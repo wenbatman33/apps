@@ -1,0 +1,17 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "亞洲大富翁 (靜態伺服器)",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["serve", "-p", "5500", "."],
+      "port": 5500
+    },
+    {
+      "name": "亞洲大富翁 (Python 伺服器)",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": ["-m", "http.server", "5500"],
+      "port": 5500
+    }
+  ]
+}
