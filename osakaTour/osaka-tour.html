@@ -1,0 +1,1104 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+<title>大阪旅遊</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+<style>
+:root{
+  --bg:#F4F1EA;
+  --card:#FFFFFF;
+  --dark:#16161E;
+  --red:#C4362B;
+  --red-lt:#F0E8E7;
+  --amber:#C8881E;
+  --text:#16161E;
+  --t2:#6A6A78;
+  --t3:#A8A8B4;
+  --border:#E4E0D6;
+  --sh:0 2px 20px rgba(22,22,30,.07);
+  --sh2:0 8px 40px rgba(22,22,30,.12);
+  --r:18px;
+  --nav:68px;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html{height:100%}
+body{height:100%;background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;}
+
+/* ── OUTER SHELL ── */
+#app{
+  display:flex;
+  flex-direction:column;
+  max-width:430px;
+  height:100vh;
+  margin:0 auto;
+  overflow:hidden;
+  background:var(--bg);
+}
+@media(min-width:500px){
+  body{background:#D8D4CC;display:flex;align-items:center;justify-content:center;}
+  #app{height:900px;max-height:100vh;border-radius:40px;box-shadow:0 30px 80px rgba(0,0,0,.35);}
+}
+
+/* ── SCROLL AREA ── */
+.scroll{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;scroll-behavior:smooth;min-height:0;}
+.scroll::-webkit-scrollbar{display:none}
+
+/* ── BOTTOM NAV ── */
+nav{
+  flex-shrink:0;
+  height:var(--nav);
+  background:rgba(255,255,255,.96);
+  backdrop-filter:blur(20px);
+  -webkit-backdrop-filter:blur(20px);
+  border-top:1px solid var(--border);
+  display:grid;grid-template-columns:repeat(4,1fr);
+  z-index:100;
+}
+.nb{
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:4px;border:none;background:none;cursor:pointer;padding:8px 4px 10px;
+  transition:opacity .15s;
+}
+.nb:active{opacity:.6}
+.nb-icon{width:24px;height:24px;display:flex;align-items:center;justify-content:center}
+.nb svg{width:22px;height:22px;stroke:var(--t3);fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;transition:stroke .2s}
+.nb.active svg{stroke:var(--red)}
+.nb-dot{width:4px;height:4px;border-radius:50%;background:var(--red);opacity:0;transition:opacity .2s;margin-top:-2px}
+.nb.active .nb-dot{opacity:1}
+.nb-lbl{font-size:10px;font-weight:500;color:var(--t3);letter-spacing:.03em;transition:color .2s}
+.nb.active .nb-lbl{color:var(--red)}
+
+/* ── PANELS ── */
+.panel{display:none;min-height:100%}
+.panel.on{display:block}
+
+/* ══════════════════════════════════
+   HOME
+══════════════════════════════════ */
+.home-top{padding:56px 20px 0}
+.home-greeting{font-size:13px;color:var(--t2);font-weight:400;letter-spacing:.04em;margin-bottom:4px}
+.home-title{font-family:'Cormorant Garamond',serif;font-size:34px;font-weight:400;line-height:1.1;color:var(--dark);letter-spacing:-.01em}
+.home-title em{font-style:italic;color:var(--red)}
+
+/* Hero card */
+.hero{
+  margin:20px 20px 0;
+  border-radius:var(--r);
+  overflow:hidden;
+  position:relative;
+  height:220px;
+  cursor:pointer;
+  box-shadow:var(--sh2);
+}
+.hero img{width:100%;height:100%;object-fit:cover;display:block;transition:transform .5s ease}
+.hero:hover img{transform:scale(1.03)}
+.hero-overlay{
+  position:absolute;inset:0;
+  background:linear-gradient(160deg,rgba(22,22,30,.05) 0%,rgba(22,22,30,.65) 100%);
+}
+.hero-badge{
+  position:absolute;top:14px;left:14px;
+  background:rgba(255,255,255,.18);
+  backdrop-filter:blur(10px);
+  -webkit-backdrop-filter:blur(10px);
+  border:1px solid rgba(255,255,255,.3);
+  border-radius:30px;
+  padding:4px 12px;
+  font-size:11px;font-weight:500;color:#fff;letter-spacing:.06em;
+}
+.hero-body{position:absolute;bottom:16px;left:16px;right:16px}
+.hero-city{font-family:'Cormorant Garamond',serif;font-size:28px;font-weight:400;color:#fff;line-height:1}
+.hero-city span{font-size:14px;font-weight:300;opacity:.8;margin-left:6px;font-family:'DM Sans',sans-serif}
+.hero-stats{display:flex;gap:16px;margin-top:10px}
+.hero-stat{display:flex;align-items:center;gap:5px}
+.hero-stat svg{width:13px;height:13px;stroke:rgba(255,255,255,.8);fill:none;stroke-width:2;stroke-linecap:round}
+.hero-stat span{font-size:12px;color:rgba(255,255,255,.9);font-weight:400}
+
+/* Countdown strip */
+.countdown{
+  margin:12px 20px 0;
+  background:var(--card);
+  border-radius:14px;
+  padding:14px 16px;
+  display:flex;align-items:center;justify-content:space-between;
+  box-shadow:var(--sh);
+}
+.cd-left{display:flex;align-items:center;gap:10px}
+.cd-dot{width:8px;height:8px;border-radius:50%;background:var(--red);flex-shrink:0;box-shadow:0 0 0 3px var(--red-lt)}
+.cd-text{font-size:13px;font-weight:500;color:var(--dark)}
+.cd-sub{font-size:11px;color:var(--t2);margin-top:1px}
+.cd-days{font-family:'Cormorant Garamond',serif;font-size:30px;font-weight:400;color:var(--red);line-height:1}
+.cd-days small{font-family:'DM Sans',sans-serif;font-size:11px;color:var(--t2);margin-left:2px}
+
+/* Section header */
+.sec-hd{display:flex;align-items:baseline;justify-content:space-between;margin:22px 20px 12px}
+.sec-hd h3{font-family:'Cormorant Garamond',serif;font-size:21px;font-weight:500;color:var(--dark)}
+.sec-hd a{font-size:12px;color:var(--red);text-decoration:none;font-weight:500}
+
+/* Day cards (horizontal scroll) */
+.h-scroll{display:flex;gap:12px;padding:0 20px 2px;overflow-x:auto;scrollbar-width:none}
+.h-scroll::-webkit-scrollbar{display:none}
+
+.day-card{
+  flex:0 0 160px;
+  border-radius:var(--r);
+  overflow:hidden;
+  position:relative;
+  height:200px;
+  cursor:pointer;
+  box-shadow:var(--sh);
+  transition:transform .2s;
+}
+.day-card:active{transform:scale(.97)}
+.day-card img{width:100%;height:100%;object-fit:cover;display:block}
+.day-card-ov{
+  position:absolute;inset:0;
+  background:linear-gradient(180deg,rgba(22,22,30,0) 40%,rgba(22,22,30,.8) 100%);
+}
+.day-card-tag{
+  position:absolute;top:10px;left:10px;
+  background:rgba(255,255,255,.2);
+  backdrop-filter:blur(8px);
+  -webkit-backdrop-filter:blur(8px);
+  border-radius:20px;padding:3px 10px;
+  font-size:10px;font-weight:600;color:#fff;letter-spacing:.05em;
+}
+.day-card-body{position:absolute;bottom:12px;left:12px;right:12px}
+.day-card-title{font-family:'Cormorant Garamond',serif;font-size:17px;font-weight:500;color:#fff;line-height:1.2}
+.day-card-date{font-size:11px;color:rgba(255,255,255,.7);margin-top:3px}
+
+/* Quick tips */
+.tips-row{display:flex;gap:10px;padding:0 20px;overflow-x:auto;scrollbar-width:none;margin-bottom:28px}
+.tips-row::-webkit-scrollbar{display:none}
+.tip-chip{
+  flex:0 0 auto;
+  background:var(--card);
+  border-radius:12px;
+  padding:10px 14px;
+  box-shadow:var(--sh);
+  display:flex;align-items:center;gap:8px;
+  min-width:0;
+}
+.tip-chip-icon{font-size:18px;flex-shrink:0}
+.tip-chip-text{font-size:12px;font-weight:500;color:var(--dark);white-space:nowrap}
+.tip-chip-sub{font-size:10px;color:var(--t2);margin-top:1px}
+
+/* ══════════════════════════════════
+   ITINERARY
+══════════════════════════════════ */
+.itin-header{padding:56px 20px 16px;background:var(--bg)}
+.itin-header h2{font-family:'Cormorant Garamond',serif;font-size:30px;font-weight:400;letter-spacing:-.01em}
+.itin-header p{font-size:13px;color:var(--t2);margin-top:3px}
+
+/* Day tabs */
+.day-tabs{display:flex;gap:8px;padding:0 20px 16px;overflow-x:auto;scrollbar-width:none}
+.day-tabs::-webkit-scrollbar{display:none}
+.dtab{
+  flex:0 0 auto;
+  border:1.5px solid var(--border);
+  border-radius:12px;padding:8px 14px;
+  background:var(--card);cursor:pointer;
+  transition:all .2s;text-align:center;
+}
+.dtab.active{background:var(--dark);border-color:var(--dark)}
+.dtab-day{font-size:10px;font-weight:600;letter-spacing:.06em;color:var(--t2);text-transform:uppercase}
+.dtab.active .dtab-day{color:rgba(255,255,255,.6)}
+.dtab-date{font-family:'Cormorant Garamond',serif;font-size:18px;font-weight:500;color:var(--dark);line-height:1}
+.dtab.active .dtab-date{color:#fff}
+
+/* Timeline */
+.timeline{padding:0 20px 28px}
+.tl-item{display:flex;gap:14px;padding-bottom:6px}
+.tl-left{display:flex;flex-direction:column;align-items:center;width:44px;flex-shrink:0}
+.tl-time{font-size:11px;font-weight:600;color:var(--t2);letter-spacing:.02em;margin-bottom:6px;white-space:nowrap}
+.tl-line-wrap{display:flex;flex-direction:column;align-items:center;flex:1}
+.tl-dot{
+  width:10px;height:10px;border-radius:50%;
+  background:var(--card);border:2.5px solid var(--border);
+  flex-shrink:0;
+}
+.tl-item.featured .tl-dot{background:var(--red);border-color:var(--red)}
+.tl-line{width:1.5px;background:var(--border);flex:1;min-height:20px;margin-top:4px}
+.tl-item:last-child .tl-line{display:none}
+
+.tl-card{
+  flex:1;background:var(--card);border-radius:14px;
+  overflow:hidden;box-shadow:var(--sh);
+  margin-bottom:12px;cursor:pointer;
+  transition:transform .15s,box-shadow .15s;
+}
+.tl-card:active{transform:scale(.99);box-shadow:none}
+.tl-img{width:100%;height:110px;object-fit:cover;display:block}
+.tl-card-body{padding:12px 14px}
+.tl-card-tag{
+  display:inline-block;font-size:10px;font-weight:600;
+  letter-spacing:.05em;padding:3px 8px;border-radius:6px;
+  background:var(--red-lt);color:var(--red);margin-bottom:7px;
+}
+.tl-card-tag.green{background:#E5F0EB;color:#2A7A4E}
+.tl-card-tag.blue{background:#E6EEF6;color:#2563AB}
+.tl-card-tag.amber{background:#F5EDD9;color:#A06810}
+.tl-card-name{font-size:15px;font-weight:600;color:var(--dark);line-height:1.3}
+.tl-card-jp{font-size:11px;color:var(--t2);margin-top:1px;font-weight:300}
+.tl-card-desc{font-size:12px;color:var(--t2);margin-top:6px;line-height:1.6}
+.tl-card-row{display:flex;align-items:center;gap:10px;margin-top:8px}
+.tl-pill{
+  font-size:10px;color:var(--t2);
+  background:var(--bg);border-radius:6px;
+  padding:3px 8px;font-weight:500;
+}
+
+/* Simple time-only entries */
+.tl-simple{
+  flex:1;padding:0 0 16px 0;
+}
+.tl-simple-name{font-size:14px;font-weight:500;color:var(--dark)}
+.tl-simple-sub{font-size:12px;color:var(--t2);margin-top:2px}
+
+/* ══════════════════════════════════
+   EXPLORE
+══════════════════════════════════ */
+.exp-header{padding:56px 20px 16px}
+.exp-header h2{font-family:'Cormorant Garamond',serif;font-size:30px;font-weight:400;letter-spacing:-.01em}
+.exp-header p{font-size:13px;color:var(--t2);margin-top:3px}
+
+.cat-tabs{display:flex;gap:8px;padding:0 20px 18px;overflow-x:auto;scrollbar-width:none}
+.cat-tabs::-webkit-scrollbar{display:none}
+.ctab{
+  flex:0 0 auto;padding:8px 16px;border-radius:30px;
+  border:1.5px solid var(--border);background:var(--card);
+  font-size:13px;font-weight:500;color:var(--t2);cursor:pointer;
+  transition:all .2s;white-space:nowrap;
+}
+.ctab.active{background:var(--dark);border-color:var(--dark);color:#fff}
+
+.exp-section{padding:0 20px 24px}
+.exp-sec-title{font-family:'Cormorant Garamond',serif;font-size:20px;font-weight:500;margin-bottom:12px;color:var(--dark)}
+
+.spot-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.spot-card{
+  background:var(--card);border-radius:14px;overflow:hidden;
+  box-shadow:var(--sh);cursor:pointer;transition:transform .15s;
+}
+.spot-card:active{transform:scale(.97)}
+.spot-img{width:100%;height:100px;object-fit:cover;display:block}
+.spot-body{padding:10px 12px}
+.spot-name{font-size:13px;font-weight:600;color:var(--dark);line-height:1.3}
+.spot-tag{font-size:10px;color:var(--t2);margin-top:3px}
+
+.food-list{display:flex;flex-direction:column;gap:10px}
+.food-row{
+  display:flex;align-items:center;gap:12px;
+  background:var(--card);border-radius:14px;padding:12px 14px;
+  box-shadow:var(--sh);cursor:pointer;transition:transform .15s;
+}
+.food-row:active{transform:scale(.99)}
+.food-emoji{font-size:28px;width:44px;height:44px;display:flex;align-items:center;justify-content:center;background:var(--bg);border-radius:12px;flex-shrink:0}
+.food-info{flex:1;min-width:0}
+.food-name{font-size:14px;font-weight:600;color:var(--dark);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.food-sub{font-size:11px;color:var(--t2);margin-top:2px}
+.food-price{font-size:12px;font-weight:600;color:var(--amber);flex-shrink:0}
+
+/* ══════════════════════════════════
+   INFO / PROFILE
+══════════════════════════════════ */
+.info-header{padding:56px 20px 20px}
+.info-header h2{font-family:'Cormorant Garamond',serif;font-size:30px;font-weight:400}
+.info-header p{font-size:13px;color:var(--t2);margin-top:3px}
+
+.info-section{padding:0 20px 20px}
+.info-sec-title{font-size:11px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--t2);margin-bottom:10px}
+
+.info-card{background:var(--card);border-radius:14px;box-shadow:var(--sh);overflow:hidden;margin-bottom:10px}
+.info-row{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:13px 16px;border-bottom:1px solid var(--border);
+}
+.info-row:last-child{border-bottom:none}
+.info-row-left{display:flex;align-items:center;gap:10px}
+.info-row-icon{width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0}
+.info-row-icon.red{background:var(--red-lt)}
+.info-row-icon.amber{background:#F5EDD9}
+.info-row-icon.green{background:#E5F0EB}
+.info-row-icon.blue{background:#E6EEF6}
+.info-label{font-size:13px;font-weight:500;color:var(--dark)}
+.info-sub{font-size:11px;color:var(--t2);margin-top:1px}
+.info-val{font-size:13px;font-weight:600;color:var(--dark)}
+
+.budget-bar-wrap{padding:0 20px 28px}
+.budget-card{background:var(--dark);border-radius:var(--r);padding:18px 18px 16px}
+.budget-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px}
+.budget-label{font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:rgba(255,255,255,.5)}
+.budget-amount{font-family:'Cormorant Garamond',serif;font-size:32px;font-weight:300;color:#fff;line-height:1}
+.budget-amount small{font-family:'DM Sans',sans-serif;font-size:13px;color:rgba(255,255,255,.5)}
+.budget-items{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px}
+.b-item{}
+.b-item-label{font-size:10px;color:rgba(255,255,255,.45);letter-spacing:.04em;margin-bottom:3px}
+.b-item-val{font-size:14px;font-weight:500;color:rgba(255,255,255,.85)}
+.b-bar{height:3px;background:rgba(255,255,255,.15);border-radius:2px;margin-top:5px}
+.b-bar-fill{height:100%;border-radius:2px;background:var(--red)}
+.b-bar-fill.amber{background:var(--amber)}
+.b-bar-fill.green{background:#4CAF7A}
+.b-bar-fill.blue{background:#5B9BD5}
+
+/* ── MODAL ── */
+.modal-bg{
+  position:fixed;inset:0;background:rgba(22,22,30,.55);
+  backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);
+  z-index:200;opacity:0;pointer-events:none;transition:opacity .25s;
+  display:flex;align-items:flex-end;
+}
+.modal-bg.open{opacity:1;pointer-events:auto}
+.modal-sheet{
+  background:var(--card);border-radius:24px 24px 0 0;
+  width:100%;max-height:85%;overflow-y:auto;
+  transform:translateY(100%);transition:transform .35s cubic-bezier(.32,.72,0,1);
+}
+.modal-sheet::-webkit-scrollbar{display:none}
+.modal-bg.open .modal-sheet{transform:translateY(0)}
+.modal-img{width:100%;height:200px;object-fit:cover;display:block}
+.modal-body{padding:20px 20px 32px}
+.modal-tag{display:inline-block;font-size:10px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--red);margin-bottom:8px}
+.modal-title{font-family:'Cormorant Garamond',serif;font-size:26px;font-weight:500;color:var(--dark);line-height:1.2}
+.modal-jp{font-size:13px;color:var(--t2);font-weight:300;margin-top:2px;margin-bottom:14px}
+.modal-desc{font-size:13px;color:var(--t2);line-height:1.75}
+.modal-meta{display:flex;flex-wrap:wrap;gap:8px;margin-top:16px}
+.modal-chip{
+  display:flex;align-items:center;gap:6px;
+  background:var(--bg);border-radius:10px;
+  padding:7px 12px;font-size:12px;font-weight:500;color:var(--t2);
+}
+.modal-chip svg{width:13px;height:13px;stroke:var(--t2);fill:none;stroke-width:2;stroke-linecap:round}
+.modal-close{
+  position:absolute;top:14px;right:14px;
+  width:32px;height:32px;border-radius:50%;
+  background:rgba(255,255,255,.8);backdrop-filter:blur(8px);
+  border:none;cursor:pointer;font-size:16px;color:var(--dark);
+  display:flex;align-items:center;justify-content:center;
+  z-index:10;
+}
+</style>
+</head>
+<body>
+<div id="app">
+
+  <!-- SCROLL AREA -->
+  <div class="scroll" id="scroll">
+
+    <!-- ══ HOME ══ -->
+    <div class="panel on" id="p-home">
+      <div class="home-top">
+        <div class="home-greeting">黃金週 · 2025</div>
+        <div class="home-title">大阪の<br>旅行計劃 <em>♪</em></div>
+      </div>
+
+      <!-- Hero -->
+      <div class="hero" onclick="openModal('dotonbori')">
+        <img src="images/dotonbori-hero.jpg" alt="道頓堀" loading="lazy"/>
+        <div class="hero-overlay"></div>
+        <div class="hero-badge">4/30 – 5/4 · 5 天</div>
+        <div class="hero-body">
+          <div class="hero-city">大阪 <span>Osaka, Japan</span></div>
+          <div class="hero-stats">
+            <div class="hero-stat">
+              <svg viewBox="0 0 24 24"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>
+              <span>16 個景點</span>
+            </div>
+            <div class="hero-stat">
+              <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+              <span>5 天行程</span>
+            </div>
+            <div class="hero-stat">
+              <svg viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/><circle cx="12" cy="9" r="2.5"/></svg>
+              <span>大阪・奈良・宇治</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Countdown -->
+      <div class="countdown">
+        <div class="cd-left">
+          <div class="cd-dot"></div>
+          <div>
+            <div class="cd-text">出發倒數</div>
+            <div class="cd-sub">2025年4月30日 啟程</div>
+          </div>
+        </div>
+        <div>
+          <div class="cd-days" id="countdown-num">—</div>
+          <div style="font-size:11px;color:var(--t2);text-align:right">天</div>
+        </div>
+      </div>
+
+      <!-- Day Cards -->
+      <div class="sec-hd">
+        <h3>每日行程</h3>
+        <a href="#" onclick="switchTab('itinerary');return false">全部 →</a>
+      </div>
+      <div class="h-scroll">
+        <div class="day-card" onclick="switchTab('itinerary');selectDay(0)">
+          <img src="images/usj.jpg" alt="USJ"/>
+          <div class="day-card-ov"></div>
+          <div class="day-card-tag">D1 · 4/30</div>
+          <div class="day-card-body">
+            <div class="day-card-title">環球影城</div>
+            <div class="day-card-date">Universal Studios Japan</div>
+          </div>
+        </div>
+        <div class="day-card" onclick="switchTab('itinerary');selectDay(1)">
+          <img src="images/nintendo.jpg" alt="任天堂博物館"/>
+          <div class="day-card-ov"></div>
+          <div class="day-card-tag">D2 · 5/1</div>
+          <div class="day-card-body">
+            <div class="day-card-title">任天堂博物館</div>
+            <div class="day-card-date">Nintendo Museum · 宇治</div>
+          </div>
+        </div>
+        <div class="day-card" onclick="switchTab('itinerary');selectDay(2)">
+          <img src="images/osaka-castle.jpg" alt="大阪城"/>
+          <div class="day-card-ov"></div>
+          <div class="day-card-tag">D3 · 5/2</div>
+          <div class="day-card-body">
+            <div class="day-card-title">大阪城・新世界</div>
+            <div class="day-card-date">Osaka Castle · Shinsekai</div>
+          </div>
+        </div>
+        <div class="day-card" onclick="switchTab('itinerary');selectDay(3)">
+          <img src="images/nara.jpg" alt="奈良"/>
+          <div class="day-card-ov"></div>
+          <div class="day-card-tag">D4 · 5/3</div>
+          <div class="day-card-body">
+            <div class="day-card-title">奈良一日遊</div>
+            <div class="day-card-date">Nara · 小鹿と遊ぶ</div>
+          </div>
+        </div>
+        <div class="day-card" onclick="switchTab('itinerary');selectDay(4)">
+          <img src="images/dotonbori-night.jpg" alt="道頓堀"/>
+          <div class="day-card-ov"></div>
+          <div class="day-card-tag">D5 · 5/4</div>
+          <div class="day-card-body">
+            <div class="day-card-title">道頓堀・購物</div>
+            <div class="day-card-date">Dotonbori · Last Day</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tips chips -->
+      <div class="sec-hd">
+        <h3>旅遊小提醒</h3>
+      </div>
+      <div class="tips-row">
+        <div class="tip-chip">
+          <div class="tip-chip-icon">🎢</div>
+          <div>
+            <div class="tip-chip-text">USJ Express Pass</div>
+            <div class="tip-chip-sub">黃金週必備，提前購買</div>
+          </div>
+        </div>
+        <div class="tip-chip">
+          <div class="tip-chip-icon">🎮</div>
+          <div>
+            <div class="tip-chip-text">任天堂抽籤</div>
+            <div class="tip-chip-sub">2月申請 / 3月公佈</div>
+          </div>
+        </div>
+        <div class="tip-chip">
+          <div class="tip-chip-icon">🚇</div>
+          <div>
+            <div class="tip-chip-text">Osaka Amazing Pass</div>
+            <div class="tip-chip-sub">地鐵無限乘+景點折扣</div>
+          </div>
+        </div>
+        <div class="tip-chip">
+          <div class="tip-chip-icon">💴</div>
+          <div>
+            <div class="tip-chip-text">預算 ¥50,000</div>
+            <div class="tip-chip-sub">含餐飲・門票・購物</div>
+          </div>
+        </div>
+      </div>
+    </div><!-- /home -->
+
+    <!-- ══ ITINERARY ══ -->
+    <div class="panel" id="p-itinerary">
+      <div class="itin-header">
+        <h2>旅行行程</h2>
+        <p>4月30日 – 5月4日 · 5天4夜</p>
+      </div>
+
+      <!-- Day tabs -->
+      <div class="day-tabs" id="day-tabs">
+        <div class="dtab active" onclick="selectDay(0)"><div class="dtab-day">D1</div><div class="dtab-date">4/30</div></div>
+        <div class="dtab" onclick="selectDay(1)"><div class="dtab-day">D2</div><div class="dtab-date">5/1</div></div>
+        <div class="dtab" onclick="selectDay(2)"><div class="dtab-day">D3</div><div class="dtab-date">5/2</div></div>
+        <div class="dtab" onclick="selectDay(3)"><div class="dtab-day">D4</div><div class="dtab-date">5/3</div></div>
+        <div class="dtab" onclick="selectDay(4)"><div class="dtab-day">D5</div><div class="dtab-date">5/4</div></div>
+      </div>
+
+      <!-- Timeline content per day -->
+      <div id="timeline-wrap" class="timeline"></div>
+    </div><!-- /itinerary -->
+
+    <!-- ══ EXPLORE ══ -->
+    <div class="panel" id="p-explore">
+      <div class="exp-header">
+        <h2>探索大阪</h2>
+        <p>精選景點 · 美食 · 購物</p>
+      </div>
+
+      <div class="cat-tabs">
+        <div class="ctab active" onclick="filterCat(this,'all')">全部</div>
+        <div class="ctab" onclick="filterCat(this,'sight')">🏯 景點</div>
+        <div class="ctab" onclick="filterCat(this,'food')">🍜 美食</div>
+        <div class="ctab" onclick="filterCat(this,'cafe')">☕ 咖啡</div>
+        <div class="ctab" onclick="filterCat(this,'shop')">🛍 購物</div>
+      </div>
+
+      <div class="exp-section" id="exp-sights" data-cat="sight">
+        <div class="exp-sec-title">必去景點</div>
+        <div class="spot-grid">
+          <div class="spot-card" onclick="openModal('osaka-castle')">
+            <img src="images/osaka-castle.jpg" alt="大阪城"/>
+            <div class="spot-body">
+              <div class="spot-name">大阪城天守閣</div>
+              <div class="spot-tag">🏯 ¥600 · D3</div>
+            </div>
+          </div>
+          <div class="spot-card" onclick="openModal('tsutenkaku')">
+            <img src="images/tsutenkaku.jpg" alt="通天閣"/>
+            <div class="spot-body">
+              <div class="spot-name">新世界・通天閣</div>
+              <div class="spot-tag">🗼 ¥800 · D3</div>
+            </div>
+          </div>
+          <div class="spot-card" onclick="openModal('nara')">
+            <img src="images/nara.jpg" alt="奈良"/>
+            <div class="spot-body">
+              <div class="spot-name">奈良公園小鹿</div>
+              <div class="spot-tag">🦌 免費 · D4</div>
+            </div>
+          </div>
+          <div class="spot-card" onclick="openModal('byodoin')">
+            <img src="images/byodoin.jpg" alt="平等院"/>
+            <div class="spot-body">
+              <div class="spot-name">平等院鳳凰堂</div>
+              <div class="spot-tag">🪙 ¥700 · D2</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="exp-section" id="exp-food" data-cat="food">
+        <div class="exp-sec-title">大阪美食</div>
+        <div class="food-list">
+          <div class="food-row" onclick="openModal('mizuno')">
+            <div class="food-emoji">🥘</div>
+            <div class="food-info">
+              <div class="food-name">水了軒 Mizuno</div>
+              <div class="food-sub">道頓堀・正宗大阪燒 · D5 推薦</div>
+            </div>
+            <div class="food-price">¥1,500~</div>
+          </div>
+          <div class="food-row" onclick="openModal('kuromon')">
+            <div class="food-emoji">🦞</div>
+            <div class="food-info">
+              <div class="food-name">黑門市場</div>
+              <div class="food-sub">新鮮海鮮・生魚片・當場品嚐</div>
+            </div>
+            <div class="food-price">¥500~</div>
+          </div>
+          <div class="food-row" onclick="openModal('kushikatsu')">
+            <div class="food-emoji">🍢</div>
+            <div class="food-info">
+              <div class="food-name">新世界串炸</div>
+              <div class="food-sub">昭和風情・正宗炸串發源地</div>
+            </div>
+            <div class="food-price">¥800~</div>
+          </div>
+          <div class="food-row">
+            <div class="food-emoji">🦀</div>
+            <div class="food-info">
+              <div class="food-name">道頓堀螃蟹道樂</div>
+              <div class="food-sub">超巨大螃蟹招牌・海鮮鍋料理</div>
+            </div>
+            <div class="food-price">¥3,000~</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="exp-section" id="exp-cafe" data-cat="cafe">
+        <div class="exp-sec-title">精品咖啡</div>
+        <div class="food-list">
+          <div class="food-row">
+            <div class="food-emoji">☕</div>
+            <div class="food-info">
+              <div class="food-name">LiLo Coffee Roasters</div>
+              <div class="food-sub">大阪頂尖精品咖啡・輕焙派必喝</div>
+            </div>
+            <div class="food-price">¥500~</div>
+          </div>
+          <div class="food-row">
+            <div class="food-emoji">🐻</div>
+            <div class="food-info">
+              <div class="food-name">熊爪咖啡 KUMANOTE</div>
+              <div class="food-sub">熊掌遞飲品・超萌互動體驗</div>
+            </div>
+            <div class="food-price">¥800~</div>
+          </div>
+          <div class="food-row">
+            <div class="food-emoji">🌿</div>
+            <div class="food-info">
+              <div class="food-name">Tera Cafe Chaniwa</div>
+              <div class="food-sub">400年寺廟咖啡廳・禪意空間</div>
+            </div>
+            <div class="food-price">¥700~</div>
+          </div>
+          <div class="food-row">
+            <div class="food-emoji">🍵</div>
+            <div class="food-info">
+              <div class="food-name">MACCHA HOUSE</div>
+              <div class="food-sub">Morihan高級抹茶・抹茶提拉米蘇</div>
+            </div>
+            <div class="food-price">¥700~</div>
+          </div>
+          <div class="food-row">
+            <div class="food-emoji">☕</div>
+            <div class="food-info">
+              <div class="food-name">Mel Coffee Roasters</div>
+              <div class="food-sub">堀江的日式簡約小咖啡館</div>
+            </div>
+            <div class="food-price">¥500~</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="exp-section" id="exp-shop" data-cat="shop">
+        <div class="exp-sec-title">購物推薦</div>
+        <div class="food-list">
+          <div class="food-row">
+            <div class="food-emoji">🛍</div>
+            <div class="food-info">
+              <div class="food-name">心齋橋筋商店街</div>
+              <div class="food-sub">心齋橋站步行・品牌&藥妝林立</div>
+            </div>
+            <div class="food-price">全天</div>
+          </div>
+          <div class="food-row">
+            <div class="food-emoji">✏️</div>
+            <div class="food-info">
+              <div class="food-name">LOFT 心齋橋</div>
+              <div class="food-sub">日系文具・廚房雜貨・旅行用品</div>
+            </div>
+            <div class="food-price">¥—</div>
+          </div>
+          <div class="food-row">
+            <div class="food-emoji">💊</div>
+            <div class="food-info">
+              <div class="food-name">松本清 藥妝</div>
+              <div class="food-sub">滿¥5,500免稅・心齋橋多間分店</div>
+            </div>
+            <div class="food-price">¥—</div>
+          </div>
+          <div class="food-row">
+            <div class="food-emoji">📷</div>
+            <div class="food-info">
+              <div class="food-name">ヨドバシカメラ 梅田</div>
+              <div class="food-sub">相機・耳機・Switch免稅最方便</div>
+            </div>
+            <div class="food-price">¥—</div>
+          </div>
+        </div>
+      </div>
+    </div><!-- /explore -->
+
+    <!-- ══ INFO ══ -->
+    <div class="panel" id="p-info">
+      <div class="info-header">
+        <h2>旅行資訊</h2>
+        <p>預算 · 交通 · 緊急聯絡</p>
+      </div>
+
+      <!-- Budget card -->
+      <div class="budget-bar-wrap">
+        <div class="budget-card">
+          <div class="budget-top">
+            <div>
+              <div class="budget-label">總預算</div>
+              <div class="budget-amount">¥50,000 <small>/ 人</small></div>
+            </div>
+            <div style="text-align:right">
+              <div class="budget-label">5 天</div>
+              <div style="font-size:13px;color:rgba(255,255,255,.6);margin-top:4px">黃金週</div>
+            </div>
+          </div>
+          <div class="budget-items">
+            <div class="b-item">
+              <div class="b-item-label">門票・入場</div>
+              <div class="b-item-val">¥18,000</div>
+              <div class="b-bar"><div class="b-bar-fill" style="width:70%"></div></div>
+            </div>
+            <div class="b-item">
+              <div class="b-item-label">餐飲</div>
+              <div class="b-item-val">¥15,000</div>
+              <div class="b-bar"><div class="b-bar-fill amber" style="width:55%"></div></div>
+            </div>
+            <div class="b-item">
+              <div class="b-item-label">交通</div>
+              <div class="b-item-val">¥8,000</div>
+              <div class="b-bar"><div class="b-bar-fill green" style="width:30%"></div></div>
+            </div>
+            <div class="b-item">
+              <div class="b-item-label">購物</div>
+              <div class="b-item-val">¥9,000</div>
+              <div class="b-bar"><div class="b-bar-fill blue" style="width:35%"></div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="info-section">
+        <div class="info-sec-title">門票資訊</div>
+        <div class="info-card">
+          <div class="info-row">
+            <div class="info-row-left">
+              <div class="info-row-icon red">🎢</div>
+              <div><div class="info-label">USJ 入場券</div><div class="info-sub">黃金週建議加購 Express Pass</div></div>
+            </div>
+            <div class="info-val">¥9,400+</div>
+          </div>
+          <div class="info-row">
+            <div class="info-row-left">
+              <div class="info-row-icon amber">🎮</div>
+              <div><div class="info-label">任天堂博物館</div><div class="info-sub">需事先抽籤預約</div></div>
+            </div>
+            <div class="info-val">¥3,300</div>
+          </div>
+          <div class="info-row">
+            <div class="info-row-left">
+              <div class="info-row-icon blue">🏯</div>
+              <div><div class="info-label">大阪城天守閣</div><div class="info-sub">公園免費・天守閣收費</div></div>
+            </div>
+            <div class="info-val">¥600</div>
+          </div>
+          <div class="info-row">
+            <div class="info-row-left">
+              <div class="info-row-icon green">🪙</div>
+              <div><div class="info-label">平等院鳳凰堂</div><div class="info-sub">宇治・含鳳翔館</div></div>
+            </div>
+            <div class="info-val">¥1,000</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="info-section">
+        <div class="info-sec-title">實用資訊</div>
+        <div class="info-card">
+          <div class="info-row">
+            <div class="info-row-left">
+              <div class="info-row-icon red">🚇</div>
+              <div><div class="info-label">Osaka Amazing Pass</div><div class="info-sub">地鐵無限乘+40+景點免費</div></div>
+            </div>
+            <div class="info-val">¥2,800/日</div>
+          </div>
+          <div class="info-row">
+            <div class="info-row-left">
+              <div class="info-row-icon amber">📶</div>
+              <div><div class="info-label">SIM卡 / WiFi分享器</div><div class="info-sub">建議到機場領取</div></div>
+            </div>
+            <div class="info-val">必備</div>
+          </div>
+          <div class="info-row">
+            <div class="info-row-left">
+              <div class="info-row-icon green">🏥</div>
+              <div><div class="info-label">緊急電話</div><div class="info-sub">警察110・救護車119</div></div>
+            </div>
+            <div class="info-val">24h</div>
+          </div>
+          <div class="info-row">
+            <div class="info-row-left">
+              <div class="info-row-icon blue">✈️</div>
+              <div><div class="info-label">關西國際機場</div><div class="info-sub">南海電鐵→難波 約38分</div></div>
+            </div>
+            <div class="info-val">¥930</div>
+          </div>
+        </div>
+      </div>
+    </div><!-- /info -->
+
+  </div><!-- /scroll -->
+
+  <!-- BOTTOM NAV -->
+  <nav>
+    <button class="nb active" id="nb-home" onclick="switchTab('home')">
+      <div class="nb-icon">
+        <svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+      </div>
+      <div class="nb-dot"></div>
+      <div class="nb-lbl">首頁</div>
+    </button>
+    <button class="nb" id="nb-itinerary" onclick="switchTab('itinerary')">
+      <div class="nb-icon">
+        <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+      </div>
+      <div class="nb-dot"></div>
+      <div class="nb-lbl">行程</div>
+    </button>
+    <button class="nb" id="nb-explore" onclick="switchTab('explore')">
+      <div class="nb-icon">
+        <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      </div>
+      <div class="nb-dot"></div>
+      <div class="nb-lbl">探索</div>
+    </button>
+    <button class="nb" id="nb-info" onclick="switchTab('info')">
+      <div class="nb-icon">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+      </div>
+      <div class="nb-dot"></div>
+      <div class="nb-lbl">資訊</div>
+    </button>
+  </nav>
+
+  <!-- MODAL -->
+  <div class="modal-bg" id="modal-bg" onclick="closeModal(event)">
+    <div class="modal-sheet" id="modal-sheet">
+      <div style="position:relative">
+        <img id="modal-img" src="" alt="" style="width:100%;height:200px;object-fit:cover;display:block"/>
+        <button class="modal-close" onclick="closeModal()">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="modal-tag" id="modal-tag"></div>
+        <div class="modal-title" id="modal-title"></div>
+        <div class="modal-jp" id="modal-jp"></div>
+        <div class="modal-desc" id="modal-desc"></div>
+        <div class="modal-meta" id="modal-meta"></div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /app -->
+
+<script>
+// ── DATA ──────────────────────────────────────────────
+const DAYS = [
+  {
+    label:'4/30 · 環球影城',
+    sub:'Universal Studios Japan',
+    items:[
+      {time:'08:00',featured:true,img:'images/usj.jpg',tag:'娛樂',tagClass:'',name:'日本環球影城',jp:'ユニバーサル・スタジオ・ジャパン',desc:'黃金週必去！超任世界、哈利波特魔法世界、小小兵樂園精彩絕倫。建議提早入場，有 Express Pass 可跳過長隊。',price:'¥9,400起',time2:'9:00–21:00',tips:'⭐ 超任世界需專用 Super Nintendo World Pass'},
+    ]
+  },
+  {
+    label:'5/1 · 任天堂博物館・宇治',
+    sub:'Nintendo Museum & Byodoin Temple',
+    items:[
+      {time:'09:30',featured:false,img:'images/byodoin.jpg',tag:'文化',tagClass:'blue',name:'平等院鳳凰堂',jp:'びょうどういん ほうおうどう',desc:'10圓硬幣上的建築！宇治川畔的世界遺產，任天堂博物館附近，前後順遊。宇治抹茶搭配鳳凰堂美景是本日精華。',price:'¥700',time2:'8:30–17:30',tips:'建議搭配宇治抹茶甜點一起品嚐'},
+      {time:'11:00',featured:true,img:'images/nintendo.jpg',tag:'娛樂',tagClass:'',name:'任天堂博物館',jp:'ニンテンドーミュージアム',desc:'任天堂135年歷史！10枚數位硬幣互動體驗，重現各年代經典遊戲。⚠️ 需事先抽籤預約，票券稀缺！',price:'¥3,300',time2:'10:00–17:00',tips:'⚠️ 需在2月申請抽籤，3月公佈結果'},
+      {time:'15:00',featured:false,img:'images/matcha.jpg',tag:'美食',tagClass:'green',name:'宇治抹茶甜點巡禮',jp:'うじ まっちゃ',desc:'宇治是日本抹茶聖地！中村藤吉、辻利兵衛本店、通圓茶屋各有特色，抹茶霜淇淋、抹茶帕菲必吃。',price:'¥500–1,500',time2:'各店不同',tips:'中村藤吉的涼粉最受歡迎'},
+    ]
+  },
+  {
+    label:'5/2 · 大阪城・新世界',
+    sub:'Osaka Castle & Shinsekai',
+    items:[
+      {time:'09:00',featured:true,img:'images/osaka-castle.jpg',tag:'景點',tagClass:'blue',name:'大阪城天守閣',jp:'おおさかじょう',desc:'大阪代表性地標！天守閣展望台可俯瞰城市全景，護城河畔散步，5月新綠美麗如畫。一至八樓有豐富歷史展覽。',price:'¥600',time2:'9:00–17:00',tips:'公園免費入場，建議留1.5–2小時'},
+      {time:'12:00',featured:false,img:'images/kuromon.jpg',tag:'美食',tagClass:'green',name:'黑門市場午餐',jp:'くろもんいちば',desc:'大阪的廚房！新鮮生魚片、海鮮串燒、當場品嚐，各種日本在地食材應有盡有。市場內可直接現買現吃。',price:'¥800–2,000',time2:'8:00–18:00',tips:'平日人少，週末人潮擁擠'},
+      {time:'15:00',featured:true,img:'images/tsutenkaku.jpg',tag:'景點',tagClass:'',name:'新世界・通天閣',jp:'しんせかい・つうてんかく',desc:'昭和復古風情街道，通天閣是大阪象徵。正宗串炸發源地，居酒屋、復古霓虹，體驗在地老大阪文化，與比利肯神像合影祈福。',price:'¥800',time2:'10:00–20:00',tips:'多嚐幾間串炸比較，別沾了醬再回沾！'},
+      {time:'19:00',featured:false,img:'images/dotonbori-night.jpg',tag:'夜景',tagClass:'amber',name:'道頓堀夜景散步',jp:'どうとんぼり',desc:'格力高廣告牌在戎橋旁，入夜後拍最美！道頓堀運河倒映霓虹燈光，是大阪最具代表性的夜間景色。',price:'免費',time2:'全天',tips:'戎橋上正面拍攝角度最佳'},
+    ]
+  },
+  {
+    label:'5/3 · 奈良一日遊',
+    sub:'Nara Day Trip',
+    items:[
+      {time:'08:30',featured:false,img:'images/nara-train.jpg',tag:'交通',tagClass:'blue',name:'搭近鐵前往奈良',jp:'きんてつ なら',desc:'從大阪難波站搭近鐵特急約40分抵達近鐵奈良站，下車即可步行至奈良公園。車票建議使用 IC 卡或購買一日券。',price:'¥680',time2:'約40分',tips:'使用近鐵奈良站比JR奈良站更靠近公園'},
+      {time:'10:00',featured:true,img:'images/nara.jpg',tag:'景點',tagClass:'green',name:'奈良公園・小鹿',jp:'ならこうえん',desc:'與自由漫步的奈良小鹿近距離接觸！鹿仙貝餵食超可愛，注意別讓鹿咬到食物袋。早上8點前人少氛圍最佳，可拍到清晨薄霧中的小鹿。',price:'免費（鹿仙貝¥200）',time2:'全天',tips:'8:00 前人少氛圍最好！'},
+      {time:'12:00',featured:false,img:'images/todaiji.jpg',tag:'景點',tagClass:'amber',name:'東大寺大佛殿',jp:'とうだいじ だいぶつでん',desc:'世界最大的木造建築，供奉高達15公尺的盧舍那大佛。穿過大佛鼻孔（柱洞）據說可獲智慧，小朋友大人都愛玩！',price:'¥600',time2:'8:00–17:00',tips:'穿過大柱洞孔有求智慧的傳說'},
+      {time:'15:00',featured:false,img:'images/naramachi.jpg',tag:'美食',tagClass:'green',name:'奈良町散步・柿葉壽司',jp:'ならまち',desc:'奈良傳統商店街，隱藏許多可愛小店。柿葉壽司是奈良名物，以柿葉包裹鯖魚或鮭魚握壽司，在地風味獨特。',price:'¥300–1,000',time2:'10:00–18:00',tips:'奈良町有很多傳統工藝小店值得探索'},
+    ]
+  },
+  {
+    label:'5/4 · 道頓堀・購物・返程',
+    sub:'Last Day — Dotonbori & Shopping',
+    items:[
+      {time:'10:00',featured:false,img:'images/coffee.jpg',tag:'美食',tagClass:'green',name:'早午餐・咖啡館',jp:'モーニング',desc:'最後一天輕鬆開始！推薦 LiLo Coffee Roasters 或 Mel Coffee，坐下來好好享受一杯精品咖啡，為今天的購物充飽電。',price:'¥500–900',time2:'9:00–20:00',tips:'LiLo Coffee 是大阪精品咖啡首選'},
+      {time:'11:00',featured:false,img:'https://images.unsplash.com/photo-1555529669-2269763671c0?w=600&q=80&fit=crop',tag:'購物',tagClass:'amber',name:'心齋橋・藥妝掃貨',jp:'しんさいばし',desc:'心齋橋筋商店街逛個透！松本清藥妝、LOFT文具雜貨、各家品牌一次滿足。滿¥5,500享免稅，記得帶護照。',price:'依採購',time2:'10:00–21:00',tips:'護照記得帶！免稅手續在各店服務台辦理'},
+      {time:'13:00',featured:true,img:'images/matcha.jpg',tag:'美食',tagClass:'',name:'水了軒 Mizuno',jp:'みずのたき',desc:'道頓堀超人氣大阪燒名店，常有排隊人龍！大阪燒vs廣島燒兩種口味都值得點。正宗口味作為最後一天的美食告別作再適合不過。',price:'¥1,500–2,500',time2:'11:00–22:00',tips:'常有排隊，建議開店時間前排隊'},
+      {time:'15:00',featured:false,img:'https://images.unsplash.com/photo-1544931170-6af1bf696a8b?w=600&q=80&fit=crop',tag:'準備',tagClass:'blue',name:'整理行李・前往機場',jp:'かんさいくうこう',desc:'南海電鐵難波站搭「Rapit特急」約38分到達關西國際機場，車資¥930。建議提早2–2.5小時到達辦理登機手續。',price:'¥930',time2:'首班5:10',tips:'行李超重風險：難波Yamato便利寄送服務'},
+    ]
+  }
+];
+
+const MODALS = {
+  'dotonbori':{
+    img:'https://images.unsplash.com/photo-WaHPhFveWLk?w=800&q=80',
+    tag:'大阪地標',title:'道頓堀',jp:'どうとんぼり',
+    desc:'大阪最具代表性的夜景勝地！格力高廣告牌、蟹道樂、金龍拉麵……霓虹倒映運河，是大阪活力的縮影。戎橋上是拍攝最佳角度，入夜後人潮最旺。',
+    chips:[{icon:'📍',text:'難波・中央區'},{icon:'⏰',text:'全天'},{icon:'💰',text:'免費參觀'}]
+  },
+  'osaka-castle':{
+    img:'https://images.unsplash.com/photo-Xzazu_aTSgc?w=800&q=80',
+    tag:'歷史景點',title:'大阪城天守閣',jp:'おおさかじょう',
+    desc:'豐臣秀吉所建，大阪最具代表性的歷史地標。天守閣8層展覽豐富，頂層展望台可俯瞰大阪城公園及城市全景。護城河畔春天賞櫻、秋天楓紅，5月是翠綠新葉。',
+    chips:[{icon:'📍',text:'大阪城公園'},{icon:'⏰',text:'9:00–17:00'},{icon:'💰',text:'天守閣¥600'}]
+  },
+  'tsutenkaku':{
+    img:'https://images.unsplash.com/photo-sfwwtp7R4Ms?w=800&q=80',
+    tag:'昭和風情',title:'新世界・通天閣',jp:'しんせかい・つうてんかく',
+    desc:'昭和30年代復古街道，正宗串炸（kushikatsu）的發源地。通天閣展望台是大阪象徵，頂樓有比利肯神像，摸腳底可以許願。入夜霓虹閃爍，氣氛最棒。',
+    chips:[{icon:'📍',text:'天王寺・惠美須町'},{icon:'⏰',text:'10:00–20:00'},{icon:'💰',text:'通天閣¥800'}]
+  },
+  'nara':{
+    img:'https://images.unsplash.com/photo-h5uEw9hgXY8?w=800&q=80',
+    tag:'一日遊',title:'奈良公園',jp:'ならこうえん',
+    desc:'1,200頭以上的野生梅花鹿自由漫步！鹿仙貝¥200可購入餵食，小鹿會主動靠近甚至鞠躬要食物。早上人少氛圍最佳，可拍到清晨美麗的公園景色。',
+    chips:[{icon:'📍',text:'近鐵奈良站步行10分'},{icon:'⏰',text:'全天開放'},{icon:'💰',text:'免費入場'}]
+  },
+  'byodoin':{
+    img:'https://images.unsplash.com/photo-7IO8Uei5TzA?w=800&q=80',
+    tag:'世界遺產',title:'平等院鳳凰堂',jp:'びょうどういんほうおうどう',
+    desc:'印在10圓硬幣上的建築！宇治川畔的世界遺產，建於西元1052年，融合中日建築美學。鳳翔館收藏的國寶雲中供養菩薩像美輪美奐，必看。',
+    chips:[{icon:'📍',text:'宇治・小倉站步行5分'},{icon:'⏰',text:'8:30–17:30'},{icon:'💰',text:'¥700（+鳳翔館¥300）'}]
+  },
+  'mizuno':{
+    img:'https://images.unsplash.com/photo-1556679343-c7306c1976bc?w=800&q=80',
+    tag:'大阪燒名店',title:'水了軒 Mizuno',jp:'みずのたき',
+    desc:'道頓堀超人氣大阪燒老店，常有排隊人龍！正宗大阪燒口味濃郁，表面酥脆內層軟嫩。推薦招牌豬肉大阪燒，最後一天的美食告別作首選。',
+    chips:[{icon:'📍',text:'道頓堀'},{icon:'⏰',text:'11:00–22:00'},{icon:'💰',text:'¥1,500–2,500'}]
+  },
+  'kuromon':{
+    img:'https://images.unsplash.com/photo-9GPNm26TrQQ?w=800&q=80',
+    tag:'在地市場',title:'黑門市場',jp:'くろもんいちば',
+    desc:'「大阪的廚房」！新鮮海鮮、生魚片、和牛串燒、各式日本食材，可以當場購買即食。充滿昭和風情的市場街道，全長約580公尺，兩側超過180間店。',
+    chips:[{icon:'📍',text:'日本橋駅・難波步行10分'},{icon:'⏰',text:'8:00–18:00'},{icon:'💰',text:'依品項'}]
+  },
+  'kushikatsu':{
+    img:'https://images.unsplash.com/photo-YpQGo0QTshE?w=800&q=80',
+    tag:'串炸聖地',title:'新世界串炸',jp:'くしかつ しんせかい',
+    desc:'串炸（Kushikatsu）就是大阪靈魂食物！肉類、蔬菜、海鮮用麵包粉炸得酥脆，沾特製醬汁享用。新世界有十幾間串炸店，可以多家比較。黃金法則：醬汁不能沾第二次！',
+    chips:[{icon:'📍',text:'新世界・惠美須町'},{icon:'⏰',text:'11:00–22:00'},{icon:'💰',text:'¥800–2,000'}]
+  },
+};
+
+// ── COUNTDOWN ────────────────────────────────────────
+(function(){
+  const target = new Date('2025-04-30T00:00:00+09:00');
+  const now = new Date();
+  const diff = Math.ceil((target - now) / 86400000);
+  const el = document.getElementById('countdown-num');
+  if(diff > 0) el.textContent = diff;
+  else if(diff === 0) el.textContent = '今天！';
+  else el.textContent = '旅途中';
+})();
+
+// ── TABS ─────────────────────────────────────────────
+function switchTab(tab){
+  ['home','itinerary','explore','info'].forEach(t=>{
+    document.getElementById('p-'+t).classList.toggle('on', t===tab);
+    document.getElementById('nb-'+t).classList.toggle('active', t===tab);
+  });
+  document.getElementById('scroll').scrollTop = 0;
+  if(tab==='itinerary') renderDay(currentDay);
+}
+
+// ── ITINERARY ─────────────────────────────────────────
+let currentDay = 0;
+function selectDay(i){
+  currentDay = i;
+  document.querySelectorAll('.dtab').forEach((el,idx)=>el.classList.toggle('active',idx===i));
+  renderDay(i);
+}
+function renderDay(i){
+  const day = DAYS[i];
+  const wrap = document.getElementById('timeline-wrap');
+  wrap.innerHTML = day.items.map(item=>`
+    <div class="tl-item ${item.featured?'featured':''}">
+      <div class="tl-left">
+        <div class="tl-time">${item.time}</div>
+        <div class="tl-line-wrap">
+          <div class="tl-dot"></div>
+          <div class="tl-line"></div>
+        </div>
+      </div>
+      <div class="tl-card" onclick="openModal('tl_${i}_${day.items.indexOf(item)}')">
+        <img class="tl-img" src="${item.img}" alt="${item.name}" loading="lazy"/>
+        <div class="tl-card-body">
+          <span class="tl-card-tag ${item.tagClass||''}">${item.tag}</span>
+          <div class="tl-card-name">${item.name}</div>
+          <div class="tl-card-jp">${item.jp}</div>
+          <div class="tl-card-desc">${item.desc.substring(0,60)}…</div>
+          <div class="tl-card-row">
+            <span class="tl-pill">⏰ ${item.time2||item.time}</span>
+            ${item.price?`<span class="tl-pill">💰 ${item.price}</span>`:''}
+          </div>
+        </div>
+      </div>
+    </div>
+  `).join('');
+  // store tl modals
+  day.items.forEach((item,idx)=>{
+    MODALS[`tl_${i}_${idx}`] = {
+      img: item.img,
+      tag: item.tag,
+      title: item.name,
+      jp: item.jp,
+      desc: item.desc,
+      chips:[
+        {icon:'⏰',text:item.time2||item.time},
+        ...(item.price?[{icon:'💰',text:item.price}]:[]),
+        ...(item.tips?[{icon:'💡',text:item.tips}]:[]),
+      ]
+    };
+  });
+}
+renderDay(0);
+
+// ── EXPLORE FILTER ────────────────────────────────────
+function filterCat(el, cat){
+  document.querySelectorAll('.ctab').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');
+  ['sights','food','cafe','shop'].forEach(s=>{
+    const sec = document.getElementById('exp-'+s);
+    const secCat = s==='sights'?'sight':s;
+    sec.style.display = (cat==='all'||cat===secCat) ? 'block':'none';
+  });
+}
+
+// ── MODAL ─────────────────────────────────────────────
+function openModal(key){
+  const d = MODALS[key];
+  if(!d) return;
+  document.getElementById('modal-img').src = d.img;
+  document.getElementById('modal-img').alt = d.title;
+  document.getElementById('modal-tag').textContent = d.tag;
+  document.getElementById('modal-title').textContent = d.title;
+  document.getElementById('modal-jp').textContent = d.jp||'';
+  document.getElementById('modal-desc').textContent = d.desc;
+  document.getElementById('modal-meta').innerHTML = (d.chips||[]).map(c=>`
+    <div class="modal-chip">
+      <span>${c.icon}</span>
+      <span>${c.text}</span>
+    </div>
+  `).join('');
+  document.getElementById('modal-bg').classList.add('open');
+}
+function closeModal(e){
+  if(!e || e.target===document.getElementById('modal-bg') || e.currentTarget.classList.contains('modal-close')){
+    document.getElementById('modal-bg').classList.remove('open');
+  }
+}
+// swipe down to close modal
+let touchStartY=0;
+document.getElementById('modal-sheet').addEventListener('touchstart',e=>{touchStartY=e.touches[0].clientY});
+document.getElementById('modal-sheet').addEventListener('touchend',e=>{
+  if(e.changedTouches[0].clientY - touchStartY > 80) closeModal();
+});
+</script>
+</body>
+</html>
