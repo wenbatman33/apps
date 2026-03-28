@@ -1,0 +1,33 @@
+{
+  "name": "nuxt-app",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "build": "nuxt build",
+    "dev": "nuxt dev",
+    "generate": "nuxt generate",
+    "preview": "nuxt preview",
+    "postinstall": "nuxt prepare"
+  },
+  "dependencies": {
+    "vue-router": "^4.6.4"
+  },
+  "version": "1.0.1",
+  "description": "Look at the [Nuxt documentation](https://nuxt.com/docs/getting-started/introduction) to learn more.",
+  "main": "app.js",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/wenbatman33/committee_duty_roster.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/wenbatman33/committee_duty_roster/issues"
+  },
+  "homepage": "https://github.com/wenbatman33/committee_duty_roster#readme",
+  "devDependencies": {
+    "nuxt": "^4.3.1",
+    "vue": "^3.5.29"
+  }
+}
