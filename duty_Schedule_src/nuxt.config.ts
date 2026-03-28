@@ -4,7 +4,7 @@ export default defineNuxtConfig({
   devtools: { enabled: false },
 
   app: {
-    baseURL: '/committee_duty_roster/', // 針對 GitHub Pages 設定 baseURL
+    baseURL: '/apps/duty_Schedule/', // 針對 GitHub Pages 設定 baseURL (配合 showcase)
     buildAssetsDir: 'assets', // 或其他子目錄，避免底線開頭（gh-pages 預設不發佈 underscore 檔案，但有 .nojekyll 就還好）
     head: {
       title: '欣聯大心 社區委員輪值抽籤系統',
