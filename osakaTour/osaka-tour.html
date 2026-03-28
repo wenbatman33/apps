@@ -384,6 +384,58 @@ nav{
   display:flex;align-items:center;justify-content:center;
   z-index:10;
 }
+
+/* ── CHECKLIST ── */
+.cl-section{padding:0 20px 20px}
+.cl-progress{margin:0 20px 12px;background:var(--card);border-radius:14px;padding:14px 16px;box-shadow:var(--sh)}
+.cl-prog-top{display:flex;justify-content:space-between;margin-bottom:8px}
+.cl-prog-label{font-size:13px;font-weight:500;color:var(--dark)}
+.cl-prog-count{font-size:13px;font-weight:600;color:var(--red)}
+.cl-prog-bar{height:6px;background:var(--border);border-radius:4px}
+.cl-prog-fill{height:100%;border-radius:4px;background:var(--red);transition:width .4s ease}
+.cl-category{margin-bottom:12px}
+.cl-cat-title{font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--t2);margin-bottom:8px}
+.cl-items{background:var(--card);border-radius:14px;box-shadow:var(--sh);overflow:hidden}
+.cl-item{display:flex;align-items:center;gap:12px;padding:12px 16px;border-bottom:1px solid var(--border);cursor:pointer;transition:background .15s;-webkit-tap-highlight-color:transparent}
+.cl-item:last-child{border-bottom:none}
+.cl-item.checked{background:#F8FBF9}
+.cl-check{width:22px;height:22px;border-radius:6px;border:2px solid var(--border);display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .2s}
+.cl-item.checked .cl-check{background:var(--red);border-color:var(--red)}
+.cl-check-icon{width:12px;height:12px;stroke:#fff;fill:none;stroke-width:3;stroke-linecap:round;stroke-linejoin:round;opacity:0;transition:opacity .15s}
+.cl-item.checked .cl-check-icon{opacity:1}
+.cl-label{font-size:14px;font-weight:500;color:var(--dark);transition:color .15s}
+.cl-item.checked .cl-label{color:var(--t3);text-decoration:line-through}
+.cl-reset-btn{width:100%;margin-top:8px;background:none;border:1.5px solid var(--border);border-radius:10px;padding:10px;font-size:12px;color:var(--t2);font-family:'DM Sans',sans-serif;cursor:pointer}
+
+/* ── EXPENSE TRACKER ── */
+.expt-wrap{padding:0 20px 28px}
+.expt-setup{background:var(--red-lt);border-radius:12px;padding:12px 14px;margin-bottom:12px;font-size:12px;color:var(--red);line-height:1.7}
+.expt-setup b{font-weight:700}
+.expt-url-input{width:100%;margin-top:8px;background:#fff;border:1.5px solid #e8c8c5;border-radius:8px;padding:8px 10px;font-size:11px;color:var(--dark);font-family:'DM Sans',sans-serif;outline:none}
+.expt-url-input:focus{border-color:var(--red)}
+.expt-form{background:var(--card);border-radius:14px;padding:16px;box-shadow:var(--sh);margin-bottom:12px}
+.expt-row{display:flex;gap:8px;margin-bottom:10px}
+.expt-select,.expt-amount{flex:1;background:var(--bg);border:1.5px solid var(--border);border-radius:10px;padding:10px 12px;font-size:14px;font-weight:500;color:var(--dark);font-family:'DM Sans',sans-serif;outline:none;-webkit-appearance:none;transition:border-color .2s}
+.expt-select:focus,.expt-amount:focus{border-color:var(--red)}
+.expt-note{width:100%;background:var(--bg);border:1.5px solid var(--border);border-radius:10px;padding:10px 12px;font-size:13px;color:var(--dark);font-family:'DM Sans',sans-serif;outline:none;margin-bottom:10px;transition:border-color .2s}
+.expt-note:focus{border-color:var(--red)}
+.expt-submit{width:100%;background:var(--dark);color:#fff;border:none;border-radius:10px;padding:12px;font-size:14px;font-weight:600;font-family:'DM Sans',sans-serif;cursor:pointer;transition:opacity .15s}
+.expt-submit:active{opacity:.75}
+.expt-submit.saving{opacity:.6;pointer-events:none}
+.expt-total{display:flex;justify-content:space-between;align-items:center;background:var(--dark);border-radius:14px;padding:14px 18px;margin-bottom:10px}
+.expt-total-label{font-size:11px;color:rgba(255,255,255,.55);letter-spacing:.06em;text-transform:uppercase}
+.expt-total-val{font-family:'Cormorant Garamond',serif;font-size:28px;font-weight:400;color:#fff}
+.expt-total-twd{font-size:11px;color:rgba(255,255,255,.4);margin-top:2px;text-align:right}
+.expt-list{background:var(--card);border-radius:14px;box-shadow:var(--sh);overflow:hidden}
+.expt-entry{display:flex;align-items:center;justify-content:space-between;padding:11px 14px;border-bottom:1px solid var(--border)}
+.expt-entry:last-child{border-bottom:none}
+.expt-entry-left{display:flex;align-items:center;gap:10px}
+.expt-entry-emoji{width:36px;height:36px;border-radius:10px;background:var(--bg);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
+.expt-entry-name{font-size:13px;font-weight:600;color:var(--dark)}
+.expt-entry-sub{font-size:11px;color:var(--t2);margin-top:1px}
+.expt-entry-amount{font-size:15px;font-weight:700;color:var(--dark)}
+.expt-empty{padding:28px;text-align:center;color:var(--t3);font-size:13px}
+.expt-del{background:none;border:none;font-size:16px;color:var(--t3);cursor:pointer;padding:0 0 0 8px;flex-shrink:0}
 </style>
 </head>
 <body>
@@ -841,6 +893,58 @@ nav{
           </div>
         </div>
       </div>
+
+      <!-- ── 出國必備清單 ── -->
+      <div class="info-section">
+        <div class="info-sec-title">出國必備清單</div>
+      </div>
+      <div class="cl-progress">
+        <div class="cl-prog-top">
+          <div class="cl-prog-label">準備進度</div>
+          <div class="cl-prog-count" id="cl-count">0 / 0</div>
+        </div>
+        <div class="cl-prog-bar"><div class="cl-prog-fill" id="cl-fill" style="width:0%"></div></div>
+      </div>
+      <div class="cl-section" id="cl-section"></div>
+
+      <!-- ── 旅費記帳 ── -->
+      <div class="info-section">
+        <div class="info-sec-title">旅費記帳</div>
+      </div>
+      <div class="expt-wrap">
+        <div class="expt-setup" id="expt-setup">
+          <b>🔗 連結 Google 試算表</b><br>
+          需先建立 Google Apps Script Web App，將試算表網址貼入下方。<br>
+          未設定時仍可記錄於本機。
+          <input class="expt-url-input" id="expt-url" type="url" placeholder="貼上 Google Apps Script 網址…" oninput="saveSheetUrl(this.value)"/>
+        </div>
+        <div class="expt-form">
+          <div class="expt-row">
+            <select class="expt-select" id="expt-cat">
+              <option value="🍜 餐飲">🍜 餐飲</option>
+              <option value="🚃 交通">🚃 交通</option>
+              <option value="🏯 景點">🏯 景點</option>
+              <option value="🛍 購物">🛍 購物</option>
+              <option value="🏨 住宿">🏨 住宿</option>
+              <option value="💰 其他">💰 其他</option>
+            </select>
+            <input class="expt-amount" id="expt-amount" type="number" placeholder="金額 ¥" inputmode="numeric"/>
+          </div>
+          <input class="expt-note" id="expt-note" type="text" placeholder="備註（可選）"/>
+          <button class="expt-submit" id="expt-btn" onclick="addExpense()">＋ 記帳</button>
+        </div>
+        <div class="expt-total">
+          <div>
+            <div class="expt-total-label">本次合計</div>
+            <div class="expt-total-val" id="expt-total">¥ 0</div>
+          </div>
+          <div>
+            <div class="expt-total-twd" id="expt-twd"></div>
+          </div>
+        </div>
+        <div class="expt-list" id="expt-list"></div>
+      </div>
+
     </div><!-- /info -->
 
   </div><!-- /scroll -->
@@ -1014,6 +1118,152 @@ const MODALS = {
     chips:[{icon:'📍',text:'新世界・惠美須町'},{icon:'⏰',text:'11:00–22:00'},{icon:'💰',text:'¥800–2,000'}]
   },
 };
+
+// ── CHECKLIST ─────────────────────────────────────────
+const CHECKLIST = [
+  {cat:'📋 證件 & 票券',items:['護照（有效期 6 個月以上）','機票確認函（CI 156）','飯店預訂確認','旅遊平安保險','USJ Express Pass']},
+  {cat:'💳 金錢',items:['信用卡（Visa / JCB）','日幣現金（¥10,000 備用）','ICOCA 電子票卡']},
+  {cat:'📱 3C & 充電',items:['手機充電線','行動電源（< 100Wh）','電源轉接頭（Type A）','相機 & 備用記憶卡']},
+  {cat:'👗 衣物',items:['換洗衣物（5 套）','薄外套 / 風衣','舒適步行鞋','拖鞋（飯店用）']},
+  {cat:'🧴 盥洗 & 健康',items:['牙刷 & 牙膏','洗髮精 & 沐浴乳','防曬乳（SPF50）','常備藥（腸胃藥・感冒藥）','OK繃']},
+];
+
+function clKey(ci,ii){return `osaka_cl_${ci}_${ii}`;}
+function renderChecklist(){
+  const sec = document.getElementById('cl-section');
+  let total=0,done=0;
+  sec.innerHTML = CHECKLIST.map((cat,ci)=>{
+    return `<div class="cl-category">
+      <div class="cl-cat-title">${cat.cat}</div>
+      <div class="cl-items">
+        ${cat.items.map((item,ii)=>{
+          total++;
+          const checked = localStorage.getItem(clKey(ci,ii))==='1';
+          if(checked) done++;
+          return `<div class="cl-item ${checked?'checked':''}" onclick="toggleCl(${ci},${ii},this)">
+            <div class="cl-check">
+              <svg class="cl-check-icon" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+            </div>
+            <div class="cl-label">${item}</div>
+          </div>`;
+        }).join('')}
+      </div>
+    </div>`;
+  }).join('');
+  sec.innerHTML += `<button class="cl-reset-btn" onclick="resetChecklist()">重置清單</button>`;
+  updateClProgress(done,total);
+}
+function updateClProgress(done,total){
+  document.getElementById('cl-count').textContent=`${done} / ${total}`;
+  document.getElementById('cl-fill').style.width=`${total?Math.round(done/total*100):0}%`;
+}
+function toggleCl(ci,ii,el){
+  const checked = el.classList.toggle('checked');
+  localStorage.setItem(clKey(ci,ii), checked?'1':'0');
+  const allItems = document.querySelectorAll('.cl-item');
+  const done = [...allItems].filter(e=>e.classList.contains('checked')).length;
+  updateClProgress(done, allItems.length);
+}
+function resetChecklist(){
+  CHECKLIST.forEach((cat,ci)=>cat.items.forEach((_,ii)=>localStorage.removeItem(clKey(ci,ii))));
+  renderChecklist();
+}
+renderChecklist();
+
+// ── EXPENSE TRACKER ────────────────────────────────────
+const EXP_STORAGE = 'osaka_expenses';
+const URL_STORAGE = 'osaka_sheets_url';
+const JPY_TWD = 0.22; // 1 JPY ≈ 0.22 TWD (approximate)
+
+function saveSheetUrl(val){localStorage.setItem(URL_STORAGE, val.trim());}
+
+function getExpenses(){
+  try{return JSON.parse(localStorage.getItem(EXP_STORAGE)||'[]');}catch{return [];}
+}
+function saveExpenses(arr){localStorage.setItem(EXP_STORAGE, JSON.stringify(arr));}
+
+async function addExpense(){
+  const cat = document.getElementById('expt-cat').value;
+  const amount = parseInt(document.getElementById('expt-amount').value);
+  const note = document.getElementById('expt-note').value.trim();
+  if(!amount || amount<=0) return;
+
+  const entry = {
+    id: Date.now(),
+    cat,
+    amount,
+    note,
+    date: new Date().toLocaleDateString('zh-TW',{month:'2-digit',day:'2-digit'})
+  };
+
+  const btn = document.getElementById('expt-btn');
+  btn.classList.add('saving');
+  btn.textContent = '記錄中…';
+
+  // Save to localStorage
+  const arr = getExpenses();
+  arr.unshift(entry);
+  saveExpenses(arr);
+
+  // Try sending to Google Sheets
+  const url = localStorage.getItem(URL_STORAGE);
+  if(url){
+    try{
+      await fetch(url,{
+        method:'POST',
+        mode:'no-cors',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({date:entry.date, category:cat, amount, note})
+      });
+    }catch(e){console.warn('Google Sheets sync failed',e);}
+  }
+
+  document.getElementById('expt-amount').value='';
+  document.getElementById('expt-note').value='';
+  btn.classList.remove('saving');
+  btn.textContent='＋ 記帳';
+  renderExpenses();
+}
+
+function deleteExpense(id){
+  const arr = getExpenses().filter(e=>e.id!==id);
+  saveExpenses(arr);
+  renderExpenses();
+}
+
+function renderExpenses(){
+  const arr = getExpenses();
+  const total = arr.reduce((s,e)=>s+e.amount,0);
+  document.getElementById('expt-total').textContent = `¥ ${total.toLocaleString()}`;
+  document.getElementById('expt-twd').textContent = total>0?`≈ NT$ ${Math.round(total*JPY_TWD).toLocaleString()}`:'';
+  const list = document.getElementById('expt-list');
+  if(!arr.length){
+    list.innerHTML='<div class="expt-empty">尚無記錄</div>';
+    return;
+  }
+  list.innerHTML = arr.map(e=>`
+    <div class="expt-entry">
+      <div class="expt-entry-left">
+        <div class="expt-entry-emoji">${e.cat.split(' ')[0]}</div>
+        <div>
+          <div class="expt-entry-name">${e.cat.split(' ').slice(1).join(' ')}${e.note?' · '+e.note:''}</div>
+          <div class="expt-entry-sub">${e.date}</div>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center">
+        <div class="expt-entry-amount">¥${e.amount.toLocaleString()}</div>
+        <button class="expt-del" onclick="deleteExpense(${e.id})">×</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+// init expense tracker
+(function(){
+  const savedUrl = localStorage.getItem(URL_STORAGE);
+  if(savedUrl) document.getElementById('expt-url').value = savedUrl;
+  renderExpenses();
+})();
 
 // ── COUNTDOWN ────────────────────────────────────────
 (function(){
