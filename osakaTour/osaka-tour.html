@@ -401,7 +401,7 @@ nav{
       <div class="hero" onclick="openModal('dotonbori')">
         <img src="images/dotonbori-hero.jpg" alt="道頓堀" loading="lazy"/>
         <div class="hero-overlay"></div>
-        <div class="hero-badge">4/30 – 5/4 · 5 天</div>
+        <div class="hero-badge">4/29 – 5/4 · 6 天</div>
         <div class="hero-body">
           <div class="hero-city">大阪 <span>Osaka, Japan</span></div>
           <div class="hero-stats">
@@ -411,7 +411,7 @@ nav{
             </div>
             <div class="hero-stat">
               <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
-              <span>5 天行程</span>
+              <span>6 天行程</span>
             </div>
             <div class="hero-stat">
               <svg viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/><circle cx="12" cy="9" r="2.5"/></svg>
@@ -427,7 +427,7 @@ nav{
           <div class="cd-dot"></div>
           <div>
             <div class="cd-text">出發倒數</div>
-            <div class="cd-sub">2025年4月30日 啟程</div>
+            <div class="cd-sub">2025年4月29日 啟程</div>
           </div>
         </div>
         <div>
@@ -443,6 +443,15 @@ nav{
       </div>
       <div class="h-scroll">
         <div class="day-card" onclick="switchTab('itinerary');selectDay(0)">
+          <img src="https://images.unsplash.com/photo-1436491865332-7a61a109cc05?w=400&q=80&fit=crop" alt="出發日"/>
+          <div class="day-card-ov"></div>
+          <div class="day-card-tag">D0 · 4/29</div>
+          <div class="day-card-body">
+            <div class="day-card-title">出發・道樂螃蟹</div>
+            <div class="day-card-date">CI 156 · TPE → KIX</div>
+          </div>
+        </div>
+        <div class="day-card" onclick="switchTab('itinerary');selectDay(1)">
           <img src="images/usj.jpg" alt="USJ"/>
           <div class="day-card-ov"></div>
           <div class="day-card-tag">D1 · 4/30</div>
@@ -451,7 +460,7 @@ nav{
             <div class="day-card-date">Universal Studios Japan</div>
           </div>
         </div>
-        <div class="day-card" onclick="switchTab('itinerary');selectDay(1)">
+        <div class="day-card" onclick="switchTab('itinerary');selectDay(2)">
           <img src="images/nintendo.jpg" alt="任天堂博物館"/>
           <div class="day-card-ov"></div>
           <div class="day-card-tag">D2 · 5/1</div>
@@ -460,7 +469,7 @@ nav{
             <div class="day-card-date">Nintendo Museum · 宇治</div>
           </div>
         </div>
-        <div class="day-card" onclick="switchTab('itinerary');selectDay(2)">
+        <div class="day-card" onclick="switchTab('itinerary');selectDay(3)">
           <img src="images/osaka-castle.jpg" alt="大阪城"/>
           <div class="day-card-ov"></div>
           <div class="day-card-tag">D3 · 5/2</div>
@@ -469,7 +478,7 @@ nav{
             <div class="day-card-date">Osaka Castle · Shinsekai</div>
           </div>
         </div>
-        <div class="day-card" onclick="switchTab('itinerary');selectDay(3)">
+        <div class="day-card" onclick="switchTab('itinerary');selectDay(4)">
           <img src="images/nara.jpg" alt="奈良"/>
           <div class="day-card-ov"></div>
           <div class="day-card-tag">D4 · 5/3</div>
@@ -478,7 +487,7 @@ nav{
             <div class="day-card-date">Nara · 小鹿と遊ぶ</div>
           </div>
         </div>
-        <div class="day-card" onclick="switchTab('itinerary');selectDay(4)">
+        <div class="day-card" onclick="switchTab('itinerary');selectDay(5)">
           <img src="images/dotonbori-night.jpg" alt="道頓堀"/>
           <div class="day-card-ov"></div>
           <div class="day-card-tag">D5 · 5/4</div>
@@ -529,16 +538,17 @@ nav{
     <div class="panel" id="p-itinerary">
       <div class="itin-header">
         <h2>旅行行程</h2>
-        <p>4月30日 – 5月4日 · 5天4夜</p>
+        <p>4月29日 – 5月4日 · 6天5夜</p>
       </div>
 
       <!-- Day tabs -->
       <div class="day-tabs" id="day-tabs">
-        <div class="dtab active" onclick="selectDay(0)"><div class="dtab-day">D1</div><div class="dtab-date">4/30</div></div>
-        <div class="dtab" onclick="selectDay(1)"><div class="dtab-day">D2</div><div class="dtab-date">5/1</div></div>
-        <div class="dtab" onclick="selectDay(2)"><div class="dtab-day">D3</div><div class="dtab-date">5/2</div></div>
-        <div class="dtab" onclick="selectDay(3)"><div class="dtab-day">D4</div><div class="dtab-date">5/3</div></div>
-        <div class="dtab" onclick="selectDay(4)"><div class="dtab-day">D5</div><div class="dtab-date">5/4</div></div>
+        <div class="dtab active" onclick="selectDay(0)"><div class="dtab-day">D0</div><div class="dtab-date">4/29</div></div>
+        <div class="dtab" onclick="selectDay(1)"><div class="dtab-day">D1</div><div class="dtab-date">4/30</div></div>
+        <div class="dtab" onclick="selectDay(2)"><div class="dtab-day">D2</div><div class="dtab-date">5/1</div></div>
+        <div class="dtab" onclick="selectDay(3)"><div class="dtab-day">D3</div><div class="dtab-date">5/2</div></div>
+        <div class="dtab" onclick="selectDay(4)"><div class="dtab-day">D4</div><div class="dtab-date">5/3</div></div>
+        <div class="dtab" onclick="selectDay(5)"><div class="dtab-day">D5</div><div class="dtab-date">5/4</div></div>
       </div>
 
       <!-- Timeline content per day -->
@@ -621,13 +631,13 @@ nav{
             </div>
             <div class="food-price">¥800~</div>
           </div>
-          <div class="food-row">
+          <div class="food-row" onclick="openModal('kani-doraku')">
             <div class="food-emoji">🦀</div>
             <div class="food-info">
-              <div class="food-name">道頓堀螃蟹道樂</div>
-              <div class="food-sub">超巨大螃蟹招牌・海鮮鍋料理</div>
+              <div class="food-name">蟹道樂 道頓堀本店</div>
+              <div class="food-sub">超巨大螃蟹招牌・D0 晚餐首選</div>
             </div>
-            <div class="food-price">¥3,000~</div>
+            <div class="food-price">¥4,000~</div>
           </div>
         </div>
       </div>
@@ -888,6 +898,17 @@ nav{
 // ── DATA ──────────────────────────────────────────────
 const DAYS = [
   {
+    label:'4/29 · 出發日',
+    sub:'China Airlines CI 156 · TPE → KIX',
+    items:[
+      {time:'08:25',featured:true,img:'https://images.unsplash.com/photo-1436491865332-7a61a109cc05?w=600&q=80&fit=crop',tag:'航班',tagClass:'blue',name:'CI 156 台北→大阪出發',jp:'チャイナエアライン CI 156',desc:'華航 CI 156 從桃園國際機場 T1 出發，飛往關西國際機場。航程約2小時40分，日本時間12:05抵達KIX。建議出發前2.5小時抵達機場辦理登機手續。',price:'',time2:'TPE 08:25 → KIX 12:05',tips:'桃園機場T1 出境，記得確認行李限重與手提規定'},
+      {time:'13:00',featured:false,img:'https://images.unsplash.com/photo-1570125909232-eb263c188f7e?w=600&q=80&fit=crop',tag:'交通',tagClass:'blue',name:'入境・南海電鐵前往難波',jp:'かんさいくうこう → なんば',desc:'完成入境審查、提領行李後，在關西機場2樓南海電鐵購票，搭乘「Rapit特急 ラピート」約38分直達難波站。建議順手購買ICOCA電子錢包卡，後續交通方便使用。',price:'¥930',time2:'KIX → 難波 約38分',tips:'抵達難波即可步行至道頓堀、飯店、心齋橋'},
+      {time:'15:00',featured:false,img:'images/coffee.jpg',tag:'準備',tagClass:'green',name:'飯店入住・輕鬆休息',jp:'チェックイン',desc:'入住飯店後稍事休息，調整時差。可至附近便利商店採購零食、飲料與日用品，為接下來幾天的行程養足精神。',price:'',time2:'一般 15:00 後入住',tips:'若早到可先寄放行李，在附近閒逛後再回來辦理入住'},
+      {time:'17:30',featured:false,img:'images/dotonbori-night.jpg',tag:'景點',tagClass:'amber',name:'道頓堀初探・格力高廣告牌',jp:'どうとんぼり グリコサイン',desc:'第一次踏上大阪的土地！道頓堀格力高廣告牌是必拍地標，夕陽時分搭配霓虹初亮是絕佳拍照時機。沿著運河漫步，感受大阪最熱鬧的街頭氛圍。',price:'免費',time2:'全天',tips:'戎橋正面角度拍攝格力高廣告牌最好看'},
+      {time:'19:30',featured:true,img:'images/kuromon.jpg',tag:'晚餐',tagClass:'',name:'蟹道樂 道頓堀本店',jp:'かに道楽 どうとんぼり本店',desc:'第一晚就犒勞自己！蟹道樂是道頓堀最具代表性的螃蟹料理名店，招牌超巨大活動螃蟹懸掛門前相當壯觀。以北海道毛蟹、松葉蟹、鱈場蟹為主食材，提供螃蟹火鍋（蟹すき）、螃蟹刺身、螃蟹燒烤等多種料理，套餐豐富。黃金週人潮多，強烈建議事先電話或網路預約。',price:'¥4,000–8,000',time2:'11:00–22:00（L.O. 21:00）',tips:'官網或電話預約：道頓堀本店 06-6211-8975，黃金週必預約！'},
+    ]
+  },
+  {
     label:'4/30 · 環球影城',
     sub:'Universal Studios Japan',
     items:[
@@ -936,6 +957,12 @@ const DAYS = [
 ];
 
 const MODALS = {
+  'kani-doraku':{
+    img:'images/kuromon.jpg',
+    tag:'螃蟹料理',title:'蟹道樂 道頓堀本店',jp:'かに道楽 どうとんぼり本店',
+    desc:'道頓堀最具代表性的螃蟹料理名店！招牌超巨大活動螃蟹懸掛門口，已成大阪地標之一。以北海道毛蟹、松葉蟹、鱈場蟹為主食材，螃蟹火鍋（蟹すき）、螃蟹刺身、燒烤套餐應有盡有。黃金週必訂位！',
+    chips:[{icon:'📍',text:'道頓堀・中央區'},{icon:'⏰',text:'11:00–22:00'},{icon:'💰',text:'¥4,000–8,000'},{icon:'📞',text:'06-6211-8975（建議預約）'}]
+  },
   'dotonbori':{
     img:'https://images.unsplash.com/photo-WaHPhFveWLk?w=800&q=80',
     tag:'大阪地標',title:'道頓堀',jp:'どうとんぼり',
@@ -988,7 +1015,7 @@ const MODALS = {
 
 // ── COUNTDOWN ────────────────────────────────────────
 (function(){
-  const target = new Date('2025-04-30T00:00:00+09:00');
+  const target = new Date('2025-04-29T00:00:00+09:00');
   const now = new Date();
   const diff = Math.ceil((target - now) / 86400000);
   const el = document.getElementById('countdown-num');
