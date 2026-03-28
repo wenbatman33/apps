@@ -411,13 +411,13 @@ nav{
 .expt-wrap{padding:0 20px 28px}
 .expt-setup{background:var(--red-lt);border-radius:12px;padding:12px 14px;margin-bottom:12px;font-size:12px;color:var(--red);line-height:1.7}
 .expt-setup b{font-weight:700}
-.expt-url-input{width:100%;margin-top:8px;background:#fff;border:1.5px solid #e8c8c5;border-radius:8px;padding:8px 10px;font-size:11px;color:var(--dark);font-family:'DM Sans',sans-serif;outline:none}
+.expt-url-input{width:100%;margin-top:10px;background:#fff;border:1.5px solid #e8c8c5;border-radius:10px;padding:12px 14px;font-size:16px;color:var(--dark);font-family:'DM Sans',sans-serif;outline:none;-webkit-appearance:none}
 .expt-url-input:focus{border-color:var(--red)}
 .expt-form{background:var(--card);border-radius:14px;padding:16px;box-shadow:var(--sh);margin-bottom:12px}
 .expt-row{display:flex;gap:8px;margin-bottom:10px}
-.expt-select,.expt-amount{flex:1;background:var(--bg);border:1.5px solid var(--border);border-radius:10px;padding:10px 12px;font-size:14px;font-weight:500;color:var(--dark);font-family:'DM Sans',sans-serif;outline:none;-webkit-appearance:none;transition:border-color .2s}
+.expt-select,.expt-amount{flex:1;background:var(--bg);border:1.5px solid var(--border);border-radius:10px;padding:12px 14px;font-size:16px;font-weight:500;color:var(--dark);font-family:'DM Sans',sans-serif;outline:none;-webkit-appearance:none;transition:border-color .2s}
 .expt-select:focus,.expt-amount:focus{border-color:var(--red)}
-.expt-note{width:100%;background:var(--bg);border:1.5px solid var(--border);border-radius:10px;padding:10px 12px;font-size:13px;color:var(--dark);font-family:'DM Sans',sans-serif;outline:none;margin-bottom:10px;transition:border-color .2s}
+.expt-note{width:100%;background:var(--bg);border:1.5px solid var(--border);border-radius:10px;padding:12px 14px;font-size:16px;color:var(--dark);font-family:'DM Sans',sans-serif;outline:none;margin-bottom:10px;transition:border-color .2s;-webkit-appearance:none}
 .expt-note:focus{border-color:var(--red)}
 .expt-submit{width:100%;background:var(--dark);color:#fff;border:none;border-radius:10px;padding:12px;font-size:14px;font-weight:600;font-family:'DM Sans',sans-serif;cursor:pointer;transition:opacity .15s}
 .expt-submit:active{opacity:.75}
@@ -916,7 +916,7 @@ nav{
           <b>🔗 連結 Google 試算表</b><br>
           需先建立 Google Apps Script Web App，將試算表網址貼入下方。<br>
           未設定時仍可記錄於本機。
-          <input class="expt-url-input" id="expt-url" type="url" placeholder="貼上 Google Apps Script 網址…" oninput="saveSheetUrl(this.value)"/>
+          <input class="expt-url-input" id="expt-url" type="text" inputmode="url" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="貼上 Google Apps Script 網址…" oninput="saveSheetUrl(this.value)"/>
         </div>
         <div class="expt-form">
           <div class="expt-row">
