@@ -1283,9 +1283,10 @@ fetch('json/oyado_all_places.json')
   .then(r => r.json())
   .then(data => {
     oyadoData = data;
+    const HIDDEN_CATS = new Set(['oyado_ARCHITECTURE__ART','oyado_BAR','oyado_FLOWER_SHOP','oyado_HOTEL','oyado_LIQUOR_STORE']);
     // Build tabs
     const tabs = document.getElementById('oyado-tabs');
-    tabs.innerHTML = Object.entries(data).map(([key, cat]) => {
+    tabs.innerHTML = Object.entries(data).filter(([key])=>!HIDDEN_CATS.has(key)).map(([key, cat]) => {
       const zh = CAT_ZH[key] || cat.category_zh;
       const [emoji, ...label] = zh.split(' ');
       return `<button class="oyado-tab" id="otab-${key}" onclick="selectOyadoCat('${key}')">
@@ -1294,7 +1295,7 @@ fetch('json/oyado_all_places.json')
       </button>`;
     }).join('');
     // Select first tab
-    selectOyadoCat(Object.keys(data)[3]); // CAFE first
+    selectOyadoCat(Object.keys(data).find(k=>!HIDDEN_CATS.has(k)));
   })
   .catch(() => {
     document.getElementById('oyado-body').innerHTML = '<div class="oyado-loading">載入失敗，請重新整理</div>';
