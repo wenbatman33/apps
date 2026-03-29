@@ -1,0 +1,27 @@
+{
+  "permissions": {
+    "allow": [
+      "WebFetch(domain:unsplash.com)",
+      "WebFetch(domain:www.flickr.com)",
+      "WebSearch",
+      "WebFetch(domain:www.osakastation.com)",
+      "WebFetch(domain:elinchow.blogspot.com)",
+      "WebFetch(domain:medium.com)",
+      "WebFetch(domain:www.tourcounsel.com)",
+      "WebFetch(domain:arigatotravel.com)",
+      "WebFetch(domain:www.sprayedout.com)",
+      "WebFetch(domain:nerdnarration.wordpress.com)",
+      "WebFetch(domain:www.cityunscripted.com)",
+      "WebFetch(domain:www.klook.com)",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:api.unsplash.com)",
+      "WebFetch(domain:images.unsplash.com)",
+      "WebFetch(domain:www.jrailpass.com)",
+      "WebFetch(domain:www.jocjapantravel.com)",
+      "WebFetch(domain:www.kanpai-japan.com)",
+      "WebFetch(domain:www.japan365days.com)",
+      "WebFetch(domain:www.visitnara.jp)",
+      "WebFetch(domain:unseen-japan.com)"
+    ]
+  }
+}
