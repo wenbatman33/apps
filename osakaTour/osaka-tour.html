@@ -436,6 +436,9 @@ nav{
 .expt-entry-amount{font-size:15px;font-weight:700;color:var(--dark)}
 .expt-empty{padding:28px;text-align:center;color:var(--t3);font-size:13px}
 .expt-del{background:none;border:none;font-size:16px;color:var(--t3);cursor:pointer;padding:0 0 0 8px;flex-shrink:0}
+.expt-linked{display:flex;align-items:center;gap:8px;background:#E5F0EB;border-radius:12px;padding:10px 14px;margin-bottom:12px;font-size:13px;font-weight:500;color:#2A7A4E}
+.expt-name-input{width:100%;background:var(--bg);border:1.5px solid var(--border);border-radius:10px;padding:12px 14px;font-size:16px;color:var(--dark);font-family:'DM Sans',sans-serif;outline:none;margin-bottom:10px;transition:border-color .2s;-webkit-appearance:none}
+.expt-name-input:focus{border-color:var(--red)}
 </style>
 </head>
 <body>
@@ -912,13 +915,9 @@ nav{
         <div class="info-sec-title">旅費記帳</div>
       </div>
       <div class="expt-wrap">
-        <div class="expt-setup" id="expt-setup">
-          <b>🔗 連結 Google 試算表</b><br>
-          需先建立 Google Apps Script Web App，將試算表網址貼入下方。<br>
-          未設定時仍可記錄於本機。
-          <input class="expt-url-input" id="expt-url" type="text" inputmode="url" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="貼上 Google Apps Script 網址…" oninput="saveSheetUrl(this.value)"/>
-        </div>
+        <div class="expt-linked">✅ 已連結 Google 試算表</div>
         <div class="expt-form">
+          <input class="expt-name-input" id="expt-name" type="text" placeholder="記帳人名字（例如：Wen）" autocorrect="off" autocapitalize="words"/>
           <div class="expt-row">
             <select class="expt-select" id="expt-cat">
               <option value="🍜 餐飲">🍜 餐飲</option>
@@ -1172,10 +1171,9 @@ renderChecklist();
 
 // ── EXPENSE TRACKER ────────────────────────────────────
 const EXP_STORAGE = 'osaka_expenses';
-const URL_STORAGE = 'osaka_sheets_url';
-const JPY_TWD = 0.22; // 1 JPY ≈ 0.22 TWD (approximate)
-
-function saveSheetUrl(val){localStorage.setItem(URL_STORAGE, val.trim());}
+const NAME_STORAGE = 'osaka_last_name';
+const SHEET_URL = 'https://script.google.com/macros/s/AKfycbx5W2HgbZ_aSXBaycyDBp_NH52rLEkdIvUrHP-IKvKaFg-QAuOAHg85WyvzcRxuhnHf/exec';
+const JPY_TWD = 0.22;
 
 function getExpenses(){
   try{return JSON.parse(localStorage.getItem(EXP_STORAGE)||'[]');}catch{return [];}
@@ -1183,13 +1181,19 @@ function getExpenses(){
 function saveExpenses(arr){localStorage.setItem(EXP_STORAGE, JSON.stringify(arr));}
 
 async function addExpense(){
-  const cat = document.getElementById('expt-cat').value;
+  const name = document.getElementById('expt-name').value.trim();
+  const cat  = document.getElementById('expt-cat').value;
   const amount = parseInt(document.getElementById('expt-amount').value);
   const note = document.getElementById('expt-note').value.trim();
   if(!amount || amount<=0) return;
+  if(!name){ document.getElementById('expt-name').focus(); return; }
+
+  // Remember last name
+  localStorage.setItem(NAME_STORAGE, name);
 
   const entry = {
     id: Date.now(),
+    name,
     cat,
     amount,
     note,
@@ -1205,18 +1209,15 @@ async function addExpense(){
   arr.unshift(entry);
   saveExpenses(arr);
 
-  // Try sending to Google Sheets
-  const url = localStorage.getItem(URL_STORAGE);
-  if(url){
-    try{
-      await fetch(url,{
-        method:'POST',
-        mode:'no-cors',
-        headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({date:entry.date, category:cat, amount, note})
-      });
-    }catch(e){console.warn('Google Sheets sync failed',e);}
-  }
+  // Sync to Google Sheets
+  try{
+    await fetch(SHEET_URL,{
+      method:'POST',
+      mode:'no-cors',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({date:entry.date, name, category:cat, amount, note})
+    });
+  }catch(e){console.warn('Sheets sync failed',e);}
 
   document.getElementById('expt-amount').value='';
   document.getElementById('expt-note').value='';
@@ -1246,7 +1247,7 @@ function renderExpenses(){
       <div class="expt-entry-left">
         <div class="expt-entry-emoji">${e.cat.split(' ')[0]}</div>
         <div>
-          <div class="expt-entry-name">${e.cat.split(' ').slice(1).join(' ')}${e.note?' · '+e.note:''}</div>
+          <div class="expt-entry-name">${e.name?e.name+' · ':''}${e.cat.split(' ').slice(1).join(' ')}${e.note?' · '+e.note:''}</div>
           <div class="expt-entry-sub">${e.date}</div>
         </div>
       </div>
@@ -1260,8 +1261,8 @@ function renderExpenses(){
 
 // init expense tracker
 (function(){
-  const savedUrl = localStorage.getItem(URL_STORAGE);
-  if(savedUrl) document.getElementById('expt-url').value = savedUrl;
+  const lastName = localStorage.getItem(NAME_STORAGE);
+  if(lastName) document.getElementById('expt-name').value = lastName;
   renderExpenses();
 })();
 
