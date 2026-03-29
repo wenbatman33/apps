@@ -1274,6 +1274,8 @@ let oyadoData = null;
 let oyadoCurrentKey = null;
 let oyadoMap = null;
 let oyadoMarker = null;
+let oyadoGeoCache = {};
+let oyadoAbort = null;
 
 function initOyadoMap() {
   if(oyadoMap) { oyadoMap.invalidateSize(); return; }
@@ -1305,31 +1307,42 @@ fetch('json/oyado_all_places.json')
     document.getElementById('oyado-body').innerHTML = '<div class="oyado-loading">載入失敗，請重新整理</div>';
   });
 
+function placeMarker(lat, lon, name) {
+  if(oyadoMarker) oyadoMarker.remove();
+  oyadoMarker = L.marker([lat, lon]).addTo(oyadoMap).bindPopup(`<b>${name}</b>`).openPopup();
+  oyadoMap.flyTo([lat, lon], 16, {duration:1});
+}
+
 function showOnMap(name, el) {
   document.querySelectorAll('.oyado-place').forEach(p => p.classList.remove('selected'));
   el.classList.add('selected');
-  const q = encodeURIComponent(name + ', 大阪, 日本');
-  fetch(`https://nominatim.openstreetmap.org/search?q=${q}&format=json&limit=1&countrycodes=jp`)
-    .then(r => r.json())
+
+  // Use cache if available
+  if(oyadoGeoCache[name]) {
+    placeMarker(oyadoGeoCache[name].lat, oyadoGeoCache[name].lon, name);
+    return;
+  }
+
+  // Cancel any in-flight request
+  if(oyadoAbort) oyadoAbort.abort();
+  oyadoAbort = new AbortController();
+  const sig = oyadoAbort.signal;
+
+  const tryFetch = (q) => fetch(`https://nominatim.openstreetmap.org/search?q=${q}&format=json&limit=1&countrycodes=jp`, {signal: sig})
+    .then(r => r.json());
+
+  tryFetch(encodeURIComponent(name + ', 大阪, 日本'))
     .then(data => {
-      if(data.length > 0){
-        const lat = parseFloat(data[0].lat), lon = parseFloat(data[0].lon);
-        if(oyadoMarker) oyadoMarker.remove();
-        oyadoMarker = L.marker([lat, lon]).addTo(oyadoMap).bindPopup(`<b>${name}</b>`).openPopup();
-        oyadoMap.flyTo([lat, lon], 16, {duration:1});
-      } else {
-        // fallback: try without city
-        fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(name)}&format=json&limit=1&countrycodes=jp&viewbox=135.3,34.5,135.8,35.1&bounded=1`)
-          .then(r => r.json())
-          .then(data2 => {
-            if(data2.length > 0){
-              const lat = parseFloat(data2[0].lat), lon = parseFloat(data2[0].lon);
-              if(oyadoMarker) oyadoMarker.remove();
-              oyadoMarker = L.marker([lat, lon]).addTo(oyadoMap).bindPopup(`<b>${name}</b>`).openPopup();
-              oyadoMap.flyTo([lat, lon], 16, {duration:1});
-            }
-          }).catch(()=>{});
-      }
+      if(data.length > 0) return data[0];
+      // fallback: search within Osaka/Kyoto bounding box
+      return tryFetch(encodeURIComponent(name) + '&viewbox=135.3,34.5,135.8,35.1&bounded=1')
+        .then(d2 => d2[0] || null);
+    })
+    .then(result => {
+      if(!result) return;
+      const lat = parseFloat(result.lat), lon = parseFloat(result.lon);
+      oyadoGeoCache[name] = {lat, lon};
+      placeMarker(lat, lon, name);
     })
     .catch(()=>{});
 }
