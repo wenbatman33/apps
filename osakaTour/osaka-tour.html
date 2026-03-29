@@ -436,6 +436,26 @@ nav{
 .expt-entry-amount{font-size:15px;font-weight:700;color:var(--dark)}
 .expt-empty{padding:28px;text-align:center;color:var(--t3);font-size:13px}
 .expt-del{background:none;border:none;font-size:16px;color:var(--t3);cursor:pointer;padding:0 0 0 8px;flex-shrink:0}
+
+/* ── OYADO EXPLORE ── */
+.oyado-tabs{display:flex;gap:8px;padding:0 20px 16px;overflow-x:auto;scrollbar-width:none}
+.oyado-tabs::-webkit-scrollbar{display:none}
+.oyado-tab{flex:0 0 auto;display:flex;flex-direction:column;align-items:center;gap:3px;padding:10px 14px;border-radius:14px;border:1.5px solid var(--border);background:var(--card);cursor:pointer;font-family:'DM Sans',sans-serif;font-size:10px;font-weight:500;color:var(--t2);white-space:nowrap;transition:all .2s;line-height:1.3}
+.oyado-tab-emoji{font-size:20px;line-height:1}
+.oyado-tab.active{background:var(--dark);border-color:var(--dark);color:#fff}
+.oyado-cat-header{display:flex;align-items:center;justify-content:space-between;padding:0 20px 14px}
+.oyado-cat-title{font-family:'Cormorant Garamond',serif;font-size:20px;font-weight:500;color:var(--dark)}
+.oyado-map-btn{font-size:11px;color:var(--red);text-decoration:none;font-weight:600;background:var(--red-lt);padding:5px 10px;border-radius:8px;white-space:nowrap}
+.oyado-places{padding:0 20px 28px;display:flex;flex-direction:column;gap:8px}
+.oyado-place{display:flex;align-items:center;justify-content:space-between;background:var(--card);border-radius:14px;padding:13px 16px;box-shadow:var(--sh);text-decoration:none;gap:10px;transition:transform .15s;-webkit-tap-highlight-color:transparent}
+.oyado-place:active{transform:scale(.98)}
+.oyado-place-rank{font-size:11px;font-weight:700;color:var(--t3);width:18px;flex-shrink:0;text-align:center}
+.oyado-place-info{flex:1;min-width:0}
+.oyado-place-name{font-size:13px;font-weight:600;color:var(--dark);line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.oyado-place-sub{font-size:11px;color:var(--t2);margin-top:3px}
+.oyado-place-rating{font-size:12px;font-weight:700;color:var(--amber);flex-shrink:0}
+.oyado-place-arrow{font-size:18px;color:var(--t3);flex-shrink:0}
+.oyado-loading{padding:40px;text-align:center;color:var(--t3);font-size:13px}
 .expt-linked{display:flex;align-items:center;gap:8px;background:#E5F0EB;border-radius:12px;padding:10px 14px;margin-bottom:12px;font-size:13px;font-weight:500;color:#2A7A4E}
 .expt-name-input{width:100%;background:var(--bg);border:1.5px solid var(--border);border-radius:10px;padding:12px 14px;font-size:16px;color:var(--dark);font-family:'DM Sans',sans-serif;outline:none;margin-bottom:10px;transition:border-color .2s;-webkit-appearance:none}
 .expt-name-input:focus{border-color:var(--red)}
@@ -615,172 +635,14 @@ nav{
     <!-- ══ EXPLORE ══ -->
     <div class="panel" id="p-explore">
       <div class="exp-header">
-        <h2>探索大阪</h2>
-        <p>精選景點 · 美食 · 購物</p>
+        <h2>探索大阪・京都</h2>
+        <p>由 oyado 精選 · 點擊地點開啟 Google Maps</p>
       </div>
-
-      <div class="cat-tabs">
-        <div class="ctab active" onclick="filterCat(this,'all')">全部</div>
-        <div class="ctab" onclick="filterCat(this,'sight')">🏯 景點</div>
-        <div class="ctab" onclick="filterCat(this,'food')">🍜 美食</div>
-        <div class="ctab" onclick="filterCat(this,'cafe')">☕ 咖啡</div>
-        <div class="ctab" onclick="filterCat(this,'shop')">🛍 購物</div>
+      <div class="oyado-tabs" id="oyado-tabs">
+        <div class="oyado-loading">載入中…</div>
       </div>
-
-      <div class="exp-section" id="exp-sights" data-cat="sight">
-        <div class="exp-sec-title">必去景點</div>
-        <div class="spot-grid">
-          <div class="spot-card" onclick="openModal('osaka-castle')">
-            <img src="images/osaka-castle.jpg" alt="大阪城"/>
-            <div class="spot-body">
-              <div class="spot-name">大阪城天守閣</div>
-              <div class="spot-tag">🏯 ¥600 · D3</div>
-            </div>
-          </div>
-          <div class="spot-card" onclick="openModal('tsutenkaku')">
-            <img src="images/tsutenkaku.jpg" alt="通天閣"/>
-            <div class="spot-body">
-              <div class="spot-name">新世界・通天閣</div>
-              <div class="spot-tag">🗼 ¥800 · D3</div>
-            </div>
-          </div>
-          <div class="spot-card" onclick="openModal('nara')">
-            <img src="images/nara.jpg" alt="奈良"/>
-            <div class="spot-body">
-              <div class="spot-name">奈良公園小鹿</div>
-              <div class="spot-tag">🦌 免費 · D4</div>
-            </div>
-          </div>
-          <div class="spot-card" onclick="openModal('byodoin')">
-            <img src="images/byodoin.jpg" alt="平等院"/>
-            <div class="spot-body">
-              <div class="spot-name">平等院鳳凰堂</div>
-              <div class="spot-tag">🪙 ¥700 · D2</div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div class="exp-section" id="exp-food" data-cat="food">
-        <div class="exp-sec-title">大阪美食</div>
-        <div class="food-list">
-          <div class="food-row" onclick="openModal('mizuno')">
-            <div class="food-emoji">🥘</div>
-            <div class="food-info">
-              <div class="food-name">水了軒 Mizuno</div>
-              <div class="food-sub">道頓堀・正宗大阪燒 · D5 推薦</div>
-            </div>
-            <div class="food-price">¥1,500~</div>
-          </div>
-          <div class="food-row" onclick="openModal('kuromon')">
-            <div class="food-emoji">🦞</div>
-            <div class="food-info">
-              <div class="food-name">黑門市場</div>
-              <div class="food-sub">新鮮海鮮・生魚片・當場品嚐</div>
-            </div>
-            <div class="food-price">¥500~</div>
-          </div>
-          <div class="food-row" onclick="openModal('kushikatsu')">
-            <div class="food-emoji">🍢</div>
-            <div class="food-info">
-              <div class="food-name">新世界串炸</div>
-              <div class="food-sub">昭和風情・正宗炸串發源地</div>
-            </div>
-            <div class="food-price">¥800~</div>
-          </div>
-          <div class="food-row" onclick="openModal('kani-doraku')">
-            <div class="food-emoji">🦀</div>
-            <div class="food-info">
-              <div class="food-name">蟹道樂 道頓堀本店</div>
-              <div class="food-sub">超巨大螃蟹招牌・D0 晚餐首選</div>
-            </div>
-            <div class="food-price">¥4,000~</div>
-          </div>
-        </div>
-      </div>
-
-      <div class="exp-section" id="exp-cafe" data-cat="cafe">
-        <div class="exp-sec-title">精品咖啡</div>
-        <div class="food-list">
-          <div class="food-row">
-            <div class="food-emoji">☕</div>
-            <div class="food-info">
-              <div class="food-name">LiLo Coffee Roasters</div>
-              <div class="food-sub">大阪頂尖精品咖啡・輕焙派必喝</div>
-            </div>
-            <div class="food-price">¥500~</div>
-          </div>
-          <div class="food-row">
-            <div class="food-emoji">🐻</div>
-            <div class="food-info">
-              <div class="food-name">熊爪咖啡 KUMANOTE</div>
-              <div class="food-sub">熊掌遞飲品・超萌互動體驗</div>
-            </div>
-            <div class="food-price">¥800~</div>
-          </div>
-          <div class="food-row">
-            <div class="food-emoji">🌿</div>
-            <div class="food-info">
-              <div class="food-name">Tera Cafe Chaniwa</div>
-              <div class="food-sub">400年寺廟咖啡廳・禪意空間</div>
-            </div>
-            <div class="food-price">¥700~</div>
-          </div>
-          <div class="food-row">
-            <div class="food-emoji">🍵</div>
-            <div class="food-info">
-              <div class="food-name">MACCHA HOUSE</div>
-              <div class="food-sub">Morihan高級抹茶・抹茶提拉米蘇</div>
-            </div>
-            <div class="food-price">¥700~</div>
-          </div>
-          <div class="food-row">
-            <div class="food-emoji">☕</div>
-            <div class="food-info">
-              <div class="food-name">Mel Coffee Roasters</div>
-              <div class="food-sub">堀江的日式簡約小咖啡館</div>
-            </div>
-            <div class="food-price">¥500~</div>
-          </div>
-        </div>
-      </div>
-
-      <div class="exp-section" id="exp-shop" data-cat="shop">
-        <div class="exp-sec-title">購物推薦</div>
-        <div class="food-list">
-          <div class="food-row">
-            <div class="food-emoji">🛍</div>
-            <div class="food-info">
-              <div class="food-name">心齋橋筋商店街</div>
-              <div class="food-sub">心齋橋站步行・品牌&藥妝林立</div>
-            </div>
-            <div class="food-price">全天</div>
-          </div>
-          <div class="food-row">
-            <div class="food-emoji">✏️</div>
-            <div class="food-info">
-              <div class="food-name">LOFT 心齋橋</div>
-              <div class="food-sub">日系文具・廚房雜貨・旅行用品</div>
-            </div>
-            <div class="food-price">¥—</div>
-          </div>
-          <div class="food-row">
-            <div class="food-emoji">💊</div>
-            <div class="food-info">
-              <div class="food-name">松本清 藥妝</div>
-              <div class="food-sub">滿¥5,500免稅・心齋橋多間分店</div>
-            </div>
-            <div class="food-price">¥—</div>
-          </div>
-          <div class="food-row">
-            <div class="food-emoji">📷</div>
-            <div class="food-info">
-              <div class="food-name">ヨドバシカメラ 梅田</div>
-              <div class="food-sub">相機・耳機・Switch免稅最方便</div>
-            </div>
-            <div class="food-price">¥—</div>
-          </div>
-        </div>
+      <div id="oyado-body">
+        <div class="oyado-loading">載入中…</div>
       </div>
     </div><!-- /explore -->
 
@@ -1344,15 +1206,56 @@ function renderDay(i){
 }
 renderDay(0);
 
-// ── EXPLORE FILTER ────────────────────────────────────
-function filterCat(el, cat){
-  document.querySelectorAll('.ctab').forEach(t=>t.classList.remove('active'));
-  el.classList.add('active');
-  ['sights','food','cafe','shop'].forEach(s=>{
-    const sec = document.getElementById('exp-'+s);
-    const secCat = s==='sights'?'sight':s;
-    sec.style.display = (cat==='all'||cat===secCat) ? 'block':'none';
+// ── OYADO EXPLORE ─────────────────────────────────────
+let oyadoData = null;
+let oyadoCurrentKey = null;
+
+fetch('json/oyado_all_places.json')
+  .then(r => r.json())
+  .then(data => {
+    oyadoData = data;
+    // Build tabs
+    const tabs = document.getElementById('oyado-tabs');
+    tabs.innerHTML = Object.entries(data).map(([key, cat]) =>
+      `<button class="oyado-tab" id="otab-${key}" onclick="selectOyadoCat('${key}')">
+        <div class="oyado-tab-emoji">${cat.emoji}</div>
+        <div>${cat.category_zh}</div>
+      </button>`
+    ).join('');
+    // Select first tab
+    selectOyadoCat(Object.keys(data)[3]); // CAFE first
+  })
+  .catch(() => {
+    document.getElementById('oyado-body').innerHTML = '<div class="oyado-loading">載入失敗，請重新整理</div>';
   });
+
+function selectOyadoCat(key) {
+  if(!oyadoData) return;
+  oyadoCurrentKey = key;
+  document.querySelectorAll('.oyado-tab').forEach(t => t.classList.remove('active'));
+  const tab = document.getElementById('otab-' + key);
+  if(tab){ tab.classList.add('active'); tab.scrollIntoView({behavior:'smooth',block:'nearest',inline:'center'}); }
+  const cat = oyadoData[key];
+  const mapsSearchBase = 'https://www.google.com/maps/search/?api=1&query=';
+  document.getElementById('oyado-body').innerHTML = `
+    <div class="oyado-cat-header">
+      <div class="oyado-cat-title">${cat.emoji} ${cat.category_zh}</div>
+      <a class="oyado-map-btn" href="${cat.source_url}" target="_blank">地圖查看 →</a>
+    </div>
+    <div class="oyado-places">
+      ${cat.places.map((p, i) => `
+        <a class="oyado-place" href="${mapsSearchBase}${encodeURIComponent(p.name)}" target="_blank">
+          <div class="oyado-place-rank">${i + 1}</div>
+          <div class="oyado-place-info">
+            <div class="oyado-place-name">${p.name}</div>
+            <div class="oyado-place-sub">⭐ ${p.rating} &nbsp;·&nbsp; ${p.reviewCount} 則 &nbsp;·&nbsp; ${p.type}</div>
+          </div>
+          <div class="oyado-place-rating">${p.rating}</div>
+          <div class="oyado-place-arrow">›</div>
+        </a>
+      `).join('')}
+    </div>
+  `;
 }
 
 // ── MODAL ─────────────────────────────────────────────
