@@ -456,6 +456,21 @@ nav{
 .oyado-place-rating{font-size:12px;font-weight:700;color:var(--amber);flex-shrink:0}
 .oyado-place-arrow{font-size:18px;color:var(--t3);flex-shrink:0}
 .oyado-loading{padding:40px;text-align:center;color:var(--t3);font-size:13px}
+
+/* ── EXPLORE SPLIT LAYOUT ── */
+.scroll.explore-mode{overflow:hidden}
+#p-explore.on{display:flex;flex-direction:column;min-height:unset;height:100%}
+#p-explore .exp-header{padding:44px 20px 8px;flex-shrink:0}
+#p-explore .oyado-tabs{flex-shrink:0}
+.oyado-map-wrap{flex-shrink:0;height:210px;background:#e8e4dc;position:relative}
+.oyado-map-wrap iframe{width:100%;height:100%;border:none;display:block}
+.oyado-list-scroll{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;min-height:0}
+.oyado-list-scroll::-webkit-scrollbar{display:none}
+.oyado-place{display:flex;align-items:center;background:var(--card);border-radius:14px;padding:12px 14px;box-shadow:var(--sh);gap:10px;cursor:pointer;transition:all .15s;-webkit-tap-highlight-color:transparent}
+.oyado-place:active{transform:scale(.98)}
+.oyado-place.selected{background:var(--red-lt)}
+.oyado-place.selected .oyado-place-name{color:var(--red)}
+.oyado-ext-link{font-size:16px;color:var(--t3);text-decoration:none;padding:4px 2px;flex-shrink:0;display:flex;align-items:center}
 .expt-linked{display:flex;align-items:center;gap:8px;background:#E5F0EB;border-radius:12px;padding:10px 14px;margin-bottom:12px;font-size:13px;font-weight:500;color:#2A7A4E}
 .expt-name-input{width:100%;background:var(--bg);border:1.5px solid var(--border);border-radius:10px;padding:12px 14px;font-size:16px;color:var(--dark);font-family:'DM Sans',sans-serif;outline:none;margin-bottom:10px;transition:border-color .2s;-webkit-appearance:none}
 .expt-name-input:focus{border-color:var(--red)}
@@ -636,13 +651,21 @@ nav{
     <div class="panel" id="p-explore">
       <div class="exp-header">
         <h2>探索大阪・京都</h2>
-        <p>由 oyado 精選 · 點擊地點開啟 Google Maps</p>
+        <p>由 oyado 精選 · 點擊地點移動地圖</p>
       </div>
       <div class="oyado-tabs" id="oyado-tabs">
         <div class="oyado-loading">載入中…</div>
       </div>
-      <div id="oyado-body">
-        <div class="oyado-loading">載入中…</div>
+      <div class="oyado-map-wrap">
+        <iframe id="oyado-map-iframe"
+          src="https://maps.google.com/maps?q=大阪,Japan&output=embed&hl=zh-TW&z=13"
+          allowfullscreen loading="lazy" referrerpolicy="no-referrer-when-downgrade">
+        </iframe>
+      </div>
+      <div class="oyado-list-scroll">
+        <div id="oyado-body">
+          <div class="oyado-loading">載入中…</div>
+        </div>
       </div>
     </div><!-- /explore -->
 
@@ -1150,7 +1173,9 @@ function switchTab(tab){
     document.getElementById('p-'+t).classList.toggle('on', t===tab);
     document.getElementById('nb-'+t).classList.toggle('active', t===tab);
   });
-  document.getElementById('scroll').scrollTop = 0;
+  const scroll = document.getElementById('scroll');
+  scroll.classList.toggle('explore-mode', tab==='explore');
+  scroll.scrollTop = 0;
   if(tab==='itinerary') renderDay(currentDay);
 }
 
@@ -1229,6 +1254,13 @@ fetch('json/oyado_all_places.json')
     document.getElementById('oyado-body').innerHTML = '<div class="oyado-loading">載入失敗，請重新整理</div>';
   });
 
+function showOnMap(name, el) {
+  document.querySelectorAll('.oyado-place').forEach(p => p.classList.remove('selected'));
+  el.classList.add('selected');
+  document.getElementById('oyado-map-iframe').src =
+    `https://maps.google.com/maps?q=${encodeURIComponent(name)}&output=embed&hl=zh-TW&z=17`;
+}
+
 function selectOyadoCat(key) {
   if(!oyadoData) return;
   oyadoCurrentKey = key;
@@ -1236,23 +1268,24 @@ function selectOyadoCat(key) {
   const tab = document.getElementById('otab-' + key);
   if(tab){ tab.classList.add('active'); tab.scrollIntoView({behavior:'smooth',block:'nearest',inline:'center'}); }
   const cat = oyadoData[key];
-  const mapsSearchBase = 'https://www.google.com/maps/search/?api=1&query=';
+  // Reset map to category area
+  document.getElementById('oyado-map-iframe').src =
+    `https://maps.google.com/maps?q=大阪,Japan&output=embed&hl=zh-TW&z=13`;
   document.getElementById('oyado-body').innerHTML = `
     <div class="oyado-cat-header">
       <div class="oyado-cat-title">${cat.emoji} ${cat.category_zh}</div>
-      <a class="oyado-map-btn" href="${cat.source_url}" target="_blank">地圖查看 →</a>
+      <a class="oyado-map-btn" href="${cat.source_url}" target="_blank">清單 →</a>
     </div>
     <div class="oyado-places">
       ${cat.places.map((p, i) => `
-        <a class="oyado-place" href="${mapsSearchBase}${encodeURIComponent(p.name)}" target="_blank">
+        <div class="oyado-place" onclick="showOnMap('${p.name.replace(/'/g,"\\'")}', this)">
           <div class="oyado-place-rank">${i + 1}</div>
           <div class="oyado-place-info">
             <div class="oyado-place-name">${p.name}</div>
             <div class="oyado-place-sub">⭐ ${p.rating} &nbsp;·&nbsp; ${p.reviewCount} 則 &nbsp;·&nbsp; ${p.type}</div>
           </div>
-          <div class="oyado-place-rating">${p.rating}</div>
-          <div class="oyado-place-arrow">›</div>
-        </a>
+          <a class="oyado-ext-link" href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(p.name)}" target="_blank" onclick="event.stopPropagation()">↗</a>
+        </div>
       `).join('')}
     </div>
   `;
