@@ -472,7 +472,7 @@ nav{
             </div>
             <div class="hero-stat">
               <svg viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/><circle cx="12" cy="9" r="2.5"/></svg>
-              <span>大阪・奈良・宇治</span>
+              <span>大阪・京都・宇治</span>
             </div>
           </div>
         </div>
@@ -522,8 +522,8 @@ nav{
           <div class="day-card-ov"></div>
           <div class="day-card-tag">D2 · 5/1</div>
           <div class="day-card-body">
-            <div class="day-card-title">任天堂博物館</div>
-            <div class="day-card-date">Nintendo Museum · 宇治</div>
+            <div class="day-card-title">任天堂・teamLab</div>
+            <div class="day-card-date">Nintendo Museum · 京都</div>
           </div>
         </div>
         <div class="day-card" onclick="switchTab('itinerary');selectDay(3)">
@@ -531,17 +531,17 @@ nav{
           <div class="day-card-ov"></div>
           <div class="day-card-tag">D3 · 5/2</div>
           <div class="day-card-body">
-            <div class="day-card-title">大阪城・新世界</div>
-            <div class="day-card-date">Osaka Castle · Shinsekai</div>
+            <div class="day-card-title">大阪城・動物園</div>
+            <div class="day-card-date">Osaka Castle · Tennoji Zoo</div>
           </div>
         </div>
         <div class="day-card" onclick="switchTab('itinerary');selectDay(4)">
-          <img src="images/nara.jpg" alt="奈良"/>
+          <img src="https://images.unsplash.com/photo-1559827260-dc66d52bef19?w=400&q=80&fit=crop" alt="海遊館"/>
           <div class="day-card-ov"></div>
           <div class="day-card-tag">D4 · 5/3</div>
           <div class="day-card-body">
-            <div class="day-card-title">奈良一日遊</div>
-            <div class="day-card-date">Nara · 小鹿と遊ぶ</div>
+            <div class="day-card-title">海遊館・天保山</div>
+            <div class="day-card-date">Kaiyukan · Tempozan</div>
           </div>
         </div>
         <div class="day-card" onclick="switchTab('itinerary');selectDay(5)">
@@ -1021,32 +1021,37 @@ const DAYS = [
     ]
   },
   {
-    label:'5/1 · 任天堂博物館・宇治',
-    sub:'Nintendo Museum & Byodoin Temple',
+    label:'5/1 · 任天堂博物館・teamLab 京都',
+    sub:'Nintendo Museum & teamLab Borderless Kyoto',
     items:[
       {time:'09:30',featured:false,img:'images/byodoin.jpg',tag:'文化',tagClass:'blue',name:'平等院鳳凰堂',jp:'びょうどういん ほうおうどう',desc:'10圓硬幣上的建築！宇治川畔的世界遺產，任天堂博物館附近，前後順遊。宇治抹茶搭配鳳凰堂美景是本日精華。',price:'¥700',time2:'8:30–17:30',tips:'建議搭配宇治抹茶甜點一起品嚐'},
       {time:'11:00',featured:true,img:'images/nintendo.jpg',tag:'娛樂',tagClass:'',name:'任天堂博物館',jp:'ニンテンドーミュージアム',desc:'任天堂135年歷史！10枚數位硬幣互動體驗，重現各年代經典遊戲。⚠️ 需事先抽籤預約，票券稀缺！',price:'¥3,300',time2:'10:00–17:00',tips:'⚠️ 需在2月申請抽籤，3月公佈結果'},
-      {time:'15:00',featured:false,img:'images/matcha.jpg',tag:'美食',tagClass:'green',name:'宇治抹茶甜點巡禮',jp:'うじ まっちゃ',desc:'宇治是日本抹茶聖地！中村藤吉、辻利兵衛本店、通圓茶屋各有特色，抹茶霜淇淋、抹茶帕菲必吃。',price:'¥500–1,500',time2:'各店不同',tips:'中村藤吉的涼粉最受歡迎'},
+      {time:'14:00',featured:false,img:'images/matcha.jpg',tag:'美食',tagClass:'green',name:'宇治抹茶甜點',jp:'うじ まっちゃ',desc:'中村藤吉、辻利兵衛本店各有特色，抹茶霜淇淋必吃。吃完即可前往京都，時間剛剛好。',price:'¥500–1,000',time2:'各店不同',tips:'中村藤吉的涼粉最受歡迎'},
+      {time:'15:30',featured:false,img:'https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?w=600&q=80&fit=crop',tag:'交通',tagClass:'blue',name:'宇治→京都 移動',jp:'うじ → きょうと',desc:'從宇治站搭 JR 奈良線約 25 分抵達京都站，再轉乘地鐵烏丸線前往 teamLab 所在區域。建議15:30出發，16:30左右抵達現場可以稍作休息。',price:'¥240',time2:'約25分',tips:'JR 奈良線 → 京都站下車'},
+      {time:'17:00',featured:true,img:'https://images.unsplash.com/photo-1518998053901-5348d3961a04?w=600&q=80&fit=crop',tag:'藝術',tagClass:'',name:'teamLab Borderless 京都',jp:'チームラボ ボーダレス 京都',desc:'全球頂尖數位藝術展！預約入場時段 17:00–17:30。無邊界沉浸式光影藝術，彷彿走進另一個次元。平均遊覽 2–2.5 小時，建議穿淺色衣服讓投影效果更美。',price:'¥3,800',time2:'入場 17:00–17:30',tips:'⚠️ 已預約！穿淺色衣服光影效果更好看'},
+      {time:'20:00',featured:false,img:'https://images.unsplash.com/photo-1528360983277-13d401cdc186?w=600&q=80&fit=crop',tag:'晚餐',tagClass:'amber',name:'京都晚餐・返回大阪',jp:'きょうと ディナー',desc:'teamLab 出來後在附近的錦市場或烏丸周邊找間居酒屋或拉麵店用晚餐。用餐後搭近鐵或阪急電車返回大阪難波，約30–40分。',price:'¥1,000–2,000',time2:'末班車注意',tips:'返回大阪搭近鐵京都線 → 難波，約35分'},
     ]
   },
   {
-    label:'5/2 · 大阪城・新世界',
-    sub:'Osaka Castle & Shinsekai',
+    label:'5/2 · 大阪城・天王寺動物園・新世界',
+    sub:'Osaka Castle · Tennoji Zoo · Shinsekai',
     items:[
       {time:'09:00',featured:true,img:'images/osaka-castle.jpg',tag:'景點',tagClass:'blue',name:'大阪城天守閣',jp:'おおさかじょう',desc:'大阪代表性地標！天守閣展望台可俯瞰城市全景，護城河畔散步，5月新綠美麗如畫。一至八樓有豐富歷史展覽。',price:'¥600',time2:'9:00–17:00',tips:'公園免費入場，建議留1.5–2小時'},
-      {time:'12:00',featured:false,img:'images/kuromon.jpg',tag:'美食',tagClass:'green',name:'黑門市場午餐',jp:'くろもんいちば',desc:'大阪的廚房！新鮮生魚片、海鮮串燒、當場品嚐，各種日本在地食材應有盡有。市場內可直接現買現吃。',price:'¥800–2,000',time2:'8:00–18:00',tips:'平日人少，週末人潮擁擠'},
-      {time:'15:00',featured:true,img:'images/tsutenkaku.jpg',tag:'景點',tagClass:'',name:'新世界・通天閣',jp:'しんせかい・つうてんかく',desc:'昭和復古風情街道，通天閣是大阪象徵。正宗串炸發源地，居酒屋、復古霓虹，體驗在地老大阪文化，與比利肯神像合影祈福。',price:'¥800',time2:'10:00–20:00',tips:'多嚐幾間串炸比較，別沾了醬再回沾！'},
+      {time:'11:30',featured:false,img:'images/kuromon.jpg',tag:'美食',tagClass:'green',name:'黑門市場午餐',jp:'くろもんいちば',desc:'大阪的廚房！新鮮生魚片、海鮮串燒、當場品嚐，各種日本在地食材應有盡有。市場內可直接現買現吃。',price:'¥800–2,000',time2:'8:00–18:00',tips:'平日人少，週末人潮擁擠'},
+      {time:'13:30',featured:true,img:'https://images.unsplash.com/photo-1503256207526-0d5523a66a39?w=600&q=80&fit=crop',tag:'景點',tagClass:'green',name:'大阪市天王寺動物園',jp:'てんのうじどうぶつえん',desc:'創立超過100年的大阪老牌動物園！約180種1,000隻動物，非洲草原區、爬蟲館、紅鶴池各有特色。天王寺公園內風景優美，逛完動物園可直接步行至新世界。',price:'¥500',time2:'9:30–17:00（週一休）',tips:'天王寺駅步行5分，動物園→新世界步行只要5分鐘'},
+      {time:'16:00',featured:false,img:'images/tsutenkaku.jpg',tag:'景點',tagClass:'',name:'新世界・通天閣',jp:'しんせかい・つうてんかく',desc:'昭和復古風情街道，通天閣是大阪象徵。正宗串炸發源地，居酒屋、復古霓虹，與比利肯神像合影祈福。',price:'¥800',time2:'10:00–20:00',tips:'多嚐幾間串炸比較，別沾了醬再回沾！'},
       {time:'19:00',featured:false,img:'images/dotonbori-night.jpg',tag:'夜景',tagClass:'amber',name:'道頓堀夜景散步',jp:'どうとんぼり',desc:'格力高廣告牌在戎橋旁，入夜後拍最美！道頓堀運河倒映霓虹燈光，是大阪最具代表性的夜間景色。',price:'免費',time2:'全天',tips:'戎橋上正面拍攝角度最佳'},
     ]
   },
   {
-    label:'5/3 · 奈良一日遊',
-    sub:'Nara Day Trip',
+    label:'5/3 · 大阪海遊館・天保山',
+    sub:'Kaiyukan Aquarium & Tempozan',
     items:[
-      {time:'08:30',featured:false,img:'images/nara-train.jpg',tag:'交通',tagClass:'blue',name:'搭近鐵前往奈良',jp:'きんてつ なら',desc:'從大阪難波站搭近鐵特急約40分抵達近鐵奈良站，下車即可步行至奈良公園。車票建議使用 IC 卡或購買一日券。',price:'¥680',time2:'約40分',tips:'使用近鐵奈良站比JR奈良站更靠近公園'},
-      {time:'10:00',featured:true,img:'images/nara.jpg',tag:'景點',tagClass:'green',name:'奈良公園・小鹿',jp:'ならこうえん',desc:'與自由漫步的奈良小鹿近距離接觸！鹿仙貝餵食超可愛，注意別讓鹿咬到食物袋。早上8點前人少氛圍最佳，可拍到清晨薄霧中的小鹿。',price:'免費（鹿仙貝¥200）',time2:'全天',tips:'8:00 前人少氛圍最好！'},
-      {time:'12:00',featured:false,img:'images/todaiji.jpg',tag:'景點',tagClass:'amber',name:'東大寺大佛殿',jp:'とうだいじ だいぶつでん',desc:'世界最大的木造建築，供奉高達15公尺的盧舍那大佛。穿過大佛鼻孔（柱洞）據說可獲智慧，小朋友大人都愛玩！',price:'¥600',time2:'8:00–17:00',tips:'穿過大柱洞孔有求智慧的傳說'},
-      {time:'15:00',featured:false,img:'images/naramachi.jpg',tag:'美食',tagClass:'green',name:'奈良町散步・柿葉壽司',jp:'ならまち',desc:'奈良傳統商店街，隱藏許多可愛小店。柿葉壽司是奈良名物，以柿葉包裹鯖魚或鮭魚握壽司，在地風味獨特。',price:'¥300–1,000',time2:'10:00–18:00',tips:'奈良町有很多傳統工藝小店值得探索'},
+      {time:'09:30',featured:true,img:'https://images.unsplash.com/photo-1559827260-dc66d52bef19?w=600&q=80&fit=crop',tag:'景點',tagClass:'blue',name:'大阪海遊館 Kaiyukan',jp:'かいゆうかん',desc:'世界最大級水族館之一！中央巨型水槽飼養鯨鯊，從4樓螺旋式步道一路看到1樓，共展示15個地區的海洋生態。企鵝、海獺、魟魚圍繞四周，視覺震撼十足。建議預留2.5–3小時盡情欣賞。',price:'¥2,400',time2:'10:00–20:00',tips:'地鐵中央線「大阪港駅」出口步行5分，開館時間排隊人少'},
+      {time:'12:30',featured:false,img:'https://images.unsplash.com/photo-1555529669-2269763671c0?w=600&q=80&fit=crop',tag:'美食',tagClass:'green',name:'天保山市場街・午餐',jp:'てんぽうざんマーケットプレース',desc:'海遊館旁的購物中心，餐廳選擇豐富。大阪拉麵、迴轉壽司、漢堡牛排都有，是消化半天行程的好地方。也可在天保山公園吹海風野餐。',price:'¥800–2,000',time2:'11:00–20:00',tips:'天保山公園視野開闊，可遠眺大阪灣'},
+      {time:'14:00',featured:false,img:'https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=600&q=80&fit=crop',tag:'體驗',tagClass:'amber',name:'Santa Maria 天保山大帆船',jp:'サンタマリア',desc:'以哥倫布遠征船為原型的觀光帆船，從天保山乘船遊覽大阪灣約45分鐘。可眺望港灣風景、大阪城遠景，吹著海風非常舒適。',price:'¥1,800',time2:'日班11:00・13:00・15:00',tips:'提前在天保山碼頭購票，黃金週建議早點排隊'},
+      {time:'16:30',featured:false,img:'https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?w=600&q=80&fit=crop',tag:'購物',tagClass:'',name:'心齋橋・美國村散策',jp:'しんさいばし・アメリカむら',desc:'從天保山回到市區後，在心齋橋美國村（Ame-mura）逛逛古著、潮流小店，感受大阪年輕文化氣息。三角公園附近有很多特色小攤。',price:'自由',time2:'各店不同',tips:'美國村：地鐵四橋線「四橋駅」或心齋橋駅步行'},
+      {time:'19:00',featured:false,img:'images/coffee.jpg',tag:'晚餐',tagClass:'amber',name:'堀江・晚餐',jp:'ほりえ',desc:'堀江是大阪時髦餐廳集中地，從義式料理、和食到各國美食都有水準。結束五天最後一個完整夜晚，選一間喜歡的餐廳好好犒勞自己。',price:'¥1,500–3,000',time2:'各店不同',tips:'堀江沿運河的餐廳氛圍很好，適合聚餐'},
     ]
   },
   {
