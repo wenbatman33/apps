@@ -460,10 +460,9 @@ nav{
 /* ── EXPLORE SPLIT LAYOUT ── */
 .scroll.explore-mode{overflow:hidden}
 #p-explore.on{display:flex;flex-direction:column;min-height:unset;height:100%}
-#p-explore .exp-header{padding:44px 20px 8px;flex-shrink:0}
-#p-explore .oyado-tabs{flex-shrink:0}
-.oyado-map-wrap{flex-shrink:0;height:210px;background:#e8e4dc;position:relative}
+.oyado-map-wrap{flex:0 0 42%;background:#e8e4dc;position:relative;min-height:0}
 .oyado-map-wrap iframe{width:100%;height:100%;border:none;display:block}
+.oyado-tabs{flex-shrink:0;background:rgba(255,255,255,.97);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border-top:1px solid var(--border);border-bottom:1px solid var(--border);box-shadow:0 2px 10px rgba(22,22,30,.08)}
 .oyado-list-scroll{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;min-height:0}
 .oyado-list-scroll::-webkit-scrollbar{display:none}
 .oyado-place{display:flex;align-items:center;background:var(--card);border-radius:14px;padding:12px 14px;box-shadow:var(--sh);gap:10px;cursor:pointer;transition:all .15s;-webkit-tap-highlight-color:transparent}
@@ -649,18 +648,14 @@ nav{
 
     <!-- ══ EXPLORE ══ -->
     <div class="panel" id="p-explore">
-      <div class="exp-header">
-        <h2>探索大阪・京都</h2>
-        <p>由 oyado 精選 · 點擊地點移動地圖</p>
-      </div>
-      <div class="oyado-tabs" id="oyado-tabs">
-        <div class="oyado-loading">載入中…</div>
-      </div>
       <div class="oyado-map-wrap">
         <iframe id="oyado-map-iframe"
           src="https://maps.google.com/maps?q=大阪,Japan&output=embed&hl=zh-TW&z=13"
           allowfullscreen loading="lazy" referrerpolicy="no-referrer-when-downgrade">
         </iframe>
+      </div>
+      <div class="oyado-tabs" id="oyado-tabs">
+        <div class="oyado-loading">載入中…</div>
       </div>
       <div class="oyado-list-scroll">
         <div id="oyado-body">
@@ -1232,6 +1227,32 @@ function renderDay(i){
 renderDay(0);
 
 // ── OYADO EXPLORE ─────────────────────────────────────
+const CAT_ZH = {
+  'oyado_ARCHITECTURE__ART':  '🖼 建築・藝術',
+  'oyado_BAR':                '🥃 威士忌・調酒吧',
+  'oyado_BOOKSTORE__LIBRARY': '📚 書店・圖書館',
+  'oyado_CAFE':               '☕ 咖啡廳',
+  'oyado_CHINESE_CUISINE':    '🥟 中華・餃子',
+  'oyado_CONFECTIONERY_STORE':'🍰 甜點店',
+  'oyado_CURRY_ASIAN_FOOD':   '🍛 咖哩・亞洲料理',
+  'oyado_EATERY':             '🍽 餐廳',
+  'oyado_EUROPEAN_CUISINE':   '🥐 法式・義式料理',
+  'oyado_FLOWER_SHOP':        '🌸 花店',
+  'oyado_FOOD_STORE':         '🥡 外帶・食品店',
+  'oyado_HOTEL':              '🏨 旅館',
+  'oyado_INNOVATIVE':         '✨ 現代料理',
+  'oyado_IZAKAYA':            '🍺 居酒屋',
+  'oyado_JAPANESE_BBQ':       '🔥 燒肉',
+  'oyado_JAPANESE_CUISINE':   '🍣 和食・壽司',
+  'oyado_LIFESTYLE_SHOPS':    '🛋 室內・雜貨',
+  'oyado_LIQUOR_STORE':       '🍶 酒類專賣',
+  'oyado_NOODLES':            '🍜 蕎麥・烏龍・拉麵',
+  'oyado_PUBLIC_BATH':        '🛁 錢湯・桑拿',
+  'oyado_WINE_BAR__BEER_BAR': '🍷 葡萄酒・啤酒吧',
+  'oyado_WORLD_CUISINE':      '🌍 世界各國料理',
+  'oyado_YAKITORI':           '🍢 烤雞串・串燒',
+};
+
 let oyadoData = null;
 let oyadoCurrentKey = null;
 
@@ -1241,12 +1262,14 @@ fetch('json/oyado_all_places.json')
     oyadoData = data;
     // Build tabs
     const tabs = document.getElementById('oyado-tabs');
-    tabs.innerHTML = Object.entries(data).map(([key, cat]) =>
-      `<button class="oyado-tab" id="otab-${key}" onclick="selectOyadoCat('${key}')">
-        <div class="oyado-tab-emoji">${cat.emoji}</div>
-        <div>${cat.category_zh}</div>
-      </button>`
-    ).join('');
+    tabs.innerHTML = Object.entries(data).map(([key, cat]) => {
+      const zh = CAT_ZH[key] || cat.category_zh;
+      const [emoji, ...label] = zh.split(' ');
+      return `<button class="oyado-tab" id="otab-${key}" onclick="selectOyadoCat('${key}')">
+        <div class="oyado-tab-emoji">${emoji}</div>
+        <div>${label.join(' ')}</div>
+      </button>`;
+    }).join('');
     // Select first tab
     selectOyadoCat(Object.keys(data)[3]); // CAFE first
   })
@@ -1273,7 +1296,7 @@ function selectOyadoCat(key) {
     `https://maps.google.com/maps?q=大阪,Japan&output=embed&hl=zh-TW&z=13`;
   document.getElementById('oyado-body').innerHTML = `
     <div class="oyado-cat-header">
-      <div class="oyado-cat-title">${cat.emoji} ${cat.category_zh}</div>
+      <div class="oyado-cat-title">${CAT_ZH[key] || cat.category_zh}</div>
       <a class="oyado-map-btn" href="${cat.source_url}" target="_blank">清單 →</a>
     </div>
     <div class="oyado-places">
