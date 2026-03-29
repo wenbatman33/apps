@@ -1387,6 +1387,10 @@ function closeModal(e){
   }
 }
 // swipe down to close modal
+// Disable pinch zoom
+document.addEventListener('touchmove', e => { if(e.touches.length > 1) e.preventDefault(); }, {passive:false});
+document.addEventListener('gesturestart', e => e.preventDefault());
+
 let touchStartY=0;
 document.getElementById('modal-sheet').addEventListener('touchstart',e=>{touchStartY=e.touches[0].clientY});
 document.getElementById('modal-sheet').addEventListener('touchend',e=>{
