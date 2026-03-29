@@ -1279,7 +1279,7 @@ function setMapSrc(q, zoom) {
     `https://maps.google.com/maps?q=${encodeURIComponent(q)}&output=embed&hl=zh-TW&z=${zoom}`;
 }
 
-fetch('json/oyado_all_places.json')
+fetch('json/oyado_osaka_kyoto.json')
   .then(r => r.json())
   .then(data => {
     oyadoData = data;

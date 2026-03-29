@@ -1,0 +1,1802 @@
+{
+  "oyado_BOOKSTORE__LIBRARY": {
+    "category_zh": "書店・図書館",
+    "category_en": "BOOKSTORE, LIBRARY",
+    "emoji": "📚",
+    "source_url": "https://maps.app.goo.gl/VmnkVAn6JWuEpdS69",
+    "total": 3,
+    "places": [
+      {
+        "name": "なタ書",
+        "rating": "4.4",
+        "reviewCount": "63",
+        "type": "二手書店"
+      },
+      {
+        "name": "本・ひとしずく",
+        "rating": "4.7",
+        "reviewCount": "49",
+        "type": "雜誌店"
+      },
+      {
+        "name": "惠文社 一乘寺店",
+        "rating": "4.5",
+        "reviewCount": "",
+        "type": "書店"
+      }
+    ]
+  },
+  "oyado_CAFE": {
+    "category_zh": "咖啡廳",
+    "category_en": "CAFE",
+    "emoji": "☕",
+    "source_url": "https://maps.app.goo.gl/YQp6Cz1dgMpDwaLU6",
+    "total": 1,
+    "places": [
+      {
+        "name": "お菓子喫茶みうら",
+        "rating": "4.4",
+        "reviewCount": "30",
+        "type": "糖果糕餅店"
+      }
+    ]
+  },
+  "oyado_CHINESE_CUISINE": {
+    "category_zh": "中華・餃子",
+    "category_en": "CHINESE_CUISINE",
+    "emoji": "🥟",
+    "source_url": "https://maps.app.goo.gl/yz4f64hULJw7eqFv8",
+    "total": 20,
+    "places": [
+      {
+        "name": "中華飯店 色香美味",
+        "rating": "4.5",
+        "reviewCount": "65",
+        "type": "¥1,000-2,000"
+      },
+      {
+        "name": "Gyoza restaurant Kazu",
+        "rating": "4.7",
+        "reviewCount": "226",
+        "type": "¥1,000-2,000"
+      },
+      {
+        "name": "wine shop YURA",
+        "rating": "4.8",
+        "reviewCount": "9",
+        "type": "葡萄酒吧"
+      },
+      {
+        "name": "餃子スラッピー",
+        "rating": "4.1",
+        "reviewCount": "35",
+        "type": "¥1,000-2,000"
+      },
+      {
+        "name": "ラビリンス",
+        "rating": "3.9",
+        "reviewCount": "19",
+        "type": "¥3,000-4,000"
+      },
+      {
+        "name": "むしやしない",
+        "rating": "4.4",
+        "reviewCount": "66",
+        "type": "$$"
+      },
+      {
+        "name": "白龍",
+        "rating": "4.3",
+        "reviewCount": "245",
+        "type": "¥1,000-2,000"
+      },
+      {
+        "name": "Paichu",
+        "rating": "4.7",
+        "reviewCount": "49",
+        "type": "餐廳"
+      },
+      {
+        "name": "yura飯店",
+        "rating": "4.3",
+        "reviewCount": "15",
+        "type": "¥6,000-7,000"
+      },
+      {
+        "name": "Spice飯店",
+        "rating": "4.1",
+        "reviewCount": "75",
+        "type": "$$"
+      },
+      {
+        "name": "Sunsu",
+        "rating": "4.2",
+        "reviewCount": "32",
+        "type": "亞洲料理"
+      },
+      {
+        "name": "HAKONE PICNIC Taiwanese Cafe & Delivery (Lunch & Dinner)",
+        "rating": "4.8",
+        "reviewCount": "450",
+        "type": "¥1,000-2,000"
+      },
+      {
+        "name": "Gyoza YOSHIHARU",
+        "rating": "4.5",
+        "reviewCount": "131",
+        "type": "中國菜"
+      },
+      {
+        "name": "MICICA",
+        "rating": "3.8",
+        "reviewCount": "5",
+        "type": "¥5,000-6,000"
+      },
+      {
+        "name": "TAN VING VING",
+        "rating": "4.1",
+        "reviewCount": "20",
+        "type": "¥4,000-5,000"
+      },
+      {
+        "name": "Nihao",
+        "rating": "4.1",
+        "reviewCount": "503",
+        "type": "粵式點心"
+      },
+      {
+        "name": "台灣家庭料理 相思豆",
+        "rating": "4.5",
+        "reviewCount": "160",
+        "type": "¥2,000-3,000"
+      },
+      {
+        "name": "Leuca",
+        "rating": "4.7",
+        "reviewCount": "22",
+        "type": "中國菜"
+      },
+      {
+        "name": "中国料理 川 [セン]",
+        "rating": "4.6",
+        "reviewCount": "25",
+        "type": "超過 ¥10,000"
+      },
+      {
+        "name": "好吃飯店",
+        "rating": "3.9",
+        "reviewCount": "55",
+        "type": "中國菜"
+      }
+    ]
+  },
+  "oyado_CONFECTIONERY_STORE": {
+    "category_zh": "菓子店",
+    "category_en": "CONFECTIONERY STORE",
+    "emoji": "🍰",
+    "source_url": "https://maps.app.goo.gl/hskCpwTweiJHGMLr7",
+    "total": 18,
+    "places": [
+      {
+        "name": "Premarché Gelateria",
+        "rating": "4.7",
+        "reviewCount": "518",
+        "type": "$$"
+      },
+      {
+        "name": "Premarché Gelateria & Alternative Junk",
+        "rating": "4.5",
+        "reviewCount": "448",
+        "type": "冰淇淋"
+      },
+      {
+        "name": "SUNDAY VEGAN",
+        "rating": "4.4",
+        "reviewCount": "182",
+        "type": "¥1-1,000"
+      },
+      {
+        "name": "Gelato 9.",
+        "rating": "4.4",
+        "reviewCount": "94",
+        "type": "冰淇淋"
+      },
+      {
+        "name": "Atomiyosowaka",
+        "rating": "4.8",
+        "reviewCount": "21",
+        "type": "糖果糕餅店"
+      },
+      {
+        "name": "お菓子喫茶みうら",
+        "rating": "4.4",
+        "reviewCount": "30",
+        "type": "糖果糕餅店"
+      },
+      {
+        "name": "Horn",
+        "rating": "3.7",
+        "reviewCount": "150",
+        "type": "¥1,000-2,000"
+      },
+      {
+        "name": "Mori no Ohagi",
+        "rating": "4.3",
+        "reviewCount": "396",
+        "type": "$$"
+      },
+      {
+        "name": "Betsubara",
+        "rating": "4.0",
+        "reviewCount": "106",
+        "type": "¥1,000-2,000"
+      },
+      {
+        "name": "焼菓子 房（ぼう）",
+        "rating": "4.6",
+        "reviewCount": "14",
+        "type": "西點"
+      },
+      {
+        "name": "菓子 ヒトトキ",
+        "rating": "4.4",
+        "reviewCount": "18",
+        "type": "西點"
+      },
+      {
+        "name": "菓子屋 糸",
+        "rating": "4.5",
+        "reviewCount": "29",
+        "type": "西點"
+      },
+      {
+        "name": "Tonka",
+        "rating": "4.6",
+        "reviewCount": "35",
+        "type": "¥1-1,000"
+      },
+      {
+        "name": "Pie at…アメリカン・パイ＆ベイク",
+        "rating": "4.2",
+        "reviewCount": "26",
+        "type": "¥1-1,000"
+      },
+      {
+        "name": "hauskaa",
+        "rating": "3.7",
+        "reviewCount": "14",
+        "type": "糖果糕餅店"
+      },
+      {
+        "name": "John",
+        "rating": "4.2",
+        "reviewCount": "44",
+        "type": "餐廳"
+      },
+      {
+        "name": "LE PETIT BONHEUR",
+        "rating": "4.5",
+        "reviewCount": "61",
+        "type": "朱古力店"
+      },
+      {
+        "name": "Chocolatier Taka",
+        "rating": "4.5",
+        "reviewCount": "47",
+        "type": "朱古力店"
+      }
+    ]
+  },
+  "oyado_CURRY_ASIAN_FOOD": {
+    "category_zh": "咖哩・亞洲料理",
+    "category_en": "CURRY_ASIAN_FOOD",
+    "emoji": "🍛",
+    "source_url": "https://maps.app.goo.gl/Gf2H7CzXJ9vKMKTc7",
+    "total": 19,
+    "places": [
+      {
+        "name": "Ali's Kitchen Osaka Halal Pakistani & Arabic Restaurant",
+        "rating": "4.3",
+        "reviewCount": "",
+        "type": "¥1,000-2,000"
+      },
+      {
+        "name": "Kakura",
+        "rating": "4.4",
+        "reviewCount": "292",
+        "type": "¥1,000-2,000"
+      },
+      {
+        "name": "kitchen and CURRY",
+        "rating": "4.3",
+        "reviewCount": "182",
+        "type": "¥1,000-2,000"
+      },
+      {
+        "name": "Hyomenchoryoku",
+        "rating": "4.5",
+        "reviewCount": "51",
+        "type": "¥1,000-2,000"
+      },
+      {
+        "name": "MUL",
+        "rating": "4.5",
+        "reviewCount": "59",
+        "type": "$$"
+      },
+      {
+        "name": "Laithai",
+        "rating": "4.4",
+        "reviewCount": "83",
+        "type": "¥1,000-2,000"
+      },
+      {
+        "name": "Sajiro Cafe",
+        "rating": "4.3",
+        "reviewCount": "263",
+        "type": "¥1,000-2,000"
+      },
+      {
+        "name": "Sunsu",
+        "rating": "4.2",
+        "reviewCount": "32",
+        "type": "亞洲料理"
+      },
+      {
+        "name": "Indochinoise (アンドシノワーズ)",
+        "rating": "4.8",
+        "reviewCount": "25",
+        "type": "超過 ¥10,000"
+      },
+      {
+        "name": "Bengal Tiger",
+        "rating": "4.5",
+        "reviewCount": "409",
+        "type": "¥1,000-2,000"
+      },
+      {
+        "name": "げつようび",
+        "rating": "4.4",
+        "reviewCount": "86",
+        "type": "¥1,000-2,000"
+      },
+      {
+        "name": "Curry to Chai Chōji",
+        "rating": "4.5",
+        "reviewCount": "17",
+        "type": "¥1,000-2,000"
+      },
+      {
+        "name": "Indu Ayurvedic Lounge South Indian Food",
+        "rating": "4.4",
+        "reviewCount": "278",
+        "type": "¥3,000-4,000"
+      },
+      {
+        "name": "Spice Gate",
+        "rating": "4.2",
+        "reviewCount": "387",
+        "type": "¥1,000-2,000"
+      },
+      {
+        "name": "E-sans Shokudo",
+        "rating": "4.0",
+        "reviewCount": "314",
+        "type": "¥1,000-2,000"
+      },
+      {
+        "name": "スパイスドランカーやぶや 燗酒専門店",
+        "rating": "4.2",
+        "reviewCount": "59",
+        "type": "超過 ¥10,000"
+      },
+      {
+        "name": "Penthai Thai Restaurant",
+        "rating": "4.5",
+        "reviewCount": "274",
+        "type": "¥1,000-2,000"
+      },
+      {
+        "name": "荒井商店",
+        "rating": "4.5",
+        "reviewCount": "88",
+        "type": "¥1,000-2,000"
+      },
+      {
+        "name": "Soi Gapao Soigapao Thai",
+        "rating": "4.3",
+        "reviewCount": "413",
+        "type": "¥1,000-2,000"
+      }
+    ]
+  },
+  "oyado_EATERY": {
+    "category_zh": "餐廳",
+    "category_en": "EATERY",
+    "emoji": "🍽",
+    "source_url": "https://maps.app.goo.gl/Wf8oqa2JHCfUsBKb7",
+    "total": 15,
+    "places": [
+      {
+        "name": "高千穗牛燒肉 和",
+        "rating": "4.4",
+        "reviewCount": "",
+        "type": "$$$"
+      },
+      {
+        "name": "食堂endo",
+        "rating": "4.5",
+        "reviewCount": "26",
+        "type": "¥1,000-2,000"
+      },
+      {
+        "name": "Hare to Ke",
+        "rating": "4.0",
+        "reviewCount": "145",
+        "type": "¥1,000-2,000"
+      },
+      {
+        "name": "saji 食堂",
+        "rating": "4.4",
+        "reviewCount": "36",
+        "type": "¥1,000-2,000"
+      },
+      {
+        "name": "パーラーkoyaji",
+        "rating": "4.7",
+        "reviewCount": "56",
+        "type": "¥3,000-4,000"
+      },
+      {
+        "name": "Otomo-to-Gohan Okamo-to-Shokudo",
+        "rating": "4.4",
+        "reviewCount": "154",
+        "type": "¥1,000-2,000"
+      },
+      {
+        "name": "こぞら荘 喫茶食堂",
+        "rating": "4.0",
+        "reviewCount": "5",
+        "type": "咖啡店"
+      },
+      {
+        "name": "Tsubaki Shokudō",
+        "rating": "4.1",
+        "reviewCount": "105",
+        "type": "¥1,000-2,000"
+      },
+      {
+        "name": "人見食堂",
+        "rating": "4.1",
+        "reviewCount": "9",
+        "type": "¥1,000-2,000"
+      },
+      {
+        "name": "Ness",
+        "rating": "4.7",
+        "reviewCount": "13",
+        "type": "¥1,000-2,000"
+      },
+      {
+        "name": "ＫＩＪＩＹＡ",
+        "rating": "4.2",
+        "reviewCount": "90",
+        "type": "鐵板燒"
+      },
+      {
+        "name": "湊食堂",
+        "rating": "4.4",
+        "reviewCount": "",
+        "type": "¥1,000-2,000"
+      },
+      {
+        "name": "Tabiji",
+        "rating": "4.4",
+        "reviewCount": "131",
+        "type": "¥1-1,000"
+      },
+      {
+        "name": "海峡荘",
+        "rating": "4.5",
+        "reviewCount": "60",
+        "type": "¥3,000-4,000"
+      },
+      {
+        "name": "Osanai",
+        "rating": "4.2",
+        "reviewCount": "",
+        "type": "¥1,000-2,000"
+      }
+    ]
+  },
+  "oyado_EUROPEAN_CUISINE": {
+    "category_zh": "法國・義大利餐廳",
+    "category_en": "EUROPEAN_CUISINE",
+    "emoji": "🥐",
+    "source_url": "https://maps.app.goo.gl/q45Sr11Uzw1K6xP18",
+    "total": 12,
+    "places": [
+      {
+        "name": "Maeshibaryoriten",
+        "rating": "4.4",
+        "reviewCount": "108",
+        "type": "超過 ¥10,000"
+      },
+      {
+        "name": "kinoene",
+        "rating": "5.0",
+        "reviewCount": "12",
+        "type": "¥5,000-6,000"
+      },
+      {
+        "name": "bistro MARLU /小皿料理とナチュラルワインのお店",
+        "rating": "4.4",
+        "reviewCount": "37",
+        "type": "小餐館"
+      },
+      {
+        "name": "goffo",
+        "rating": "3.6",
+        "reviewCount": "317",
+        "type": "$$"
+      },
+      {
+        "name": "ikuta",
+        "rating": "4.0",
+        "reviewCount": "8",
+        "type": "¥9,000-10,000"
+      },
+      {
+        "name": "Le Pompon",
+        "rating": "4.4",
+        "reviewCount": "28",
+        "type": "¥6,000-7,000"
+      },
+      {
+        "name": "Dominic",
+        "rating": "5.0",
+        "reviewCount": "10",
+        "type": "¥5,000-6,000"
+      },
+      {
+        "name": "Ruhmato",
+        "rating": "4.4",
+        "reviewCount": "36",
+        "type": "¥1,000-2,000"
+      },
+      {
+        "name": "La table de EST",
+        "rating": "4.7",
+        "reviewCount": "35",
+        "type": "¥2,000-3,000"
+      },
+      {
+        "name": "restaurant Kiro;",
+        "rating": "4.9",
+        "reviewCount": "13",
+        "type": "餐廳"
+      },
+      {
+        "name": "Ball",
+        "rating": "4.9",
+        "reviewCount": "14",
+        "type": "小餐館"
+      },
+      {
+        "name": "肉とワイン LUCY",
+        "rating": "3.7",
+        "reviewCount": "6",
+        "type": "超過 ¥10,000"
+      }
+    ]
+  },
+  "oyado_FOOD_STORE": {
+    "category_zh": "テイクアウト・食品店",
+    "category_en": "FOOD STORE",
+    "emoji": "🥡",
+    "source_url": "https://maps.app.goo.gl/9gMnBfKKVu76dUDL8",
+    "total": 2,
+    "places": [
+      {
+        "name": "だしいなり 海木",
+        "rating": "4.3",
+        "reviewCount": "214",
+        "type": "¥1,000-2,000"
+      },
+      {
+        "name": "田中鮮魚店",
+        "rating": "4.4",
+        "reviewCount": "47",
+        "type": "魚販"
+      }
+    ]
+  },
+  "oyado_INNOVATIVE": {
+    "category_zh": "イノベーティブ",
+    "category_en": "INNOVATIVE",
+    "emoji": "🍽",
+    "source_url": "https://maps.app.goo.gl/e4N85DdFdpvVquq3A",
+    "total": 20,
+    "places": [
+      {
+        "name": "MAEN Sake pairing restaurant",
+        "rating": "4.9",
+        "reviewCount": "96",
+        "type": "超過 ¥10,000"
+      },
+      {
+        "name": "Omakase 美食 創新日本料理餐廳「Virtue」",
+        "rating": "4.8",
+        "reviewCount": "32",
+        "type": "超過 ¥10,000"
+      },
+      {
+        "name": "mukuroji",
+        "rating": "4.5",
+        "reviewCount": "74",
+        "type": "餐廳"
+      },
+      {
+        "name": "Salmon & Trout",
+        "rating": "4.3",
+        "reviewCount": "81",
+        "type": "亞洲融合料理"
+      },
+      {
+        "name": "Ristorante da Fiore",
+        "rating": "4.4",
+        "reviewCount": "180",
+        "type": "超過 ¥10,000"
+      },
+      {
+        "name": "根深",
+        "rating": "4.5",
+        "reviewCount": "11",
+        "type": "超過 ¥10,000"
+      },
+      {
+        "name": "mûrir ミュリール",
+        "rating": "4.9",
+        "reviewCount": "18",
+        "type": "超過 ¥10,000"
+      },
+      {
+        "name": "gigrestaurant",
+        "rating": "4.6",
+        "reviewCount": "17",
+        "type": "超過 ¥10,000"
+      },
+      {
+        "name": "啓蟄(けいちつ)",
+        "rating": "4.2",
+        "reviewCount": "18",
+        "type": "超過 ¥10,000"
+      },
+      {
+        "name": "然味-sami-",
+        "rating": "4.7",
+        "reviewCount": "44",
+        "type": "餐廳"
+      },
+      {
+        "name": "arkua",
+        "rating": "4.6",
+        "reviewCount": "53",
+        "type": "超過 ¥10,000"
+      },
+      {
+        "name": "tsumugi",
+        "rating": "4.9",
+        "reviewCount": "36",
+        "type": "超過 ¥10,000"
+      },
+      {
+        "name": "小料理 yarn",
+        "rating": "4.7",
+        "reviewCount": "20",
+        "type": "超過 ¥10,000"
+      },
+      {
+        "name": "LURRA°",
+        "rating": "4.4",
+        "reviewCount": "222",
+        "type": "超過 ¥10,000"
+      },
+      {
+        "name": "Syn",
+        "rating": "4.4",
+        "reviewCount": "35",
+        "type": "超過 ¥10,000"
+      },
+      {
+        "name": "Respiracion",
+        "rating": "4.5",
+        "reviewCount": "267",
+        "type": "超過 ¥10,000"
+      },
+      {
+        "name": "jinen",
+        "rating": "4.8",
+        "reviewCount": "75",
+        "type": "超過 ¥10,000"
+      },
+      {
+        "name": "kotoisa",
+        "rating": "4.4",
+        "reviewCount": "7",
+        "type": "餐廳"
+      },
+      {
+        "name": "HATO",
+        "rating": "4.2",
+        "reviewCount": "62",
+        "type": "超過 ¥10,000"
+      },
+      {
+        "name": "Restaurant Naz",
+        "rating": "4.9",
+        "reviewCount": "86",
+        "type": "超過 ¥10,000"
+      }
+    ]
+  },
+  "oyado_IZAKAYA": {
+    "category_zh": "居酒屋",
+    "category_en": "IZAKAYA",
+    "emoji": "🍺",
+    "source_url": "https://maps.app.goo.gl/US2ZEn22sUqkuqTz5",
+    "total": 20,
+    "places": [
+      {
+        "name": "Tomoemaru",
+        "rating": "4.4",
+        "reviewCount": "78",
+        "type": "¥5,000-6,000"
+      },
+      {
+        "name": "小料理 ゆう",
+        "rating": "4.8",
+        "reviewCount": "10",
+        "type": "$"
+      },
+      {
+        "name": "Peridot",
+        "rating": "4.5",
+        "reviewCount": "11",
+        "type": "日本菜"
+      },
+      {
+        "name": "酒と茶と 襤褸",
+        "rating": "4.2",
+        "reviewCount": "46",
+        "type": "¥5,000-6,000"
+      },
+      {
+        "name": "るつぼ",
+        "rating": "4.7",
+        "reviewCount": "10",
+        "type": "餐廳"
+      },
+      {
+        "name": "Nagata-ya",
+        "rating": "4.9",
+        "reviewCount": "10",
+        "type": "居酒屋"
+      },
+      {
+        "name": "器酒亭",
+        "rating": "4.1",
+        "reviewCount": "60",
+        "type": "¥1,000-2,000"
+      },
+      {
+        "name": "カジュアル和食メゾンプラス",
+        "rating": "4.6",
+        "reviewCount": "135",
+        "type": "¥4,000-5,000"
+      },
+      {
+        "name": "Cisco",
+        "rating": "4.3",
+        "reviewCount": "150",
+        "type": "¥3,000-4,000"
+      },
+      {
+        "name": "賽",
+        "rating": "4.4",
+        "reviewCount": "19",
+        "type": "居酒屋"
+      },
+      {
+        "name": "Kakitsubata",
+        "rating": "4.1",
+        "reviewCount": "105",
+        "type": "$$"
+      },
+      {
+        "name": "料理とお酒 晴ル",
+        "rating": "4.2",
+        "reviewCount": "30",
+        "type": "$$"
+      },
+      {
+        "name": "おばんざいとお酒 うきわ",
+        "rating": "4.4",
+        "reviewCount": "49",
+        "type": "¥3,000-4,000"
+      },
+      {
+        "name": "Oden KELP",
+        "rating": "4.2",
+        "reviewCount": "124",
+        "type": "$$"
+      },
+      {
+        "name": "パルメラ Palmela",
+        "rating": "4.4",
+        "reviewCount": "10",
+        "type": "居酒屋"
+      },
+      {
+        "name": "charlie",
+        "rating": "4.7",
+        "reviewCount": "101",
+        "type": "¥3,000-4,000"
+      },
+      {
+        "name": "dooop",
+        "rating": "4.2",
+        "reviewCount": "28",
+        "type": "¥3,000-4,000"
+      },
+      {
+        "name": "酒とたけい",
+        "rating": "4.7",
+        "reviewCount": "12",
+        "type": "¥3,000-4,000"
+      },
+      {
+        "name": "花具礼 ( カグレ KAGULE )",
+        "rating": "4.6",
+        "reviewCount": "8",
+        "type": "現代居酒屋"
+      },
+      {
+        "name": "Tozakana Tomizo",
+        "rating": "4.3",
+        "reviewCount": "171",
+        "type": "$$"
+      }
+    ]
+  },
+  "oyado_JAPANESE_BBQ": {
+    "category_zh": "燒肉",
+    "category_en": "JAPANESE_BBQ",
+    "emoji": "🔥",
+    "source_url": "https://maps.app.goo.gl/1d2Gjry2rVzmnoPv7",
+    "total": 20,
+    "places": [
+      {
+        "name": "燒肉 初榮",
+        "rating": "4.2",
+        "reviewCount": "224",
+        "type": "¥2,000-3,000"
+      },
+      {
+        "name": "板前焼肉 英",
+        "rating": "4.9",
+        "reviewCount": "7",
+        "type": "¥5,000-6,000"
+      },
+      {
+        "name": "焼肉 東京24区",
+        "rating": "4.8",
+        "reviewCount": "12",
+        "type": "超過 ¥10,000"
+      },
+      {
+        "name": "宮崎牛個室焼肉 伊勢舌",
+        "rating": "4.2",
+        "reviewCount": "55",
+        "type": "日式燒肉"
+      },
+      {
+        "name": "竹山寺町店",
+        "rating": "4.5",
+        "reviewCount": "130",
+        "type": "¥4,000-5,000"
+      },
+      {
+        "name": "味樂苑 本店",
+        "rating": "4.3",
+        "reviewCount": "67",
+        "type": "內臟燒肉餐廳"
+      },
+      {
+        "name": "燒肉・冷麵 髭",
+        "rating": "4.3",
+        "reviewCount": "",
+        "type": "¥1,000-2,000"
+      },
+      {
+        "name": "ホルモン碌(ホルモンろく)",
+        "rating": "4.6",
+        "reviewCount": "48",
+        "type": "日式燒肉"
+      },
+      {
+        "name": "徳山",
+        "rating": "4.3",
+        "reviewCount": "489",
+        "type": "$$"
+      },
+      {
+        "name": "Kuwahara",
+        "rating": "4.5",
+        "reviewCount": "358",
+        "type": "$$"
+      },
+      {
+        "name": "ホルモン ジビエ 明星",
+        "rating": "4.6",
+        "reviewCount": "103",
+        "type": "¥3,000-4,000"
+      },
+      {
+        "name": "Urashinoda",
+        "rating": "4.9",
+        "reviewCount": "32",
+        "type": "超過 ¥10,000"
+      },
+      {
+        "name": "大皿焼肉 老中",
+        "rating": "4.6",
+        "reviewCount": "107",
+        "type": "超過 ¥10,000"
+      },
+      {
+        "name": "Ichiriki",
+        "rating": "4.3",
+        "reviewCount": "766",
+        "type": "$$"
+      },
+      {
+        "name": "燒肉 大東園 本店",
+        "rating": "4.3",
+        "reviewCount": "",
+        "type": "$$$"
+      },
+      {
+        "name": "焼肉 十々",
+        "rating": "4.2",
+        "reviewCount": "72",
+        "type": "$$"
+      },
+      {
+        "name": "ホルモン販売＆肉酒場 CHOKU",
+        "rating": "4.6",
+        "reviewCount": "66",
+        "type": "¥4,000-5,000"
+      },
+      {
+        "name": "成吉思汗烤肉 羊八 - 千歲船橋店",
+        "rating": "4.4",
+        "reviewCount": "77",
+        "type": "內臟燒肉餐廳"
+      },
+      {
+        "name": "Yakiniku Stand Niku to Mugi",
+        "rating": "4.5",
+        "reviewCount": "361",
+        "type": "¥4,000-5,000"
+      },
+      {
+        "name": "Otaru Yakiniku Sanshiro Main Branch",
+        "rating": "4.1",
+        "reviewCount": "344",
+        "type": "$$"
+      }
+    ]
+  },
+  "oyado_JAPANESE_CUISINE": {
+    "category_zh": "和食・壽司",
+    "category_en": "JAPANESE_CUISINE",
+    "emoji": "🍣",
+    "source_url": "https://maps.app.goo.gl/NdFH77fHpusxqbLU7",
+    "total": 19,
+    "places": [
+      {
+        "name": "Minoya",
+        "rating": "4.6",
+        "reviewCount": "117",
+        "type": "日本菜"
+      },
+      {
+        "name": "草喰 中東",
+        "rating": "4.5",
+        "reviewCount": "320",
+        "type": "超過 ¥10,000"
+      },
+      {
+        "name": "Sushi-Take",
+        "rating": "4.2",
+        "reviewCount": "64",
+        "type": "超過 ¥10,000"
+      },
+      {
+        "name": "割烹ワイン吉本",
+        "rating": "4.6",
+        "reviewCount": "11",
+        "type": "超過 ¥10,000"
+      },
+      {
+        "name": "KOMB",
+        "rating": "4.7",
+        "reviewCount": "34",
+        "type": "超過 ¥10,000"
+      },
+      {
+        "name": "どちゃく",
+        "rating": "4.5",
+        "reviewCount": "2",
+        "type": "日本菜"
+      },
+      {
+        "name": "Korian",
+        "rating": "4.5",
+        "reviewCount": "72",
+        "type": "超過 ¥10,000"
+      },
+      {
+        "name": "元屋",
+        "rating": "4.6",
+        "reviewCount": "52",
+        "type": "日本菜"
+      },
+      {
+        "name": "柏屋",
+        "rating": "4.5",
+        "reviewCount": "303",
+        "type": "超過 ¥10,000"
+      },
+      {
+        "name": "天ぷら好日",
+        "rating": "4.8",
+        "reviewCount": "15",
+        "type": "超過 ¥10,000"
+      },
+      {
+        "name": "Maru Sushi",
+        "rating": "4.6",
+        "reviewCount": "148",
+        "type": "超過 ¥10,000"
+      },
+      {
+        "name": "高檔壽司 鮨處有馬",
+        "rating": "4.2",
+        "reviewCount": "202",
+        "type": "超過 ¥10,000"
+      },
+      {
+        "name": "Kitanohana Hayashi",
+        "rating": "4.7",
+        "reviewCount": "144",
+        "type": "超過 ¥10,000"
+      },
+      {
+        "name": "鮨棗 本店",
+        "rating": "4.4",
+        "reviewCount": "221",
+        "type": "超過 ¥10,000"
+      },
+      {
+        "name": "Ninokura",
+        "rating": "4.5",
+        "reviewCount": "116",
+        "type": "超過 ¥10,000"
+      },
+      {
+        "name": "Sushi Minato",
+        "rating": "4.2",
+        "reviewCount": "277",
+        "type": "超過 ¥10,000"
+      },
+      {
+        "name": "鮨 おくの",
+        "rating": "4.5",
+        "reviewCount": "79",
+        "type": "超過 ¥10,000"
+      },
+      {
+        "name": "Sushidokoro Minami",
+        "rating": "4.4",
+        "reviewCount": "95",
+        "type": "超過 ¥10,000"
+      },
+      {
+        "name": "Sushi Kai",
+        "rating": "4.8",
+        "reviewCount": "61",
+        "type": "超過 ¥10,000"
+      }
+    ]
+  },
+  "oyado_LIFESTYLE_SHOPS": {
+    "category_zh": "インテリア・雑貨・日用品",
+    "category_en": "LIFESTYLE SHOPS",
+    "emoji": "🛋",
+    "source_url": "https://maps.app.goo.gl/PXEtdbe8dgUPfEEi8",
+    "total": 17,
+    "places": [
+      {
+        "name": "Astier de Villatte (アスティエ･ド･ヴィラット) フラッグシップストア",
+        "rating": "5.0",
+        "reviewCount": "5",
+        "type": "家品店"
+      },
+      {
+        "name": "古道具屋enco",
+        "rating": "4.7",
+        "reviewCount": "9",
+        "type": "古董店"
+      },
+      {
+        "name": "seoto/瀬音 うつわとワイン 冬季休業中",
+        "rating": "4.5",
+        "reviewCount": "2",
+        "type": "暫時關閉"
+      },
+      {
+        "name": "yau",
+        "rating": "4.6",
+        "reviewCount": "20",
+        "type": "時裝店"
+      },
+      {
+        "name": "noji+",
+        "rating": "3.7",
+        "reviewCount": "6",
+        "type": "時裝店"
+      },
+      {
+        "name": "歩く鳥",
+        "rating": "4.8",
+        "reviewCount": "8",
+        "type": "雜貨舖"
+      },
+      {
+        "name": "GENERAL FURNISHINGS & CO.",
+        "rating": "4.4",
+        "reviewCount": "49",
+        "type": "家品店"
+      },
+      {
+        "name": "Wormhole Furniture",
+        "rating": "4.8",
+        "reviewCount": "5",
+        "type": "古董家具店"
+      },
+      {
+        "name": "SEED antiques & Photo Studio",
+        "rating": "4.4",
+        "reviewCount": "31",
+        "type": "古董店"
+      },
+      {
+        "name": "内町工場",
+        "rating": "4.6",
+        "reviewCount": "24",
+        "type": "二手書店"
+      },
+      {
+        "name": "仁平古家具店 真岡店",
+        "rating": "4.2",
+        "reviewCount": "39",
+        "type": "二手家具店"
+      },
+      {
+        "name": "SECOND HAND SHOP 中古知新",
+        "rating": "4.6",
+        "reviewCount": "5",
+        "type": "夜冷舖"
+      },
+      {
+        "name": "pejite",
+        "rating": "4.3",
+        "reviewCount": "123",
+        "type": "古董家具店"
+      },
+      {
+        "name": "古道具caesura",
+        "rating": "5.0",
+        "reviewCount": "5",
+        "type": "古董店"
+      },
+      {
+        "name": "Kama-Asa",
+        "rating": "4.4",
+        "reviewCount": "733",
+        "type": "廚房用品店"
+      },
+      {
+        "name": "煌めき堂",
+        "rating": "4.5",
+        "reviewCount": "10",
+        "type": "畫廊"
+      },
+      {
+        "name": "古道具＋original 紫山",
+        "rating": "3.0",
+        "reviewCount": "9",
+        "type": "古董店"
+      }
+    ]
+  },
+  "oyado_NOODLES": {
+    "category_zh": "蕎麥麵・烏龍麵・拉麵",
+    "category_en": "NOODLES",
+    "emoji": "🍜",
+    "source_url": "https://maps.app.goo.gl/B7KH5uFXEmZnwFUi7",
+    "total": 19,
+    "places": [
+      {
+        "name": "Naniwa Menjiro Miyabi",
+        "rating": "4.4",
+        "reviewCount": "177",
+        "type": "¥1,000-2,000"
+      },
+      {
+        "name": "高千穂蕎麦 おたに家",
+        "rating": "4.4",
+        "reviewCount": "329",
+        "type": "¥1,000-2,000"
+      },
+      {
+        "name": "梵保庵",
+        "rating": "4.3",
+        "reviewCount": "113",
+        "type": "¥1,000-2,000"
+      },
+      {
+        "name": "手打ちうどん 虎と草",
+        "rating": "4.6",
+        "reviewCount": "10",
+        "type": "¥1,000-2,000"
+      },
+      {
+        "name": "Garidebuchu",
+        "rating": "4.1",
+        "reviewCount": "362",
+        "type": "¥1,000-2,000"
+      },
+      {
+        "name": "ら〜麺 瑞藤",
+        "rating": "4.3",
+        "reviewCount": "167",
+        "type": "¥1,000-2,000"
+      },
+      {
+        "name": "3931WORKS.",
+        "rating": "4.4",
+        "reviewCount": "238",
+        "type": "¥1,000-2,000"
+      },
+      {
+        "name": "Japanese Ramen Noodle Lab Q",
+        "rating": "3.8",
+        "reviewCount": "930",
+        "type": "¥1,000-2,000"
+      },
+      {
+        "name": "麵鍾馗",
+        "rating": "4.2",
+        "reviewCount": "525",
+        "type": "¥1,000-2,000"
+      },
+      {
+        "name": "RAMEN RS 改",
+        "rating": "4.0",
+        "reviewCount": "790",
+        "type": "¥1,000-2,000"
+      },
+      {
+        "name": "生薑拉麵 Mizuno(みづの)水野",
+        "rating": "4.3",
+        "reviewCount": "845",
+        "type": "¥1-1,000"
+      },
+      {
+        "name": "Bon No Kaze",
+        "rating": "4.0",
+        "reviewCount": "660",
+        "type": "¥1,000-2,000"
+      },
+      {
+        "name": "Hanamaru",
+        "rating": "4.0",
+        "reviewCount": "591",
+        "type": "¥1-1,000"
+      },
+      {
+        "name": "Ramen Sakurajima",
+        "rating": "4.0",
+        "reviewCount": "854",
+        "type": "¥1-1,000"
+      },
+      {
+        "name": "Hakodate Shio Ramen Shinano",
+        "rating": "4.1",
+        "reviewCount": "",
+        "type": "¥1,000-2,000"
+      },
+      {
+        "name": "麺屋 高橋",
+        "rating": "4.1",
+        "reviewCount": "906",
+        "type": "¥1-1,000"
+      },
+      {
+        "name": "信玄拉麵",
+        "rating": "4.1",
+        "reviewCount": "",
+        "type": "¥1,000-2,000"
+      },
+      {
+        "name": "Gojogen",
+        "rating": "4.1",
+        "reviewCount": "",
+        "type": "¥1-1,000"
+      },
+      {
+        "name": "千壽",
+        "rating": "4.2",
+        "reviewCount": "697",
+        "type": "¥1-1,000"
+      }
+    ]
+  },
+  "oyado_PUBLIC_BATH": {
+    "category_zh": "銭湯・サウナ",
+    "category_en": "PUBLIC BATH",
+    "emoji": "🛁",
+    "source_url": "https://maps.app.goo.gl/FY1pT1imAm18djTw8",
+    "total": 9,
+    "places": [
+      {
+        "name": "休日湯",
+        "rating": "4.4",
+        "reviewCount": "31",
+        "type": "公共浴室"
+      },
+      {
+        "name": "Kobe Ladies Spa",
+        "rating": "3.9",
+        "reviewCount": "231",
+        "type": "熱石水療"
+      },
+      {
+        "name": "Hisetsunotaki Camping Ground",
+        "rating": "4.5",
+        "reviewCount": "251",
+        "type": "營地"
+      },
+      {
+        "name": "Thermal Climb Studio FUJI",
+        "rating": "4.8",
+        "reviewCount": "190",
+        "type": "桑拿"
+      },
+      {
+        "name": "The Sauna",
+        "rating": "4.8",
+        "reviewCount": "270",
+        "type": "桑拿"
+      },
+      {
+        "name": "THE CLASS.",
+        "rating": "4.8",
+        "reviewCount": "5",
+        "type": "桑拿"
+      },
+      {
+        "name": "堀田湯",
+        "rating": "3.9",
+        "reviewCount": "608",
+        "type": "錢湯"
+      },
+      {
+        "name": "Paradise",
+        "rating": "3.9",
+        "reviewCount": "530",
+        "type": "桑拿"
+      },
+      {
+        "name": "SaunaTherapy",
+        "rating": "4.8",
+        "reviewCount": "159",
+        "type": "桑拿"
+      }
+    ]
+  },
+  "oyado_WINE_BAR__BEER_BAR": {
+    "category_zh": "ワインバー・ビアバー",
+    "category_en": "WINE BAR, BEER BAR",
+    "emoji": "🍷",
+    "source_url": "https://maps.app.goo.gl/AxpuLdJG3c8pGExs9",
+    "total": 20,
+    "places": [
+      {
+        "name": "The Slop Shop",
+        "rating": "4.5",
+        "reviewCount": "99",
+        "type": "啤酒專賣店"
+      },
+      {
+        "name": "Komuro Beer",
+        "rating": "4.7",
+        "reviewCount": "50",
+        "type": "啤酒專賣店"
+      },
+      {
+        "name": "Craft beer freaks Sink",
+        "rating": "5.0",
+        "reviewCount": "71",
+        "type": "¥2,000-3,000"
+      },
+      {
+        "name": "Uluru",
+        "rating": "4.4",
+        "reviewCount": "84",
+        "type": "¥4,000-5,000"
+      },
+      {
+        "name": "Kimama Craft Beer Stand",
+        "rating": "4.7",
+        "reviewCount": "58",
+        "type": "¥2,000-3,000"
+      },
+      {
+        "name": "E'cuve Komoro",
+        "rating": "4.4",
+        "reviewCount": "47",
+        "type": "¥2,000-3,000"
+      },
+      {
+        "name": "MOONRISE KINGDOM",
+        "rating": "4.8",
+        "reviewCount": "153",
+        "type": "啤酒專賣店"
+      },
+      {
+        "name": "Sorry, that I'm DRUNK",
+        "rating": "4.2",
+        "reviewCount": "22",
+        "type": "酒吧"
+      },
+      {
+        "name": "mukuraf",
+        "rating": "4.1",
+        "reviewCount": "85",
+        "type": "¥1,000-2,000"
+      },
+      {
+        "name": "craft beer BLUE",
+        "rating": "4.7",
+        "reviewCount": "22",
+        "type": "¥2,000-3,000"
+      },
+      {
+        "name": "ゆうがお",
+        "rating": "4.8",
+        "reviewCount": "9",
+        "type": "葡萄酒吧"
+      },
+      {
+        "name": "イストワ / Natural Wine Shop&Bar Histoi",
+        "rating": "4.6",
+        "reviewCount": "56",
+        "type": "¥3,000-4,000"
+      },
+      {
+        "name": "I.N.U.wines HAKATA【アイエヌユー ワインズ ハカタ】",
+        "rating": "4.3",
+        "reviewCount": "4",
+        "type": "葡萄酒吧"
+      },
+      {
+        "name": "Nuppi",
+        "rating": "4.8",
+        "reviewCount": "12",
+        "type": "¥2,000-3,000"
+      },
+      {
+        "name": "Wine Bar A demain ワインバー アドゥマン",
+        "rating": "4.6",
+        "reviewCount": "9",
+        "type": "葡萄酒吧"
+      },
+      {
+        "name": "le bar sans nom",
+        "rating": "4.0",
+        "reviewCount": "3",
+        "type": "¥1,000-2,000"
+      },
+      {
+        "name": "ワイン酒場Impletio",
+        "rating": "4.3",
+        "reviewCount": "3",
+        "type": "葡萄酒吧"
+      },
+      {
+        "name": "wine shop YURA",
+        "rating": "4.8",
+        "reviewCount": "9",
+        "type": "葡萄酒吧"
+      },
+      {
+        "name": "Porco",
+        "rating": "4.1",
+        "reviewCount": "56",
+        "type": "¥4,000-5,000"
+      },
+      {
+        "name": "takefive",
+        "rating": "5.0",
+        "reviewCount": "3",
+        "type": "酒吧"
+      }
+    ]
+  },
+  "oyado_WORLD_CUISINE": {
+    "category_zh": "世界各國菜餚",
+    "category_en": "WORLD_CUISINE",
+    "emoji": "🌍",
+    "source_url": "https://maps.app.goo.gl/ugrawyKMzmtX6m4h6",
+    "total": 19,
+    "places": [
+      {
+        "name": "ケパサ QUÉ PASA downtown",
+        "rating": "4.8",
+        "reviewCount": "",
+        "type": "¥1,000-2,000"
+      },
+      {
+        "name": "BAOBAB - music and food kitchen",
+        "rating": "4.8",
+        "reviewCount": "65",
+        "type": "¥1,000-2,000"
+      },
+      {
+        "name": "akordu",
+        "rating": "4.4",
+        "reviewCount": "216",
+        "type": "超過 ¥10,000"
+      },
+      {
+        "name": "HOBO TACOS",
+        "rating": "4.7",
+        "reviewCount": "40",
+        "type": "¥3,000-4,000"
+      },
+      {
+        "name": "cloudy｜蔵前 Tacos & Wine",
+        "rating": "4.9",
+        "reviewCount": "32",
+        "type": "¥2,000-3,000"
+      },
+      {
+        "name": "土耳其料理 Burgaz Ada",
+        "rating": "4.6",
+        "reviewCount": "153",
+        "type": "超過 ¥10,000"
+      },
+      {
+        "name": "Bépocah Peruvian Restaurant",
+        "rating": "4.5",
+        "reviewCount": "514",
+        "type": "超過 ¥10,000"
+      },
+      {
+        "name": "Sanbarco",
+        "rating": "4.6",
+        "reviewCount": "179",
+        "type": "¥1,000-2,000"
+      },
+      {
+        "name": "PIEME",
+        "rating": "4.6",
+        "reviewCount": "180",
+        "type": "¥1-1,000"
+      },
+      {
+        "name": "Luke Tacos",
+        "rating": "4.4",
+        "reviewCount": "91",
+        "type": "¥1,000-2,000"
+      },
+      {
+        "name": "Aluthgamage",
+        "rating": "4.6",
+        "reviewCount": "64",
+        "type": "¥1,000-2,000"
+      },
+      {
+        "name": "norðic",
+        "rating": "4.6",
+        "reviewCount": "43",
+        "type": "¥2,000-3,000"
+      },
+      {
+        "name": "Jollof Kitchen African Restaurant",
+        "rating": "4.4",
+        "reviewCount": "138",
+        "type": "¥1,000-2,000"
+      },
+      {
+        "name": "AnnChai",
+        "rating": "4.6",
+        "reviewCount": "54",
+        "type": "¥1,000-2,000"
+      },
+      {
+        "name": "Hayashi Shoten",
+        "rating": "4.5",
+        "reviewCount": "150",
+        "type": "¥1,000-2,000"
+      },
+      {
+        "name": "トルコ食堂 タマム",
+        "rating": "4.6",
+        "reviewCount": "146",
+        "type": "¥1,000-2,000"
+      },
+      {
+        "name": "墨西哥餐廳 TORTACOS",
+        "rating": "4.5",
+        "reviewCount": "258",
+        "type": "墨西哥菜"
+      },
+      {
+        "name": "ハチャプリ",
+        "rating": "4.4",
+        "reviewCount": "77",
+        "type": "¥1,000-2,000"
+      },
+      {
+        "name": "Lumio Tacos",
+        "rating": "4.9",
+        "reviewCount": "13",
+        "type": "¥1,000-2,000"
+      }
+    ]
+  },
+  "oyado_YAKITORI": {
+    "category_zh": "烤雞肉串・串燒",
+    "category_en": "YAKITORI",
+    "emoji": "🍢",
+    "source_url": "https://maps.app.goo.gl/RQo4zdsRhGsiN4aq8",
+    "total": 20,
+    "places": [
+      {
+        "name": "炭火焼鳥 百星",
+        "rating": "4.3",
+        "reviewCount": "62",
+        "type": "日式串燒"
+      },
+      {
+        "name": "TORIDORI / ホテルオークス",
+        "rating": "3.8",
+        "reviewCount": "19",
+        "type": "日式串燒"
+      },
+      {
+        "name": "焼鳥みどり",
+        "rating": "4.8",
+        "reviewCount": "45",
+        "type": "超過 ¥10,000"
+      },
+      {
+        "name": "Michishirube",
+        "rating": "4.4",
+        "reviewCount": "160",
+        "type": "居酒屋"
+      },
+      {
+        "name": "Yakitori Hinata",
+        "rating": "4.4",
+        "reviewCount": "25",
+        "type": "超過 ¥10,000"
+      },
+      {
+        "name": "Doromamire",
+        "rating": "4.4",
+        "reviewCount": "492",
+        "type": "$$"
+      },
+      {
+        "name": "とり吾",
+        "rating": "4.1",
+        "reviewCount": "58",
+        "type": "日式串燒"
+      },
+      {
+        "name": "Sekine",
+        "rating": "4.7",
+        "reviewCount": "93",
+        "type": "日式串燒"
+      },
+      {
+        "name": "Aramaki",
+        "rating": "4.6",
+        "reviewCount": "37",
+        "type": "超過 ¥10,000"
+      },
+      {
+        "name": "Torichō",
+        "rating": "4.4",
+        "reviewCount": "242",
+        "type": "超過 ¥10,000"
+      },
+      {
+        "name": "焼鳥なかむら 虎ノ門",
+        "rating": "5.0",
+        "reviewCount": "43",
+        "type": "超過 ¥10,000"
+      },
+      {
+        "name": "Shirokane Toritama Kagurazaka",
+        "rating": "3.9",
+        "reviewCount": "264",
+        "type": "$$$"
+      },
+      {
+        "name": "Toribayashi",
+        "rating": "4.7",
+        "reviewCount": "34",
+        "type": "超過 ¥10,000"
+      },
+      {
+        "name": "Torisami",
+        "rating": "4.7",
+        "reviewCount": "76",
+        "type": "日式串燒"
+      },
+      {
+        "name": "OHKUSA",
+        "rating": "4.7",
+        "reviewCount": "67",
+        "type": "超過 ¥10,000"
+      },
+      {
+        "name": "Yakitori Uno",
+        "rating": "4.5",
+        "reviewCount": "152",
+        "type": "$$"
+      },
+      {
+        "name": "Eiki",
+        "rating": "4.7",
+        "reviewCount": "112",
+        "type": "超過 ¥10,000"
+      },
+      {
+        "name": "Yakitori Hirano",
+        "rating": "4.4",
+        "reviewCount": "186",
+        "type": "超過 ¥10,000"
+      },
+      {
+        "name": "燒鳥阿部",
+        "rating": "4.5",
+        "reviewCount": "150",
+        "type": "超過 ¥10,000"
+      },
+      {
+        "name": "Yakitori Hachiman",
+        "rating": "4.4",
+        "reviewCount": "221",
+        "type": "$$"
+      }
+    ]
+  }
+}
