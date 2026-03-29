@@ -8,6 +8,8 @@
 <title>大阪旅遊</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <style>
 :root{
   --bg:#F4F1EA;
@@ -523,7 +525,7 @@ nav{
         </div>
         <div>
           <div class="cd-days" id="countdown-num">—</div>
-          <div style="font-size:11px;color:var(--t2);text-align:right">天</div>
+          <div id="countdown-unit" style="font-size:11px;color:var(--t2);text-align:right">天</div>
         </div>
       </div>
 
@@ -649,10 +651,7 @@ nav{
     <!-- ══ EXPLORE ══ -->
     <div class="panel" id="p-explore">
       <div class="oyado-map-wrap">
-        <iframe id="oyado-map-iframe"
-          src="https://maps.google.com/maps?q=大阪,Japan&output=embed&hl=zh-TW&z=13"
-          allowfullscreen loading="lazy" referrerpolicy="no-referrer-when-downgrade">
-        </iframe>
+        <div id="oyado-leaflet-map" style="width:100%;height:100%;"></div>
       </div>
       <div class="oyado-tabs" id="oyado-tabs">
         <div class="oyado-loading">載入中…</div>
@@ -954,7 +953,7 @@ const MODALS = {
     chips:[{icon:'📍',text:'道頓堀・中央區'},{icon:'⏰',text:'11:00–22:00'},{icon:'💰',text:'¥4,000–8,000'},{icon:'📞',text:'06-6211-8975（建議預約）'}]
   },
   'dotonbori':{
-    img:'https://images.unsplash.com/photo-WaHPhFveWLk?w=800&q=80',
+    img:'images/dotonbori-hero.jpg',
     tag:'大阪地標',title:'道頓堀',jp:'どうとんぼり',
     desc:'大阪最具代表性的夜景勝地！格力高廣告牌、蟹道樂、金龍拉麵……霓虹倒映運河，是大阪活力的縮影。戎橋上是拍攝最佳角度，入夜後人潮最旺。',
     chips:[{icon:'📍',text:'難波・中央區'},{icon:'⏰',text:'全天'},{icon:'💰',text:'免費參觀'}]
@@ -1154,12 +1153,29 @@ function renderExpenses(){
 // ── COUNTDOWN ────────────────────────────────────────
 (function(){
   const target = new Date('2025-04-29T00:00:00+09:00');
+  const tripEnd = new Date('2025-05-04T23:59:59+09:00');
   const now = new Date();
   const diff = Math.ceil((target - now) / 86400000);
   const el = document.getElementById('countdown-num');
-  if(diff > 0) el.textContent = diff;
-  else if(diff === 0) el.textContent = '今天！';
-  else el.textContent = '旅途中';
+  const unit = document.getElementById('countdown-unit');
+  const label = document.querySelector('.cd-text');
+  if(diff > 0){
+    el.textContent = diff;
+    unit.style.display = '';
+    label.textContent = '出發倒數';
+  } else if(diff === 0){
+    el.textContent = '今天出發！';
+    unit.style.display = 'none';
+    label.textContent = '出發日';
+  } else if(now <= tripEnd){
+    el.textContent = '旅途中';
+    unit.style.display = 'none';
+    label.textContent = '享受旅程！';
+  } else {
+    el.textContent = '完旅';
+    unit.style.display = 'none';
+    label.textContent = '旅程結束';
+  }
 })();
 
 // ── TABS ─────────────────────────────────────────────
@@ -1172,6 +1188,7 @@ function switchTab(tab){
   scroll.classList.toggle('explore-mode', tab==='explore');
   scroll.scrollTop = 0;
   if(tab==='itinerary') renderDay(currentDay);
+  if(tab==='explore') setTimeout(initOyadoMap, 100);
 }
 
 // ── ITINERARY ─────────────────────────────────────────
@@ -1255,6 +1272,17 @@ const CAT_ZH = {
 
 let oyadoData = null;
 let oyadoCurrentKey = null;
+let oyadoMap = null;
+let oyadoMarker = null;
+
+function initOyadoMap() {
+  if(oyadoMap) { oyadoMap.invalidateSize(); return; }
+  oyadoMap = L.map('oyado-leaflet-map', {zoomControl:true, attributionControl:false})
+    .setView([34.6937, 135.5023], 13);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    maxZoom:19
+  }).addTo(oyadoMap);
+}
 
 fetch('json/oyado_all_places.json')
   .then(r => r.json())
@@ -1280,8 +1308,17 @@ fetch('json/oyado_all_places.json')
 function showOnMap(name, el) {
   document.querySelectorAll('.oyado-place').forEach(p => p.classList.remove('selected'));
   el.classList.add('selected');
-  document.getElementById('oyado-map-iframe').src =
-    `https://maps.google.com/maps?q=${encodeURIComponent(name)}&output=embed&hl=zh-TW&z=17`;
+  fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(name+' 大阪 OR 京都')}&format=json&limit=1&accept-language=zh-TW`, {headers:{'Accept-Language':'zh-TW'}})
+    .then(r => r.json())
+    .then(data => {
+      if(data.length > 0){
+        const lat = parseFloat(data[0].lat), lon = parseFloat(data[0].lon);
+        if(oyadoMarker) oyadoMarker.remove();
+        oyadoMarker = L.marker([lat, lon]).addTo(oyadoMap).bindPopup(`<b>${name}</b>`).openPopup();
+        oyadoMap.flyTo([lat, lon], 16, {duration:1});
+      }
+    })
+    .catch(()=>{});
 }
 
 function selectOyadoCat(key) {
@@ -1291,9 +1328,8 @@ function selectOyadoCat(key) {
   const tab = document.getElementById('otab-' + key);
   if(tab){ tab.classList.add('active'); tab.scrollIntoView({behavior:'smooth',block:'nearest',inline:'center'}); }
   const cat = oyadoData[key];
-  // Reset map to category area
-  document.getElementById('oyado-map-iframe').src =
-    `https://maps.google.com/maps?q=大阪,Japan&output=embed&hl=zh-TW&z=13`;
+  // Reset map to Osaka center
+  if(oyadoMap){ if(oyadoMarker){oyadoMarker.remove();oyadoMarker=null;} oyadoMap.flyTo([34.6937,135.5023],13,{duration:1}); }
   document.getElementById('oyado-body').innerHTML = `
     <div class="oyado-cat-header">
       <div class="oyado-cat-title">${CAT_ZH[key] || cat.category_zh}</div>
