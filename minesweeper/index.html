@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>極致踩地雷 | Premium Minesweeper</title>
+    <meta name="description" content="一個現代化、視覺精美且流暢的踩地雷遊戲。">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="background-animation"></div>
+    
+    <main class="game-container">
+        <header>
+            <h1>極致踩地雷</h1>
+            <div class="stats">
+                <div class="stat-item">
+                    <span class="label">剩餘地雷</span>
+                    <span id="mine-count" class="value">010</span>
+                </div>
+                <div class="stat-item">
+                    <span class="label">計時</span>
+                    <span id="timer" class="value">000</span>
+                </div>
+            </div>
+        </header>
+
+        <div class="grid-wrapper">
+            <div id="minefield" class="minefield"></div>
+            <div id="overlay" class="overlay hidden">
+                <div class="overlay-content">
+                    <h2 id="overlay-text">遊戲結束</h2>
+                    <button id="restart-btn">重新挑戰</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="controls-info">
+            <p><span class="key">左鍵</span> 挖開 | <span class="key">右鍵</span> 插旗</p>
+        </div>
+
+        <footer>
+            <p>&copy; 2026 Premium Mines. Made with ❤️</p>
+        </footer>
+    </main>
+
+    <script src="script.js"></script>
+</body>
+</html>
