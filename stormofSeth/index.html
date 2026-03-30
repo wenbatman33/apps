@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Storm of Seth ⚡ Slot Game Demo</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<div id="game-root">
+
+  <!-- Header -->
+  <header id="game-header">
+    <div id="game-logo">⚡ STORM OF SETH</div>
+    <div id="theme-switcher">
+      <button class="theme-btn active" data-theme="egyptian" data-path="themes/egyptian.json">Egyptian</button>
+      <button class="theme-btn" data-theme="fantasy" data-path="themes/fantasy.json">Fantasy</button>
+    </div>
+  </header>
+
+  <!-- Bonus Status Bar -->
+  <div id="bonus-bar">
+    <div id="free-spins-info">
+      <span class="label">FREE SPINS</span>
+      <span id="free-spins-count" class="info-value">0</span>
+      <span class="label">REMAINING</span>
+    </div>
+    <div id="multiplier-info">
+      <span class="label">MULTIPLIER</span>
+      <span id="multiplier-value" class="info-value">1x</span>
+    </div>
+  </div>
+
+  <!-- Game Canvas -->
+  <div id="game-area">
+    <div id="canvas-wrapper">
+      <canvas id="game-canvas"></canvas>
+    </div>
+  </div>
+
+  <!-- Message Bar -->
+  <div id="message-bar">
+    <div id="message-text">Spin to begin your journey into the Storm...</div>
+  </div>
+
+  <!-- Controls Panel -->
+  <div id="controls-panel">
+
+    <!-- Balance -->
+    <div class="info-display">
+      <div class="info-label">Balance</div>
+      <div class="info-value" id="balance-value">1000.00</div>
+    </div>
+
+    <!-- Bet Control -->
+    <div id="bet-control">
+      <div class="info-label">Total Bet</div>
+      <div class="bet-row">
+        <button class="bet-btn" id="bet-down-btn">−</button>
+        <div id="bet-value">1.00</div>
+        <button class="bet-btn" id="bet-up-btn">+</button>
+      </div>
+      <button class="max-bet-btn" id="max-bet-btn">MAX BET</button>
+    </div>
+
+    <!-- Spin Button (center) -->
+    <div id="spin-center">
+      <button id="spin-btn">SPIN</button>
+      <button id="auto-btn">AUTO 10</button>
+    </div>
+
+    <!-- Win Display -->
+    <div class="info-display">
+      <div class="info-label">Last Win</div>
+      <div class="info-value" id="win-value">0.00</div>
+    </div>
+
+    <!-- RTP / Lines info -->
+    <div class="info-display">
+      <div class="info-label">Lines</div>
+      <div class="info-value" id="lines-value">20</div>
+    </div>
+
+  </div>
+
+  <!-- Feature chips -->
+  <div id="features-info">
+    <div class="feature-chip"><span class="dot"></span> Seth Wild — Expands on Free Spins</div>
+    <div class="feature-chip"><span class="dot"></span> Storm Scatter — Triggers Free Spins</div>
+    <div class="feature-chip"><span class="dot"></span> Seth Storm — Up to 5x Multiplier</div>
+    <div class="feature-chip"><span class="dot"></span> 20 Paylines</div>
+  </div>
+
+</div><!-- /#game-root -->
+
+<!-- Big Win Overlay -->
+<div id="win-overlay">
+  <div id="win-type-label">BIG WIN</div>
+  <div id="win-amount-display">0.00</div>
+  <div id="win-close-hint">CLICK ANYWHERE TO CONTINUE</div>
+</div>
+
+<!-- Paytable Button -->
+<button id="paytable-btn" title="Paytable">📜</button>
+
+<!-- Paytable Modal -->
+<div id="paytable-modal">
+  <div id="paytable-content">
+    <h2>⚡ PAYTABLE ⚡</h2>
+    <div class="paytable-grid" id="paytable-grid">
+      <!-- Populated by JS -->
+    </div>
+    <div style="margin-top:16px; font-size:11px; color:var(--color-text-secondary); text-align:center; letter-spacing:1px; line-height:1.8">
+      <div>Wins pay left to right on active lines • Wild substitutes all except Scatter</div>
+      <div>3+ Scatter anywhere = Free Spins • Seth wilds expand during Free Spins</div>
+      <div>Each expanded Seth adds +1 to multiplier (max 5x) and awards 1 Re-spin</div>
+    </div>
+    <button class="paytable-close" onclick="document.getElementById('paytable-modal').classList.remove('open')">CLOSE</button>
+  </div>
+</div>
+
+<!-- Game Scripts -->
+<script src="js/core/ThemeManager.js"></script>
+<script src="js/core/SymbolRenderer.js"></script>
+<script src="js/core/PaylineEngine.js"></script>
+<script src="js/core/ReelManager.js"></script>
+<script src="js/core/BonusEngine.js"></script>
+<script src="js/SlotGame.js"></script>
+
+<script>
+// ═══════════════════════════════════════════════
+// Main entry — wires UI to SlotGame engine
+// ═══════════════════════════════════════════════
+
+let game;
+
+async function initGame() {
+  game = new SlotGame('game-canvas');
+
+  // ── Callbacks ──────────────────────────────
+  game.onBalanceChange = (val) => {
+    document.getElementById('balance-value').textContent = val.toFixed(2);
+  };
+
+  game.onWinChange = (val) => {
+    document.getElementById('win-value').textContent = val.toFixed(2);
+  };
+
+  game.onBetChange = (val) => {
+    document.getElementById('bet-value').textContent = val.toFixed(2);
+  };
+
+  game.onStateChange = (state, bonusStatus) => {
+    const spinBtn = document.getElementById('spin-btn');
+    const autoBtn = document.getElementById('auto-btn');
+
+    const isBusy = state !== 'idle';
+    spinBtn.disabled = isBusy;
+    autoBtn.disabled = isBusy && !game.autoSpin;
+
+    if (state === 'spinning') {
+      spinBtn.classList.add('spinning');
+      spinBtn.textContent = '...';
+    } else if (bonusStatus?.isFreeSpins) {
+      spinBtn.classList.remove('spinning');
+      spinBtn.textContent = 'FREE';
+    } else {
+      spinBtn.classList.remove('spinning');
+      spinBtn.textContent = 'SPIN';
+    }
+  };
+
+  game.onFreeSpinsChange = (status) => {
+    const fsInfo = document.getElementById('free-spins-info');
+    const fsCount = document.getElementById('free-spins-count');
+    if (status.isFreeSpins) {
+      fsInfo.classList.add('visible');
+      fsCount.textContent = status.spinsRemaining;
+    } else {
+      fsInfo.classList.remove('visible');
+    }
+  };
+
+  game.onMultiplierChange = (val) => {
+    const multInfo = document.getElementById('multiplier-info');
+    const multVal = document.getElementById('multiplier-value');
+    if (val > 1) {
+      multInfo.classList.add('visible');
+      multVal.textContent = `${val}x`;
+    } else {
+      multInfo.classList.remove('visible');
+    }
+  };
+
+  game.onMessage = (msg) => {
+    const el = document.getElementById('message-text');
+    el.textContent = msg;
+    el.classList.add('highlight');
+    setTimeout(() => el.classList.remove('highlight'), 3000);
+  };
+
+  game.onBigWin = (type, amount, config) => {
+    const overlay = document.getElementById('win-overlay');
+    const typeEl = document.getElementById('win-type-label');
+    const amtEl = document.getElementById('win-amount-display');
+
+    typeEl.textContent = config.title;
+    typeEl.style.color = config.color;
+    typeEl.style.textShadow = `0 0 40px ${config.color}, 0 0 80px ${config.color}`;
+    amtEl.textContent = amount.toFixed(2);
+
+    overlay.classList.add('visible');
+    setTimeout(() => overlay.classList.remove('visible'), 4000);
+  };
+
+  // ── Initialize game with Egyptian theme ────
+  await game.init('egyptian', 'themes/egyptian.json');
+
+  // Update lines display
+  document.getElementById('lines-value').textContent = game.themeManager.get().paylines.length;
+
+  // Build initial paytable
+  buildPaytable(game.themeManager.get());
+}
+
+// ── UI Event Handlers ─────────────────────────
+
+document.getElementById('spin-btn').addEventListener('click', () => {
+  if (game && game.state === 'idle') game.spin();
+});
+
+document.getElementById('bet-up-btn').addEventListener('click', () => game?.betUp());
+document.getElementById('bet-down-btn').addEventListener('click', () => game?.betDown());
+document.getElementById('max-bet-btn').addEventListener('click', () => game?.maxBet());
+
+const autoBtn = document.getElementById('auto-btn');
+autoBtn.addEventListener('click', () => {
+  if (!game) return;
+  if (game.autoSpin) {
+    game.stopAutoSpin();
+    autoBtn.classList.remove('active');
+    autoBtn.textContent = 'AUTO 10';
+  } else {
+    game.startAutoSpin(10);
+    autoBtn.classList.add('active');
+    autoBtn.textContent = 'STOP';
+  }
+});
+
+// Stop auto on manual spin btn
+document.getElementById('spin-btn').addEventListener('click', () => {
+  if (game?.autoSpin) {
+    game.stopAutoSpin();
+    autoBtn.classList.remove('active');
+    autoBtn.textContent = 'AUTO 10';
+  }
+});
+
+// Close big win overlay on click
+document.getElementById('win-overlay').addEventListener('click', () => {
+  document.getElementById('win-overlay').classList.remove('visible');
+});
+
+// ── Theme Switching ───────────────────────────
+document.querySelectorAll('.theme-btn').forEach(btn => {
+  btn.addEventListener('click', async () => {
+    if (!game) return;
+    const themeId = btn.dataset.theme;
+    const themePath = btn.dataset.path;
+
+    document.querySelectorAll('.theme-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+
+    await game.switchTheme(themeId, themePath);
+
+    const theme = game.themeManager.get();
+    document.getElementById('lines-value').textContent = theme.paylines.length;
+    document.getElementById('game-logo').textContent = theme.ui?.title || theme.name;
+
+    // Update feature chips
+    const chips = document.querySelectorAll('.feature-chip');
+    if (chips[0]) chips[0].querySelector('span:last-child') && (chips[0].innerHTML = `<span class="dot"></span> ${theme.symbols.find(s=>s.type==='wild')?.name} — Expands on Free Spins`);
+
+    buildPaytable(theme);
+  });
+});
+
+// ── Paytable ─────────────────────────────────
+document.getElementById('paytable-btn').addEventListener('click', () => {
+  document.getElementById('paytable-modal').classList.add('open');
+});
+
+document.getElementById('paytable-modal').addEventListener('click', (e) => {
+  if (e.target === document.getElementById('paytable-modal')) {
+    document.getElementById('paytable-modal').classList.remove('open');
+  }
+});
+
+function buildPaytable(theme) {
+  const grid = document.getElementById('paytable-grid');
+  grid.innerHTML = '';
+  const renderer = game?.symbolRenderer || new SymbolRenderer();
+
+  for (const sym of theme.symbols) {
+    const row = document.createElement('div');
+    row.className = 'paytable-row';
+
+    // Mini canvas
+    const canvas = document.createElement('canvas');
+    canvas.width = 64; canvas.height = 64;
+    canvas.className = 'paytable-symbol-canvas';
+    const ctx = canvas.getContext('2d');
+    renderer.drawSymbol(ctx, sym, 32, 32, 58, 1, false);
+
+    // Info
+    const info = document.createElement('div');
+    info.className = 'paytable-info';
+
+    const nameEl = document.createElement('div');
+    nameEl.className = 'paytable-name';
+    nameEl.innerHTML = sym.name;
+    if (sym.type === 'wild') nameEl.innerHTML += `<span class="paytable-badge badge-wild">WILD</span>`;
+    if (sym.type === 'scatter') nameEl.innerHTML += `<span class="paytable-badge badge-scatter">SCATTER</span>`;
+
+    const pays = document.createElement('div');
+    pays.className = 'paytable-pays';
+    for (const [count, val] of Object.entries(sym.paytable || {})) {
+      const p = document.createElement('div');
+      p.className = 'paytable-pay';
+      p.innerHTML = `${val} <span>x${count}</span>`;
+      pays.appendChild(p);
+    }
+
+    info.appendChild(nameEl);
+    info.appendChild(pays);
+
+    if (sym.freeSpin) {
+      const fs = document.createElement('div');
+      fs.style.cssText = 'font-size:10px;color:var(--color-scatter-glow);margin-top:3px;letter-spacing:1px;';
+      fs.textContent = `3+ = ${sym.freeSpin[3]} FS  4+ = ${sym.freeSpin[4]} FS  5 = ${sym.freeSpin[5]} FS`;
+      info.appendChild(fs);
+    }
+
+    row.appendChild(canvas);
+    row.appendChild(info);
+    grid.appendChild(row);
+  }
+}
+
+// ── Keyboard shortcuts ────────────────────────
+document.addEventListener('keydown', (e) => {
+  if (e.code === 'Space') {
+    e.preventDefault();
+    if (game?.state === 'idle') game.spin();
+  }
+});
+
+// ── Start ─────────────────────────────────────
+initGame().catch(console.error);
+</script>
+
+</body>
+</html>

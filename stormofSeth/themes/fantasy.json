@@ -1,0 +1,216 @@
+{
+  "id": "fantasy",
+  "name": "Dragon's Realm",
+  "version": "1.0.0",
+  "description": "Fantasy medieval theme - swap-in example showing theme portability",
+
+  "colors": {
+    "background": "#050a05",
+    "reelBg": "#070d07",
+    "reelBorder": "#4a8a2a",
+    "reelBorderGlow": "#66cc44",
+    "panelBg": "#060e06",
+    "panelBorder": "#3a6a2a",
+    "controlsBg": "#050c05",
+    "buttonPrimary": "#1a4a1a",
+    "buttonPrimaryHover": "#226622",
+    "buttonGold": "#4a8a2a",
+    "buttonGoldHover": "#66aa44",
+    "textPrimary": "#88ff66",
+    "textSecondary": "#66cc44",
+    "textWin": "#ccff44",
+    "textBigWin": "#ffaa00",
+    "winOverlayBg": "rgba(2, 8, 2, 0.92)",
+    "sethGlow": "#44ff00",
+    "stormPurple": "#006600",
+    "lightningYellow": "#88ff44",
+    "scatterGlow": "#00cc44"
+  },
+
+  "fonts": {
+    "title": "MedievalSharp, serif",
+    "ui": "Palatino, serif",
+    "numbers": "Courier New, monospace"
+  },
+
+  "grid": {
+    "reels": 5,
+    "rows": 3,
+    "symbolSize": 128,
+    "symbolPadding": 6
+  },
+
+  "symbols": [
+    {
+      "id": "seth",
+      "name": "Dragon Wild",
+      "type": "wild",
+      "drawStyle": "seth",
+      "colors": { "primary": "#006600", "secondary": "#44ff22", "glow": "#22cc00", "border": "#aaff66" },
+      "image": null,
+      "paytable": { "5": 2000, "4": 500, "3": 100 },
+      "weight": 3
+    },
+    {
+      "id": "storm",
+      "name": "Magic Scatter",
+      "type": "scatter",
+      "drawStyle": "storm",
+      "colors": { "primary": "#004400", "secondary": "#22aa22", "glow": "#44ff44", "border": "#88ff88" },
+      "image": null,
+      "paytable": { "5": 500, "4": 200, "3": 50 },
+      "scatterPay": { "5": 50, "4": 20, "3": 5 },
+      "freeSpin": { "3": 10, "4": 15, "5": 20 },
+      "weight": 4
+    },
+    {
+      "id": "pharaoh",
+      "name": "Knight",
+      "type": "high",
+      "drawStyle": "pharaoh",
+      "colors": { "primary": "#556600", "secondary": "#88aa00", "glow": "#aacc00", "border": "#ccee44" },
+      "image": null,
+      "paytable": { "5": 1000, "4": 250, "3": 50 },
+      "weight": 8
+    },
+    {
+      "id": "eye",
+      "name": "Crystal",
+      "type": "high",
+      "drawStyle": "eye",
+      "colors": { "primary": "#006644", "secondary": "#00aa66", "glow": "#00cc77", "border": "#66ffaa" },
+      "image": null,
+      "paytable": { "5": 500, "4": 150, "3": 30 },
+      "weight": 10
+    },
+    {
+      "id": "ankh",
+      "name": "Sword",
+      "type": "high",
+      "drawStyle": "ankh",
+      "colors": { "primary": "#446600", "secondary": "#669900", "glow": "#88bb00", "border": "#aaddoo" },
+      "image": null,
+      "paytable": { "5": 300, "4": 100, "3": 20 },
+      "weight": 12
+    },
+    {
+      "id": "scarab",
+      "name": "Shield",
+      "type": "mid",
+      "drawStyle": "scarab",
+      "colors": { "primary": "#224400", "secondary": "#446600", "glow": "#668800", "border": "#aabb44" },
+      "image": null,
+      "paytable": { "5": 200, "4": 75, "3": 15 },
+      "weight": 14
+    },
+    {
+      "id": "lotus",
+      "name": "Potion",
+      "type": "mid",
+      "drawStyle": "lotus",
+      "colors": { "primary": "#004422", "secondary": "#006633", "glow": "#008844", "border": "#44cc88" },
+      "image": null,
+      "paytable": { "5": 150, "4": 50, "3": 10 },
+      "weight": 16
+    },
+    {
+      "id": "ace",
+      "name": "A",
+      "type": "low",
+      "drawStyle": "card",
+      "cardLabel": "A",
+      "colors": { "primary": "#334400", "secondary": "#556600", "glow": "#778800", "border": "#aabb44" },
+      "image": null,
+      "paytable": { "5": 100, "4": 25, "3": 5 },
+      "weight": 18
+    },
+    {
+      "id": "king",
+      "name": "K",
+      "type": "low",
+      "drawStyle": "card",
+      "cardLabel": "K",
+      "colors": { "primary": "#224400", "secondary": "#446600", "glow": "#668800", "border": "#99bb44" },
+      "image": null,
+      "paytable": { "5": 75, "4": 20, "3": 4 },
+      "weight": 20
+    },
+    {
+      "id": "queen",
+      "name": "Q",
+      "type": "low",
+      "drawStyle": "card",
+      "cardLabel": "Q",
+      "colors": { "primary": "#116600", "secondary": "#228800", "glow": "#33aa00", "border": "#66cc44" },
+      "image": null,
+      "paytable": { "5": 50, "4": 15, "3": 3 },
+      "weight": 22
+    },
+    {
+      "id": "jack",
+      "name": "J",
+      "type": "low",
+      "drawStyle": "card",
+      "cardLabel": "J",
+      "colors": { "primary": "#335500", "secondary": "#557700", "glow": "#779900", "border": "#99bb55" },
+      "image": null,
+      "paytable": { "5": 40, "4": 10, "3": 2 },
+      "weight": 24
+    }
+  ],
+
+  "features": {
+    "sethStorm": {
+      "enabled": true,
+      "description": "Dragon Fire: Dragon wilds expand and trigger multiplier re-spins",
+      "multiplierPerSeth": 1,
+      "maxMultiplier": 5,
+      "reSpinOnExpand": true
+    },
+    "freeSpins": {
+      "enabled": true,
+      "scatterSymbol": "storm",
+      "minTrigger": 3,
+      "awards": { "3": 10, "4": 15, "5": 20 }
+    },
+    "cascading": false
+  },
+
+  "paylines": [
+    [1,1,1,1,1],
+    [0,0,0,0,0],
+    [2,2,2,2,2],
+    [0,1,2,1,0],
+    [2,1,0,1,2],
+    [0,0,1,2,2],
+    [2,2,1,0,0],
+    [1,0,0,0,1],
+    [1,2,2,2,1],
+    [0,1,1,1,0],
+    [2,1,1,1,2],
+    [1,0,1,2,1],
+    [1,2,1,0,1],
+    [0,0,1,0,0],
+    [2,2,1,2,2],
+    [1,1,0,1,1],
+    [1,1,2,1,1],
+    [0,1,0,1,0],
+    [2,1,2,1,2],
+    [0,2,0,2,0]
+  ],
+
+  "ui": {
+    "title": "🐉 DRAGON'S REALM 🐉",
+    "subtitle": "The Ancient Power Rises",
+    "logo": null,
+    "background": null,
+    "reelFrame": null,
+    "particleColor": "#44ff22",
+    "lightningColor": "#66ff00",
+    "winAnimations": {
+      "bigWin": { "threshold": 20, "title": "BIG WIN", "color": "#88ff44" },
+      "megaWin": { "threshold": 50, "title": "MEGA WIN", "color": "#ccff00" },
+      "epicWin": { "threshold": 100, "title": "EPIC WIN! 🐉", "color": "#44ff00" }
+    }
+  }
+}

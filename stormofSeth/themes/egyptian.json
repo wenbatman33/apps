@@ -1,0 +1,216 @@
+{
+  "id": "egyptian",
+  "name": "Storm of Seth",
+  "version": "1.0.0",
+  "description": "Original Egyptian mythology theme featuring the war god Seth",
+
+  "colors": {
+    "background": "#0a0510",
+    "reelBg": "#0d0918",
+    "reelBorder": "#c8a84b",
+    "reelBorderGlow": "#ffcc44",
+    "panelBg": "#12071a",
+    "panelBorder": "#6b3a8a",
+    "controlsBg": "#0e0619",
+    "buttonPrimary": "#8b1a1a",
+    "buttonPrimaryHover": "#b02222",
+    "buttonGold": "#c8a84b",
+    "buttonGoldHover": "#e8c85b",
+    "textPrimary": "#f0d080",
+    "textSecondary": "#c0a060",
+    "textWin": "#ffee44",
+    "textBigWin": "#ff8800",
+    "winOverlayBg": "rgba(5, 2, 15, 0.92)",
+    "sethGlow": "#ff4400",
+    "stormPurple": "#6600cc",
+    "lightningYellow": "#ffcc00",
+    "scatterGlow": "#8833ff"
+  },
+
+  "fonts": {
+    "title": "Cinzel Decorative, serif",
+    "ui": "Cinzel, serif",
+    "numbers": "Orbitron, monospace"
+  },
+
+  "grid": {
+    "reels": 5,
+    "rows": 3,
+    "symbolSize": 128,
+    "symbolPadding": 6
+  },
+
+  "symbols": [
+    {
+      "id": "seth",
+      "name": "Seth Wild",
+      "type": "wild",
+      "drawStyle": "seth",
+      "colors": { "primary": "#cc2200", "secondary": "#ff6600", "glow": "#ff4400", "border": "#ffcc00" },
+      "image": null,
+      "paytable": { "5": 2000, "4": 500, "3": 100 },
+      "weight": 3
+    },
+    {
+      "id": "storm",
+      "name": "Storm Scatter",
+      "type": "scatter",
+      "drawStyle": "storm",
+      "colors": { "primary": "#4400aa", "secondary": "#8833ff", "glow": "#aa44ff", "border": "#cc88ff" },
+      "image": null,
+      "paytable": { "5": 500, "4": 200, "3": 50 },
+      "scatterPay": { "5": 50, "4": 20, "3": 5 },
+      "freeSpin": { "3": 10, "4": 15, "5": 20 },
+      "weight": 4
+    },
+    {
+      "id": "pharaoh",
+      "name": "Pharaoh",
+      "type": "high",
+      "drawStyle": "pharaoh",
+      "colors": { "primary": "#cc9900", "secondary": "#ffcc00", "glow": "#ffaa00", "border": "#ffffff" },
+      "image": null,
+      "paytable": { "5": 1000, "4": 250, "3": 50 },
+      "weight": 8
+    },
+    {
+      "id": "eye",
+      "name": "Eye of Ra",
+      "type": "high",
+      "drawStyle": "eye",
+      "colors": { "primary": "#2244cc", "secondary": "#4488ff", "glow": "#3366ff", "border": "#aaccff" },
+      "image": null,
+      "paytable": { "5": 500, "4": 150, "3": 30 },
+      "weight": 10
+    },
+    {
+      "id": "ankh",
+      "name": "Ankh",
+      "type": "high",
+      "drawStyle": "ankh",
+      "colors": { "primary": "#aa7700", "secondary": "#ddaa00", "glow": "#cc9900", "border": "#ffdd66" },
+      "image": null,
+      "paytable": { "5": 300, "4": 100, "3": 20 },
+      "weight": 12
+    },
+    {
+      "id": "scarab",
+      "name": "Scarab",
+      "type": "mid",
+      "drawStyle": "scarab",
+      "colors": { "primary": "#006644", "secondary": "#00aa66", "glow": "#00cc77", "border": "#88ffcc" },
+      "image": null,
+      "paytable": { "5": 200, "4": 75, "3": 15 },
+      "weight": 14
+    },
+    {
+      "id": "lotus",
+      "name": "Lotus",
+      "type": "mid",
+      "drawStyle": "lotus",
+      "colors": { "primary": "#992266", "secondary": "#cc4488", "glow": "#ff66aa", "border": "#ffaad4" },
+      "image": null,
+      "paytable": { "5": 150, "4": 50, "3": 10 },
+      "weight": 16
+    },
+    {
+      "id": "ace",
+      "name": "A",
+      "type": "low",
+      "drawStyle": "card",
+      "cardLabel": "A",
+      "colors": { "primary": "#883300", "secondary": "#cc5500", "glow": "#ff7722", "border": "#ffaa66" },
+      "image": null,
+      "paytable": { "5": 100, "4": 25, "3": 5 },
+      "weight": 18
+    },
+    {
+      "id": "king",
+      "name": "K",
+      "type": "low",
+      "drawStyle": "card",
+      "cardLabel": "K",
+      "colors": { "primary": "#553399", "secondary": "#7755cc", "glow": "#9966ff", "border": "#cc99ff" },
+      "image": null,
+      "paytable": { "5": 75, "4": 20, "3": 4 },
+      "weight": 20
+    },
+    {
+      "id": "queen",
+      "name": "Q",
+      "type": "low",
+      "drawStyle": "card",
+      "cardLabel": "Q",
+      "colors": { "primary": "#226644", "secondary": "#338855", "glow": "#44aa66", "border": "#88ddaa" },
+      "image": null,
+      "paytable": { "5": 50, "4": 15, "3": 3 },
+      "weight": 22
+    },
+    {
+      "id": "jack",
+      "name": "J",
+      "type": "low",
+      "drawStyle": "card",
+      "cardLabel": "J",
+      "colors": { "primary": "#664422", "secondary": "#996633", "glow": "#bb8844", "border": "#ddbb77" },
+      "image": null,
+      "paytable": { "5": 40, "4": 10, "3": 2 },
+      "weight": 24
+    }
+  ],
+
+  "features": {
+    "sethStorm": {
+      "enabled": true,
+      "description": "During free spins, Seth wilds expand to fill entire reel and add multiplier",
+      "multiplierPerSeth": 1,
+      "maxMultiplier": 5,
+      "reSpinOnExpand": true
+    },
+    "freeSpins": {
+      "enabled": true,
+      "scatterSymbol": "storm",
+      "minTrigger": 3,
+      "awards": { "3": 10, "4": 15, "5": 20 }
+    },
+    "cascading": false
+  },
+
+  "paylines": [
+    [1,1,1,1,1],
+    [0,0,0,0,0],
+    [2,2,2,2,2],
+    [0,1,2,1,0],
+    [2,1,0,1,2],
+    [0,0,1,2,2],
+    [2,2,1,0,0],
+    [1,0,0,0,1],
+    [1,2,2,2,1],
+    [0,1,1,1,0],
+    [2,1,1,1,2],
+    [1,0,1,2,1],
+    [1,2,1,0,1],
+    [0,0,1,0,0],
+    [2,2,1,2,2],
+    [1,1,0,1,1],
+    [1,1,2,1,1],
+    [0,1,0,1,0],
+    [2,1,2,1,2],
+    [0,2,0,2,0]
+  ],
+
+  "ui": {
+    "title": "⚡ STORM OF SETH ⚡",
+    "subtitle": "The War God Awakens",
+    "logo": null,
+    "background": null,
+    "reelFrame": null,
+    "particleColor": "#ffcc44",
+    "lightningColor": "#ff6600",
+    "winAnimations": {
+      "bigWin": { "threshold": 20, "title": "BIG WIN", "color": "#ffcc00" },
+      "megaWin": { "threshold": 50, "title": "MEGA WIN", "color": "#ff8800" },
+      "epicWin": { "threshold": 100, "title": "EPIC WIN! ⚡", "color": "#ff4400" }
+    }
+  }
+}
