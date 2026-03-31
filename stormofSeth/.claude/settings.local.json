@@ -2,7 +2,11 @@
   "permissions": {
     "allow": [
       "WebSearch",
-      "mcp__Claude_Preview__preview_start"
+      "mcp__Claude_Preview__preview_start",
+      "Bash(git commit:*)",
+      "Bash(git push:*)",
+      "Read(//Users/batman_work/claude/apps/xenoTactic/**)",
+      "Bash(/Users/batman_work/claude/apps/stormofSeth/css/style.css:*)"
     ]
   }
 }

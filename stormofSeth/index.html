@@ -120,6 +120,32 @@
   </div>
 </div>
 
+<!-- Developer RTP Control Panel -->
+<div id="rtp-panel">
+  <div id="rtp-panel-header">
+    <span>⚙ 開發者面板 · RTP控制</span>
+    <button id="rtp-panel-close" title="關閉 (按 ` 切換)">✕</button>
+  </div>
+  <div class="rtp-row">
+    <label class="rtp-label">殺率控制</label>
+    <label class="rtp-toggle-wrap">
+      <input type="checkbox" id="rtp-enabled">
+      <span class="rtp-toggle-slider"></span>
+    </label>
+    <span id="rtp-enabled-label" class="rtp-status off">關閉</span>
+  </div>
+  <div class="rtp-row">
+    <label class="rtp-label">中獎率</label>
+    <input type="range" id="rtp-winrate" min="0" max="100" value="30" step="1" class="rtp-slider">
+    <span id="rtp-winrate-val" class="rtp-val">30%</span>
+  </div>
+  <div class="rtp-row" style="justify-content:center; padding-top:4px;">
+    <span id="rtp-last-outcome" class="rtp-outcome">—</span>
+  </div>
+  <div class="rtp-hint">按 <kbd>`</kbd> 切換面板</div>
+</div>
+<button id="rtp-toggle-btn" title="開發者面板 (`)">⚙</button>
+
 <!-- Game Scripts -->
 <script src="js/core/ThemeManager.js"></script>
 <script src="js/core/SymbolRenderer.js"></script>
@@ -356,8 +382,74 @@ document.addEventListener('keydown', (e) => {
   }
 });
 
+// ── RTP / Kill-Rate Developer Panel ───────────
+const rtpPanel      = document.getElementById('rtp-panel');
+const rtpToggleBtn  = document.getElementById('rtp-toggle-btn');
+const rtpClose      = document.getElementById('rtp-panel-close');
+const rtpEnabled    = document.getElementById('rtp-enabled');
+const rtpEnabledLbl = document.getElementById('rtp-enabled-label');
+const rtpWinrate    = document.getElementById('rtp-winrate');
+const rtpWinrateVal = document.getElementById('rtp-winrate-val');
+const rtpOutcome    = document.getElementById('rtp-last-outcome');
+
+function toggleRtpPanel() {
+  const open = rtpPanel.classList.toggle('open');
+  rtpToggleBtn.classList.toggle('active', open);
+}
+
+rtpToggleBtn.addEventListener('click', toggleRtpPanel);
+rtpClose.addEventListener('click', () => {
+  rtpPanel.classList.remove('open');
+  rtpToggleBtn.classList.remove('active');
+});
+
+document.addEventListener('keydown', (e) => {
+  if (e.key === '`' || e.key === '~') toggleRtpPanel();
+});
+
+rtpEnabled.addEventListener('change', () => {
+  if (!game) return;
+  game.rtpControl.enabled = rtpEnabled.checked;
+  rtpEnabledLbl.textContent = rtpEnabled.checked ? '開啟' : '關閉';
+  rtpEnabledLbl.className   = 'rtp-status ' + (rtpEnabled.checked ? 'on' : 'off');
+  rtpWinrate.disabled        = !rtpEnabled.checked;
+});
+
+rtpWinrate.addEventListener('input', () => {
+  if (!game) return;
+  game.rtpControl.winRate = +rtpWinrate.value;
+  rtpWinrateVal.textContent = rtpWinrate.value + '%';
+});
+
+// Hook into game spin to show last outcome
+const _origSpin = () => {};   // placeholder — patched after initGame
+function patchRtpOutcome() {
+  const origOnWinChange = game.onWinChange;
+  game.onWinChange = (val) => {
+    if (origOnWinChange) origOnWinChange(val);
+    if (game.rtpControl.enabled) {
+      if (val > 0) {
+        rtpOutcome.textContent = `WIN  +${val.toFixed(2)}`;
+        rtpOutcome.className = 'rtp-outcome win';
+      }
+    }
+  };
+  const origOnStateChange = game.onStateChange;
+  game.onStateChange = (state, bonus) => {
+    if (origOnStateChange) origOnStateChange(state, bonus);
+    if (game.rtpControl.enabled && state === 'spinning') {
+      rtpOutcome.textContent = '旋轉中...';
+      rtpOutcome.className = 'rtp-outcome';
+    }
+    if (game.rtpControl.enabled && state === 'idle' && game.lastWin === 0) {
+      rtpOutcome.textContent = 'LOSS  +0.00';
+      rtpOutcome.className = 'rtp-outcome loss';
+    }
+  };
+}
+
 // ── Start ─────────────────────────────────────
-initGame().catch(console.error);
+initGame().then(() => patchRtpOutcome()).catch(console.error);
 </script>
 
 </body>

@@ -181,4 +181,27 @@ class PaylineEngine {
     }
     return grid;
   }
+
+  /**
+   * Generate grid guaranteed to have zero wins.
+   * Re-rolls up to 50 times; falls back to patching reel 2 if needed.
+   */
+  generateLoss(reels, rows) {
+    for (let attempt = 0; attempt < 50; attempt++) {
+      const grid = this.generateGrid(reels, rows);
+      const result = this.evaluate(grid, 1, false, 1);
+      if (result.totalWin === 0) return grid;
+    }
+    // Guaranteed fallback: break every potential match at reel index 2
+    const grid = this.generateGrid(reels, rows);
+    const breaker = this.theme.symbols.find(
+      s => s.type !== 'wild' && s.type !== 'scatter' && s.weight >= 5
+    ) || this.theme.symbols[this.theme.symbols.length - 1];
+    // Alternate between two different low symbols across rows so no scatter forms either
+    const alts = this.theme.symbols.filter(s => s.type !== 'wild' && s.type !== 'scatter');
+    for (let row = 0; row < rows; row++) {
+      grid[2][row] = alts[row % alts.length]?.id || breaker.id;
+    }
+    return grid;
+  }
 }

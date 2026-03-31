@@ -43,6 +43,9 @@ class SlotGame {
     this.currentGrid = null;
     this.winResult = null;
 
+    // RTP / kill-rate control (developer panel)
+    this.rtpControl = { enabled: false, winRate: 30 };
+
     // Win display
     this.winDisplayTimer = 0;
     this.winLineIndex = 0;
@@ -461,7 +464,20 @@ class SlotGame {
 
     // Generate result grid
     const theme = this.themeManager.get();
-    const grid = this.paylineEngine.generateGrid(theme.grid.reels, theme.grid.rows);
+    let grid;
+    if (this.rtpControl.enabled) {
+      if (Math.random() * 100 < this.rtpControl.winRate) {
+        // Forced win: pick a random pay symbol and force 3-in-a-row
+        const paySymbols = theme.symbols.filter(s => s.type !== 'scatter' && s.paytable && Object.keys(s.paytable).length > 0);
+        const sym = paySymbols[Math.floor(Math.random() * paySymbols.length)];
+        grid = this.paylineEngine.generateForcedWin(theme.grid.reels, theme.grid.rows, sym.id, 3);
+      } else {
+        // Forced loss
+        grid = this.paylineEngine.generateLoss(theme.grid.reels, theme.grid.rows);
+      }
+    } else {
+      grid = this.paylineEngine.generateGrid(theme.grid.reels, theme.grid.rows);
+    }
     this.currentGrid = grid;
 
     this.state = 'spinning';
