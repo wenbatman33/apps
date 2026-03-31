@@ -44,6 +44,7 @@ class ReelManager {
 
     this.spinning = false;
     this.onAllStopped = null;
+    this.onReelStop = null;
 
     // Animation constants
     this.SPIN_SPEED = this.cellSize * 0.72;     // px per frame at max speed
@@ -221,6 +222,7 @@ class ReelManager {
         this.reelSymbols[i] = [...this.targetGrid[i]];
         this.reelStates[i] = 'stopped';
         this._stoppedCount++;
+        if (this.onReelStop) this.onReelStop(i);
         return;
       }
 

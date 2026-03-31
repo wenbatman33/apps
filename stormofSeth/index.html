@@ -17,6 +17,7 @@
       <button class="theme-btn active" data-theme="egyptian" data-path="themes/egyptian.json">Egyptian</button>
       <button class="theme-btn" data-theme="fantasy" data-path="themes/fantasy.json">Fantasy</button>
     </div>
+    <button id="sound-btn" title="Toggle Sound">🔊</button>
   </header>
 
   <!-- Bonus Status Bar -->
@@ -147,6 +148,7 @@
 <button id="rtp-toggle-btn" title="開發者面板 (`)">⚙</button>
 
 <!-- Game Scripts -->
+<script src="js/core/SoundManager.js"></script>
 <script src="js/core/ThemeManager.js"></script>
 <script src="js/core/SymbolRenderer.js"></script>
 <script src="js/core/PaylineEngine.js"></script>
@@ -253,16 +255,29 @@ async function initGame() {
 // ── UI Event Handlers ─────────────────────────
 
 document.getElementById('spin-btn').addEventListener('click', () => {
-  if (game && game.state === 'idle') game.spin();
+  if (game && game.state === 'idle') {
+    game.soundManager.playClick();
+    game.spin();
+  }
 });
 
-document.getElementById('bet-up-btn').addEventListener('click', () => game?.betUp());
-document.getElementById('bet-down-btn').addEventListener('click', () => game?.betDown());
-document.getElementById('max-bet-btn').addEventListener('click', () => game?.maxBet());
+document.getElementById('bet-up-btn').addEventListener('click', () => {
+  game?.soundManager.playClick();
+  game?.betUp();
+});
+document.getElementById('bet-down-btn').addEventListener('click', () => {
+  game?.soundManager.playClick();
+  game?.betDown();
+});
+document.getElementById('max-bet-btn').addEventListener('click', () => {
+  game?.soundManager.playClick();
+  game?.maxBet();
+});
 
 const autoBtn = document.getElementById('auto-btn');
 autoBtn.addEventListener('click', () => {
   if (!game) return;
+  game.soundManager.playClick();
   if (game.autoSpin) {
     game.stopAutoSpin();
     autoBtn.classList.remove('active');
@@ -447,6 +462,14 @@ function patchRtpOutcome() {
     }
   };
 }
+
+// ── Sound toggle ──────────────────────────────
+const soundBtn = document.getElementById('sound-btn');
+soundBtn.addEventListener('click', () => {
+  if (!game) return;
+  const on = game.soundManager.toggle();
+  soundBtn.textContent = on ? '🔊' : '🔇';
+});
 
 // ── Start ─────────────────────────────────────
 initGame().then(() => patchRtpOutcome()).catch(console.error);

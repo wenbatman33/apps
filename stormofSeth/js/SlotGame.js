@@ -27,6 +27,7 @@ class SlotGame {
     // Sub-systems (initialized in init())
     this.themeManager = new ThemeManager();
     this.symbolRenderer = new SymbolRenderer();
+    this.soundManager = new SoundManager();
     this.reelManager = null;
     this.paylineEngine = null;
     this.bonusEngine = null;
@@ -101,6 +102,7 @@ class SlotGame {
   async _setupTheme(theme) {
     await this.symbolRenderer.preloadThemeImages(theme.symbols);
     this.reelManager = new ReelManager(theme, this.symbolRenderer);
+    this.reelManager.onReelStop = (reelIdx) => this.soundManager.playReelStop(reelIdx);
     this.paylineEngine = new PaylineEngine(theme);
     this.bonusEngine = new BonusEngine(theme);
 
@@ -483,10 +485,12 @@ class SlotGame {
     this.state = 'spinning';
     this.notifyState();
 
+    this.soundManager.startSpin();
     this.reelManager.spin(grid, () => this._onReelsStopped());
   }
 
   _onReelsStopped() {
+    this.soundManager.stopSpin();
     this.state = 'evaluating';
     const status = this.bonusEngine.getStatus();
     const result = this.paylineEngine.evaluate(
@@ -516,6 +520,7 @@ class SlotGame {
 
     // Win handling
     if (result.totalWin > 0) {
+      this.soundManager.playWin(result.totalWin, this.bet);
       this.lastWin = result.totalWin;
       this.balance += result.totalWin;
       if (this.onBalanceChange) this.onBalanceChange(this.balance);
@@ -539,10 +544,13 @@ class SlotGame {
       const mult = result.totalWin / this.bet;
       const wins = theme.ui?.winAnimations;
       if (wins && mult >= wins.epicWin?.threshold) {
+        this.soundManager.playBigWin('epic');
         if (this.onBigWin) this.onBigWin('epic', result.totalWin, wins.epicWin);
       } else if (wins && mult >= wins.megaWin?.threshold) {
+        this.soundManager.playBigWin('mega');
         if (this.onBigWin) this.onBigWin('mega', result.totalWin, wins.megaWin);
       } else if (wins && mult >= wins.bigWin?.threshold) {
+        this.soundManager.playBigWin('big');
         if (this.onBigWin) this.onBigWin('big', result.totalWin, wins.bigWin);
       }
 
@@ -595,6 +603,7 @@ class SlotGame {
   _startFreeSpins(count) {
     this.bonusEngine.startFreeSpins(count);
     if (this.onFreeSpinsChange) this.onFreeSpinsChange(this.bonusEngine.getStatus());
+    this.soundManager.playFreeSpins();
     this._notify(`⚡ ${count} FREE SPINS ACTIVATED! ⚡`);
     this.state = 'idle';
     this.notifyState();
