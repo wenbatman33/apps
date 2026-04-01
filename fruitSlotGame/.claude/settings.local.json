@@ -7,7 +7,15 @@
       "Bash(git commit:*)",
       "Bash(rm /Users/batman_work/claude/apps/.git/index.lock)",
       "Bash(git -C /Users/batman_work/claude/apps/fruitSlotGame add css/style.css index.html js/audio.js js/game.js phaser-version/ .claude/settings.local.json .claude/launch.json)",
-      "Bash(git -C:*)"
+      "Bash(git -C:*)",
+      "Bash(git push:*)",
+      "Bash(find /Users/batman_work/claude/apps/slotGame -type f -name *.webp -o -name *.png -o -name *.jpg -o -name *.gif)",
+      "Bash(ls -lh /Users/batman_work/claude/apps/fruitSlotGame/*.html /Users/batman_work/claude/apps/fruitSlotGame/css/*.css /Users/batman_work/claude/apps/fruitSlotGame/js/*.js)",
+      "Bash(identify /Users/batman_work/claude/apps/slotGame/assets/img/*.webp)",
+      "Bash(file /Users/batman_work/claude/apps/slotGame/assets/img/*.webp)",
+      "Bash(xargs kill:*)",
+      "Bash(python3 -c \":*)",
+      "Bash(sips -g pixelWidth -g pixelHeight /Users/batman_work/claude/apps/slotGame/assets/img/Classic-Sevens-Slots-2D-Game-Kit5.webp)"
     ]
   }
 }

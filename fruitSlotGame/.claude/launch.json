@@ -12,6 +12,12 @@
       "runtimeExecutable": "npx",
       "runtimeArgs": ["serve", "-p", "3458", "phaser-version"],
       "port": 3458
+    },
+    {
+      "name": "slotGame",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["serve", "-p", "3460", "../slotGame"],
+      "port": 3460
     }
   ]
 }

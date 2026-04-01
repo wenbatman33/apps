@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "slotGame",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["serve", "-l", "3460", "--no-clipboard"],
+      "port": 3460
+    }
+  ]
+}

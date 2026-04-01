@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>Classic Sevens Slots</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div id="game-container">
+  <!-- Top Bar -->
+  <div id="top-bar">
+    <button id="btn-lobby" class="top-btn">LOBBY</button>
+    <div class="coins-display"><span class="coin-icon">&#x1FA99;</span><span id="balance-top">1000.00</span></div>
+    <div id="game-title">CLASSIC SEVENS</div>
+    <button id="btn-info" class="top-btn icon-btn" title="Paytable">&#x2139;</button>
+    <button id="btn-sound" class="top-btn icon-btn" title="Sound">&#x1F50A;</button>
+  </div>
+
+  <!-- Free Spins Bar (hidden by default) -->
+  <div id="freespin-bar" class="hidden">
+    <span id="fs-multiplier">x2</span>
+    <span>FREE GAME MULTIPLIER</span>
+    <span id="fs-count">10 FREE SPINS</span>
+  </div>
+
+  <!-- Message bar -->
+  <div id="msg-bar">&nbsp;</div>
+
+  <canvas id="gameCanvas"></canvas>
+
+  <!-- Bottom Panel -->
+  <div id="bottom-panel">
+    <div class="bet-section">
+      <div class="label">TOTAL BET</div>
+      <div class="bet-controls">
+        <button id="btn-bet-down" class="ctrl-btn">&minus;</button>
+        <span id="bet-display">1.00</span>
+        <button id="btn-bet-up" class="ctrl-btn">+</button>
+      </div>
+    </div>
+    <div class="win-section">
+      <div class="label">WIN</div>
+      <div id="win-display">0</div>
+    </div>
+    <div class="action-section">
+      <button id="btn-maxbet" class="action-btn">MAX<br>BET</button>
+      <button id="btn-auto" class="action-btn">AUTO<br>10</button>
+      <button id="btn-spin" class="spin-btn">SPIN</button>
+    </div>
+  </div>
+
+  <!-- Toolbar -->
+  <div id="toolbar">
+    <button id="btn-paytable" class="tool-btn">&#x1F4DC; Paytable</button>
+    <button id="btn-settings" class="tool-btn">&#x2699; Settings</button>
+    <button id="btn-rtp" class="tool-btn">&#x2696; RTP</button>
+  </div>
+
+  <!-- Paytable Modal -->
+  <div id="paytable-modal" class="modal hidden">
+    <div class="modal-content paytable-content">
+      <button class="modal-close">&times;</button>
+      <div id="paytable-pages"></div>
+      <div class="page-dots" id="paytable-dots"></div>
+    </div>
+  </div>
+
+  <!-- Big Win Overlay -->
+  <div id="bigwin-overlay" class="overlay hidden">
+    <div id="bigwin-text">BIG WIN!</div>
+    <div id="bigwin-amount">0</div>
+    <div id="bigwin-particles"></div>
+  </div>
+
+  <!-- Gamble Overlay -->
+  <div id="gamble-overlay" class="overlay hidden">
+    <div class="gamble-content">
+      <div class="gamble-title">GAMBLE</div>
+      <div class="gamble-subtitle">PICK A HIGHER CARD</div>
+      <div id="gamble-cards">
+        <div class="card dealer-card" id="dealer-card">?</div>
+        <div class="card player-card" id="player-card">?</div>
+      </div>
+      <div class="gamble-info">
+        <span>BET: <span id="gamble-bet">0</span></span>
+        <span>WIN UP TO: <span id="gamble-win">0</span></span>
+      </div>
+      <div class="gamble-buttons">
+        <button id="btn-collect" class="gamble-btn collect">COLLECT</button>
+        <button id="btn-gamble-pick" class="gamble-btn pick">GAMBLE</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- RTP Dev Panel -->
+  <div id="rtp-panel" class="hidden">
+    <div class="rtp-title">RTP Developer Panel</div>
+    <label>
+      <input type="checkbox" id="rtp-enabled"> Kill Switch
+    </label>
+    <label>
+      Win Rate: <span id="rtp-val">50</span>%
+      <input type="range" id="rtp-slider" min="0" max="100" value="50">
+    </label>
+    <div>Last: <span id="rtp-last">—</span></div>
+    <div>Spins: <span id="rtp-spins">0</span> | Wins: <span id="rtp-wins">0</span></div>
+  </div>
+</div>
+
+<script src="js/symbols.js"></script>
+<script src="js/game.js"></script>
+</body>
+</html>
