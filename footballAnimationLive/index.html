@@ -36,24 +36,6 @@ body {
   pointer-events: none;
 }
 
-/* Ad boards */
-.ad-board {
-  background: #1a3a6a;
-  color: #7aa4d4;
-  text-align: center;
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 3px;
-  padding: 4px 0;
-  display: flex;
-  justify-content: space-around;
-}
-.ad-board span {
-  padding: 2px 20px;
-  border: 1px solid rgba(122,164,212,0.3);
-  border-radius: 2px;
-}
-
 /* Pitch canvas */
 #pitch-container {
   position: relative;
@@ -448,12 +430,6 @@ body {
 
 <!-- Stadium -->
 <div id="stadium-wrap">
-  <div class="ad-board">
-    <span>FOOTBALL LIVE</span>
-    <span>ESPN DATA</span>
-    <span>FOOTBALL LIVE</span>
-    <span>ESPN DATA</span>
-  </div>
   <div id="pitch-container">
     <canvas id="pitchCanvas"></canvas>
     <div id="possession-label">
@@ -1805,10 +1781,7 @@ sourceSelect.onchange = () => {
   dataSource = sourceSelect.value;
   document.getElementById('espn-controls').style.display = dataSource === 'espn' ? '' : 'none';
   document.getElementById('sb-controls').style.display = dataSource === 'statsbomb' ? '' : 'none';
-  const adBoard = document.querySelector('.ad-board');
-  adBoard.querySelectorAll('span').forEach((s, i) => {
-    s.textContent = i % 2 === 0 ? 'FOOTBALL LIVE' : (dataSource === 'espn' ? 'ESPN DATA' : 'STATSBOMB DATA');
-  });
+
 };
 
 // ESPN: date picker
