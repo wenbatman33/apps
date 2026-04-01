@@ -343,8 +343,9 @@ class GameScene extends Phaser.Scene {
       bg.fillRect(cx, y - 1, cw, 2);
     });
 
-    // 5. Rotating ray burst — warm golden tones
+    // 5. Rotating ray burst — pivot set to center of area so rotation is correct
     const rays = this.add.graphics().setDepth(1);
+    rays.setPosition(midX, cyCtr);   // rotation origin = center of center area
     const numRays = 20;
     for (let r = 0; r < numRays; r++) {
       const angle = (r / numRays) * Math.PI * 2;
@@ -352,10 +353,11 @@ class GameScene extends Phaser.Scene {
       const dist = cw * 0.8;
       const col = r % 2 === 0 ? 0xffdd88 : 0xffaa44;
       rays.fillStyle(col, 0.04);
+      // Draw relative to (0,0) since graphics is positioned at (midX, cyCtr)
       rays.fillTriangle(
-        midX, cyCtr,
-        midX + Math.cos(angle) * dist, cyCtr + Math.sin(angle) * dist,
-        midX + Math.cos(nextAngle) * dist, cyCtr + Math.sin(nextAngle) * dist
+        0, 0,
+        Math.cos(angle) * dist, Math.sin(angle) * dist,
+        Math.cos(nextAngle) * dist, Math.sin(nextAngle) * dist
       );
     }
     this.tweens.add({ targets: rays, angle: 360, duration: 12000, repeat: -1, ease: 'Linear' });
@@ -383,10 +385,10 @@ class GameScene extends Phaser.Scene {
       {x: cx+14, y: cy+ch*0.65, f:2}, {x: cx+cw-14, y: cy+ch*0.65, f:3},
       {x: cx+cw/2, y: cy+ch-14, f:4},
     ];
-    bgFruitPos.forEach(p => {
+    const bgFruitTexts = bgFruitPos.map(p =>
       this.add.text(p.x, p.y, bgFruits[p.f], { fontSize: '16px' })
-        .setOrigin(0.5).setDepth(1).setAlpha(0.25);
-    });
+        .setOrigin(0.5).setDepth(1).setAlpha(0.25)
+    );
 
     // 8. Inner border glow rim
     const rim = this.add.graphics().setDepth(1);
@@ -394,6 +396,13 @@ class GameScene extends Phaser.Scene {
     rim.strokeRect(cx + 4, cy + 4, cw - 8, ch - 8);
     rim.lineStyle(1, 0xaaddff, 0.2);
     rim.strokeRect(cx + 7, cy + 7, cw - 14, ch - 14);
+
+    // Geometry mask — clips all bg elements to center area bounds
+    const maskShape = this.make.graphics({ add: false });
+    maskShape.fillStyle(0xffffff);
+    maskShape.fillRect(cx, cy, cw, ch);
+    const centerMask = maskShape.createGeometryMask();
+    [bg, rays, sparks, rim, ...bgFruitTexts].forEach(obj => obj.setMask(centerMask));
 
     // 9. Side star decorations (keep from before, on top of bg)
     const starX1 = cx + tileSize * 0.35;
