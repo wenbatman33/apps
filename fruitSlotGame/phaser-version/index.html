@@ -16,11 +16,13 @@
     }
     #game-container { position: relative; }
     canvas { display: block; }
+    html, body { user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
   </style>
   <script>
     document.addEventListener('gesturestart', function(e){ e.preventDefault(); });
     document.addEventListener('gesturechange', function(e){ e.preventDefault(); });
     document.addEventListener('touchmove', function(e){ if(e.touches.length > 1) e.preventDefault(); }, { passive: false });
+    document.addEventListener('contextmenu', function(e){ e.preventDefault(); });
   </script>
 </head>
 <body>
