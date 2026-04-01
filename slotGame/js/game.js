@@ -144,6 +144,47 @@ class Particle {
 }
 
 /* ============================================================
+   BET HISTORY
+   ============================================================ */
+const BetHistory = (() => {
+  const STORAGE_KEY = 'classicSevens_betHistory';
+  const MAX_RECORDS = 200;
+
+  function genId() {
+    return Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+  }
+
+  function load() {
+    try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]'); }
+    catch { return []; }
+  }
+
+  function save(records) {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(records));
+  }
+
+  function record({ bet, win, isFree, balance }) {
+    const records = load();
+    records.unshift({
+      id:      genId(),
+      time:    new Date().toISOString(),
+      bet:     +bet.toFixed(2),
+      win:     +win.toFixed(2),
+      isFree:  !!isFree,
+      balance: +balance.toFixed(2),
+    });
+    if (records.length > MAX_RECORDS) records.length = MAX_RECORDS;
+    save(records);
+  }
+
+  function clear() { localStorage.removeItem(STORAGE_KEY); }
+
+  function getAll() { return load(); }
+
+  return { record, clear, getAll };
+})();
+
+/* ============================================================
    MAIN GAME CLASS
    ============================================================ */
 class SlotGame {
@@ -293,6 +334,17 @@ class SlotGame {
     $('btn-settings').addEventListener('click', () => { /* placeholder */ });
     $('btn-rtp').addEventListener('click', () => $('rtp-panel').classList.toggle('hidden'));
 
+    // History modal
+    $('btn-history').addEventListener('click', () => this.showHistory());
+    $('history-close').addEventListener('click', () => $('history-modal').classList.add('hidden'));
+    $('history-modal').addEventListener('click', e => {
+      if (e.target === $('history-modal')) $('history-modal').classList.add('hidden');
+    });
+    $('btn-history-clear').addEventListener('click', () => {
+      BetHistory.clear();
+      this.renderHistoryTable();
+    });
+
     // RTP panel
     $('rtp-enabled').addEventListener('change', e => { this.rtpEnabled = e.target.checked; });
     $('rtp-slider').addEventListener('input', e => {
@@ -361,6 +413,7 @@ class SlotGame {
     if (this.state !== 'idle') return;
 
     const cost = this.freeSpinsLeft > 0 ? 0 : this.bet;
+    this._lastCost = cost;
     if (this.balance < cost) {
       this.showMsg('Insufficient balance!');
       this.autoActive = false;
@@ -631,6 +684,14 @@ class SlotGame {
     this.totalWin = totalPayout;
     this.lastWin = totalPayout;
 
+    // Record bet history
+    BetHistory.record({
+      bet:     this.freeSpinsLeft >= 0 && this._lastCost !== undefined ? this._lastCost : this.bet,
+      win:     totalPayout,
+      isFree:  this._lastCost === 0,
+      balance: this.balance,
+    });
+
     // RTP tracking
     if (this.rtpEnabled) {
       if (totalPayout > 0) this.rtpWins++;
@@ -867,6 +928,47 @@ class SlotGame {
   }
 
   /* ---- Paytable ---- */
+  showHistory() {
+    this.renderHistoryTable();
+    document.getElementById('history-modal').classList.remove('hidden');
+  }
+
+  renderHistoryTable() {
+    const records = BetHistory.getAll();
+    const tbody = document.getElementById('history-tbody');
+    const empty = document.getElementById('history-empty');
+    const countEl = document.getElementById('history-count');
+
+    countEl.textContent = `${records.length} 筆`;
+    tbody.innerHTML = '';
+
+    if (records.length === 0) {
+      empty.classList.remove('hidden');
+      return;
+    }
+    empty.classList.add('hidden');
+
+    records.forEach(r => {
+      const tr = document.createElement('tr');
+      const timeStr = new Date(r.time).toLocaleString('zh-TW', {
+        month: '2-digit', day: '2-digit',
+        hour: '2-digit', minute: '2-digit', second: '2-digit',
+      });
+      const winClass = r.win > 0 ? 'td-win-pos' : 'td-win-zero';
+      const typeClass = r.isFree ? 'td-free' : 'td-normal';
+      const typeText  = r.isFree ? '免費' : '一般';
+      tr.innerHTML = `
+        <td class="td-id">${r.id}</td>
+        <td>${timeStr}</td>
+        <td>${r.bet.toFixed(2)}</td>
+        <td class="${winClass}">${r.win > 0 ? '+' : ''}${r.win.toFixed(2)}</td>
+        <td>${r.balance.toFixed(2)}</td>
+        <td class="${typeClass}">${typeText}</td>
+      `;
+      tbody.appendChild(tr);
+    });
+  }
+
   showPaytable() {
     const modal = document.getElementById('paytable-modal');
     const pages = document.getElementById('paytable-pages');

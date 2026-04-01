@@ -55,6 +55,7 @@
     <button id="btn-paytable" class="tool-btn">&#x1F4DC; Paytable</button>
     <button id="btn-settings" class="tool-btn">&#x2699; Settings</button>
     <button id="btn-rtp" class="tool-btn">&#x2696; RTP</button>
+    <button id="btn-history" class="tool-btn">&#x1F4CB; 注單</button>
   </div>
 
   <!-- Paytable Modal -->
@@ -89,6 +90,34 @@
       <div class="gamble-buttons">
         <button id="btn-collect" class="gamble-btn collect">COLLECT</button>
         <button id="btn-gamble-pick" class="gamble-btn pick">GAMBLE</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bet History Modal -->
+  <div id="history-modal" class="modal hidden">
+    <div class="modal-content history-content">
+      <button class="modal-close" id="history-close">&times;</button>
+      <h2 class="history-title">&#x1F4CB; 注單紀錄</h2>
+      <div class="history-toolbar">
+        <span id="history-count">0 筆</span>
+        <button id="btn-history-clear" class="history-clear-btn">清除紀錄</button>
+      </div>
+      <div class="history-table-wrap">
+        <table class="history-table">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>時間</th>
+              <th>下注</th>
+              <th>贏分</th>
+              <th>餘額</th>
+              <th>類型</th>
+            </tr>
+          </thead>
+          <tbody id="history-tbody"></tbody>
+        </table>
+        <div id="history-empty" class="history-empty hidden">尚無紀錄</div>
       </div>
     </div>
   </div>

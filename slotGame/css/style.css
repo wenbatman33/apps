@@ -473,3 +473,92 @@ html, body {
   #bigwin-text { font-size: 32px; }
   #bigwin-amount { font-size: 40px; }
 }
+
+/* ===== Bet History Modal ===== */
+.history-content {
+  max-width: 640px;
+  width: 95vw;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  padding: 16px;
+  background: linear-gradient(180deg, #2a1a08 0%, #1a0a02 100%);
+  border: 2px solid var(--gold-dark);
+  border-radius: 12px;
+}
+
+.history-title {
+  color: var(--text-gold);
+  font-size: 16px;
+  text-align: center;
+  margin-bottom: 10px;
+  letter-spacing: 2px;
+}
+
+.history-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+  font-size: 12px;
+  color: var(--gold);
+}
+
+.history-clear-btn {
+  background: #601010;
+  color: #ffd0d0;
+  border: 1px solid #aa3030;
+  border-radius: 6px;
+  padding: 3px 10px;
+  font-size: 11px;
+  cursor: pointer;
+}
+.history-clear-btn:active { filter: brightness(0.8); }
+
+.history-table-wrap {
+  overflow-y: auto;
+  flex: 1;
+}
+
+.history-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.history-table th {
+  background: #3a2208;
+  color: var(--gold);
+  padding: 6px 8px;
+  text-align: left;
+  position: sticky;
+  top: 0;
+  border-bottom: 1px solid var(--gold-dark);
+  white-space: nowrap;
+}
+
+.history-table td {
+  padding: 5px 8px;
+  border-bottom: 1px solid rgba(139,105,20,0.2);
+  color: var(--text-light);
+  white-space: nowrap;
+}
+
+.history-table tr:hover td { background: rgba(200,146,42,0.08); }
+
+.history-table .td-win-pos { color: #60ff60; font-weight: bold; }
+.history-table .td-win-zero { color: #888; }
+.history-table .td-free { color: #88ccff; }
+.history-table .td-normal { color: #ccc; }
+.history-table .td-id {
+  font-family: monospace;
+  font-size: 10px;
+  color: #8888aa;
+}
+
+.history-empty {
+  text-align: center;
+  color: #888;
+  padding: 30px;
+  font-size: 13px;
+}
