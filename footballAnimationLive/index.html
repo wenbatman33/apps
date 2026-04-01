@@ -1,0 +1,1974 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Football Animation Live</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  background: #0a1628;
+  color: #fff;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  overflow-x: hidden;
+}
+
+/* ── Stadium Container ── */
+#stadium-wrap {
+  position: relative;
+  width: 100%;
+  max-width: 1100px;
+  margin: 0 auto;
+  background: linear-gradient(180deg, #1a2744 0%, #0d1a30 100%);
+  border-radius: 0 0 12px 12px;
+  overflow: hidden;
+}
+
+/* Crowd background - top */
+#stadium-wrap::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 40px;
+  background: repeating-linear-gradient(90deg,
+    rgba(100,130,180,0.15) 0px, rgba(80,110,160,0.1) 3px, rgba(60,90,140,0.15) 6px);
+  z-index: 1;
+  pointer-events: none;
+}
+/* Crowd sides */
+#stadium-wrap::after {
+  content: '';
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
+  height: 30px;
+  background: repeating-linear-gradient(90deg,
+    rgba(100,130,180,0.1) 0px, rgba(80,110,160,0.08) 3px, rgba(60,90,140,0.1) 6px);
+  z-index: 1;
+  pointer-events: none;
+}
+
+/* Ad boards */
+.ad-board {
+  background: #1a3a6a;
+  color: #7aa4d4;
+  text-align: center;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 3px;
+  padding: 4px 0;
+  display: flex;
+  justify-content: space-around;
+}
+.ad-board span {
+  padding: 2px 20px;
+  border: 1px solid rgba(122,164,212,0.3);
+  border-radius: 2px;
+}
+
+/* Pitch canvas */
+#pitch-container {
+  position: relative;
+  padding: 8px 20px;
+  display: flex;
+  justify-content: center;
+}
+#pitchCanvas {
+  display: block;
+  border-radius: 4px;
+}
+
+/* Possession label */
+#possession-label {
+  position: absolute;
+  top: 80px;
+  left: 100px;
+  z-index: 10;
+  text-align: center;
+  pointer-events: none;
+}
+#possession-label .team-name {
+  font-size: 20px;
+  font-weight: 700;
+  text-shadow: 0 2px 8px rgba(0,0,0,0.7);
+}
+#possession-label .label {
+  font-size: 13px;
+  color: #f5c542;
+  font-weight: 600;
+}
+
+/* ── Score Bar ── */
+#score-bar {
+  max-width: 1100px;
+  margin: 0 auto;
+  background: linear-gradient(180deg, #0f1e36 0%, #0a1628 100%);
+  padding: 6px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  border-top: 1px solid rgba(255,255,255,0.08);
+}
+#match-time {
+  font-size: 14px;
+  color: #5ddf5d;
+  font-weight: 600;
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  top: -24px;
+}
+.score-section {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  flex: 1;
+}
+.team-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.team-info.away {
+  flex-direction: row-reverse;
+}
+.team-flag {
+  width: 28px;
+  height: 28px;
+  border-radius: 2px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+}
+.team-flag img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+.team-label {
+  font-size: 16px;
+  font-weight: 600;
+}
+.score-display {
+  font-size: 26px;
+  font-weight: 800;
+  letter-spacing: 4px;
+  min-width: 80px;
+  text-align: center;
+}
+.card-stats {
+  display: flex;
+  gap: 12px;
+  font-size: 12px;
+  color: #8899aa;
+}
+.card-stats span {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+.card-icon {
+  width: 10px;
+  height: 13px;
+  border-radius: 1px;
+  display: inline-block;
+}
+.card-icon.yellow { background: #f5c542; }
+.card-icon.red { background: #e74c3c; }
+.corner-icon { color: #6b8; }
+
+/* ── Timeline ── */
+#timeline-section {
+  max-width: 1100px;
+  margin: 0 auto;
+  background: #0d1a30;
+  padding: 8px 20px 4px;
+}
+#timeline-container {
+  position: relative;
+  height: 90px;
+}
+.timeline-team-label {
+  position: absolute;
+  left: 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: #8899aa;
+  width: 50px;
+}
+.timeline-team-label.home { top: 2px; }
+.timeline-team-label.away { top: 56px; }
+
+#timeline-track {
+  position: absolute;
+  left: 55px;
+  right: 10px;
+  top: 0;
+  bottom: 0;
+}
+
+/* Momentum chart */
+#momentumCanvas {
+  position: absolute;
+  left: 0;
+  top: 14px;
+  width: 100%;
+  height: 50px;
+}
+
+/* Time axis */
+.time-axis {
+  position: absolute;
+  left: 55px;
+  right: 10px;
+  bottom: 0;
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  color: #556677;
+}
+
+/* Timeline events */
+.timeline-event {
+  position: absolute;
+  font-size: 14px;
+  transform: translateX(-50%);
+  cursor: pointer;
+  z-index: 5;
+  filter: drop-shadow(0 1px 3px rgba(0,0,0,0.5));
+}
+.timeline-event.home { top: -2px; }
+.timeline-event.away { top: 54px; }
+
+/* Timeline progress */
+#timeline-progress {
+  position: absolute;
+  top: 14px;
+  left: 0;
+  width: 0%;
+  height: 50px;
+  background: rgba(93,223,93,0.06);
+  border-right: 2px solid rgba(93,223,93,0.5);
+  pointer-events: none;
+  transition: width 0.3s;
+}
+
+/* ── Stats Bar ── */
+#stats-section {
+  max-width: 1100px;
+  margin: 0 auto;
+  background: #0a1628;
+  padding: 6px 20px 8px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2px 30px;
+}
+.stat-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 0;
+}
+.stat-val {
+  font-size: 14px;
+  font-weight: 700;
+  min-width: 32px;
+  text-align: center;
+}
+.stat-val.home { color: #5ba3f5; }
+.stat-val.away { color: #f5a623; }
+.stat-label {
+  flex: 1;
+  text-align: center;
+  font-size: 12px;
+  color: #8899aa;
+}
+.stat-bar-wrap {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.stat-bar {
+  height: 6px;
+  border-radius: 3px;
+  transition: width 0.5s;
+}
+.stat-bar.home { background: #5ba3f5; }
+.stat-bar.away { background: #f5a623; }
+.stat-bar-bg {
+  flex: 1;
+  height: 6px;
+  background: rgba(255,255,255,0.06);
+  border-radius: 3px;
+  overflow: hidden;
+  display: flex;
+}
+.stat-bar-bg.reverse { flex-direction: row-reverse; }
+
+/* ── Controls ── */
+#controls {
+  max-width: 1100px;
+  margin: 2px auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 4px 10px;
+}
+#controls button {
+  background: #1a3050;
+  border: 1px solid rgba(255,255,255,0.12);
+  color: #ccc;
+  padding: 6px 14px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 13px;
+  transition: all 0.15s;
+}
+#controls button:hover { background: #254070; color: #fff; }
+#controls button.active { background: #2a5090; color: #fff; border-color: #5ba3f5; }
+#seek-slider {
+  flex: 1;
+  max-width: 400px;
+  accent-color: #5ba3f5;
+}
+#current-time-display {
+  font-size: 13px;
+  color: #5ddf5d;
+  font-weight: 600;
+  min-width: 50px;
+  text-align: center;
+}
+
+/* Loading */
+#loading {
+  position: fixed;
+  inset: 0;
+  background: #0a1628;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 999;
+  gap: 16px;
+}
+#loading .spinner {
+  width: 40px; height: 40px;
+  border: 3px solid rgba(91,163,245,0.2);
+  border-top-color: #5ba3f5;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+#loading .text { color: #8899aa; font-size: 14px; }
+#loading.hidden { display: none; }
+
+/* Competition selector */
+#match-selector {
+  max-width: 1100px;
+  margin: 4px auto;
+  display: flex;
+  gap: 6px;
+  padding: 4px 10px;
+}
+#match-selector select {
+  background: #1a3050;
+  border: 1px solid rgba(255,255,255,0.12);
+  color: #ccc;
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 12px;
+}
+</style>
+</head>
+<body>
+
+<!-- Loading -->
+<div id="loading">
+  <div class="spinner"></div>
+  <div class="text">Loading match data...</div>
+</div>
+
+<!-- Match Selector -->
+<div id="match-selector">
+  <select id="source-select">
+    <option value="espn" selected>ESPN Live</option>
+    <option value="statsbomb">StatsBomb Historical</option>
+  </select>
+  <!-- ESPN mode -->
+  <span id="espn-controls">
+    <input type="date" id="date-picker" value="2026-03-31">
+    <select id="match-select"><option>Loading...</option></select>
+  </span>
+  <!-- StatsBomb mode -->
+  <span id="sb-controls" style="display:none">
+    <select id="comp-select"><option>Loading...</option></select>
+    <select id="season-select"><option>--</option></select>
+    <select id="sb-match-select"><option>--</option></select>
+  </span>
+</div>
+
+<!-- Stadium -->
+<div id="stadium-wrap">
+  <div class="ad-board">
+    <span>FOOTBALL LIVE</span>
+    <span>ESPN DATA</span>
+    <span>FOOTBALL LIVE</span>
+    <span>ESPN DATA</span>
+  </div>
+  <div id="pitch-container">
+    <canvas id="pitchCanvas"></canvas>
+    <div id="possession-label">
+      <div class="team-name" id="poss-team-name"></div>
+      <div class="label">控球</div>
+    </div>
+  </div>
+</div>
+
+<!-- Score Bar -->
+<div id="score-bar">
+  <div class="card-stats" id="home-cards"></div>
+  <div class="score-section">
+    <div class="team-info home">
+      <span class="team-label" id="home-name">Home</span>
+      <span class="team-flag" id="home-flag">🏠</span>
+    </div>
+    <div class="score-display"><span id="home-score">0</span> : <span id="away-score">0</span></div>
+    <div class="team-info away">
+      <span class="team-label" id="away-name">Away</span>
+      <span class="team-flag" id="away-flag">🏁</span>
+    </div>
+    <div id="match-time">0'</div>
+  </div>
+  <div class="card-stats" id="away-cards"></div>
+</div>
+
+<!-- Timeline -->
+<div id="timeline-section">
+  <div id="timeline-container">
+    <div class="timeline-team-label home" id="tl-home-name">Home</div>
+    <div class="timeline-team-label away" id="tl-away-name">Away</div>
+    <div id="timeline-track">
+      <div id="timeline-progress"></div>
+      <canvas id="momentumCanvas"></canvas>
+    </div>
+  </div>
+  <div class="time-axis">
+    <span>0'</span><span>15'</span><span>30'</span><span>HT</span><span>60'</span><span>75'</span><span>90'</span>
+  </div>
+</div>
+
+<!-- Stats -->
+<div id="stats-section" id="stats-grid"></div>
+
+<!-- Controls -->
+<div id="controls">
+  <button id="btn-play">▶ Play</button>
+  <button id="btn-pause" style="display:none">⏸ Pause</button>
+  <input type="range" id="seek-slider" min="0" max="1000" value="0">
+  <span id="current-time-display">0'</span>
+  <button class="speed-btn active" data-speed="1">1x</button>
+  <button class="speed-btn" data-speed="2">2x</button>
+  <button class="speed-btn" data-speed="4">4x</button>
+  <button class="speed-btn" data-speed="8">8x</button>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════════
+// ESPN DATA LOADER
+// ═══════════════════════════════════════════════════════════
+const ESPN_BASE = 'https://site.api.espn.com/apis/site/v2/sports/soccer/all';
+
+let dataSource = 'espn'; // 'espn' or 'statsbomb'
+
+async function loadESPNMatchesByDate(dateStr) {
+  const d = dateStr.replace(/-/g, '');
+  const res = await fetch(`${ESPN_BASE}/scoreboard?dates=${d}`);
+  const data = await res.json();
+  return (data.events || []).map(ev => {
+    const comp = ev.competitions[0];
+    const home = comp.competitors.find(c => c.homeAway === 'home') || comp.competitors[0];
+    const away = comp.competitors.find(c => c.homeAway === 'away') || comp.competitors[1];
+    return {
+      id: ev.id,
+      name: ev.name,
+      shortName: ev.shortName,
+      date: ev.date,
+      status: ev.status?.type?.shortDetail || '',
+      homeTeam: home.team.displayName,
+      awayTeam: away.team.displayName,
+      homeScore: home.score || '0',
+      awayScore: away.score || '0',
+      homeLogo: home.team.logo,
+      awayLogo: away.team.logo,
+      homeId: home.team.id,
+      awayId: away.team.id,
+    };
+  });
+}
+
+async function loadESPNMatchDetail(eventId) {
+  const res = await fetch(`${ESPN_BASE}/summary?event=${eventId}`);
+  return await res.json();
+}
+
+function parseESPNData(detail, matchInfo) {
+  // Parse rosters into lineup format
+  const rosters = detail.rosters || [];
+  const boxscore = detail.boxscore || {};
+  const teamStats = boxscore.teams || [];
+
+  // Build home/away lineups
+  homeLineup = [];
+  awayLineup = [];
+
+  rosters.forEach((teamRoster, idx) => {
+    const isHome = idx === 0;
+    const starters = (teamRoster.roster || []).filter(p => p.starter);
+    const subs = (teamRoster.roster || []).filter(p => !p.starter);
+
+    // Sort starters: GK first, then Defenders, Midfielders, Forwards
+    const posOrder = { 'Goalkeeper': 0, 'Defender': 1, 'Midfielder': 2, 'Forward': 3 };
+    starters.sort((a, b) => (posOrder[a.position?.displayName] ?? 2) - (posOrder[b.position?.displayName] ?? 2));
+
+    // Fill to 11 if needed
+    while (starters.length < 11 && subs.length > 0) starters.push(subs.shift());
+
+    // Assign each player to a formation slot
+    const roster = starters.slice(0, 11).map((p, i) => {
+      const slot = FORMATION_433[i] || FORMATION_433[5]; // fallback to midfield
+      return {
+        playerId: p.athlete?.id || p.jersey,
+        jersey: parseInt(p.jersey) || 0,
+        name: p.athlete?.fullName || p.athlete?.shortName || '',
+        position: slot.role,
+        baseX: slot.x,
+        baseY: slot.y,
+        keeper: slot.role === 'GK'
+      };
+    });
+
+    if (isHome) homeLineup = roster;
+    else awayLineup = roster;
+  });
+
+  // Parse match events (goals, cards, subs)
+  goalEvents = [];
+  cardEvents = [];
+  const matchEvents = []; // for timeline animation
+
+  rosters.forEach((teamRoster, idx) => {
+    const isHome = idx === 0;
+    const teamName = isHome ? matchInfo.homeTeam : matchInfo.awayTeam;
+    const teamId = isHome ? matchInfo.homeId : matchInfo.awayId;
+
+    (teamRoster.roster || []).forEach(p => {
+      (p.plays || []).forEach(play => {
+        const minute = parseInt(play.clock?.displayValue) || 0;
+        const matchSeconds = minute * 60;
+
+        if (play.scoringPlay || play.didScore) {
+          goalEvents.push({
+            minute, team: teamName, teamId, matchSeconds,
+            player: p.athlete?.shortName || p.athlete?.fullName || ''
+          });
+        }
+        if (play.yellowCard) {
+          cardEvents.push({
+            minute, team: teamName, teamId, matchSeconds,
+            player: p.athlete?.shortName || '', card: 'Yellow Card'
+          });
+        }
+        if (play.redCard) {
+          cardEvents.push({
+            minute, team: teamName, teamId, matchSeconds,
+            player: p.athlete?.shortName || '', card: 'Red Card'
+          });
+        }
+
+        matchEvents.push({
+          minute, matchSeconds, teamId, isHome,
+          type: play.scoringPlay ? 'Goal' : play.yellowCard ? 'Yellow' : play.redCard ? 'Red' : play.substitution ? 'Sub' : 'Other',
+          player: p.athlete?.shortName || ''
+        });
+      });
+    });
+  });
+
+  // Parse team statistics
+  stats = { home: {}, away: {} };
+  const statMap = {
+    'Possession': 'possession', 'SHOTS': 'shots', 'Total Shots': 'shots',
+    'ON GOAL': 'shotsOnTarget', 'Shots On Target': 'shotsOnTarget',
+    'Shots Off Target': 'shotsOff', 'Corner Kicks': 'corners', 'Fouls': 'fouls',
+    'Yellow Cards': 'yellowCards', 'Red Cards': 'redCards', 'Offsides': 'offsides',
+    'Saves': 'saves', 'Blocked Shots': 'blockedShots'
+  };
+
+  teamStats.forEach((team, idx) => {
+    const side = idx === 0 ? 'home' : 'away';
+    stats[side] = { possession: 50, shots: 0, shotsOnTarget: 0, shotsOff: 0, corners: 0, fouls: 0, yellowCards: 0, redCards: 0, attacks: 0, dangerousAttacks: 0 };
+    (team.statistics || []).forEach(s => {
+      const key = statMap[s.label || s.name];
+      if (key) {
+        let val = parseFloat(s.displayValue);
+        if (key === 'possession') val = parseFloat(s.displayValue);
+        stats[side][key] = val || 0;
+      }
+    });
+    // Compute derived stats
+    if (!stats[side].shotsOff) stats[side].shotsOff = Math.max(0, (stats[side].shots || 0) - (stats[side].shotsOnTarget || 0));
+    stats[side].attacks = (stats[side].shots || 0) * 8 + (stats[side].corners || 0) * 3;
+    stats[side].dangerousAttacks = (stats[side].shotsOnTarget || 0) * 5 + (stats[side].shots || 0) * 2;
+  });
+
+  // Build synthetic animation events from goals/cards timeline
+  // Since ESPN doesn't have play-by-play coordinates, we simulate ball movement
+  buildSyntheticAnimEvents(matchEvents);
+}
+
+// Fixed 4-3-3 formation template (11 slots, attacking right toward x=120)
+const FORMATION_433 = [
+  { x: 6,  y: 40, role: 'GK' },      // Goalkeeper
+  { x: 25, y: 10, role: 'RB' },      // Right Back
+  { x: 22, y: 30, role: 'RCB' },     // Right Center Back
+  { x: 22, y: 50, role: 'LCB' },     // Left Center Back
+  { x: 25, y: 70, role: 'LB' },      // Left Back
+  { x: 45, y: 20, role: 'RCM' },     // Right Center Mid
+  { x: 42, y: 40, role: 'CDM' },     // Central Defensive Mid
+  { x: 45, y: 60, role: 'LCM' },     // Left Center Mid
+  { x: 78, y: 12, role: 'RW' },      // Right Wing
+  { x: 82, y: 40, role: 'ST' },      // Striker
+  { x: 78, y: 68, role: 'LW' },      // Left Wing
+];
+
+function buildSyntheticAnimEvents() {
+  animEvents = [];
+  maxMatchSeconds = 5400; // 90 min
+
+  const homePoss = (stats.home.possession || 50) / 100;
+  const allRealEvents = [...goalEvents, ...cardEvents].sort((a, b) => a.matchSeconds - b.matchSeconds);
+
+  // Get screen positions for each player
+  function getPlayerScreenPos(p, isHome) {
+    return { x: isHome ? p.baseX : 120 - p.baseX, y: p.baseY };
+  }
+
+  // Pick a pass target from lineup (nearby player, biased forward)
+  function pickPassTarget(lineup, isHome, fromX, fromY, goingForward) {
+    const candidates = lineup.filter(p => !p.keeper);
+    let best = null, bestScore = -Infinity;
+    candidates.forEach(p => {
+      const pos = getPlayerScreenPos(p, isHome);
+      const dist = Math.hypot(pos.x - fromX, pos.y - fromY);
+      if (dist < 5) return; // skip self
+      // Prefer forward passes when attacking, backward when retreating
+      const forwardBonus = goingForward ? (pos.x - fromX) * (isHome ? 1 : -1) * 0.3 : 0;
+      const score = -dist * 0.5 + forwardBonus + (Math.random() - 0.3) * 20;
+      if (score > bestScore) { bestScore = score; best = p; }
+    });
+    return best || candidates[Math.floor(Math.random() * candidates.length)];
+  }
+
+  let sec = 0;
+  let possHome = true; // who has the ball
+  let phase = 'buildup'; // buildup, midfield, attack, shoot
+
+  while (sec < maxMatchSeconds) {
+    const period = sec < 2700 ? 1 : 2;
+    const lineup = possHome ? homeLineup : awayLineup;
+    const oppLineup = possHome ? awayLineup : homeLineup;
+    const teamName = possHome ? homeTeam : awayTeam;
+    const teamId = possHome ? homeId : awayId;
+    const attackDir = possHome ? 1 : -1; // +1 = right, -1 = left
+
+    // Check for real events at this time
+    const nearGoal = allRealEvents.find(e => e.matchSeconds >= sec && e.matchSeconds < sec + 30 && goalEvents.includes(e));
+    const isGoalMoment = nearGoal && Math.abs(nearGoal.matchSeconds - sec) < 6;
+    const scorerIsHome = nearGoal ? nearGoal.teamId == homeId : false;
+
+    // Determine possession phase based on play progression
+    let passCount = 0;
+    const maxPasses = 3 + Math.floor(Math.random() * 5); // 3-7 passes per possession
+
+    // Start possession from defense
+    let keeper = lineup.find(p => p.keeper) || lineup[0];
+    let currentPlayer = keeper;
+    let bx, by;
+
+    if (phase === 'buildup') {
+      // Start from own half
+      const kpos = getPlayerScreenPos(keeper, possHome);
+      bx = kpos.x + attackDir * (5 + Math.random() * 10);
+      by = 30 + Math.random() * 20;
+      // Pick a defender
+      currentPlayer = lineup.find(p => p.position?.includes('Back') || p.position?.includes('Defender')) || lineup[1];
+    }
+
+    // Build a possession chain of passes
+    while (passCount < maxPasses && sec < maxMatchSeconds) {
+      const pos = getPlayerScreenPos(currentPlayer, possHome);
+      // Ball at this player's position (with small offset)
+      bx = pos.x + (Math.random() - 0.5) * 4;
+      by = pos.y + (Math.random() - 0.5) * 4;
+      bx = Math.max(3, Math.min(117, bx));
+      by = Math.max(3, Math.min(78, by));
+
+      // Check if this should be a goal
+      if (isGoalMoment && possHome === scorerIsHome && passCount >= maxPasses - 2) {
+        // Goal! Ball goes to goal area
+        const goalX = possHome ? 116 : 4;
+        const goalY = 37 + Math.random() * 6;
+        // Shot event
+        animEvents.push(makeEvent(sec, period, currentPlayer, possHome, bx, by, goalX, goalY, teamName, teamId, 'Shot'));
+        sec += 2;
+        // Reset to center after goal
+        animEvents.push(makeEvent(sec, period, keeper, !possHome, 60, 40, null, null, possHome ? awayTeam : homeTeam, possHome ? awayId : homeId, 'Kick Off'));
+        sec += 3;
+        possHome = !possHome; // other team kicks off
+        phase = 'buildup';
+        break;
+      }
+
+      // Pick next player to pass to
+      const goingForward = passCount < maxPasses - 1;
+      const target = pickPassTarget(lineup, possHome, bx, by, goingForward);
+      const tpos = getPlayerScreenPos(target, possHome);
+      const endX = tpos.x + (Math.random() - 0.5) * 6;
+      const endY = tpos.y + (Math.random() - 0.5) * 6;
+
+      // Add pass event
+      animEvents.push(makeEvent(sec, period, currentPlayer, possHome, bx, by,
+        Math.max(3, Math.min(117, endX)), Math.max(3, Math.min(77, endY)),
+        teamName, teamId, 'Pass'));
+
+      currentPlayer = target;
+      passCount++;
+      sec += 1.5 + Math.random() * 2; // 1.5-3.5 seconds per pass
+    }
+
+    // End of possession - loss of ball or clearance
+    if (passCount >= maxPasses) {
+      // Turnover: other team gets the ball
+      const oppPlayer = oppLineup.filter(p => !p.keeper)[Math.floor(Math.random() * (oppLineup.length - 1))];
+      const opos = getPlayerScreenPos(oppPlayer, !possHome);
+      animEvents.push(makeEvent(sec, period, oppPlayer, !possHome, opos.x, opos.y, null, null,
+        possHome ? awayTeam : homeTeam, possHome ? awayId : homeId, 'Ball Recovery'));
+      sec += 1;
+      possHome = !possHome;
+    }
+
+    // Use possession ratio to bias which team gets the ball
+    if (Math.random() > homePoss) possHome = false;
+    else possHome = true;
+
+    phase = ['buildup', 'midfield', 'attack'][Math.floor(Math.random() * 3)];
+  }
+
+  animEvents.sort((a, b) => a.matchSeconds - b.matchSeconds);
+}
+
+function makeEvent(sec, period, player, isHome, x, y, endX, endY, teamName, teamId, type) {
+  return {
+    id: `syn_${sec.toFixed(1)}`,
+    index: animEvents.length,
+    type,
+    period,
+    timestamp: `00:${Math.floor((sec % 2700) / 60).toString().padStart(2,'0')}:${Math.floor(sec % 60).toString().padStart(2,'0')}.000`,
+    matchSeconds: sec,
+    minute: Math.floor(sec / 60),
+    second: Math.floor(sec % 60),
+    team: teamName,
+    teamId: teamId,
+    player: player?.name || '',
+    playerId: player?.playerId || 0,
+    x: x,
+    y: y,
+    endX: endX,
+    endY: endY,
+    shouldFlip: false,
+    possession_team: teamName,
+    duration: 1.5,
+    raw: null
+  };
+}
+
+// ═══════════════════════════════════════════════════════════
+// STATSBOMB DATA LOADER
+// ═══════════════════════════════════════════════════════════
+const BASE = 'https://raw.githubusercontent.com/statsbomb/open-data/master/data';
+
+const COUNTRY_FLAGS = {
+  'Argentina': '🇦🇷', 'France': '🇫🇷', 'Brazil': '🇧🇷', 'Germany': '🇩🇪',
+  'Spain': '🇪🇸', 'England': '🏴󠁧󠁢󠁥󠁮󠁧󠁿', 'Italy': '🇮🇹', 'Portugal': '🇵🇹',
+  'Netherlands': '🇳🇱', 'Croatia': '🇭🇷', 'Belgium': '🇧🇪', 'Uruguay': '🇺🇾',
+  'Colombia': '🇨🇴', 'Mexico': '🇲🇽', 'United States': '🇺🇸', 'Japan': '🇯🇵',
+  'South Korea': '🇰🇷', 'Australia': '🇦🇺', 'Morocco': '🇲🇦', 'Senegal': '🇸🇳',
+  'Cameroon': '🇨🇲', 'Ghana': '🇬🇭', 'Nigeria': '🇳🇬', 'Tunisia': '🇹🇳',
+  'Saudi Arabia': '🇸🇦', 'Iran': '🇮🇷', 'Qatar': '🇶🇦', 'Ecuador': '🇪🇨',
+  'Peru': '🇵🇪', 'Chile': '🇨🇱', 'Paraguay': '🇵🇾', 'Bolivia': '🇧🇴',
+  'Venezuela': '🇻🇪', 'Costa Rica': '🇨🇷', 'Panama': '🇵🇦', 'Honduras': '🇭🇳',
+  'Canada': '🇨🇦', 'Jamaica': '🇯🇲', 'Poland': '🇵🇱', 'Sweden': '🇸🇪',
+  'Denmark': '🇩🇰', 'Switzerland': '🇨🇭', 'Austria': '🇦🇹', 'Serbia': '🇷🇸',
+  'Wales': '🏴󠁧󠁢󠁷󠁬󠁳󠁿', 'Scotland': '🏴󠁧󠁢󠁳󠁣󠁴󠁿', 'Republic of Ireland': '🇮🇪',
+  'Czech Republic': '🇨🇿', 'Turkey': '🇹🇷', 'Russia': '🇷🇺', 'Ukraine': '🇺🇦',
+  'Romania': '🇷🇴', 'Greece': '🇬🇷', 'Hungary': '🇭🇺', 'Norway': '🇳🇴',
+  'Finland': '🇫🇮', 'Iceland': '🇮🇸', 'Albania': '🇦🇱', 'North Macedonia': '🇲🇰',
+  'Montenegro': '🇲🇪', 'Bosnia and Herzegovina': '🇧🇦', 'Slovakia': '🇸🇰',
+  'Slovenia': '🇸🇮', 'Bulgaria': '🇧🇬', 'China PR': '🇨🇳', 'India': '🇮🇳',
+  'Thailand': '🇹🇭', 'Vietnam': '🇻🇳', 'Indonesia': '🇮🇩',
+  'Barcelona': '🔵🔴', 'Real Madrid': '⚪', 'Liverpool': '🔴',
+  'Manchester City': '🔵', 'Chelsea': '🔵', 'Arsenal': '🔴',
+  'Bayern Munich': '🔴', 'Juventus': '⚪⚫', 'Paris Saint-Germain': '🔵🔴',
+  'AC Milan': '🔴⚫', 'Inter Milan': '🔵⚫', 'Atlético Madrid': '🔴⚪',
+};
+
+function getFlag(name) {
+  return COUNTRY_FLAGS[name] || '⚽';
+}
+
+async function fetchJSON(url) {
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`Failed to fetch ${url}`);
+  return res.json();
+}
+
+// ═══════════════════════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════════════════════
+let matchData = null;
+let eventsData = [];
+let lineupsData = null;
+let threeSixtyData = null;
+let competitions = [];
+
+let homeTeam = '', awayTeam = '', homeId = 0, awayId = 0;
+
+// Animation state
+let animEvents = [];       // events with locations, sorted by time
+let currentEventIdx = 0;
+let ballX = 60, ballY = 40; // pitch coords (120x80)
+let targetX = 60, targetY = 40;
+let animProgress = 0;      // 0-1 interpolation between events
+let isPlaying = false;
+let playSpeed = 1;
+let currentMatchMinute = 0;
+let currentPeriod = 1;
+let totalMatchSeconds = 0;  // total seconds elapsed in match
+let maxMatchSeconds = 5400; // default 90 min
+
+// Player positions
+let currentPlayers = [];    // [{x,y,teammate,actor,keeper,jersey}]
+let smoothedPlayers = [];   // smoothed rendering positions
+let threeSixtyMap = {};     // event_uuid -> freeze_frame
+let playerFrames = [];      // sorted [{matchSeconds, period, players:[{x,y,teammate,keeper}]}]
+
+// Formation system - always show 22 players
+let homeLineup = [];        // [{jersey, name, position, baseX, baseY}]
+let awayLineup = [];
+
+// Default formation positions (on 120x80 pitch, attacking RIGHT toward x=120)
+const POSITION_COORDS = {
+  'Goalkeeper':              [6, 40],
+  'Left Back':               [25, 68],
+  'Left Center Back':        [22, 52],
+  'Center Back':             [20, 40],
+  'Right Center Back':       [22, 28],
+  'Right Back':              [25, 12],
+  'Left Wing Back':          [35, 70],
+  'Right Wing Back':         [35, 10],
+  'Left Defensive Midfield': [38, 50],
+  'Center Defensive Midfield':[38, 40],
+  'Right Defensive Midfield':[38, 30],
+  'Left Midfield':           [50, 68],
+  'Left Center Midfield':    [50, 50],
+  'Center Midfield':         [50, 40],
+  'Right Center Midfield':   [50, 30],
+  'Right Midfield':          [50, 12],
+  'Left Wing':               [75, 70],
+  'Center Attacking Midfield':[65, 40],
+  'Right Wing':              [75, 10],
+  'Left Center Forward':     [85, 50],
+  'Center Forward':          [88, 40],
+  'Right Center Forward':    [85, 30],
+};
+
+// Stats
+let stats = { home: {}, away: {} };
+let goalEvents = [];
+let cardEvents = [];
+let momentumData = [];      // per-5-min possession segments
+
+// ═══════════════════════════════════════════════════════════
+// PITCH DRAWING
+// ═══════════════════════════════════════════════════════════
+const pitchCanvas = document.getElementById('pitchCanvas');
+const pitchCtx = pitchCanvas.getContext('2d');
+
+const PITCH_W = 120, PITCH_H = 80;
+let canvasW, canvasH, scaleX, scaleY, offsetX = 0, offsetY = 0;
+
+function resizePitch() {
+  const container = document.getElementById('pitch-container');
+  const maxW = container.clientWidth - 40;
+  const maxH = Math.min(340, window.innerHeight * 0.42);
+  const ratio = PITCH_H / PITCH_W;
+
+  // Fit within max dimensions
+  canvasW = maxW;
+  canvasH = maxW * ratio;
+  if (canvasH > maxH) {
+    canvasH = maxH;
+    canvasW = maxH / ratio;
+  }
+
+  pitchCanvas.width = canvasW * 2;  // 2x for retina
+  pitchCanvas.height = canvasH * 2;
+  pitchCanvas.style.width = canvasW + 'px';
+  pitchCanvas.style.height = canvasH + 'px';
+  scaleX = (canvasW * 2) / PITCH_W;
+  scaleY = (canvasH * 2) / PITCH_H;
+}
+
+function px(x) { return x * scaleX; }
+function py(y) { return y * scaleY; }
+
+function drawPitch() {
+  const ctx = pitchCtx;
+  const w = pitchCanvas.width, h = pitchCanvas.height;
+  ctx.clearRect(0, 0, w, h);
+
+  // Striped grass
+  const stripeCount = 12;
+  const stripeW = w / stripeCount;
+  for (let i = 0; i < stripeCount; i++) {
+    ctx.fillStyle = i % 2 === 0 ? '#2d8a4e' : '#34a058';
+    ctx.fillRect(i * stripeW, 0, stripeW, h);
+  }
+
+  // Lines
+  ctx.strokeStyle = 'rgba(255,255,255,0.6)';
+  ctx.lineWidth = 2;
+
+  // Outline
+  ctx.strokeRect(px(0.5), py(0.5), px(119), py(79));
+
+  // Center line
+  ctx.beginPath();
+  ctx.moveTo(px(60), py(0.5));
+  ctx.lineTo(px(60), py(79.5));
+  ctx.stroke();
+
+  // Center circle
+  ctx.beginPath();
+  ctx.arc(px(60), py(40), px(9.15), 0, Math.PI * 2);
+  ctx.stroke();
+
+  // Center spot
+  ctx.fillStyle = 'rgba(255,255,255,0.7)';
+  ctx.beginPath();
+  ctx.arc(px(60), py(40), 3, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Penalty areas
+  // Left
+  ctx.strokeRect(px(0.5), py(18), px(16.5), py(44));
+  ctx.strokeRect(px(0.5), py(30), px(5.5), py(20));
+  // Right
+  ctx.strokeRect(px(103), py(18), px(16.5), py(44));
+  ctx.strokeRect(px(114), py(30), px(5.5), py(20));
+
+  // Penalty spots
+  ctx.fillStyle = 'rgba(255,255,255,0.7)';
+  ctx.beginPath();
+  ctx.arc(px(12), py(40), 3, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.beginPath();
+  ctx.arc(px(108), py(40), 3, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Penalty arcs
+  ctx.beginPath();
+  ctx.arc(px(12), py(40), px(9.15), -0.7, 0.7);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.arc(px(108), py(40), px(9.15), Math.PI - 0.7, Math.PI + 0.7);
+  ctx.stroke();
+
+  // Corner arcs
+  const cornerR = px(1.5);
+  ctx.beginPath(); ctx.arc(px(0.5), py(0.5), cornerR, 0, Math.PI / 2); ctx.stroke();
+  ctx.beginPath(); ctx.arc(px(119.5), py(0.5), cornerR, Math.PI / 2, Math.PI); ctx.stroke();
+  ctx.beginPath(); ctx.arc(px(119.5), py(79.5), cornerR, Math.PI, Math.PI * 1.5); ctx.stroke();
+  ctx.beginPath(); ctx.arc(px(0.5), py(79.5), cornerR, Math.PI * 1.5, Math.PI * 2); ctx.stroke();
+
+  // Goals
+  ctx.strokeStyle = 'rgba(255,255,255,0.8)';
+  ctx.lineWidth = 3;
+  ctx.strokeRect(px(-2), py(36), px(2.5), py(8));
+  ctx.strokeRect(px(119.5), py(36), px(2.5), py(8));
+  ctx.lineWidth = 2;
+}
+
+// ═══════════════════════════════════════════════════════════
+// DRAW BALL & PLAYERS
+// ═══════════════════════════════════════════════════════════
+function drawBall(x, y) {
+  const ctx = pitchCtx;
+  const bx = px(x), by = py(y);
+
+  // Glow
+  const glow = ctx.createRadialGradient(bx, by, 2, bx, by, 18);
+  glow.addColorStop(0, 'rgba(255,255,255,0.5)');
+  glow.addColorStop(1, 'rgba(255,255,255,0)');
+  ctx.fillStyle = glow;
+  ctx.beginPath();
+  ctx.arc(bx, by, 18, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Ball
+  ctx.fillStyle = '#fff';
+  ctx.beginPath();
+  ctx.arc(bx, by, 6, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.strokeStyle = '#333';
+  ctx.lineWidth = 1;
+  ctx.stroke();
+}
+
+function drawPlayers(players) {
+  const ctx = pitchCtx;
+  const r = Math.max(8, scaleX * 1.2); // player circle radius
+
+  players.forEach(p => {
+    const x = px(p.x), y = py(p.y);
+    const isHome = p.teammate;
+
+    // Player circle
+    ctx.beginPath();
+    ctx.arc(x, y, r, 0, Math.PI * 2);
+    if (p.keeper) {
+      ctx.fillStyle = isHome ? 'rgba(245,220,50,0.9)' : 'rgba(50,220,100,0.9)';
+    } else {
+      ctx.fillStyle = isHome ? 'rgba(91,163,245,0.9)' : 'rgba(245,166,35,0.9)';
+    }
+    ctx.fill();
+    ctx.strokeStyle = isHome ? '#2a5eb0' : '#b0721a';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+
+    // Actor highlight ring (ball carrier)
+    if (p.actor) {
+      ctx.beginPath();
+      ctx.arc(x, y, r + 4, 0, Math.PI * 2);
+      ctx.strokeStyle = 'rgba(255,255,255,0.8)';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+    }
+
+    // Jersey number
+    if (p.jersey) {
+      ctx.fillStyle = '#fff';
+      ctx.font = `bold ${Math.max(9, r * 0.85)}px sans-serif`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(p.jersey, x, y + 0.5);
+    }
+  });
+}
+
+function drawPassTrail(fromX, fromY, toX, toY, progress) {
+  const ctx = pitchCtx;
+  ctx.beginPath();
+  ctx.moveTo(px(fromX), py(fromY));
+  const midX = (fromX + toX) / 2;
+  const midY = (fromY + toY) / 2;
+  ctx.lineTo(px(fromX + (toX - fromX) * progress), py(fromY + (toY - fromY) * progress));
+  ctx.strokeStyle = 'rgba(255,255,255,0.4)';
+  ctx.lineWidth = 2;
+  ctx.setLineDash([6, 4]);
+  ctx.stroke();
+  ctx.setLineDash([]);
+}
+
+// ═══════════════════════════════════════════════════════════
+// PROCESS EVENTS
+// ═══════════════════════════════════════════════════════════
+function parseTimestamp(ts) {
+  // "00:12:34.567" -> seconds within period
+  const parts = ts.split(':');
+  return parseInt(parts[0]) * 3600 + parseInt(parts[1]) * 60 + parseFloat(parts[2]);
+}
+
+function eventToMatchSeconds(ev) {
+  const periodOffset = ev.period === 1 ? 0 : ev.period === 2 ? 2700 : ev.period === 3 ? 5400 : ev.period === 4 ? 6300 : 7200;
+  return periodOffset + parseTimestamp(ev.timestamp);
+}
+
+function processEvents(events) {
+  // Sort by index
+  events.sort((a, b) => a.index - b.index);
+
+  // Extract animation events (with locations)
+  // Normalize ALL coordinates to screen space:
+  //   Home team attacks RIGHT (x=120) in period 1/3
+  //   Home team attacks LEFT in period 2/4
+  // StatsBomb always has attacking team toward x=120
+  // So we flip when: (isHomeTeam XOR isFirstHalf) is false
+  //   P1 home: no flip | P1 away: flip | P2 home: flip | P2 away: no flip
+  animEvents = events.filter(e => e.location).map(e => {
+    let endLoc = null;
+    if (e.pass && e.pass.end_location) endLoc = e.pass.end_location;
+    else if (e.carry && e.carry.end_location) endLoc = e.carry.end_location;
+    else if (e.shot && e.shot.end_location) endLoc = e.shot.end_location;
+
+    const isHome = e.team && e.team.id === homeId;
+    const isSecondHalf = e.period === 2 || e.period === 4;
+    const shouldFlip = isHome === isSecondHalf; // flip when both true or both false... actually:
+    // P1 home: isHome=T, isSecondHalf=F → T===F → false → no flip ✓
+    // P1 away: isHome=F, isSecondHalf=F → F===F → true → flip ✓
+    // P2 home: isHome=T, isSecondHalf=T → T===T → true → flip ✓
+    // P2 away: isHome=F, isSecondHalf=T → F===T → false → no flip ✓
+
+    let sx = e.location[0], sy = e.location[1];
+    let sex = endLoc ? endLoc[0] : null, sey = endLoc ? endLoc[1] : null;
+    if (shouldFlip) {
+      sx = 120 - sx; sy = 80 - sy;
+      if (sex !== null) { sex = 120 - sex; sey = 80 - sey; }
+    }
+
+    return {
+      id: e.id,
+      index: e.index,
+      type: e.type.name,
+      typeId: e.type.id,
+      period: e.period,
+      timestamp: e.timestamp,
+      matchSeconds: eventToMatchSeconds(e),
+      minute: e.minute,
+      second: e.second,
+      team: e.team ? e.team.name : '',
+      teamId: e.team ? e.team.id : 0,
+      player: e.player ? e.player.name : '',
+      playerId: e.player ? e.player.id : 0,
+      x: sx,
+      y: sy,
+      endX: sex,
+      endY: sey,
+      shouldFlip: shouldFlip,
+      possession_team: e.possession_team ? e.possession_team.name : '',
+      duration: e.duration || 0.5,
+      raw: e
+    };
+  });
+
+  // Max match seconds
+  if (animEvents.length > 0) {
+    maxMatchSeconds = animEvents[animEvents.length - 1].matchSeconds + 1;
+  }
+
+  // Extract goals
+  goalEvents = events.filter(e => e.shot && e.shot.outcome && e.shot.outcome.name === 'Goal')
+    .map(e => ({
+      minute: e.minute,
+      team: e.team.name,
+      teamId: e.team.id,
+      player: e.player.name,
+      matchSeconds: eventToMatchSeconds(e)
+    }));
+
+  // Extract cards
+  cardEvents = [];
+  events.forEach(e => {
+    if (e.foul_committed && e.foul_committed.card) {
+      cardEvents.push({
+        minute: e.minute,
+        team: e.team.name,
+        teamId: e.team.id,
+        player: e.player.name,
+        card: e.foul_committed.card.name,
+        matchSeconds: eventToMatchSeconds(e)
+      });
+    }
+    if (e.bad_behaviour && e.bad_behaviour.card) {
+      cardEvents.push({
+        minute: e.minute,
+        team: e.team.name,
+        teamId: e.team.id,
+        player: e.player.name,
+        card: e.bad_behaviour.card.name,
+        matchSeconds: eventToMatchSeconds(e)
+      });
+    }
+  });
+
+  // Calculate stats
+  computeStats(events);
+  computeMomentum(events);
+}
+
+function computeStats(events) {
+  const s = {
+    home: { possession: 0, attacks: 0, dangerousAttacks: 0, shots: 0, shotsOnTarget: 0, shotsOff: 0, corners: 0, fouls: 0, yellowCards: 0, redCards: 0 },
+    away: { possession: 0, attacks: 0, dangerousAttacks: 0, shots: 0, shotsOnTarget: 0, shotsOff: 0, corners: 0, fouls: 0, yellowCards: 0, redCards: 0 }
+  };
+
+  // Possession: count events per team
+  let homeCount = 0, awayCount = 0;
+  events.forEach(e => {
+    if (!e.team) return;
+    const side = e.team.id === homeId ? 'home' : 'away';
+    if (e.team.id === homeId) homeCount++; else awayCount++;
+
+    if (e.type.name === 'Shot') {
+      s[side].shots++;
+      if (e.shot) {
+        const outcome = e.shot.outcome ? e.shot.outcome.name : '';
+        if (outcome === 'Goal' || outcome === 'Saved' || outcome === 'Saved To Post') s[side].shotsOnTarget++;
+        else s[side].shotsOff++;
+      }
+    }
+    if (e.type.name === 'Pass' && e.pass && e.pass.type && e.pass.type.name === 'Corner') {
+      s[side].corners++;
+    }
+    if (e.type.name === 'Foul Committed') {
+      s[side].fouls++;
+    }
+
+    // Attacks: possession sequences entering final third
+    if (e.location && e.location[0] > 60) {
+      s[side].attacks++;
+      if (e.location[0] > 80) s[side].dangerousAttacks++;
+    }
+  });
+
+  // Cards
+  cardEvents.forEach(c => {
+    const side = c.teamId === homeId ? 'home' : 'away';
+    if (c.card.includes('Yellow')) s[side].yellowCards++;
+    if (c.card.includes('Red')) s[side].redCards++;
+  });
+
+  const total = homeCount + awayCount || 1;
+  s.home.possession = Math.round((homeCount / total) * 100);
+  s.away.possession = 100 - s.home.possession;
+
+  stats = s;
+}
+
+function computeMomentum(events) {
+  // Every 5 minutes, count events per team
+  momentumData = [];
+  const bucketSize = 300; // 5 min in seconds
+  const buckets = Math.ceil(maxMatchSeconds / bucketSize);
+  for (let i = 0; i < buckets; i++) {
+    const from = i * bucketSize;
+    const to = from + bucketSize;
+    let h = 0, a = 0;
+    animEvents.forEach(e => {
+      if (e.matchSeconds >= from && e.matchSeconds < to) {
+        if (e.teamId === homeId) h++;
+        else a++;
+      }
+    });
+    const total = h + a || 1;
+    momentumData.push({ home: h / total, away: a / total });
+  }
+}
+
+// ═══════════════════════════════════════════════════════════
+// RENDER UI
+// ═══════════════════════════════════════════════════════════
+function renderScoreBar() {
+  document.getElementById('home-name').textContent = homeTeam;
+  document.getElementById('away-name').textContent = awayTeam;
+  // Don't overwrite flags - they're set during match load (may be <img> from ESPN)
+
+  // Goals at current time
+  let hGoals = 0, aGoals = 0;
+  goalEvents.forEach(g => {
+    if (g.matchSeconds <= totalMatchSeconds) {
+      if (g.teamId === homeId) hGoals++;
+      else aGoals++;
+    }
+  });
+  document.getElementById('home-score').textContent = hGoals;
+  document.getElementById('away-score').textContent = aGoals;
+
+  // Cards
+  const homeCards = cardEvents.filter(c => c.teamId === homeId && c.matchSeconds <= totalMatchSeconds);
+  const awayCards = cardEvents.filter(c => c.teamId !== homeId && c.matchSeconds <= totalMatchSeconds);
+  document.getElementById('home-cards').innerHTML = renderCardIcons(homeCards);
+  document.getElementById('away-cards').innerHTML = renderCardIcons(awayCards);
+}
+
+function renderCardIcons(cards) {
+  let yellows = 0, reds = 0, corners = 0;
+  cards.forEach(c => {
+    if (c.card.includes('Yellow')) yellows++;
+    if (c.card.includes('Red')) reds++;
+  });
+  return `
+    <span><span class="card-icon yellow"></span> ${yellows}</span>
+    <span><span class="card-icon red"></span> ${reds}</span>
+  `;
+}
+
+function renderStats() {
+  const grid = document.getElementById('stats-section');
+  const rows = [
+    ['possession', '控球率', '%'],
+    ['attacks', '進攻', ''],
+    ['dangerousAttacks', '危險進攻', ''],
+    ['shots', '射門', ''],
+    ['shotsOnTarget', '射正', ''],
+    ['shotsOff', '射偏', ''],
+    ['corners', '角球', ''],
+    ['fouls', '犯規', ''],
+  ];
+
+  grid.innerHTML = rows.map(([key, label, suffix]) => {
+    const hv = stats.home[key];
+    const av = stats.away[key];
+    const total = hv + av || 1;
+    const hPct = (hv / total) * 100;
+    const aPct = (av / total) * 100;
+    return `
+      <div class="stat-row">
+        <span class="stat-val home">${hv}${suffix}</span>
+        <div class="stat-bar-bg reverse">
+          <div class="stat-bar home" style="width:${hPct}%"></div>
+        </div>
+        <span class="stat-label">${label}</span>
+        <div class="stat-bar-bg">
+          <div class="stat-bar away" style="width:${aPct}%"></div>
+        </div>
+        <span class="stat-val away">${av}${suffix}</span>
+      </div>
+    `;
+  }).join('');
+}
+
+function renderTimeline() {
+  const track = document.getElementById('timeline-track');
+  // Remove old events
+  track.querySelectorAll('.timeline-event').forEach(el => el.remove());
+
+  const allEvents = [...goalEvents.map(e => ({...e, icon: '⚽', type: 'goal'})),
+                     ...cardEvents.map(e => ({...e, icon: e.card.includes('Yellow') ? '🟨' : '🟥', type: 'card'}))];
+
+  allEvents.forEach(e => {
+    const pct = (e.matchSeconds / maxMatchSeconds) * 100;
+    const isHome = e.teamId === homeId;
+    const div = document.createElement('div');
+    div.className = `timeline-event ${isHome ? 'home' : 'away'}`;
+    div.style.left = pct + '%';
+    div.textContent = e.icon;
+    div.title = `${e.minute}' ${e.player}`;
+    track.appendChild(div);
+  });
+
+  document.getElementById('tl-home-name').textContent = homeTeam;
+  document.getElementById('tl-away-name').textContent = awayTeam;
+
+  drawMomentum();
+}
+
+function drawMomentum() {
+  const canvas = document.getElementById('momentumCanvas');
+  const rect = canvas.parentElement.getBoundingClientRect();
+  canvas.width = rect.width * 2;
+  canvas.height = 100;
+  canvas.style.width = rect.width + 'px';
+  canvas.style.height = '50px';
+  const ctx = canvas.getContext('2d');
+  const w = canvas.width, h = canvas.height;
+  const midY = h / 2;
+  const bucketW = w / (momentumData.length || 1);
+
+  // Home (top, blue)
+  ctx.beginPath();
+  ctx.moveTo(0, midY);
+  momentumData.forEach((d, i) => {
+    const x = i * bucketW + bucketW / 2;
+    const y = midY - d.home * midY * 0.9;
+    if (i === 0) ctx.lineTo(x, y);
+    else ctx.lineTo(x, y);
+  });
+  ctx.lineTo(w, midY);
+  ctx.closePath();
+  ctx.fillStyle = 'rgba(91,163,245,0.3)';
+  ctx.fill();
+
+  // Away (bottom, orange)
+  ctx.beginPath();
+  ctx.moveTo(0, midY);
+  momentumData.forEach((d, i) => {
+    const x = i * bucketW + bucketW / 2;
+    const y = midY + d.away * midY * 0.9;
+    if (i === 0) ctx.lineTo(x, y);
+    else ctx.lineTo(x, y);
+  });
+  ctx.lineTo(w, midY);
+  ctx.closePath();
+  ctx.fillStyle = 'rgba(245,166,35,0.3)';
+  ctx.fill();
+
+  // Center line
+  ctx.beginPath();
+  ctx.moveTo(0, midY);
+  ctx.lineTo(w, midY);
+  ctx.strokeStyle = 'rgba(255,255,255,0.1)';
+  ctx.lineWidth = 1;
+  ctx.stroke();
+}
+
+// ═══════════════════════════════════════════════════════════
+// ANIMATION ENGINE
+// ═══════════════════════════════════════════════════════════
+let lastFrameTime = 0;
+let prevEvent = null;
+
+function getEventAtTime(matchSec) {
+  // Binary search for the event just before matchSec
+  let lo = 0, hi = animEvents.length - 1;
+  while (lo < hi) {
+    const mid = (lo + hi + 1) >> 1;
+    if (animEvents[mid].matchSeconds <= matchSec) lo = mid;
+    else hi = mid - 1;
+  }
+  return lo;
+}
+
+function updateAnimation(timestamp) {
+  if (!isPlaying) return;
+  if (!lastFrameTime) lastFrameTime = timestamp;
+  const dt = (timestamp - lastFrameTime) / 1000 * playSpeed;
+  lastFrameTime = timestamp;
+
+  totalMatchSeconds += dt;
+
+  if (totalMatchSeconds >= maxMatchSeconds) {
+    totalMatchSeconds = maxMatchSeconds;
+    pausePlayback();
+  }
+
+  currentEventIdx = getEventAtTime(totalMatchSeconds);
+  const ev = animEvents[currentEventIdx];
+  const nextEv = animEvents[currentEventIdx + 1];
+
+  if (ev) {
+    // Detect possession change between current and next event
+    const possessionChanged = nextEv && ev.possession_team !== nextEv.possession_team;
+    // Detect large distance jump (e.g. goal kick, free kick restart)
+    const evEnd = ev.endX !== null ? { x: ev.endX, y: ev.endY } : { x: ev.x, y: ev.y };
+    const bigJump = nextEv && Math.hypot(nextEv.x - evEnd.x, nextEv.y - evEnd.y) > 30;
+
+    // Determine ball position
+    if (nextEv && nextEv.matchSeconds > ev.matchSeconds) {
+      const elapsed = totalMatchSeconds - ev.matchSeconds;
+      const duration = nextEv.matchSeconds - ev.matchSeconds;
+      const t = Math.min(elapsed / duration, 1);
+
+      if (possessionChanged || bigJump) {
+        // Possession change or big jump: move ball along event path, then snap to next position
+        if (ev.endX !== null) {
+          // Complete the pass/carry first, then snap
+          if (t < 0.6) {
+            const t2 = t / 0.6;
+            ballX = ev.x + (ev.endX - ev.x) * easeInOut(t2);
+            ballY = ev.y + (ev.endY - ev.y) * easeInOut(t2);
+          } else {
+            // Snap quickly to next event position
+            const t2 = (t - 0.6) / 0.4;
+            const snapT = Math.min(t2 * 3, 1); // fast snap
+            ballX = ev.endX + (nextEv.x - ev.endX) * easeInOut(snapT);
+            ballY = ev.endY + (nextEv.y - ev.endY) * easeInOut(snapT);
+          }
+        } else {
+          // No end location - just snap quickly
+          const snapT = Math.min(t * 3, 1);
+          ballX = ev.x + (nextEv.x - ev.x) * easeInOut(snapT);
+          ballY = ev.y + (nextEv.y - ev.y) * easeInOut(snapT);
+        }
+      } else {
+        // Same possession: smooth interpolation
+        if (ev.endX !== null) {
+          if (t < 0.5) {
+            const t2 = t * 2;
+            ballX = ev.x + (ev.endX - ev.x) * easeInOut(t2);
+            ballY = ev.y + (ev.endY - ev.y) * easeInOut(t2);
+          } else {
+            const t2 = (t - 0.5) * 2;
+            ballX = ev.endX + (nextEv.x - ev.endX) * easeInOut(t2);
+            ballY = ev.endY + (nextEv.y - ev.endY) * easeInOut(t2);
+          }
+        } else {
+          ballX = ev.x + (nextEv.x - ev.x) * easeInOut(t);
+          ballY = ev.y + (nextEv.y - ev.y) * easeInOut(t);
+        }
+      }
+    } else {
+      ballX = ev.endX || ev.x;
+      ballY = ev.endY || ev.y;
+    }
+
+    // Update possession label
+    document.getElementById('poss-team-name').textContent = ev.possession_team;
+
+    // Current minute display
+    currentMatchMinute = ev.minute;
+    currentPeriod = ev.period;
+
+    // Update 360 player positions (interpolated)
+    updatePlayerPositions(ev);
+
+    // Draw
+    drawPitch();
+    // Only draw pass trail for same-possession events with end location
+    if (ev.endX !== null && !possessionChanged) {
+      drawPassTrail(ev.x, ev.y, ev.endX, ev.endY, 1);
+    }
+    drawPlayers(currentPlayers);
+    drawBall(ballX, ballY);
+  }
+
+  // Update UI
+  updateTimeDisplay();
+  renderScoreBar();
+
+  // Update seek slider
+  document.getElementById('seek-slider').value = (totalMatchSeconds / maxMatchSeconds) * 1000;
+
+  // Timeline progress
+  document.getElementById('timeline-progress').style.width = ((totalMatchSeconds / maxMatchSeconds) * 100) + '%';
+
+  requestAnimationFrame(updateAnimation);
+}
+
+// Fallback: use setInterval when rAF is throttled (background tab)
+let _animInterval = null;
+function ensureAnimLoop() {
+  if (_animInterval) clearInterval(_animInterval);
+  _animInterval = setInterval(() => {
+    if (isPlaying) updateAnimation(performance.now());
+  }, 30);
+}
+ensureAnimLoop();
+
+function easeInOut(t) {
+  return t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t;
+}
+
+function buildLineups(lineups) {
+  homeLineup = [];
+  awayLineup = [];
+
+  lineups.forEach(team => {
+    const isHome = team.team_id === homeId;
+    const roster = [];
+
+    team.lineup.forEach(p => {
+      // Get the first (starting) position
+      const pos = p.positions.length > 0 ? p.positions[0].position : 'Center Midfield';
+      const coords = POSITION_COORDS[pos] || [50, 40];
+      roster.push({
+        playerId: p.player_id,
+        jersey: p.jersey_number,
+        name: p.player_name,
+        position: pos,
+        baseX: coords[0],
+        baseY: coords[1],
+        keeper: pos === 'Goalkeeper'
+      });
+    });
+
+    if (isHome) homeLineup = roster.slice(0, 11);
+    else awayLineup = roster.slice(0, 11);
+  });
+}
+
+function buildPlayerFrames() {
+  // Not used anymore - formation system replaces this
+  playerFrames = [];
+}
+
+// Get formation positions shifted by ball position
+function getFormationPositions(bx, by, carrierId, carrierIsHome) {
+  const players = [];
+
+  // Ball influence: entire team shifts toward ball zone
+  const ballInfluenceX = (bx - 60) / 120; // -0.5 to 0.5
+  const ballInfluenceY = (by - 40) / 80;
+
+  function processTeam(lineup, isHome) {
+    lineup.forEach(p => {
+      const isBallCarrier = (p.playerId === carrierId && isHome === carrierIsHome);
+
+      if (isBallCarrier) {
+        // Ball carrier goes TO the ball
+        players.push({
+          x: bx, y: by, teammate: isHome, keeper: p.keeper,
+          actor: true, jersey: p.jersey
+        });
+        return;
+      }
+
+      let x = isHome ? p.baseX : 120 - p.baseX;
+      let y = p.baseY;
+
+      if (!p.keeper) {
+        // Shift whole team toward ball zone (compact shape)
+        x += ballInfluenceX * 15;
+        y += ballInfluenceY * 8;
+
+        // Only the 2-3 closest players crowd toward ball
+        const distToBall = Math.hypot(x - bx, y - by);
+        if (distToBall < 25 && distToBall > 5) {
+          const pullStrength = (25 - distToBall) / 25 * 0.15;
+          x += (bx - x) * pullStrength;
+          y += (by - y) * pullStrength;
+        }
+
+        // Natural movement jitter
+        const t = totalMatchSeconds;
+        x += Math.sin(t * 0.4 + p.jersey * 7.3) * 2;
+        y += Math.cos(t * 0.3 + p.jersey * 11.7) * 1.5;
+      } else {
+        // Keeper shifts slightly with ball y-position
+        y += (by - 40) * 0.12;
+      }
+
+      x = Math.max(2, Math.min(118, x));
+      y = Math.max(2, Math.min(78, y));
+
+      players.push({
+        x, y, teammate: isHome, keeper: p.keeper,
+        actor: false, jersey: p.jersey
+      });
+    });
+  }
+
+  processTeam(homeLineup, true);
+  processTeam(awayLineup, false);
+  return players;
+}
+
+function updatePlayerPositions(ev) {
+  const carrierId = ev.playerId || 0;
+  const carrierIsHome = ev.teamId === homeId;
+  const targets = getFormationPositions(ballX, ballY, carrierId, carrierIsHome);
+
+  // Initialize smoothed positions if empty or count changed
+  if (smoothedPlayers.length !== targets.length) {
+    smoothedPlayers = targets.map(p => ({ ...p }));
+    currentPlayers = smoothedPlayers;
+    return;
+  }
+
+  // Lerp each player toward target
+  const lerpSpeed = 0.06; // lower = smoother, higher = snappier
+  const carrierLerp = 0.18; // ball carrier moves faster to stay with ball
+
+  for (let i = 0; i < targets.length; i++) {
+    const t = targets[i];
+    const s = smoothedPlayers[i];
+    const speed = t.actor ? carrierLerp : lerpSpeed;
+    s.x += (t.x - s.x) * speed;
+    s.y += (t.y - s.y) * speed;
+    s.teammate = t.teammate;
+    s.keeper = t.keeper;
+    s.actor = t.actor;
+    s.jersey = t.jersey;
+  }
+
+  currentPlayers = smoothedPlayers;
+}
+
+function updateTimeDisplay() {
+  let minDisplay;
+  if (currentPeriod === 1) {
+    minDisplay = Math.min(45, Math.floor(totalMatchSeconds / 60));
+  } else if (currentPeriod === 2) {
+    minDisplay = Math.min(90, 45 + Math.floor((totalMatchSeconds - 2700) / 60));
+  } else {
+    minDisplay = Math.floor(totalMatchSeconds / 60);
+  }
+  const timeStr = minDisplay + "'";
+  document.getElementById('match-time').textContent = timeStr;
+  document.getElementById('current-time-display').textContent = timeStr;
+}
+
+// ═══════════════════════════════════════════════════════════
+// PLAYBACK CONTROLS
+// ═══════════════════════════════════════════════════════════
+function startPlayback() {
+  isPlaying = true;
+  lastFrameTime = 0;
+  document.getElementById('btn-play').style.display = 'none';
+  document.getElementById('btn-pause').style.display = '';
+  requestAnimationFrame(updateAnimation);
+}
+
+function pausePlayback() {
+  isPlaying = false;
+  document.getElementById('btn-play').style.display = '';
+  document.getElementById('btn-pause').style.display = 'none';
+}
+
+document.getElementById('btn-play').onclick = startPlayback;
+document.getElementById('btn-pause').onclick = pausePlayback;
+
+document.getElementById('seek-slider').addEventListener('input', e => {
+  const pct = e.target.value / 1000;
+  totalMatchSeconds = pct * maxMatchSeconds;
+  currentEventIdx = getEventAtTime(totalMatchSeconds);
+  if (!isPlaying) {
+    // Render single frame
+    const ev = animEvents[currentEventIdx];
+    if (ev) {
+      ballX = ev.x; ballY = ev.y;
+      updatePlayerPositions(ev);
+      drawPitch();
+      drawPlayers(currentPlayers);
+      drawBall(ballX, ballY);
+      document.getElementById('poss-team-name').textContent = ev.possession_team;
+      currentMatchMinute = ev.minute;
+      currentPeriod = ev.period;
+    }
+    updateTimeDisplay();
+    renderScoreBar();
+    document.getElementById('timeline-progress').style.width = (pct * 100) + '%';
+  }
+});
+
+document.querySelectorAll('.speed-btn').forEach(btn => {
+  btn.onclick = () => {
+    document.querySelectorAll('.speed-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    playSpeed = parseInt(btn.dataset.speed);
+  };
+});
+
+// ═══════════════════════════════════════════════════════════
+// MATCH SELECTOR
+// ═══════════════════════════════════════════════════════════
+const compSelect = document.getElementById('comp-select');
+const seasonSelect = document.getElementById('season-select');
+const matchSelect = document.getElementById('match-select');
+const sbMatchSelect = document.getElementById('sb-match-select');
+const datePicker = document.getElementById('date-picker');
+const sourceSelect = document.getElementById('source-select');
+
+let espnMatches = [];
+
+// Source toggle
+sourceSelect.onchange = () => {
+  dataSource = sourceSelect.value;
+  document.getElementById('espn-controls').style.display = dataSource === 'espn' ? '' : 'none';
+  document.getElementById('sb-controls').style.display = dataSource === 'statsbomb' ? '' : 'none';
+  const adBoard = document.querySelector('.ad-board');
+  adBoard.querySelectorAll('span').forEach((s, i) => {
+    s.textContent = i % 2 === 0 ? 'FOOTBALL LIVE' : (dataSource === 'espn' ? 'ESPN DATA' : 'STATSBOMB DATA');
+  });
+};
+
+// ESPN: date picker
+datePicker.onchange = async () => {
+  matchSelect.innerHTML = '<option>Loading...</option>';
+  espnMatches = await loadESPNMatchesByDate(datePicker.value);
+  matchSelect.innerHTML = '<option value="">-- Select Match --</option>';
+  espnMatches.forEach(m => {
+    matchSelect.innerHTML += `<option value="${m.id}">${m.homeTeam} vs ${m.awayTeam} (${m.homeScore}-${m.awayScore}) ${m.status}</option>`;
+  });
+};
+
+// ESPN: match select
+matchSelect.onchange = async () => {
+  const eventId = matchSelect.value;
+  if (!eventId) return;
+  const matchInfo = espnMatches.find(m => m.id === eventId);
+  if (matchInfo) await loadESPNMatch(eventId, matchInfo);
+};
+
+// StatsBomb selectors
+async function loadCompetitions() {
+  competitions = await fetchJSON(`${BASE}/competitions.json`);
+  const comps = {};
+  competitions.forEach(c => {
+    const key = c.competition_id;
+    if (!comps[key]) comps[key] = { name: c.competition_name, id: key, seasons: [] };
+    comps[key].seasons.push({ id: c.season_id, name: c.season_name });
+  });
+  compSelect.innerHTML = '<option value="">-- Competition --</option>';
+  Object.values(comps).sort((a, b) => a.name.localeCompare(b.name)).forEach(c => {
+    compSelect.innerHTML += `<option value="${c.id}">${c.name}</option>`;
+  });
+}
+
+compSelect.onchange = () => {
+  const compId = compSelect.value;
+  const seasons = competitions.filter(c => c.competition_id == compId);
+  seasonSelect.innerHTML = '<option value="">-- Season --</option>';
+  seasons.sort((a, b) => b.season_name.localeCompare(a.season_name)).forEach(s => {
+    seasonSelect.innerHTML += `<option value="${s.season_id}">${s.season_name}</option>`;
+  });
+  sbMatchSelect.innerHTML = '<option value="">--</option>';
+};
+
+seasonSelect.onchange = async () => {
+  const compId = compSelect.value, seasonId = seasonSelect.value;
+  if (!compId || !seasonId) return;
+  sbMatchSelect.innerHTML = '<option>Loading...</option>';
+  const matches = await fetchJSON(`${BASE}/matches/${compId}/${seasonId}.json`);
+  sbMatchSelect.innerHTML = '<option value="">-- Match --</option>';
+  matches.sort((a, b) => a.match_date.localeCompare(b.match_date)).forEach(m => {
+    sbMatchSelect.innerHTML += `<option value="${m.match_id}">${m.match_date} ${m.home_team.home_team_name} vs ${m.away_team.away_team_name} (${m.home_score}-${m.away_score})</option>`;
+  });
+};
+
+sbMatchSelect.onchange = async () => {
+  const matchId = sbMatchSelect.value;
+  if (!matchId) return;
+  await loadStatsBombMatch(matchId, compSelect.value, seasonSelect.value);
+};
+
+// ═══════════════════════════════════════════════════════════
+// LOAD MATCH (ESPN)
+// ═══════════════════════════════════════════════════════════
+async function loadESPNMatch(eventId, matchInfo) {
+  document.getElementById('loading').classList.remove('hidden');
+  pausePlayback();
+  totalMatchSeconds = 0;
+  currentEventIdx = 0;
+  currentPlayers = [];
+  smoothedPlayers = [];
+
+  try {
+    homeTeam = matchInfo.homeTeam;
+    awayTeam = matchInfo.awayTeam;
+    homeId = matchInfo.homeId;
+    awayId = matchInfo.awayId;
+
+    // Set team logos
+    document.getElementById('home-flag').innerHTML = matchInfo.homeLogo ? `<img src="${matchInfo.homeLogo}" alt="${homeTeam}">` : getFlag(homeTeam);
+    document.getElementById('away-flag').innerHTML = matchInfo.awayLogo ? `<img src="${matchInfo.awayLogo}" alt="${awayTeam}">` : getFlag(awayTeam);
+
+    const detail = await loadESPNMatchDetail(eventId);
+    parseESPNData(detail, matchInfo);
+
+    renderScoreBar();
+    renderStats();
+    renderTimeline();
+    computeMomentum([]);
+
+    resizePitch();
+    ballX = 60; ballY = 40;
+    updatePlayerPositions(animEvents[0] || { period: 1, playerId: 0, teamId: homeId });
+    drawPitch();
+    drawPlayers(currentPlayers);
+    drawBall(60, 40);
+
+    document.getElementById('loading').classList.add('hidden');
+  } catch (err) {
+    console.error('Error loading ESPN match:', err);
+    document.getElementById('loading').querySelector('.text').textContent = 'Error: ' + err.message;
+  }
+}
+
+// ═══════════════════════════════════════════════════════════
+// LOAD MATCH (STATSBOMB)
+// ═══════════════════════════════════════════════════════════
+async function loadStatsBombMatch(matchId, compId, seasonId) {
+  document.getElementById('loading').classList.remove('hidden');
+  pausePlayback();
+  totalMatchSeconds = 0;
+  currentEventIdx = 0;
+  currentPlayers = [];
+  smoothedPlayers = [];
+  threeSixtyMap = {};
+
+  try {
+    const matches = await fetchJSON(`${BASE}/matches/${compId}/${seasonId}.json`);
+    matchData = matches.find(m => m.match_id == matchId);
+    homeTeam = matchData.home_team.home_team_name;
+    awayTeam = matchData.away_team.away_team_name;
+    homeId = matchData.home_team.home_team_id;
+    awayId = matchData.away_team.away_team_id;
+
+    document.getElementById('home-flag').textContent = getFlag(homeTeam);
+    document.getElementById('away-flag').textContent = getFlag(awayTeam);
+
+    const [events, lineups] = await Promise.all([
+      fetchJSON(`${BASE}/events/${matchId}.json`),
+      fetchJSON(`${BASE}/lineups/${matchId}.json`)
+    ]);
+    eventsData = events;
+    lineupsData = lineups;
+
+    try {
+      const threeSixty = await fetchJSON(`${BASE}/three-sixty/${matchId}.json`);
+      threeSixty.forEach(item => { threeSixtyMap[item.event_uuid] = item.freeze_frame; });
+    } catch (e) {}
+
+    processEvents(events);
+    buildLineups(lineups);
+    buildPlayerFrames();
+    renderScoreBar();
+    renderStats();
+    renderTimeline();
+
+    resizePitch();
+    ballX = 60; ballY = 40;
+    updatePlayerPositions(animEvents[0] || { period: 1, playerId: 0, teamId: homeId });
+    drawPitch();
+    drawPlayers(currentPlayers);
+    drawBall(60, 40);
+
+    document.getElementById('loading').classList.add('hidden');
+  } catch (err) {
+    console.error('Error loading StatsBomb match:', err);
+    document.getElementById('loading').querySelector('.text').textContent = 'Error: ' + err.message;
+  }
+}
+
+// ═══════════════════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════════════════
+async function init() {
+  resizePitch();
+  drawPitch();
+  drawBall(60, 40);
+
+  // Default: load ESPN matches for Iraq vs Bolivia date
+  espnMatches = await loadESPNMatchesByDate('2026-03-31');
+  matchSelect.innerHTML = '<option value="">-- Select Match --</option>';
+  espnMatches.forEach(m => {
+    matchSelect.innerHTML += `<option value="${m.id}">${m.homeTeam} vs ${m.awayTeam} (${m.homeScore}-${m.awayScore}) ${m.status}</option>`;
+  });
+
+  // Auto-select Iraq vs Bolivia if found
+  const iraqMatch = espnMatches.find(m => m.homeTeam.includes('Iraq') || m.awayTeam.includes('Iraq') || m.homeTeam.includes('Bolivia') || m.awayTeam.includes('Bolivia'));
+  if (iraqMatch) {
+    matchSelect.value = iraqMatch.id;
+    await loadESPNMatch(iraqMatch.id, iraqMatch);
+  }
+
+  document.getElementById('loading').classList.add('hidden');
+}
+
+window.addEventListener('resize', () => {
+  resizePitch();
+  drawPitch();
+  drawPlayers(currentPlayers);
+  drawBall(ballX, ballY);
+});
+
+init();
+</script>
+</body>
+</html>

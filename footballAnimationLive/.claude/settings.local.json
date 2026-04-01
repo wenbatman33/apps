@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__Claude_Preview__preview_start",
+      "WebSearch",
+      "WebFetch(domain:www.thesportsdb.com)",
+      "WebFetch(domain:site.api.espn.com)",
+      "WebFetch(domain:v3.football.api-sports.io)",
+      "WebFetch(domain:api.openligadb.de)",
+      "Bash(curl -sI -X OPTIONS -H \"Origin: http://localhost:3000\" -H \"Access-Control-Request-Method: GET\" \"https://site.api.espn.com/apis/site/v2/sports/soccer/all/scoreboard?dates=20260331\")",
+      "Bash(curl -sI -X OPTIONS -H \"Origin: http://localhost:3000\" -H \"Access-Control-Request-Method: GET\" \"https://www.thesportsdb.com/api/v1/json/3/searchevents.php?e=Iraq_vs_Bolivia\")",
+      "Bash(curl -sI -H \"Origin: http://localhost:3000\" \"https://site.api.espn.com/apis/site/v2/sports/soccer/all/scoreboard?dates=20260331&limit=1\")"
+    ]
+  }
+}
