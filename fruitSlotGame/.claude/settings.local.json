@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "WebFetch(domain:www.youtube.com)",
+      "mcp__Claude_Preview__preview_start",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(rm /Users/batman_work/claude/apps/.git/index.lock)",
+      "Bash(git -C /Users/batman_work/claude/apps/fruitSlotGame add css/style.css index.html js/audio.js js/game.js phaser-version/ .claude/settings.local.json .claude/launch.json)",
+      "Bash(git -C:*)"
+    ]
+  }
+}

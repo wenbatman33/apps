@@ -3,147 +3,140 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-  <title>🍒 小瑪莉 Fruit Slot</title>
+  <title>小瑪莉</title>
   <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
 
 <div id="machine">
 
-  <!-- 頂部燈條 -->
-  <div class="top-lights">
-    <div class="light-row" id="topLights"></div>
+  <!-- 機台頂部螺絲裝飾 -->
+  <div class="machine-screws top-screws">
+    <span class="screw"></span><span class="screw"></span>
   </div>
 
-  <!-- 機台標題 -->
-  <div id="machine-title">
-    <div class="title-text">🍒 小瑪莉 🍒</div>
-    <div class="title-sub">FRUIT SLOT MACHINE</div>
-  </div>
-
-  <!-- 中獎顯示跑馬燈 -->
-  <div id="marquee-wrap">
-    <div id="marquee-text">🎰 歡迎光臨小瑪莉！投幣開始遊戲！🎰</div>
-  </div>
-
-  <!-- 得分顯示板 -->
-  <div id="score-board">
-    <div class="score-item">
-      <div class="score-label">CREDIT</div>
-      <div class="score-value" id="credits">100</div>
+  <!-- ① 上方 LED 顯示 -->
+  <div id="top-panel">
+    <div class="display-unit">
+      <div class="display-label">WIN</div>
+      <div class="led-display" id="winLed"><span>0</span><span>0</span><span>0</span><span>0</span></div>
     </div>
-    <div class="score-item">
-      <div class="score-label">BET</div>
-      <div class="score-value" id="betDisplay">1</div>
-    </div>
-    <div class="score-item">
-      <div class="score-label">WIN</div>
-      <div class="score-value" id="winDisplay">0</div>
+    <div class="display-unit">
+      <div class="display-label">CREDIT</div>
+      <div class="led-display" id="creditLed"><span>0</span><span>0</span><span>0</span><span>0</span></div>
     </div>
   </div>
 
-  <!-- 拉霸機主體 -->
-  <div id="slot-body">
+  <!-- ② 主遊戲區（符號邊框 + 中央動畫） -->
+  <div id="main-panel">
+    <!-- 邊框指示燈 -->
+    <div class="panel-lights top-lights">
+      <span class="plight" data-i="0"></span><span class="plight" data-i="1"></span>
+      <span class="plight" data-i="2"></span><span class="plight" data-i="3"></span>
+      <span class="plight" data-i="4"></span><span class="plight" data-i="5"></span>
+    </div>
+    <div class="panel-lights bot-lights">
+      <span class="plight" data-i="6"></span><span class="plight" data-i="7"></span>
+      <span class="plight" data-i="8"></span><span class="plight" data-i="9"></span>
+      <span class="plight" data-i="10"></span><span class="plight" data-i="11"></span>
+    </div>
 
-    <!-- 中獎線指示 -->
-    <div class="win-line-indicator top-line"></div>
-    <div class="win-line-indicator mid-line"></div>
-    <div class="win-line-indicator bot-line"></div>
+    <!-- 符號邊框 -->
+    <div id="symbol-frame">
+      <!-- 上排 -->
+      <div class="frame-row" id="frame-top"></div>
 
-    <!-- 三個滾輪 -->
-    <div id="reels-container">
-      <div class="reel-wrapper" id="reel-wrap-0">
-        <div class="hold-btn" id="hold-0" data-reel="0">HOLD</div>
-        <div class="reel-window">
-          <div class="reel" id="reel-0"></div>
+      <!-- 中段 -->
+      <div id="frame-middle">
+        <div class="frame-col" id="frame-left"></div>
+
+        <!-- 中央顯示區 -->
+        <div id="center-area">
+          <div id="center-burst"></div>
+          <div class="center-deco">⭐</div>
+          <div id="center-main">
+            <div id="center-title">小瑪莉</div>
+            <div id="center-reel-wrap">
+              <div id="center-reel-card">
+                <div id="center-sym-display">🎰</div>
+              </div>
+            </div>
+            <div id="jp-row">
+              <span id="jp-title">J·P</span>
+              <span id="jp-count">0</span>
+            </div>
+            <div id="game-msg"></div>
+          </div>
+          <div class="center-deco">⭐</div>
         </div>
-      </div>
-      <div class="reel-wrapper" id="reel-wrap-1">
-        <div class="hold-btn" id="hold-1" data-reel="1">HOLD</div>
-        <div class="reel-window">
-          <div class="reel" id="reel-1"></div>
-        </div>
-      </div>
-      <div class="reel-wrapper" id="reel-wrap-2">
-        <div class="hold-btn" id="hold-2" data-reel="2">HOLD</div>
-        <div class="reel-window">
-          <div class="reel" id="reel-2"></div>
-        </div>
-      </div>
-    </div>
 
-    <!-- 贏線說明 -->
-    <div id="payline-label">
-      <span class="line-tag top-tag">TOP</span>
-      <span class="line-tag mid-tag">MID ★</span>
-      <span class="line-tag bot-tag">BOT</span>
+        <div class="frame-col" id="frame-right"></div>
+      </div>
+
+      <!-- 下排 -->
+      <div class="frame-row" id="frame-bottom"></div>
     </div>
   </div>
 
-  <!-- 賠率表 -->
-  <div id="paytable">
-    <div class="pay-title">💰 賠率表 PAYTABLE 💰</div>
-    <div class="pay-grid">
-      <div class="pay-row jackpot-row"><span>7️⃣ 7️⃣ 7️⃣</span><span>JACKPOT × 100</span></div>
-      <div class="pay-row"><span>BAR BAR BAR</span><span>× 50</span></div>
-      <div class="pay-row"><span>🍉 🍉 🍉</span><span>× 20</span></div>
-      <div class="pay-row"><span>🔔 🔔 🔔</span><span>× 15</span></div>
-      <div class="pay-row"><span>🍇 🍇 🍇</span><span>× 10</span></div>
-      <div class="pay-row"><span>🍊 🍊 🍊</span><span>× 8</span></div>
-      <div class="pay-row"><span>🍋 🍋 🍋</span><span>× 6</span></div>
-      <div class="pay-row"><span>🍒 🍒 🍒</span><span>× 5</span></div>
-      <div class="pay-row"><span>🍒 🍒 任意</span><span>× 2</span></div>
-    </div>
+  <!-- ③ 賠率表 -->
+  <div id="paytable-panel">
+    <div id="paytable-cols"></div>
+    <div id="paytable-leds"></div>
   </div>
 
-  <!-- 控制區 -->
-  <div id="controls">
-    <!-- 押注按鈕 -->
-    <div id="bet-controls">
-      <button class="ctrl-btn" id="betMinus">BET −</button>
-      <button class="ctrl-btn" id="betMax">BET MAX</button>
-      <button class="ctrl-btn" id="betPlus">BET +</button>
+  <!-- ④ 控制面板 -->
+  <div id="control-panel">
+    <button class="cpanel-btn leave-btn" id="addCreditBtn">儲值</button>
+    <button class="cpanel-btn orange-btn" id="winCreditBtn" style="font-size:9px">WIN→<br>CREDIT</button>
+    <button class="cpanel-btn orange-btn bet-btn" id="smallBetBtn">
+      <span class="bet-size">左</span>
+      <span class="bet-range">1-4</span>
+    </button>
+    <div id="double-area">
+      <span>DOUBLE</span>
+      <span>IN BET</span>
     </div>
-
-    <!-- 主要操作 -->
-    <div id="main-controls">
-      <button class="ctrl-btn secondary-btn" id="addCoins">投幣 +100</button>
-      <button class="spin-btn" id="spinBtn">
-        <span class="spin-text">SPIN</span>
-        <span class="spin-sub">旋轉</span>
-      </button>
-      <button class="ctrl-btn secondary-btn" id="autoBtn">AUTO</button>
-    </div>
-
-    <!-- 音效切換 -->
-    <div id="sound-control">
-      <button class="ctrl-btn sound-btn" id="soundBtn">🔊 SOUND ON</button>
-    </div>
+    <button class="cpanel-btn orange-btn bet-btn" id="bigBetBtn">
+      <span class="bet-size">右</span>
+      <span class="bet-range">6-9</span>
+    </button>
+    <button class="cpanel-btn auto-btn" id="autoBtn">AUTO</button>
+    <button class="cpanel-btn start-btn" id="startBtn">開始</button>
   </div>
 
-  <!-- 底部燈條 -->
-  <div class="bottom-lights">
-    <div class="light-row" id="botLights"></div>
+  <!-- ⑤ 底部 7 個大按鈕 + 符號 -->
+  <div id="action-panel">
+    <div id="action-symbols"></div>
+    <div id="action-btns"></div>
+  </div>
+
+  <!-- 底部螺絲 -->
+  <div class="machine-screws bot-screws">
+    <span class="screw"></span><span class="screw"></span>
+  </div>
+
+  <!-- 出幣口 -->
+  <div id="coin-tray">
+    <div class="tray-inner"></div>
   </div>
 
 </div>
 
-<!-- 中獎彈窗 -->
+<!-- 中獎疊層 -->
 <div id="win-overlay" class="hidden">
   <div id="win-box">
-    <div id="win-emoji">🎊</div>
-    <div id="win-title">YOU WIN!</div>
-    <div id="win-amount"></div>
-    <div id="win-coins"></div>
+    <div id="win-icon">🎊</div>
+    <div id="win-label">WIN!</div>
+    <div id="win-amount-display"></div>
   </div>
 </div>
 
-<!-- JACKPOT彈窗 -->
-<div id="jackpot-overlay" class="hidden">
-  <div id="jackpot-box">
-    <div id="jackpot-title">🎰 JACKPOT!! 🎰</div>
-    <div id="jackpot-amount"></div>
-    <div class="jackpot-stars" id="jackpotStars"></div>
+<!-- JACKPOT 疊層 -->
+<div id="jp-overlay" class="hidden">
+  <div id="jp-box">
+    <div id="jp-overlay-title">🎰 JACKPOT!! 🎰</div>
+    <div id="jp-overlay-amount"></div>
+    <div id="jp-stars">★ ★ ★ ★ ★</div>
   </div>
 </div>
 

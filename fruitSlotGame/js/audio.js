@@ -94,13 +94,16 @@ const Audio = (() => {
     noise(t, 0.15, 0.08);
   }
 
-  /** 滾輪滾動中的嗒嗒聲（每格） */
+  /** 跑馬燈滾動音效 — 清脆的電子嗶聲 */
   function tick() {
     if (!ctx || !enabled) return;
     resume();
     const t = ctx.currentTime;
-    osc('square', 220, t, 0.04, 0.18, 0.001);
-    noise(t, 0.03, 0.1);
+    // 高頻清脆嗶聲
+    osc('sine', 1800, t, 0.025, 0.2, 0.001);
+    osc('sine', 1200, t, 0.02, 0.1, 0.001);
+    // 短促金屬感
+    osc('triangle', 3000, t, 0.015, 0.08, 0.001);
   }
 
   /** 滾輪停止：重擊聲 */
@@ -171,13 +174,17 @@ const Audio = (() => {
     }
   }
 
-  /** 押注按鈕點擊聲 */
+  /** 押注按鈕點擊聲 — 清脆的機械按鍵感 */
   function click() {
     if (!ctx || !enabled) return;
     resume();
     const t = ctx.currentTime;
-    osc('sine', 800, t, 0.04, 0.15, 0.001);
-    osc('sine', 400, t + 0.02, 0.03, 0.1, 0.001);
+    // 短促高頻 click
+    osc('sine', 1600, t, 0.02, 0.25, 0.001);
+    osc('sine', 800, t + 0.01, 0.03, 0.15, 0.001);
+    // 低頻回彈感
+    osc('triangle', 300, t + 0.02, 0.03, 0.1, 0.001);
+    noise(t, 0.02, 0.08);
   }
 
   /** 連續出幣計數聲 */
