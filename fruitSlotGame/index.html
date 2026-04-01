@@ -2,7 +2,7 @@
 <html lang="zh-TW">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>小瑪莉</title>
   <link rel="stylesheet" href="css/style.css">
   <script>
@@ -10,6 +10,7 @@
     document.addEventListener('gesturechange', function(e){ e.preventDefault(); });
     document.addEventListener('touchmove', function(e){ if(e.touches.length > 1) e.preventDefault(); }, { passive: false });
     document.addEventListener('contextmenu', function(e){ e.preventDefault(); });
+    document.addEventListener('dblclick', function(e){ e.preventDefault(); });
   </script>
 </head>
 <body>
