@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>🍒 小瑪莉 Fruit Slot</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<div id="machine">
+
+  <!-- 頂部燈條 -->
+  <div class="top-lights">
+    <div class="light-row" id="topLights"></div>
+  </div>
+
+  <!-- 機台標題 -->
+  <div id="machine-title">
+    <div class="title-text">🍒 小瑪莉 🍒</div>
+    <div class="title-sub">FRUIT SLOT MACHINE</div>
+  </div>
+
+  <!-- 中獎顯示跑馬燈 -->
+  <div id="marquee-wrap">
+    <div id="marquee-text">🎰 歡迎光臨小瑪莉！投幣開始遊戲！🎰</div>
+  </div>
+
+  <!-- 得分顯示板 -->
+  <div id="score-board">
+    <div class="score-item">
+      <div class="score-label">CREDIT</div>
+      <div class="score-value" id="credits">100</div>
+    </div>
+    <div class="score-item">
+      <div class="score-label">BET</div>
+      <div class="score-value" id="betDisplay">1</div>
+    </div>
+    <div class="score-item">
+      <div class="score-label">WIN</div>
+      <div class="score-value" id="winDisplay">0</div>
+    </div>
+  </div>
+
+  <!-- 拉霸機主體 -->
+  <div id="slot-body">
+
+    <!-- 中獎線指示 -->
+    <div class="win-line-indicator top-line"></div>
+    <div class="win-line-indicator mid-line"></div>
+    <div class="win-line-indicator bot-line"></div>
+
+    <!-- 三個滾輪 -->
+    <div id="reels-container">
+      <div class="reel-wrapper" id="reel-wrap-0">
+        <div class="hold-btn" id="hold-0" data-reel="0">HOLD</div>
+        <div class="reel-window">
+          <div class="reel" id="reel-0"></div>
+        </div>
+      </div>
+      <div class="reel-wrapper" id="reel-wrap-1">
+        <div class="hold-btn" id="hold-1" data-reel="1">HOLD</div>
+        <div class="reel-window">
+          <div class="reel" id="reel-1"></div>
+        </div>
+      </div>
+      <div class="reel-wrapper" id="reel-wrap-2">
+        <div class="hold-btn" id="hold-2" data-reel="2">HOLD</div>
+        <div class="reel-window">
+          <div class="reel" id="reel-2"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 贏線說明 -->
+    <div id="payline-label">
+      <span class="line-tag top-tag">TOP</span>
+      <span class="line-tag mid-tag">MID ★</span>
+      <span class="line-tag bot-tag">BOT</span>
+    </div>
+  </div>
+
+  <!-- 賠率表 -->
+  <div id="paytable">
+    <div class="pay-title">💰 賠率表 PAYTABLE 💰</div>
+    <div class="pay-grid">
+      <div class="pay-row jackpot-row"><span>7️⃣ 7️⃣ 7️⃣</span><span>JACKPOT × 100</span></div>
+      <div class="pay-row"><span>BAR BAR BAR</span><span>× 50</span></div>
+      <div class="pay-row"><span>🍉 🍉 🍉</span><span>× 20</span></div>
+      <div class="pay-row"><span>🔔 🔔 🔔</span><span>× 15</span></div>
+      <div class="pay-row"><span>🍇 🍇 🍇</span><span>× 10</span></div>
+      <div class="pay-row"><span>🍊 🍊 🍊</span><span>× 8</span></div>
+      <div class="pay-row"><span>🍋 🍋 🍋</span><span>× 6</span></div>
+      <div class="pay-row"><span>🍒 🍒 🍒</span><span>× 5</span></div>
+      <div class="pay-row"><span>🍒 🍒 任意</span><span>× 2</span></div>
+    </div>
+  </div>
+
+  <!-- 控制區 -->
+  <div id="controls">
+    <!-- 押注按鈕 -->
+    <div id="bet-controls">
+      <button class="ctrl-btn" id="betMinus">BET −</button>
+      <button class="ctrl-btn" id="betMax">BET MAX</button>
+      <button class="ctrl-btn" id="betPlus">BET +</button>
+    </div>
+
+    <!-- 主要操作 -->
+    <div id="main-controls">
+      <button class="ctrl-btn secondary-btn" id="addCoins">投幣 +100</button>
+      <button class="spin-btn" id="spinBtn">
+        <span class="spin-text">SPIN</span>
+        <span class="spin-sub">旋轉</span>
+      </button>
+      <button class="ctrl-btn secondary-btn" id="autoBtn">AUTO</button>
+    </div>
+
+    <!-- 音效切換 -->
+    <div id="sound-control">
+      <button class="ctrl-btn sound-btn" id="soundBtn">🔊 SOUND ON</button>
+    </div>
+  </div>
+
+  <!-- 底部燈條 -->
+  <div class="bottom-lights">
+    <div class="light-row" id="botLights"></div>
+  </div>
+
+</div>
+
+<!-- 中獎彈窗 -->
+<div id="win-overlay" class="hidden">
+  <div id="win-box">
+    <div id="win-emoji">🎊</div>
+    <div id="win-title">YOU WIN!</div>
+    <div id="win-amount"></div>
+    <div id="win-coins"></div>
+  </div>
+</div>
+
+<!-- JACKPOT彈窗 -->
+<div id="jackpot-overlay" class="hidden">
+  <div id="jackpot-box">
+    <div id="jackpot-title">🎰 JACKPOT!! 🎰</div>
+    <div id="jackpot-amount"></div>
+    <div class="jackpot-stars" id="jackpotStars"></div>
+  </div>
+</div>
+
+<script src="js/audio.js"></script>
+<script src="js/game.js"></script>
+</body>
+</html>
