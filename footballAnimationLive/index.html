@@ -24,17 +24,6 @@ body {
   overflow: hidden;
 }
 
-/* Crowd background - top */
-#stadium-wrap::before {
-  content: '';
-  position: absolute;
-  top: 0; left: 0; right: 0;
-  height: 40px;
-  background: repeating-linear-gradient(90deg,
-    rgba(100,130,180,0.15) 0px, rgba(80,110,160,0.1) 3px, rgba(60,90,140,0.15) 6px);
-  z-index: 1;
-  pointer-events: none;
-}
 /* Crowd sides */
 #stadium-wrap::after {
   content: '';
@@ -382,6 +371,51 @@ body {
   padding: 4px 8px;
   border-radius: 6px;
   font-size: 12px;
+}
+
+/* ── Mobile responsive ── */
+@media (max-width: 600px) {
+  #controls {
+    flex-wrap: wrap;
+    gap: 6px;
+    padding: 6px 8px;
+  }
+  /* Play/Pause + time on first row */
+  #controls #btn-play,
+  #controls #btn-pause,
+  #controls #current-time-display {
+    flex-shrink: 0;
+  }
+  /* Slider fills second row */
+  #controls #seek-slider {
+    order: 10;
+    width: 100%;
+    max-width: 100%;
+    flex-basis: 100%;
+  }
+  /* Speed buttons shrink */
+  #controls .speed-btn {
+    padding: 5px 10px;
+    font-size: 12px;
+  }
+  #controls button {
+    padding: 5px 10px;
+    font-size: 12px;
+  }
+  /* Match selector wrap on small screens */
+  #match-selector {
+    flex-wrap: wrap;
+  }
+  #match-selector select,
+  #match-selector input {
+    max-width: 100%;
+    flex: 1 1 auto;
+  }
+  /* Stats two-column on mobile */
+  #stats-section {
+    grid-template-columns: 1fr;
+    gap: 2px;
+  }
 }
 </style>
 </head>
