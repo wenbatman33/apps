@@ -112,46 +112,38 @@ body {
   max-width: 1100px;
   margin: 0 auto;
   background: linear-gradient(180deg, #0f1e36 0%, #0a1628 100%);
-  padding: 6px 20px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
+  padding: 8px 20px;
   border-top: 1px solid rgba(255,255,255,0.08);
 }
-#match-time {
-  font-size: 14px;
-  color: #5ddf5d;
-  font-weight: 600;
-  position: absolute;
-  left: 50%;
-  transform: translateX(-50%);
-  top: -24px;
-}
+/* match-time removed - time shown in timeline bar */
 .score-section {
   position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 16px;
-  flex: 1;
 }
 .team-info {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
+  width: 200px;
+}
+.team-info.home {
+  justify-content: flex-end;
 }
 .team-info.away {
   flex-direction: row-reverse;
+  justify-content: flex-end;
 }
 .team-flag {
   width: 28px;
   height: 28px;
-  border-radius: 2px;
+  border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 20px;
+  flex-shrink: 0;
 }
 .team-flag img {
   width: 100%;
@@ -159,15 +151,23 @@ body {
   object-fit: contain;
 }
 .team-label {
-  font-size: 16px;
+  font-size: 15px;
   font-weight: 600;
+  padding-bottom: 2px;
+  border-bottom: 3px solid transparent;
+  transition: border-color 0.3s;
+  white-space: nowrap;
+}
+.team-label.has-possession {
+  border-bottom-color: #5ddf5d;
 }
 .score-display {
-  font-size: 26px;
+  font-size: 28px;
   font-weight: 800;
-  letter-spacing: 4px;
-  min-width: 80px;
+  letter-spacing: 2px;
+  min-width: 100px;
   text-align: center;
+  flex-shrink: 0;
 }
 .card-stats {
   display: flex;
@@ -195,71 +195,180 @@ body {
   max-width: 1100px;
   margin: 0 auto;
   background: #0d1a30;
-  padding: 8px 20px 4px;
+  padding: 8px 12px 4px;
+}
+#timeline-controls-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+#timeline-controls-row button {
+  background: #1a3050;
+  border: 1px solid rgba(255,255,255,0.15);
+  color: #ccc;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 14px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s;
+}
+#timeline-controls-row button:hover { background: #254070; color: #fff; }
+#current-time-display {
+  font-size: 14px;
+  color: #5ddf5d;
+  font-weight: 700;
+  min-width: 36px;
+  text-align: center;
+  flex-shrink: 0;
 }
 #timeline-container {
   position: relative;
-  height: 90px;
+  height: 70px;
+  flex: 1;
+  min-width: 0;
 }
 .timeline-team-label {
-  position: absolute;
-  left: 0;
-  font-size: 13px;
-  font-weight: 600;
-  color: #8899aa;
-  width: 50px;
+  display: none; /* hidden - team names now shown inside the track */
 }
-.timeline-team-label.home { top: 2px; }
-.timeline-team-label.away { top: 56px; }
 
 #timeline-track {
   position: absolute;
-  left: 55px;
-  right: 10px;
+  left: 0;
+  right: 0;
   top: 0;
   bottom: 0;
+  cursor: pointer;
+  -webkit-user-select: none;
+  user-select: none;
 }
 
 /* Momentum chart */
 #momentumCanvas {
   position: absolute;
   left: 0;
-  top: 14px;
+  top: 0;
   width: 100%;
-  height: 50px;
+  height: 100%;
 }
 
-/* Time axis */
+/* Timeline bottom rows */
+#timeline-bottom-row {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 2px 0 0 0;
+}
 .time-axis {
-  position: absolute;
-  left: 55px;
-  right: 10px;
-  bottom: 0;
   display: flex;
   justify-content: space-between;
-  font-size: 11px;
+  font-size: 10px;
   color: #556677;
+  padding: 0;
+}
+#speed-buttons {
+  display: flex;
+  gap: 4px;
+  justify-content: flex-end;
+}
+#speed-buttons .speed-btn {
+  background: #1a3050;
+  border: 1px solid rgba(255,255,255,0.12);
+  color: #889;
+  padding: 2px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 11px;
+  transition: all 0.15s;
+}
+#speed-buttons .speed-btn:hover { background: #254070; color: #fff; }
+#speed-buttons .speed-btn.active { background: #2a5090; color: #fff; border-color: #5ba3f5; }
+
+/* Timeline split halves */
+.timeline-half {
+  position: absolute;
+  left: 0; right: 0;
+  display: flex;
+  align-items: center;
+  padding: 0 6px;
+  overflow: hidden;
+}
+.timeline-half.home {
+  top: 0;
+  height: 50%;
+  background: rgba(91,163,245,0.08);
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+}
+.timeline-half.away {
+  bottom: 0;
+  height: 50%;
+  background: rgba(245,166,35,0.06);
+}
+.timeline-half .team-name-bg {
+  font-size: 18px;
+  font-weight: 900;
+  color: rgba(255,255,255,0.12);
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  white-space: nowrap;
+  pointer-events: none;
 }
 
 /* Timeline events */
 .timeline-event {
   position: absolute;
-  font-size: 14px;
-  transform: translateX(-50%);
+  font-size: 16px;
   cursor: pointer;
   z-index: 5;
   filter: drop-shadow(0 1px 3px rgba(0,0,0,0.5));
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  transform: translateX(-6px); /* anchor near the ball icon center */
 }
-.timeline-event.home { top: -2px; }
-.timeline-event.away { top: 54px; }
+.timeline-event::after {
+  content: attr(data-label);
+  font-size: 9px;
+  color: rgba(255,255,255,0.85);
+  font-weight: 600;
+  white-space: nowrap;
+  margin-left: 3px;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+.timeline-event:hover::after,
+.timeline-event.active::after {
+  opacity: 1;
+}
+.timeline-event.home { top: 3px; }
+.timeline-event.away { bottom: 3px; }
 
 /* Timeline progress */
 #timeline-progress {
   position: absolute;
-  top: 14px;
+  top: 0;
   left: 0;
   width: 0%;
-  height: 50px;
+  height: 100%;
+  background: rgba(93,223,93,0.06);
+  border-right: 2px solid rgba(93,223,93,0.6);
+  pointer-events: none;
+  z-index: 6;
+}
+#timeline-time-indicator {
+  position: absolute;
+  top: -16px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #5ddf5d;
+  transform: translateX(-50%);
+  pointer-events: none;
+  z-index: 10;
+  text-shadow: 0 1px 3px rgba(0,0,0,0.8);
   background: rgba(93,223,93,0.06);
   border-right: 2px solid rgba(93,223,93,0.5);
   pointer-events: none;
@@ -320,39 +429,7 @@ body {
 .stat-bar-bg.reverse { flex-direction: row-reverse; }
 
 /* ── Controls ── */
-#controls {
-  max-width: 1100px;
-  margin: 2px auto;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  padding: 4px 10px;
-}
-#controls button {
-  background: #1a3050;
-  border: 1px solid rgba(255,255,255,0.12);
-  color: #ccc;
-  padding: 6px 14px;
-  border-radius: 6px;
-  cursor: pointer;
-  font-size: 13px;
-  transition: all 0.15s;
-}
-#controls button:hover { background: #254070; color: #fff; }
-#controls button.active { background: #2a5090; color: #fff; border-color: #5ba3f5; }
-#seek-slider {
-  flex: 1;
-  max-width: 400px;
-  accent-color: #5ba3f5;
-}
-#current-time-display {
-  font-size: 13px;
-  color: #5ddf5d;
-  font-weight: 600;
-  min-width: 50px;
-  text-align: center;
-}
+/* Old controls - removed, now integrated into timeline */
 
 /* Loading */
 #loading {
@@ -466,11 +543,27 @@ document.addEventListener('touchmove', (e) => {
 <!-- Match Selector -->
 <div id="match-selector">
   <select id="source-select">
-    <option value="espn" selected>ESPN Live</option>
+    <option value="skillcorner" selected>SkillCorner Tracking</option>
+    <option value="espn">ESPN Live</option>
     <option value="statsbomb">StatsBomb Historical</option>
   </select>
+  <!-- SkillCorner mode -->
+  <span id="sc-controls">
+    <select id="sc-match-select">
+      <option value="1996435">Sydney FC vs Adelaide United (4-1)</option>
+      <option value="2017461">Melbourne V FC vs Auckland FC (0-1)</option>
+      <option value="2015213">Western United vs Auckland FC (4-2)</option>
+      <option value="2013725">Western United vs Sydney FC (1-0)</option>
+      <option value="2011166">Wellington P FC vs Melbourne V FC (2-3)</option>
+      <option value="2006229">Melbourne City vs Macarthur FC (2-0)</option>
+      <option value="1953632">CC Mariners vs Melbourne City (1-1)</option>
+      <option value="1925299">Brisbane FC vs Perth Glory (0-1)</option>
+      <option value="1899585">Auckland FC vs Wellington P FC (2-1)</option>
+      <option value="1886347">Auckland FC vs Newcastle (2-0)</option>
+    </select>
+  </span>
   <!-- ESPN mode -->
-  <span id="espn-controls">
+  <span id="espn-controls" style="display:none">
     <input type="date" id="date-picker" value="2026-03-31">
     <select id="match-select"><option>Loading...</option></select>
   </span>
@@ -486,7 +579,7 @@ document.addEventListener('touchmove', (e) => {
 <div id="stadium-wrap">
   <div id="pitch-container">
     <canvas id="pitchCanvas"></canvas>
-    <div id="possession-label">
+    <div id="possession-label" style="display:none">
       <div class="team-name" id="poss-team-name"></div>
       <div class="label">控球</div>
     </div>
@@ -501,7 +594,6 @@ document.addEventListener('touchmove', (e) => {
 
 <!-- Score Bar -->
 <div id="score-bar">
-  <div class="card-stats" id="home-cards"></div>
   <div class="score-section">
     <div class="team-info home">
       <span class="team-label" id="home-name">Home</span>
@@ -512,36 +604,36 @@ document.addEventListener('touchmove', (e) => {
       <span class="team-label" id="away-name">Away</span>
       <span class="team-flag" id="away-flag">🏁</span>
     </div>
-    <div id="match-time">0'</div>
   </div>
-  <div class="card-stats" id="away-cards"></div>
+  <div class="card-stats" id="home-cards" style="display:none"></div>
+  <div class="card-stats" id="away-cards" style="display:none"></div>
 </div>
 
-<!-- Timeline -->
+<!-- Unified Timeline + Controls -->
 <div id="timeline-section">
-  <div id="timeline-container">
-    <div class="timeline-team-label home" id="tl-home-name">Home</div>
-    <div class="timeline-team-label away" id="tl-away-name">Away</div>
-    <div id="timeline-track">
-      <div id="timeline-progress"></div>
-      <canvas id="momentumCanvas"></canvas>
+  <div id="timeline-controls-row">
+    <button id="btn-play" style="display:none">▶</button>
+    <button id="btn-pause" style="display:none">⏸</button>
+    <div id="timeline-container">
+      <div class="timeline-team-label home" id="tl-home-name">Home</div>
+      <div class="timeline-team-label away" id="tl-away-name">Away</div>
+      <div id="timeline-track">
+        <div id="timeline-progress"></div>
+        <div id="timeline-time-indicator">0'</div>
+        <canvas id="momentumCanvas"></canvas>
+      </div>
     </div>
   </div>
-  <div class="time-axis">
-    <span>0'</span><span>15'</span><span>30'</span><span>HT</span><span>60'</span><span>75'</span><span>90'</span>
+  <div id="timeline-bottom-row">
+    <div class="time-axis" id="time-axis-labels"></div>
+    <div id="speed-buttons">
+      <button class="speed-btn active" data-speed="1">1x</button>
+      <button class="speed-btn" data-speed="2">2x</button>
+      <button class="speed-btn" data-speed="4">4x</button>
+      <button class="speed-btn" data-speed="8">8x</button>
+    </div>
   </div>
-</div>
-
-<!-- Controls -->
-<div id="controls">
-  <button id="btn-play">▶ Play</button>
-  <button id="btn-pause" style="display:none">⏸ Pause</button>
-  <input type="range" id="seek-slider" min="0" max="1000" value="0">
-  <span id="current-time-display">0'</span>
-  <button class="speed-btn active" data-speed="1">1x</button>
-  <button class="speed-btn" data-speed="2">2x</button>
-  <button class="speed-btn" data-speed="4">4x</button>
-  <button class="speed-btn" data-speed="8">8x</button>
+  <input type="range" id="seek-slider" min="0" max="1000" value="0" style="display:none">
 </div>
 
 <!-- Stats -->
@@ -1285,7 +1377,7 @@ function autoPlayKeyEvents() {
   isAutoPlaying = true;
   currentKeyIdx = -1;
   document.getElementById('btn-play').style.display = 'none';
-  document.getElementById('btn-pause').style.display = '';
+  document.getElementById('btn-pause').style.display = 'none';
   // Start with first event
   currentKeyIdx = 0;
   if (keyEvents.length > 0) {
@@ -1296,7 +1388,249 @@ function autoPlayKeyEvents() {
 function stopAutoPlay() {
   isAutoPlaying = false;
   stopScene();
-  document.getElementById('btn-play').style.display = '';
+  document.getElementById('btn-play').style.display = 'none';
+  document.getElementById('btn-pause').style.display = 'none';
+}
+
+// ═══════════════════════════════════════════════════════════
+// SKILLCORNER TRACKING PLAYBACK
+// ═══════════════════════════════════════════════════════════
+let scFrames = [];           // compact tracking frames
+let scPlayerMap = {};        // trackable_object -> {name, number, team_id}
+let scInfo = null;           // match info
+let scFrameIdx = 0;
+let scPitchL = 105, scPitchW = 68;
+let scGoals = [];
+
+async function loadSkillCornerMatch(matchId) {
+  document.getElementById('loading').classList.remove('hidden');
+  document.getElementById('loading').querySelector('.text').textContent = 'Loading tracking data (4MB)...';
+  pausePlayback();
+  stopScene();
+  isAutoPlaying = false;
+  totalMatchSeconds = 0;
+  scFrameIdx = 0;
+  smoothedPlayers = [];
+
+  try {
+    const data = await fetchJSON(`data/${matchId}_compact.json`);
+    scInfo = data.info;
+    scFrames = data.frames;
+    scPlayerMap = scInfo.players;
+    scPitchL = scInfo.pitch_length;
+    scPitchW = scInfo.pitch_width;
+
+    homeTeam = scInfo.home_team;
+    awayTeam = scInfo.away_team;
+    homeId = scInfo.home_id;
+    awayId = scInfo.away_id;
+
+    // Set team info in UI
+    document.getElementById('home-name').textContent = homeTeam;
+    document.getElementById('away-name').textContent = awayTeam;
+    document.getElementById('home-flag').innerHTML = `<span style="display:inline-block;width:24px;height:24px;border-radius:50%;background:${scInfo.home_color};border:2px solid rgba(255,255,255,0.3)"></span>`;
+    document.getElementById('away-flag').innerHTML = `<span style="display:inline-block;width:24px;height:24px;border-radius:50%;background:${scInfo.away_color};border:2px solid rgba(255,255,255,0.3)"></span>`;
+    document.getElementById('home-score').textContent = '0';
+    document.getElementById('away-score').textContent = '0';
+
+    // Build goal timeline for score tracking
+    scGoals = (scInfo.goals || []).sort((a, b) => a.frame - b.frame);
+
+    // Calculate max match seconds from last frame timestamp
+    // SkillCorner timestamps already include full match time
+    const lastFrame = scFrames[scFrames.length - 1];
+    maxMatchSeconds = parseTimestamp(lastFrame.t);
+
+    // Render timeline
+    updateTimeAxisLabels();
+    renderSCTimeline();
+
+    resizePitch();
+    scPlayTime = 0;
+    renderSkillCornerFrameInterp(0, 1, 0);
+    document.getElementById('loading').classList.add('hidden');
+  } catch (err) {
+    console.error('Error loading SkillCorner:', err);
+    document.getElementById('loading').querySelector('.text').textContent = 'Error: ' + err.message;
+  }
+}
+
+// SkillCorner playback via setInterval with interpolation
+let scPlayInterval = null;
+let scPlayTime = 0;       // continuous time in "data frames" (float)
+
+function startSCPlayback() {
+  if (scPlayInterval) clearInterval(scPlayInterval);
+  document.getElementById('btn-play').style.display = 'none';
+  document.getElementById('btn-pause').style.display = 'none';
+  isPlaying = true;
+  scPlayTime = scFrameIdx;
+
+  let scLastTick = performance.now();
+  scPlayInterval = setInterval(() => {
+    if (!isPlaying) return;
+    const now = performance.now();
+    const dt = (now - scLastTick) / 1000; // actual seconds elapsed
+    scLastTick = now;
+    // Original data = 2fps, so 2 data frames = 1 second real time
+    const advance = dt * 2 * playSpeed;
+    scPlayTime += advance;
+
+    if (scPlayTime >= scFrames.length - 1) {
+      scPlayTime = scFrames.length - 1;
+      pauseSCPlayback();
+      return;
+    }
+
+    // Interpolate between two data frames
+    const idxA = Math.floor(scPlayTime);
+    const idxB = Math.min(idxA + 1, scFrames.length - 1);
+    const t = scPlayTime - idxA;
+    renderSkillCornerFrameInterp(idxA, idxB, t);
+  }, 33);
+}
+
+function renderSkillCornerFrameInterp(idxA, idxB, t) {
+  const frameA = scFrames[idxA];
+  const frameB = scFrames[idxB];
+  scFrameIdx = idxA;
+
+  // Update time from frameA
+  // SkillCorner timestamps already include match time (P2 starts at 45:00)
+  if (frameA.t) {
+    totalMatchSeconds = parseTimestamp(frameA.t);
+  }
+  currentPeriod = frameA.p;
+  currentMatchMinute = Math.floor(totalMatchSeconds / 60);
+  updateTimeDisplay();
+
+  // Possession - show underline on team name in score bar
+  const possHome = frameA.ps === 'home team';
+  const possAway = frameA.ps === 'away team';
+  document.getElementById('home-name').classList.toggle('has-possession', possHome);
+  document.getElementById('away-name').classList.toggle('has-possession', possAway);
+
+  // Interpolate ball
+  if (frameA.b && frameB.b) {
+    ballX = ((frameA.b[0] + (frameB.b[0] - frameA.b[0]) * t) / scPitchL + 0.5) * 120;
+    ballY = ((frameA.b[1] + (frameB.b[1] - frameA.b[1]) * t) / scPitchW + 0.5) * 80;
+  } else if (frameA.b) {
+    ballX = (frameA.b[0] / scPitchL + 0.5) * 120;
+    ballY = (frameA.b[1] / scPitchW + 0.5) * 80;
+  }
+
+  // Interpolate players - match by player_id
+  const playersA = {};
+  frameA.d.forEach(([x, y, pid]) => { playersA[pid] = { x, y }; });
+
+  const targets = frameB.d.map(([xB, yB, pid]) => {
+    const pInfo = scPlayerMap[String(pid)] || {};
+    const isHome = pInfo.team_id === homeId;
+    const a = playersA[pid];
+    let x, y;
+    if (a) {
+      x = (( a.x + (xB - a.x) * t ) / scPitchL + 0.5) * 120;
+      y = (( a.y + (yB - a.y) * t ) / scPitchW + 0.5) * 80;
+    } else {
+      x = (xB / scPitchL + 0.5) * 120;
+      y = (yB / scPitchW + 0.5) * 80;
+    }
+    return { x, y, teammate: isHome, keeper: pInfo.position === 'GK', actor: false, jersey: pInfo.number || 0 };
+  });
+
+  currentPlayers = targets;
+
+  // Draw
+  drawPitch();
+  drawPlayers(currentPlayers);
+  if (ballX >= 0 && ballX <= 120 && ballY >= 0 && ballY <= 80) drawBall(ballX, ballY);
+
+  // Update slider & time indicator — use time-based percentage for consistency
+  const timePct = Math.min((totalMatchSeconds / maxMatchSeconds) * 100, 100);
+  document.getElementById('seek-slider').value = (scPlayTime / scFrames.length) * 1000;
+  document.getElementById('timeline-progress').style.width = timePct + '%';
+  const timeIndicator = document.getElementById('timeline-time-indicator');
+  if (timeIndicator) {
+    timeIndicator.style.left = timePct + '%';
+    timeIndicator.textContent = currentMatchMinute + "'";
+  }
+
+  // Update score based on current time + activate goal labels
+  let hs = 0, as = 0;
+  document.querySelectorAll('#timeline-track .timeline-event').forEach((el, i) => {
+    const g = scGoals[i];
+    if (!g) return;
+    const reached = currentMatchMinute >= g.minute;
+    if (reached) { hs = g.home_score; as = g.away_score; }
+    // Show label for 3 minutes after goal
+    el.classList.toggle('active', reached && currentMatchMinute < g.minute + 3);
+  });
+  document.getElementById('home-score').textContent = hs;
+  document.getElementById('away-score').textContent = as;
+}
+
+function updateTimeAxisLabels() {
+  const el = document.getElementById('time-axis-labels');
+  if (!el) return;
+  // Check if match has extra time periods (period 3/4)
+  const hasExtraTime = scFrames.length > 0 && scFrames.some(f => f.p >= 3);
+  let labels;
+  if (hasExtraTime) {
+    labels = ["0'", "15'", "30'", "HT", "60'", "75'", "90'", "105'", "120'"];
+  } else {
+    labels = ["0'", "15'", "30'", "HT", "60'", "75'", "90'"];
+  }
+  el.innerHTML = labels.map(l => `<span>${l}</span>`).join('');
+}
+
+function renderSCTimeline() {
+  const track = document.getElementById('timeline-track');
+  // Clear old content
+  track.querySelectorAll('.timeline-event, .timeline-half').forEach(el => el.remove());
+
+  // Build two halves with team name backgrounds
+  const homeHalf = document.createElement('div');
+  homeHalf.className = 'timeline-half home';
+  homeHalf.innerHTML = `<span class="team-name-bg">${homeTeam}</span>`;
+  track.appendChild(homeHalf);
+
+  const awayHalf = document.createElement('div');
+  awayHalf.className = 'timeline-half away';
+  awayHalf.innerHTML = `<span class="team-name-bg">${awayTeam}</span>`;
+  track.appendChild(awayHalf);
+
+  // Add goal events — position by minute/maxMatchSeconds for accuracy
+  const totalFrames = scFrames.length;
+  scGoals.forEach(g => {
+    const pct = (g.minute * 60 / maxMatchSeconds) * 100;
+    const isHome = g.team === 'home';
+    const shortName = g.player.split(' ').pop();
+
+    // Find closest data index for click-to-seek
+    let dataIdx = 0;
+    for (let i = 0; i < scFrames.length; i++) {
+      if (scFrames[i].f >= g.frame) { dataIdx = i; break; }
+    }
+
+    const div = document.createElement('div');
+    div.className = `timeline-event ${isHome ? 'home' : 'away'}`;
+    div.style.left = pct + '%';
+    div.innerHTML = `⚽`;
+    div.dataset.label = `${g.minute}' ${shortName}`;
+    div.title = `${g.minute}' ${g.player} (${g.home_score}-${g.away_score})`;
+    div.onclick = () => {
+      scPlayTime = dataIdx;
+      scFrameIdx = dataIdx;
+      renderSkillCornerFrameInterp(dataIdx, Math.min(dataIdx + 1, totalFrames - 1), 0);
+    };
+    track.appendChild(div);
+  });
+}
+
+function pauseSCPlayback() {
+  isPlaying = false;
+  if (scPlayInterval) { clearInterval(scPlayInterval); scPlayInterval = null; }
+  document.getElementById('btn-play').style.display = 'none';
   document.getElementById('btn-pause').style.display = 'none';
 }
 
@@ -1545,7 +1879,7 @@ function drawBall(x, y) {
 
 function drawPlayers(players) {
   const ctx = pitchCtx;
-  const r = Math.max(11, scaleX * 1.6); // player circle radius
+  const r = Math.max(14, scaleX * 2.0); // player circle radius
 
   players.forEach(p => {
     const x = px(p.x), y = py(p.y);
@@ -1779,7 +2113,8 @@ function computeMomentum(events) {
 function renderScoreBar() {
   document.getElementById('home-name').textContent = homeTeam;
   document.getElementById('away-name').textContent = awayTeam;
-  // Don't overwrite flags - they're set during match load (may be <img> from ESPN)
+  // SkillCorner handles its own score in renderSkillCornerFrameInterp
+  if (dataSource === 'skillcorner') return;
 
   // Goals at current time
   let hGoals = 0, aGoals = 0;
@@ -2048,7 +2383,7 @@ let _animInterval = null;
 function ensureAnimLoop() {
   if (_animInterval) clearInterval(_animInterval);
   _animInterval = setInterval(() => {
-    if (isPlaying) updateAnimation(performance.now());
+    if (isPlaying && dataSource !== 'skillcorner') updateAnimation(performance.now());
   }, 30);
 }
 ensureAnimLoop();
@@ -2300,8 +2635,10 @@ function updateTimeDisplay() {
     minDisplay = Math.floor(totalMatchSeconds / 60);
   }
   const timeStr = minDisplay + "'";
-  document.getElementById('match-time').textContent = timeStr;
-  document.getElementById('current-time-display').textContent = timeStr;
+  const matchTimeEl = document.getElementById('match-time');
+  if (matchTimeEl) matchTimeEl.textContent = timeStr;
+  const ctd = document.getElementById('current-time-display');
+  if (ctd) ctd.textContent = timeStr;
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -2311,25 +2648,29 @@ function startPlayback() {
   isPlaying = true;
   lastFrameTime = 0;
   document.getElementById('btn-play').style.display = 'none';
-  document.getElementById('btn-pause').style.display = '';
+  document.getElementById('btn-pause').style.display = 'none';
   requestAnimationFrame(updateAnimation);
 }
 
 function pausePlayback() {
   isPlaying = false;
-  document.getElementById('btn-play').style.display = '';
+  document.getElementById('btn-play').style.display = 'none';
   document.getElementById('btn-pause').style.display = 'none';
 }
 
 document.getElementById('btn-play').onclick = () => {
-  if (dataSource === 'espn' && keyEvents.length > 0) {
+  if (dataSource === 'skillcorner') {
+    startSCPlayback();
+  } else if (dataSource === 'espn' && keyEvents.length > 0) {
     autoPlayKeyEvents();
   } else {
     startPlayback();
   }
 };
 document.getElementById('btn-pause').onclick = () => {
-  if (dataSource === 'espn') {
+  if (dataSource === 'skillcorner') {
+    pauseSCPlayback();
+  } else if (dataSource === 'espn') {
     stopAutoPlay();
   }
   pausePlayback();
@@ -2337,6 +2678,14 @@ document.getElementById('btn-pause').onclick = () => {
 
 document.getElementById('seek-slider').addEventListener('input', e => {
   const pct = e.target.value / 1000;
+  if (dataSource === 'skillcorner' && scFrames.length > 0) {
+    scPlayTime = pct * (scFrames.length - 1);
+    scFrameIdx = Math.floor(scPlayTime);
+    const idxA = scFrameIdx;
+    const idxB = Math.min(idxA + 1, scFrames.length - 1);
+    renderSkillCornerFrameInterp(idxA, idxB, scPlayTime - idxA);
+    return;
+  }
   totalMatchSeconds = pct * maxMatchSeconds;
   currentEventIdx = getEventAtTime(totalMatchSeconds);
   if (!isPlaying) {
@@ -2357,6 +2706,39 @@ document.getElementById('seek-slider').addEventListener('input', e => {
     document.getElementById('timeline-progress').style.width = (pct * 100) + '%';
   }
 });
+
+// Timeline track drag-to-seek
+(function() {
+  const track = document.getElementById('timeline-track');
+  let dragging = false;
+
+  function seekFromEvent(e) {
+    const rect = track.getBoundingClientRect();
+    const x = (e.touches ? e.touches[0].clientX : e.clientX) - rect.left;
+    const pct = Math.max(0, Math.min(1, x / rect.width));
+
+    // Sync the slider
+    document.getElementById('seek-slider').value = pct * 1000;
+
+    if (dataSource === 'skillcorner' && scFrames.length > 0) {
+      scPlayTime = pct * (scFrames.length - 1);
+      scFrameIdx = Math.floor(scPlayTime);
+      const idxA = scFrameIdx;
+      const idxB = Math.min(idxA + 1, scFrames.length - 1);
+      renderSkillCornerFrameInterp(idxA, idxB, scPlayTime - idxA);
+    } else {
+      totalMatchSeconds = pct * maxMatchSeconds;
+      document.getElementById('seek-slider').dispatchEvent(new Event('input'));
+    }
+  }
+
+  track.addEventListener('mousedown', e => { dragging = true; seekFromEvent(e); });
+  track.addEventListener('touchstart', e => { dragging = true; seekFromEvent(e); }, { passive: true });
+  window.addEventListener('mousemove', e => { if (dragging) seekFromEvent(e); });
+  window.addEventListener('touchmove', e => { if (dragging) seekFromEvent(e); }, { passive: true });
+  window.addEventListener('mouseup', () => { dragging = false; });
+  window.addEventListener('touchend', () => { dragging = false; });
+})();
 
 document.querySelectorAll('.speed-btn').forEach(btn => {
   btn.onclick = () => {
@@ -2381,9 +2763,15 @@ let espnMatches = [];
 // Source toggle
 sourceSelect.onchange = () => {
   dataSource = sourceSelect.value;
+  document.getElementById('sc-controls').style.display = dataSource === 'skillcorner' ? '' : 'none';
   document.getElementById('espn-controls').style.display = dataSource === 'espn' ? '' : 'none';
   document.getElementById('sb-controls').style.display = dataSource === 'statsbomb' ? '' : 'none';
+};
 
+// SkillCorner match select
+document.getElementById('sc-match-select').onchange = () => {
+  const matchId = document.getElementById('sc-match-select').value;
+  if (matchId) loadSkillCornerMatch(matchId);
 };
 
 // ESPN: date picker
@@ -2553,21 +2941,15 @@ async function init() {
   drawPitch();
   drawBall(60, 40);
 
-  // Default: load ESPN matches for Iraq vs Bolivia date
-  espnMatches = await loadESPNMatchesByDate('2026-03-31');
-  matchSelect.innerHTML = '<option value="">-- Select Match --</option>';
-  espnMatches.forEach(m => {
-    matchSelect.innerHTML += `<option value="${m.id}">${m.homeTeam} vs ${m.awayTeam} (${m.homeScore}-${m.awayScore}) ${m.status}</option>`;
-  });
+  // Default: load SkillCorner tracking data
+  dataSource = 'skillcorner';
+  playSpeed = 4;
+  document.querySelectorAll('.speed-btn').forEach(b => b.classList.remove('active'));
+  document.querySelector('.speed-btn[data-speed="4"]').classList.add('active');
+  await loadSkillCornerMatch('1996435');
 
-  // Auto-select Iraq vs Bolivia if found
-  const iraqMatch = espnMatches.find(m => m.homeTeam.includes('Iraq') || m.awayTeam.includes('Iraq') || m.homeTeam.includes('Bolivia') || m.awayTeam.includes('Bolivia'));
-  if (iraqMatch) {
-    matchSelect.value = iraqMatch.id;
-    await loadESPNMatch(iraqMatch.id, iraqMatch);
-  }
-
-  document.getElementById('loading').classList.add('hidden');
+  // Auto-play immediately
+  startSCPlayback();
 }
 
 window.addEventListener('resize', () => {
