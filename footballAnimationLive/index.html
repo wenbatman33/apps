@@ -542,7 +542,7 @@ document.addEventListener('touchmove', (e) => {
 
 <!-- Match Selector -->
 <div id="match-selector">
-  <select id="source-select">
+  <select id="source-select" style="display:none">
     <option value="skillcorner" selected>SkillCorner Tracking</option>
     <option value="espn">ESPN Live</option>
     <option value="statsbomb">StatsBomb Historical</option>
@@ -1441,7 +1441,8 @@ async function loadSkillCornerMatch(matchId) {
     const lastFrame = scFrames[scFrames.length - 1];
     maxMatchSeconds = parseTimestamp(lastFrame.t);
 
-    // Render timeline
+    // Update colors and render timeline
+    updateTeamColors();
     updateTimeAxisLabels();
     renderSCTimeline();
 
@@ -1877,6 +1878,19 @@ function drawBall(x, y) {
   ctx.stroke();
 }
 
+// Get team colors for rendering
+let homeColor = '#5ba3f5', awayColor = '#f5a623';
+let homeNumColor = '#fff', awayNumColor = '#fff';
+
+function updateTeamColors() {
+  if (scInfo) {
+    homeColor = scInfo.home_color || '#5ba3f5';
+    awayColor = scInfo.away_color || '#f5a623';
+    homeNumColor = scInfo.home_number_color || '#fff';
+    awayNumColor = scInfo.away_number_color || '#fff';
+  }
+}
+
 function drawPlayers(players) {
   const ctx = pitchCtx;
   const r = Math.max(14, scaleX * 2.0); // player circle radius
@@ -1884,32 +1898,36 @@ function drawPlayers(players) {
   players.forEach(p => {
     const x = px(p.x), y = py(p.y);
     const isHome = p.teammate;
+    const teamColor = isHome ? homeColor : awayColor;
+    const numColor = isHome ? homeNumColor : awayNumColor;
 
-    // Player circle
+    // Player circle with team jersey color
     ctx.beginPath();
     ctx.arc(x, y, r, 0, Math.PI * 2);
     if (p.keeper) {
-      ctx.fillStyle = isHome ? 'rgba(245,220,50,0.9)' : 'rgba(50,220,100,0.9)';
+      // Keepers get a distinct color (inverted/lighter)
+      ctx.fillStyle = isHome ? '#44dd66' : '#dddd44';
     } else {
-      ctx.fillStyle = isHome ? 'rgba(91,163,245,0.9)' : 'rgba(245,166,35,0.9)';
+      ctx.fillStyle = teamColor;
     }
     ctx.fill();
-    ctx.strokeStyle = isHome ? '#2a5eb0' : '#b0721a';
-    ctx.lineWidth = 1.5;
+    // White border for visibility on green pitch
+    ctx.strokeStyle = 'rgba(255,255,255,0.6)';
+    ctx.lineWidth = 2;
     ctx.stroke();
 
     // Actor highlight ring (ball carrier)
     if (p.actor) {
       ctx.beginPath();
       ctx.arc(x, y, r + 4, 0, Math.PI * 2);
-      ctx.strokeStyle = 'rgba(255,255,255,0.8)';
-      ctx.lineWidth = 2;
+      ctx.strokeStyle = 'rgba(255,255,255,0.9)';
+      ctx.lineWidth = 2.5;
       ctx.stroke();
     }
 
-    // Jersey number
+    // Jersey number with team number color
     if (p.jersey) {
-      ctx.fillStyle = '#fff';
+      ctx.fillStyle = p.keeper ? '#000' : numColor;
       ctx.font = `bold ${Math.max(9, r * 0.85)}px sans-serif`;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
@@ -2769,9 +2787,12 @@ sourceSelect.onchange = () => {
 };
 
 // SkillCorner match select
-document.getElementById('sc-match-select').onchange = () => {
+document.getElementById('sc-match-select').onchange = async () => {
   const matchId = document.getElementById('sc-match-select').value;
-  if (matchId) loadSkillCornerMatch(matchId);
+  if (!matchId) return;
+  pauseSCPlayback();
+  await loadSkillCornerMatch(matchId);
+  startSCPlayback();
 };
 
 // ESPN: date picker
