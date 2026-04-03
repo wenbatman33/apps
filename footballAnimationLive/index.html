@@ -550,6 +550,7 @@ document.addEventListener('touchmove', (e) => {
   <!-- SkillCorner mode -->
   <span id="sc-controls">
     <select id="sc-match-select">
+      <option value="virtual_match">⚡ FC Phoenix vs Blue Thunder (3-2)</option>
       <option value="1996435">Sydney FC vs Adelaide United (4-1)</option>
       <option value="2017461">Melbourne V FC vs Auckland FC (0-1)</option>
       <option value="2015213">Western United vs Auckland FC (4-2)</option>
@@ -1435,11 +1436,13 @@ async function loadSkillCornerMatch(matchId) {
 
     // Build goal timeline for score tracking
     scGoals = (scInfo.goals || []).sort((a, b) => a.frame - b.frame);
+    scGoals.forEach(g => delete g._shown); // reset goal effect flags
+    scGoalBurst = null;
 
     // Calculate max match seconds from last frame timestamp
     // SkillCorner timestamps already include full match time
     const lastFrame = scFrames[scFrames.length - 1];
-    maxMatchSeconds = parseTimestamp(lastFrame.t);
+    maxMatchSeconds = Math.max(5400, parseTimestamp(lastFrame.t)); // at least 90 min
 
     // Update colors and render timeline
     updateTeamColors();
@@ -1543,6 +1546,12 @@ function renderSkillCornerFrameInterp(idxA, idxB, t) {
 
   // Draw
   drawPitch();
+
+  // No ball override — real tracking data plays as-is
+  // Goals are shown via GOAL text overlay when score changes
+
+  // Goal burst removed — clean goal display
+
   drawPlayers(currentPlayers);
   if (ballX >= 0 && ballX <= 120 && ballY >= 0 && ballY <= 80) drawBall(ballX, ballY);
 
@@ -1556,19 +1565,53 @@ function renderSkillCornerFrameInterp(idxA, idxB, t) {
     timeIndicator.textContent = currentMatchMinute + "'";
   }
 
-  // Update score based on current time + activate goal labels
+  // Update score based on current time + activate goal labels + goal effects
   let hs = 0, as = 0;
+  let goalJustScored = null;
+  const prevHS = parseInt(document.getElementById('home-score').textContent) || 0;
+  const prevAS = parseInt(document.getElementById('away-score').textContent) || 0;
+
   document.querySelectorAll('#timeline-track .timeline-event').forEach((el, i) => {
     const g = scGoals[i];
     if (!g) return;
     const reached = currentMatchMinute >= g.minute;
     if (reached) { hs = g.home_score; as = g.away_score; }
-    // Show label for 3 minutes after goal
     el.classList.toggle('active', reached && currentMatchMinute < g.minute + 3);
   });
+
+  // Detect score change → trigger goal effect (only during playback)
+  if (isPlaying && (hs !== prevHS || as !== prevAS) && (hs > 0 || as > 0)) {
+    goalJustScored = scGoals.find(g => g.home_score === hs && g.away_score === as);
+    if (goalJustScored && !goalJustScored._shown) {
+      goalJustScored._shown = true;
+      showGoalEffect(goalJustScored);
+    }
+  }
+
   document.getElementById('home-score').textContent = hs;
   document.getElementById('away-score').textContent = as;
 }
+
+// Goal celebration effect on pitch
+let goalEffectTimer = null;
+function showGoalEffect(goal) {
+  const overlay = document.getElementById('event-overlay');
+  overlay.style.display = '';
+  overlay.style.animation = 'none';
+  void overlay.offsetHeight;
+  overlay.style.animation = 'eventPop 0.4s ease-out';
+  document.getElementById('event-icon').textContent = '⚽';
+  document.getElementById('event-minute').textContent = goal.minute + "'";
+  document.getElementById('event-text').textContent = 'GOAL! ' + goal.player;
+
+  // Hide overlay after 3 seconds
+  if (goalEffectTimer) clearTimeout(goalEffectTimer);
+  goalEffectTimer = setTimeout(() => {
+    overlay.style.display = 'none';
+  }, 3000);
+}
+
+let scGoalBurst = null;
 
 function updateTimeAxisLabels() {
   const el = document.getElementById('time-axis-labels');
@@ -2735,6 +2778,12 @@ document.getElementById('seek-slider').addEventListener('input', e => {
     const x = (e.touches ? e.touches[0].clientX : e.clientX) - rect.left;
     const pct = Math.max(0, Math.min(1, x / rect.width));
 
+    // Reset goal flags when seeking
+    if (scGoals) scGoals.forEach(g => { delete g._shown; delete g._shotSetup; });
+    scGoalBurst = null;
+    const overlay = document.getElementById('event-overlay');
+    if (overlay) overlay.style.display = 'none';
+
     // Sync the slider
     document.getElementById('seek-slider').value = pct * 1000;
 
@@ -2967,7 +3016,7 @@ async function init() {
   playSpeed = 4;
   document.querySelectorAll('.speed-btn').forEach(b => b.classList.remove('active'));
   document.querySelector('.speed-btn[data-speed="4"]').classList.add('active');
-  await loadSkillCornerMatch('1996435');
+  await loadSkillCornerMatch('virtual_match');
 
   // Auto-play immediately
   startSCPlayback();
