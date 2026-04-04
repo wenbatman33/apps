@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "football-live",
+      "runtimeExecutable": "/bin/bash",
+      "runtimeArgs": ["-c", "export PATH=/Users/batman_work/.nvm/versions/node/v24.11.0/bin:$PATH && npx serve /Users/batman_work/claude/apps/footballBroadcastLive -l 3000"],
+      "port": 3000
+    }
+  ]
+}

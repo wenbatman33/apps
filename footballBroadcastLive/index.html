@@ -1,0 +1,2599 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>足球直播系統</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  background: #0a1628;
+  color: #fff;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  overflow-x: hidden;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: pan-y;
+}
+
+/* ── Split-screen Layout ── */
+#app-layout { display: flex; width: 100%; height: 100vh; overflow: hidden; }
+#control-panel { width: 55%; overflow-y: auto; background: #0a1628; padding: 12px; display: flex; flex-direction: column; gap: 8px; }
+#preview-panel { width: 45%; background: linear-gradient(180deg, #1a2744, #0d1a30); display: flex; flex-direction: column; align-items: stretch; overflow: hidden; }
+#preview-panel #score-bar { padding: 6px 12px; flex-shrink: 0; }
+#preview-panel #timeline-section { padding: 6px 12px 4px; flex-shrink: 0; }
+#preview-panel #stadium-wrap { flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center; }
+@media (max-width: 900px) {
+  #app-layout { flex-direction: column-reverse; }
+  #control-panel { width: 100%; height: 50vh; overflow-y: auto; }
+  #preview-panel { width: 100%; height: 50vh; }
+}
+
+/* ── Stadium Container ── */
+#stadium-wrap {
+  position: relative;
+  width: 100%;
+  background: linear-gradient(180deg, #1a2744 0%, #0d1a30 100%);
+  border-radius: 0 0 12px 12px;
+  overflow: hidden;
+}
+#stadium-wrap::after {
+  content: '';
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
+  height: 30px;
+  background: repeating-linear-gradient(90deg,
+    rgba(100,130,180,0.1) 0px, rgba(80,110,160,0.08) 3px, rgba(60,90,140,0.1) 6px);
+  z-index: 1;
+  pointer-events: none;
+}
+
+/* Pitch canvas */
+#pitch-container {
+  position: relative;
+  padding: 8px 20px;
+  display: flex;
+  justify-content: center;
+}
+#pitchCanvas { display: block; border-radius: 4px; }
+
+/* Possession label */
+#possession-label {
+  position: absolute; top: 80px; left: 100px; z-index: 10;
+  text-align: center; pointer-events: none;
+}
+#possession-label .team-name { font-size: 20px; font-weight: 700; text-shadow: 0 2px 8px rgba(0,0,0,0.7); }
+#possession-label .label { font-size: 13px; color: #f5c542; font-weight: 600; }
+
+/* Event overlay */
+#event-overlay {
+  position: absolute; top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  text-align: center; z-index: 20; pointer-events: none;
+  animation: eventPop 0.4s ease-out;
+}
+#event-icon { font-size: 48px; margin-bottom: 4px; filter: drop-shadow(0 2px 8px rgba(0,0,0,0.6)); }
+#event-minute { font-size: 14px; color: #5ddf5d; font-weight: 700; text-shadow: 0 1px 4px rgba(0,0,0,0.8); }
+#event-text { font-size: 16px; font-weight: 700; color: #fff; text-shadow: 0 2px 8px rgba(0,0,0,0.8); max-width: 240px; margin: 0 auto; }
+@keyframes eventPop {
+  0% { transform: translate(-50%, -50%) scale(0.3); opacity: 0; }
+  60% { transform: translate(-50%, -50%) scale(1.1); opacity: 1; }
+  100% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+}
+
+/* ── Score Bar ── */
+#score-bar {
+  background: linear-gradient(180deg, #0f1e36 0%, #0a1628 100%);
+  padding: 8px 20px;
+  border-top: 1px solid rgba(255,255,255,0.08);
+}
+.score-section { position: relative; display: flex; align-items: center; justify-content: center; }
+.team-info { display: flex; align-items: center; gap: 8px; width: 200px; }
+.team-info.home { justify-content: flex-end; }
+.team-info.away { flex-direction: row-reverse; justify-content: flex-end; }
+.team-flag { width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 20px; flex-shrink: 0; }
+.team-flag img { width: 100%; height: 100%; object-fit: contain; }
+.team-label { font-size: 15px; font-weight: 600; padding-bottom: 2px; border-bottom: 3px solid transparent; transition: border-color 0.3s; white-space: nowrap; }
+.team-label.has-possession { border-bottom-color: #5ddf5d; }
+.score-display { font-size: 28px; font-weight: 800; letter-spacing: 2px; min-width: 100px; text-align: center; flex-shrink: 0; }
+
+/* ── Timeline ── */
+#timeline-section { background: #0d1a30; padding: 8px 12px 4px; }
+#timeline-controls-row { display: flex; align-items: center; gap: 8px; }
+#timeline-controls-row button {
+  background: #1a3050; border: 1px solid rgba(255,255,255,0.15); color: #ccc;
+  width: 36px; height: 36px; border-radius: 50%; cursor: pointer; font-size: 14px;
+  flex-shrink: 0; display: flex; align-items: center; justify-content: center; transition: all 0.15s;
+}
+#timeline-controls-row button:hover { background: #254070; color: #fff; }
+#current-time-display { font-size: 14px; color: #5ddf5d; font-weight: 700; min-width: 36px; text-align: center; flex-shrink: 0; }
+#timeline-container { position: relative; height: 70px; flex: 1; min-width: 0; }
+.timeline-team-label { display: none; }
+#timeline-track { position: absolute; left: 0; right: 0; top: 0; bottom: 0; cursor: pointer; user-select: none; }
+#momentumCanvas { position: absolute; left: 0; top: 0; width: 100%; height: 100%; }
+
+#timeline-bottom-row { display: flex; flex-direction: column; gap: 2px; padding: 2px 0 0 0; }
+.time-axis { display: flex; justify-content: space-between; font-size: 10px; color: #556677; padding: 0; }
+#speed-buttons { display: flex; gap: 4px; justify-content: flex-end; }
+#speed-buttons .speed-btn {
+  background: #1a3050; border: 1px solid rgba(255,255,255,0.12); color: #889;
+  padding: 2px 8px; border-radius: 4px; cursor: pointer; font-size: 11px; transition: all 0.15s;
+}
+#speed-buttons .speed-btn:hover { background: #254070; color: #fff; }
+#speed-buttons .speed-btn.active { background: #2a5090; color: #fff; border-color: #5ba3f5; }
+
+/* Timeline split halves */
+.timeline-half {
+  position: absolute; left: 0; right: 0; display: flex; align-items: center;
+  padding: 0 6px; overflow: hidden;
+}
+.timeline-half.home { top: 0; height: 50%; background: rgba(91,163,245,0.08); border-bottom: 1px solid rgba(255,255,255,0.06); }
+.timeline-half.away { bottom: 0; height: 50%; background: rgba(245,166,35,0.06); }
+.timeline-half .team-name-bg { font-size: 18px; font-weight: 900; color: rgba(255,255,255,0.12); letter-spacing: 1px; text-transform: uppercase; white-space: nowrap; pointer-events: none; }
+
+/* Timeline events */
+.timeline-event {
+  position: absolute; font-size: 16px; cursor: pointer; z-index: 5;
+  filter: drop-shadow(0 1px 3px rgba(0,0,0,0.5)); display: flex; align-items: center; gap: 2px; transform: translateX(-6px);
+}
+.timeline-event::after { content: attr(data-label); font-size: 9px; color: rgba(255,255,255,0.85); font-weight: 600; white-space: nowrap; margin-left: 3px; opacity: 0; transition: opacity 0.2s; }
+.timeline-event:hover::after, .timeline-event.active::after { opacity: 1; }
+.timeline-event.home { top: 3px; }
+.timeline-event.away { bottom: 3px; }
+
+/* Timeline progress */
+#timeline-progress {
+  position: absolute; top: 0; left: 0; width: 0%; height: 100%;
+  background: rgba(93,223,93,0.06); border-right: 2px solid rgba(93,223,93,0.6);
+  pointer-events: none; z-index: 6;
+}
+#timeline-time-indicator {
+  position: absolute; top: -16px; font-size: 11px; font-weight: 700; color: #5ddf5d;
+  transform: translateX(-50%); pointer-events: none; z-index: 10;
+  text-shadow: 0 1px 3px rgba(0,0,0,0.8);
+}
+#timeline-track.seeking { cursor: grabbing; }
+#timeline-track.seeking #timeline-progress { border-right-color: #ff6b6b; background: rgba(255,107,107,0.08); }
+
+/* Timeline published segments */
+.timeline-segment {
+  position: absolute; top: 2px; bottom: 2px;
+  background: rgba(156,39,176,0.3); border: 1px solid rgba(156,39,176,0.6);
+  border-radius: 3px; z-index: 4; display: flex; align-items: center; justify-content: center;
+  font-size: 9px; color: rgba(255,255,255,0.7); overflow: hidden; white-space: nowrap; min-width: 20px;
+  pointer-events: none;
+}
+
+/* Loading */
+#loading {
+  position: fixed; inset: 0; background: #0a1628;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 999; gap: 16px;
+}
+#loading .spinner { width: 40px; height: 40px; border: 3px solid rgba(91,163,245,0.2); border-top-color: #5ba3f5; border-radius: 50%; animation: spin 0.8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+#loading .text { color: #8899aa; font-size: 14px; }
+#loading.hidden { display: none; }
+
+/* ── Match Setup Overlay ── */
+#match-setup-overlay {
+  position: fixed; inset: 0; z-index: 1001;
+  display: none; align-items: center; justify-content: center;
+  background: rgba(10,22,40,0.97); overflow-y: auto; padding: 20px;
+}
+#match-setup-panel {
+  max-width: 860px; width: 100%;
+  background: linear-gradient(180deg, #0f1e36 0%, #0a1628 100%);
+  border: 1px solid rgba(91,163,245,0.3); border-radius: 12px; padding: 24px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.6);
+}
+#match-setup-panel h2 { font-size: 20px; font-weight: 800; color: #5ba3f5; text-align: center; margin-bottom: 20px; }
+.setup-teams { display: flex; gap: 20px; }
+.setup-team { flex: 1; min-width: 0; }
+.setup-team h3 { font-size: 14px; font-weight: 700; margin-bottom: 10px; padding-bottom: 6px; border-bottom: 2px solid rgba(255,255,255,0.1); }
+.setup-team.home h3 { color: #5ba3f5; }
+.setup-team.away h3 { color: #f5a623; }
+.setup-field { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+.setup-field label { font-size: 12px; color: #8899aa; min-width: 50px; flex-shrink: 0; }
+.setup-field input[type="text"], .setup-field input[type="number"] {
+  background: #1a3050; border: 1px solid rgba(255,255,255,0.15); color: #ddd;
+  padding: 6px 8px; border-radius: 6px; font-size: 12px; flex: 1; min-width: 0;
+}
+.setup-field input[type="color"] { width: 36px; height: 28px; border: none; border-radius: 4px; cursor: pointer; background: none; padding: 0; }
+.setup-roster-header { display: flex; gap: 6px; font-size: 10px; color: #667; margin: 10px 0 4px; padding: 0 2px; }
+.setup-roster-header span:nth-child(1) { width: 44px; text-align: center; }
+.setup-roster-header span:nth-child(2) { flex: 1; }
+.setup-roster-header span:nth-child(3) { width: 30px; text-align: center; }
+.setup-player-row { display: flex; gap: 4px; margin-bottom: 3px; align-items: center; }
+.setup-player-row input[type="number"] {
+  width: 44px; background: #1a3050; border: 1px solid rgba(255,255,255,0.12); color: #ddd;
+  padding: 4px 4px; border-radius: 4px; font-size: 11px; text-align: center; flex-shrink: 0;
+}
+.setup-player-row input[type="text"] {
+  flex: 1; background: #1a3050; border: 1px solid rgba(255,255,255,0.12); color: #ddd;
+  padding: 4px 6px; border-radius: 4px; font-size: 11px; min-width: 0;
+}
+.setup-player-row input[type="checkbox"] { width: 16px; height: 16px; cursor: pointer; flex-shrink: 0; accent-color: #5ba3f5; }
+.setup-player-row.gk-row input[type="text"] { border-color: rgba(68,221,102,0.4); }
+.setup-actions { display: flex; gap: 12px; margin-top: 20px; justify-content: center; }
+.setup-actions button {
+  padding: 10px 24px; border-radius: 8px; font-size: 14px; font-weight: 700; cursor: pointer; border: none; transition: all 0.2s;
+}
+#setup-quick-fill { background: #1a3050; color: #aab; border: 1px solid rgba(255,255,255,0.15); }
+#setup-quick-fill:hover { background: #254070; color: #fff; }
+#setup-start { background: linear-gradient(135deg, #2ecc71, #27ae60); color: #fff; box-shadow: 0 4px 16px rgba(46,204,113,0.3); }
+#setup-start:hover { transform: translateY(-1px); box-shadow: 0 6px 24px rgba(46,204,113,0.5); }
+
+/* ── Editor Canvas ── */
+#editor-canvas-wrap { position: relative; overflow: hidden; flex-shrink: 0; display: flex; justify-content: center; }
+#editorCanvas { display: block; border-radius: 6px; border: 1px solid rgba(255,255,255,0.1); cursor: grab; }
+#editorCanvas.dragging { cursor: grabbing; }
+
+/* ── Selector Bar ── */
+#selector-bar { padding: 6px 0; }
+.selector-row { display: flex; align-items: center; gap: 4px; margin-bottom: 4px; }
+.selector-label { font-size: 11px; color: #8899aa; min-width: 36px; }
+.selector-buttons { display: flex; gap: 3px; flex-wrap: wrap; }
+.sel-btn {
+  min-width: 32px; height: 28px; border: 2px solid rgba(255,255,255,0.15); border-radius: 4px;
+  cursor: pointer; font-size: 11px; font-weight: 700; color: #fff;
+  display: flex; align-items: center; justify-content: center; transition: all 0.15s;
+}
+.sel-btn-home { background: rgba(91,163,245,0.3); }
+.sel-btn-away { background: rgba(245,166,35,0.3); }
+.sel-btn-gk { background: rgba(68,221,102,0.3); }
+.sel-btn-ball { background: rgba(255,255,255,0.2); min-width: 50px; }
+.sel-btn.active { border-color: #fff; box-shadow: 0 0 8px rgba(255,255,255,0.3); transform: scale(1.1); }
+.sel-btn-home.active { background: rgba(91,163,245,0.7); }
+.sel-btn-away.active { background: rgba(245,166,35,0.7); }
+.sel-btn-ball.active { background: rgba(255,255,255,0.5); color: #000; }
+.sel-btn-gk.active { background: rgba(68,221,102,0.7); }
+
+/* ── Segments Panel ── */
+#segments-panel { flex: 1; min-height: 80px; overflow-y: auto; border: 1px solid rgba(255,255,255,0.05); border-radius: 6px; padding: 4px; }
+.segment-card {
+  background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 6px; padding: 8px; margin-bottom: 6px;
+}
+.segment-card.active { border-color: rgba(91,163,245,0.4); background: rgba(91,163,245,0.05); }
+.segment-card:hover { border-color: rgba(255,255,255,0.12); }
+.segment-header { display: flex; align-items: center; gap: 6px; margin-bottom: 6px; font-size: 12px; flex-wrap: wrap; }
+.segment-header input {
+  background: #1a3050; border: 1px solid rgba(255,255,255,0.12); color: #ddd;
+  padding: 3px 6px; border-radius: 4px; font-size: 11px; width: 70px; text-align: center;
+}
+.segment-header .seg-label { color: #5ba3f5; font-weight: 700; }
+.seg-time-sel { background: #1a3050; border: 1px solid rgba(255,255,255,0.12); color: #ddd; padding: 2px 4px; border-radius: 3px; font-size: 11px; width: 46px; }
+.segment-timeline { display: flex; align-items: center; gap: 6px; }
+.segment-bar {
+  flex: 1; height: 28px; background: rgba(255,255,255,0.05); border-radius: 14px;
+  position: relative; display: flex; align-items: center; cursor: pointer;
+}
+.segment-bar:hover { background: rgba(255,255,255,0.08); }
+.seg-node-dot {
+  width: 16px; height: 16px; border-radius: 50%;
+  background: rgba(255,255,255,0.2); border: 2px solid rgba(255,255,255,0.4);
+  position: absolute; transform: translateX(-50%); pointer-events: none;
+}
+.seg-node-dot.filled { background: rgba(91,163,245,0.5); border-color: #5ba3f5; }
+.seg-seek-line {
+  position: absolute; top: 2px; bottom: 2px; width: 2px;
+  background: #5ddf5d; border-radius: 1px; pointer-events: none; display: none;
+}
+.seg-play-btn {
+  background: #1a3050; border: 1px solid rgba(255,255,255,0.12); color: #aab;
+  padding: 4px 10px; border-radius: 4px; cursor: pointer; font-size: 11px; white-space: nowrap;
+}
+.seg-play-btn:hover { background: #254070; color: #fff; }
+.segment-actions { display: flex; gap: 4px; margin-top: 6px; }
+.segment-actions button {
+  background: #1a3050; border: 1px solid rgba(255,255,255,0.12); color: #aab;
+  padding: 3px 10px; border-radius: 4px; cursor: pointer; font-size: 11px; transition: all 0.15s;
+}
+.segment-actions button:hover { background: #254070; color: #fff; }
+.segment-actions .seg-delete-btn { color: #e74c3c; }
+.segment-actions .seg-delete-btn:hover { background: rgba(231,76,60,0.15); }
+.segment-actions .seg-save-btn { color: #5ddf5d; }
+.segment-actions .seg-save-btn:hover { background: rgba(93,223,93,0.1); }
+
+/* ── Publish Button ── */
+/* ── Template Grid ── */
+#template-section { padding: 6px 0; border-top: 1px solid rgba(255,255,255,0.06); }
+#template-grid { max-height: 240px; overflow-y: auto; }
+
+/* Template tabs */
+.tpl-tabs { display: flex; gap: 3px; margin-bottom: 6px; flex-wrap: wrap; }
+.tpl-tab { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: #889; padding: 3px 10px; border-radius: 10px; cursor: pointer; font-size: 10px; font-weight: 600; transition: all 0.15s; }
+.tpl-tab:hover { background: rgba(245,166,35,0.15); color: #f5a623; }
+.tpl-tab.active { background: rgba(245,166,35,0.2); color: #f5a623; border-color: rgba(245,166,35,0.4); }
+
+/* Template cards */
+.tpl-cards { display: flex; gap: 4px; flex-wrap: wrap; }
+.tpl-card { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 4px; padding: 4px 6px; cursor: pointer; font-size: 10px; color: #aab; transition: all 0.2s; display: flex; align-items: center; gap: 3px; white-space: nowrap; }
+.tpl-card:hover { background: rgba(245,166,35,0.15); border-color: rgba(245,166,35,0.4); color: #fff; transform: translateY(-1px); box-shadow: 0 2px 8px rgba(245,166,35,0.2); }
+.tpl-card .tpl-icon { font-size: 12px; }
+.tpl-card .tpl-name { font-weight: 600; }
+.tpl-card .tpl-zone { color: #667; font-size: 9px; }
+.tpl-card.tpl-home { border-left: 3px solid rgba(91,163,245,0.5); }
+.tpl-card.tpl-home:hover { background: rgba(91,163,245,0.12); border-color: #5ba3f5; }
+.tpl-card.tpl-away { border-left: 3px solid rgba(245,166,35,0.5); }
+.tpl-card.tpl-away:hover { background: rgba(245,166,35,0.12); border-color: #f5a623; }
+.tpl-team-tag { font-size: 9px; font-weight: 800; padding: 1px 4px; border-radius: 3px; }
+.tpl-team-tag.tpl-home { background: rgba(91,163,245,0.3); color: #5ba3f5; }
+.tpl-team-tag.tpl-away { background: rgba(245,166,35,0.3); color: #f5a623; }
+
+.publish-btn {
+  width: 100%; padding: 14px;
+  background: linear-gradient(135deg, #f5a623, #e09000);
+  border: none; color: #fff; font-size: 16px; font-weight: 800;
+  border-radius: 8px; cursor: pointer; letter-spacing: 1px; transition: all 0.2s;
+}
+.publish-btn:hover { box-shadow: 0 4px 20px rgba(245,166,35,0.4); transform: translateY(-1px); }
+
+/* ── Data Bar ── */
+#data-bar { display: flex; gap: 6px; padding: 6px 0; justify-content: flex-end; }
+.cmd-btn { background: #1a3050; border: 1px solid rgba(255,255,255,0.12); color: #aab; padding: 6px 14px; border-radius: 6px; font-size: 12px; cursor: pointer; font-weight: 600; }
+.cmd-btn:hover { background: #254070; color: #fff; }
+.cmd-btn-sm { background: #1a3050; border: 1px solid rgba(255,255,255,0.12); color: #889; padding: 3px 8px; border-radius: 4px; cursor: pointer; font-size: 10px; }
+.cmd-btn-sm:hover { background: #254070; color: #fff; }
+.cmd-btn-sm-danger { color: #e74c3c; }
+
+/* ── Mobile responsive ── */
+@media (max-width: 600px) { .setup-teams { flex-direction: column; } }
+</style>
+<script>
+let _lastTap = 0;
+document.addEventListener('touchend', (e) => { const now = Date.now(); if (now - _lastTap < 300) e.preventDefault(); _lastTap = now; }, { passive: false });
+document.addEventListener('gesturestart', (e) => e.preventDefault(), { passive: false });
+document.addEventListener('gesturechange', (e) => e.preventDefault(), { passive: false });
+document.addEventListener('touchmove', (e) => { if (e.touches.length > 1) e.preventDefault(); }, { passive: false });
+</script>
+</head>
+<body>
+
+<!-- Match Setup Overlay -->
+<div id="match-setup-overlay">
+  <div id="match-setup-panel">
+    <h2>&#9917; 比賽設定</h2>
+    <div class="setup-teams">
+      <div class="setup-team home">
+        <h3>主隊 (A)</h3>
+        <div class="setup-field">
+          <label>隊名</label>
+          <input type="text" id="setup-a-name" value="主隊 FC">
+        </div>
+        <div class="setup-field">
+          <label>顏色</label>
+          <input type="color" id="setup-a-color" value="#5ba3f5">
+          <label>背號色</label>
+          <input type="color" id="setup-a-numcolor" value="#ffffff">
+        </div>
+        <div class="setup-roster-header"><span>#</span><span>球員姓名</span><span>門將</span></div>
+        <div id="setup-a-roster"></div>
+      </div>
+      <div class="setup-team away">
+        <h3>客隊 (B)</h3>
+        <div class="setup-field">
+          <label>隊名</label>
+          <input type="text" id="setup-b-name" value="客隊聯隊">
+        </div>
+        <div class="setup-field">
+          <label>顏色</label>
+          <input type="color" id="setup-b-color" value="#f5a623">
+          <label>背號色</label>
+          <input type="color" id="setup-b-numcolor" value="#ffffff">
+        </div>
+        <div class="setup-roster-header"><span>#</span><span>球員姓名</span><span>門將</span></div>
+        <div id="setup-b-roster"></div>
+      </div>
+    </div>
+    <div class="setup-actions">
+      <button id="setup-quick-fill">快速填入預設</button>
+      <button id="setup-start">&#9654; 開始比賽</button>
+    </div>
+  </div>
+</div>
+
+<!-- Loading -->
+<div id="loading" class="hidden">
+  <div class="spinner"></div>
+  <div class="text">載入比賽資料...</div>
+</div>
+
+<!-- App Layout -->
+<div id="app-layout">
+  <!-- Control Panel (left 55%) -->
+  <div id="control-panel">
+
+    <!-- Pitch Editor -->
+    <div id="editor-canvas-wrap">
+      <canvas id="editorCanvas"></canvas>
+    </div>
+
+    <!-- Player/Ball Selector -->
+    <div id="selector-bar">
+      <div class="selector-row">
+        <span class="selector-label">主場</span>
+        <div class="selector-buttons" id="home-player-btns"></div>
+        <button id="ball-btn" class="sel-btn sel-btn-ball active" data-entity="ball" onclick="toggleEntity('ball')">足球</button>
+      </div>
+      <div class="selector-row">
+        <span class="selector-label">客場</span>
+        <div class="selector-buttons" id="away-player-btns"></div>
+      </div>
+    </div>
+
+    <!-- Template Library -->
+    <div id="template-section">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+        <span style="font-size:13px;font-weight:700;color:#f5a623">📋 進球模板</span>
+        <div style="display:flex;gap:4px;align-items:center">
+          <span style="color:#667;font-size:11px">時間</span>
+          <input type="number" id="tpl-minute" min="0" max="90" value="0" style="background:#1a3050;border:1px solid rgba(255,255,255,0.12);color:#ddd;padding:3px 6px;border-radius:4px;font-size:11px;width:46px" title="分鐘">
+          <span style="color:#667;font-size:11px">'</span>
+          <input type="number" id="tpl-second" min="0" max="59" value="0" style="background:#1a3050;border:1px solid rgba(255,255,255,0.12);color:#ddd;padding:3px 6px;border-radius:4px;font-size:11px;width:46px" title="秒鐘">
+          <span style="color:#667;font-size:11px">"</span>
+        </div>
+      </div>
+      <div id="template-grid"></div>
+    </div>
+
+    <!-- Segments -->
+    <div id="segments-panel">
+      <div id="segments-list"></div>
+      <button id="add-segment-btn" class="cmd-btn" onclick="addSegment()" style="width:100%;margin-top:6px">＋ 手動新增片段</button>
+    </div>
+
+    <!-- Publish -->
+    <button id="publish-btn" class="publish-btn" onclick="publishAll()">推送主時間軸</button>
+
+    <!-- Data actions -->
+    <div id="data-bar">
+      <button onclick="exportSessionJSON()" class="cmd-btn-sm">匯出</button>
+      <button onclick="clearSession()" class="cmd-btn-sm cmd-btn-sm-danger">清除</button>
+      <label class="cmd-btn-sm" style="cursor:pointer">匯入<input type="file" accept=".json" onchange="importSessionJSON(this.files[0])" style="display:none"></label>
+    </div>
+
+  </div>
+
+  <!-- Preview Panel (right 45%) -->
+  <div id="preview-panel">
+
+    <!-- Score Bar -->
+    <div id="score-bar">
+      <div class="score-section">
+        <div class="team-info home">
+          <span class="team-label" id="home-name">Home</span>
+          <span class="team-flag" id="home-flag">&#127968;</span>
+        </div>
+        <div class="score-display"><span id="home-score">0</span> : <span id="away-score">0</span></div>
+        <div class="team-info away">
+          <span class="team-label" id="away-name">Away</span>
+          <span class="team-flag" id="away-flag">&#127937;</span>
+        </div>
+      </div>
+    </div>
+
+    <div id="stadium-wrap">
+      <div id="pitch-container">
+        <canvas id="pitchCanvas"></canvas>
+        <div id="possession-label" style="display:none">
+          <div class="team-name" id="poss-team-name"></div>
+          <div class="label">控球</div>
+        </div>
+        <div id="event-overlay" style="display:none">
+          <div id="event-icon"></div>
+          <div id="event-minute"></div>
+          <div id="event-text"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Timeline -->
+    <div id="timeline-section">
+      <div id="timeline-controls-row">
+        <button id="btn-play" onclick="togglePlayPause()">&#9654;</button>
+        <span id="current-time-display">0'</span>
+        <div id="timeline-container">
+          <div id="timeline-track">
+            <div id="timeline-progress"></div>
+            <div id="timeline-time-indicator">0'</div>
+            <canvas id="momentumCanvas"></canvas>
+          </div>
+        </div>
+      </div>
+      <div id="timeline-bottom-row">
+        <div class="time-axis" id="time-axis-labels"></div>
+        <div id="speed-buttons">
+          <button class="speed-btn active" data-speed="1">1x</button>
+          <button class="speed-btn" data-speed="2">2x</button>
+          <button class="speed-btn" data-speed="4">4x</button>
+          <button class="speed-btn" data-speed="8">8x</button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+// ===============================================================
+// FORMATION TEMPLATE
+// ===============================================================
+const FORMATION_433 = [
+  { x: 6,  y: 40, role: 'GK' },
+  { x: 25, y: 10, role: 'RB' },
+  { x: 22, y: 30, role: 'RCB' },
+  { x: 22, y: 50, role: 'LCB' },
+  { x: 25, y: 70, role: 'LB' },
+  { x: 45, y: 20, role: 'RCM' },
+  { x: 42, y: 40, role: 'CDM' },
+  { x: 45, y: 60, role: 'LCM' },
+  { x: 78, y: 12, role: 'RW' },
+  { x: 82, y: 40, role: 'ST' },
+  { x: 78, y: 68, role: 'LW' },
+];
+
+const POSITION_COORDS = {
+  'Goalkeeper':              [6, 40],
+  'Left Back':               [25, 68],
+  'Left Center Back':        [22, 52],
+  'Center Back':             [20, 40],
+  'Right Center Back':       [22, 28],
+  'Right Back':              [25, 12],
+  'Left Wing Back':          [35, 70],
+  'Right Wing Back':         [35, 10],
+  'Left Defensive Midfield': [38, 50],
+  'Center Defensive Midfield':[38, 40],
+  'Right Defensive Midfield':[38, 30],
+  'Left Midfield':           [50, 68],
+  'Left Center Midfield':    [50, 50],
+  'Center Midfield':         [50, 40],
+  'Right Center Midfield':   [50, 30],
+  'Right Midfield':          [50, 12],
+  'Left Wing':               [75, 70],
+  'Center Attacking Midfield':[65, 40],
+  'Right Wing':              [75, 10],
+  'Left Center Forward':     [85, 50],
+  'Center Forward':          [88, 40],
+  'Right Center Forward':    [85, 30],
+};
+
+// ===============================================================
+// STATE
+// ===============================================================
+let homeTeam = '', awayTeam = '', homeId = 0, awayId = 0;
+let ballX = 60, ballY = 40;
+let isPlaying = false;
+let playSpeed = 1;
+let currentMatchMinute = 0;
+let currentPeriod = 1;
+let totalMatchSeconds = 0;
+let maxMatchSeconds = 5400;
+let currentPlayers = [];
+let smoothedPlayers = [];
+let homeLineup = [];
+let awayLineup = [];
+let stats = { home: {}, away: {} };
+let goalEvents = [];
+let cardEvents = [];
+
+// Scene system
+let sceneTimer = null;
+let sceneStart = 0;
+let currentScene = null;
+
+// Timeline seeking
+let timelineDragging = false;
+
+// Restore
+let _pendingRestore = null;
+
+// Team colors
+let homeColor = '#5ba3f5', awayColor = '#f5a623';
+let homeNumColor = '#fff', awayNumColor = '#fff';
+
+// ===============================================================
+// NODE-BASED SEGMENT STATE
+// ===============================================================
+// Each segment has node data for all players and ball
+// Each player/ball has exactly 4 nodes (keyframe positions)
+let segments = [];
+let activeSegmentId = null;
+let selectedEntities = new Set(['ball']); // multi-select: Set of 'ball', 'home-9', 'away-3', etc.
+let selectedEntity = 'ball'; // kept for backward compat — last selected for node dragging
+
+// Editor drag state
+let editorDraggingNode = -1; // -1 = not dragging, 0-3 = which node
+let editorCanvas = null;
+let editorCtx = null;
+let editorW = 0, editorH = 0;
+
+// Virtual match
+let vmActive = false;
+let vmPossessionHome = true;
+let vmPossessionTimer = 0;
+let vmPossessionDuration = 15;
+let vmBallPhase = 'buildup';
+let vmPhaseTimer = 0;
+let vmPhaseDuration = 4;
+let vmBallTarget = { x: 60, y: 40 };
+let vmInterval = null;
+let vmLastTick = 0;
+let vmPaused = false;
+let vmGoals = [];
+let vmHomeScore = 0, vmAwayScore = 0;
+
+// Segment preview animation
+let segPreviewTimer = null;
+
+// ===============================================================
+// PITCH DRAWING (Preview)
+// ===============================================================
+const pitchCanvas = document.getElementById('pitchCanvas');
+const pitchCtx = pitchCanvas.getContext('2d');
+const PITCH_W = 120, PITCH_H = 80;
+let canvasW, canvasH, scaleX, scaleY, offsetX = 0, offsetY = 0;
+
+function resizePitch() {
+  const panel = document.getElementById('preview-panel');
+  const container = document.getElementById('pitch-container');
+  const maxW = panel ? panel.clientWidth - 40 : container.clientWidth - 40;
+  const maxH = panel ? panel.clientHeight - 20 : Math.min(340, window.innerHeight * 0.42);
+  const ratio = PITCH_H / PITCH_W;
+  canvasW = maxW;
+  canvasH = maxW * ratio;
+  if (canvasH > maxH) { canvasH = maxH; canvasW = maxH / ratio; }
+  pitchCanvas.width = canvasW * 2;
+  pitchCanvas.height = canvasH * 2;
+  pitchCanvas.style.width = canvasW + 'px';
+  pitchCanvas.style.height = canvasH + 'px';
+  scaleX = (canvasW * 2) / PITCH_W;
+  scaleY = (canvasH * 2) / PITCH_H;
+}
+
+function px(x) { return x * scaleX; }
+function py(y) { return y * scaleY; }
+
+function drawPitchOnCtx(ctx, w, h) {
+  ctx.clearRect(0, 0, w, h);
+  const sx = w / 120, sy = h / 80;
+  const stripeCount = 12;
+  const stripeW = w / stripeCount;
+  for (let i = 0; i < stripeCount; i++) {
+    ctx.fillStyle = i % 2 === 0 ? '#2d8a4e' : '#34a058';
+    ctx.fillRect(i * stripeW, 0, stripeW, h);
+  }
+  ctx.strokeStyle = 'rgba(255,255,255,0.6)';
+  ctx.lineWidth = 2;
+  ctx.strokeRect(sx*0.5, sy*0.5, sx*119, sy*79);
+  ctx.beginPath(); ctx.moveTo(sx*60, sy*0.5); ctx.lineTo(sx*60, sy*79.5); ctx.stroke();
+  ctx.beginPath(); ctx.arc(sx*60, sy*40, sx*9.15, 0, Math.PI*2); ctx.stroke();
+  ctx.fillStyle = 'rgba(255,255,255,0.7)';
+  ctx.beginPath(); ctx.arc(sx*60, sy*40, 3, 0, Math.PI*2); ctx.fill();
+  ctx.strokeRect(sx*0.5, sy*18, sx*16.5, sy*44);
+  ctx.strokeRect(sx*0.5, sy*30, sx*5.5, sy*20);
+  ctx.strokeRect(sx*103, sy*18, sx*16.5, sy*44);
+  ctx.strokeRect(sx*114, sy*30, sx*5.5, sy*20);
+  ctx.fillStyle = 'rgba(255,255,255,0.7)';
+  ctx.beginPath(); ctx.arc(sx*12, sy*40, 3, 0, Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.arc(sx*108, sy*40, 3, 0, Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.arc(sx*12, sy*40, sx*9.15, -0.7, 0.7); ctx.stroke();
+  ctx.beginPath(); ctx.arc(sx*108, sy*40, sx*9.15, Math.PI-0.7, Math.PI+0.7); ctx.stroke();
+  const cornerR = sx*1.5;
+  ctx.beginPath(); ctx.arc(sx*0.5, sy*0.5, cornerR, 0, Math.PI/2); ctx.stroke();
+  ctx.beginPath(); ctx.arc(sx*119.5, sy*0.5, cornerR, Math.PI/2, Math.PI); ctx.stroke();
+  ctx.beginPath(); ctx.arc(sx*119.5, sy*79.5, cornerR, Math.PI, Math.PI*1.5); ctx.stroke();
+  ctx.beginPath(); ctx.arc(sx*0.5, sy*79.5, cornerR, Math.PI*1.5, Math.PI*2); ctx.stroke();
+  ctx.strokeStyle = 'rgba(255,255,255,0.8)';
+  ctx.lineWidth = 3;
+  ctx.strokeRect(sx*(-2), sy*36, sx*2.5, sy*8);
+  ctx.strokeRect(sx*119.5, sy*36, sx*2.5, sy*8);
+  ctx.lineWidth = 2;
+}
+
+function drawPitch() {
+  drawPitchOnCtx(pitchCtx, pitchCanvas.width, pitchCanvas.height);
+}
+
+// ===============================================================
+// DRAW BALL & PLAYERS (Preview)
+// ===============================================================
+function drawBall(x, y) {
+  const ctx = pitchCtx;
+  const bx = px(x), by = py(y);
+  const glow = ctx.createRadialGradient(bx, by, 3, bx, by, 24);
+  glow.addColorStop(0, 'rgba(255,255,255,0.5)');
+  glow.addColorStop(1, 'rgba(255,255,255,0)');
+  ctx.fillStyle = glow;
+  ctx.beginPath(); ctx.arc(bx, by, 28, 0, Math.PI*2); ctx.fill();
+  ctx.fillStyle = '#fff';
+  ctx.beginPath(); ctx.arc(bx, by, 14, 0, Math.PI*2); ctx.fill();
+  ctx.strokeStyle = '#333'; ctx.lineWidth = 1.5; ctx.stroke();
+}
+
+function drawPlayers(players) {
+  const ctx = pitchCtx;
+  const r = Math.max(20, scaleX * 2.8);
+  players.forEach(p => {
+    const x = px(p.x), y = py(p.y);
+    const isHome = p.teammate;
+    const teamColor = isHome ? homeColor : awayColor;
+    const numColor = isHome ? homeNumColor : awayNumColor;
+    ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI*2);
+    if (p.keeper) { ctx.fillStyle = isHome ? '#44dd66' : '#dddd44'; }
+    else { ctx.fillStyle = teamColor; }
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(255,255,255,0.6)'; ctx.lineWidth = 2.5; ctx.stroke();
+    if (p.actor) {
+      ctx.beginPath(); ctx.arc(x, y, r+5, 0, Math.PI*2);
+      ctx.strokeStyle = 'rgba(255,255,255,0.9)'; ctx.lineWidth = 2.5; ctx.stroke();
+    }
+    if (p.jersey) {
+      ctx.fillStyle = p.keeper ? '#000' : numColor;
+      ctx.font = `bold ${Math.max(12, r*0.85)}px sans-serif`;
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText(p.jersey, x, y+0.5);
+    }
+  });
+}
+
+// ===============================================================
+// UTILITY
+// ===============================================================
+function parseTimestamp(ts) {
+  const parts = ts.split(':');
+  return parseInt(parts[0])*3600 + parseInt(parts[1])*60 + parseFloat(parts[2]);
+}
+
+function formatTime(seconds) {
+  const m = Math.floor(seconds / 60);
+  const s = Math.floor(seconds % 60);
+  return m + "'" + String(s).padStart(2, '0') + "''";
+}
+
+function parseTimeInput(str) {
+  // Parse "1'30''" or "1:30" or "90" format
+  str = str.trim().replace(/['']/g, "'");
+  const parts = str.split("'").filter(x => x !== '');
+  if (parts.length >= 2) return parseInt(parts[0])*60 + parseInt(parts[1]);
+  const num = parseInt(str);
+  return isNaN(num) ? 0 : num;
+}
+
+// ===============================================================
+// FORMATION SYSTEM
+// ===============================================================
+function getFormationPositions(bx, by, carrierId, carrierIsHome) {
+  const players = [];
+  const attackIsHome = carrierIsHome;
+
+  function processTeam(lineup, isHome) {
+    const isAttacking = isHome === attackIsHome;
+    const atkDir = isHome ? 1 : -1;
+
+    lineup.forEach(p => {
+      const isBallCarrier = (p.playerId === carrierId && isHome === carrierIsHome);
+      if (isBallCarrier) {
+        players.push({ x: bx, y: by, teammate: isHome, keeper: p.keeper, actor: true, jersey: p.jersey });
+        return;
+      }
+
+      let x = isHome ? p.baseX : 120 - p.baseX;
+      let y = p.baseY;
+
+      if (p.keeper) {
+        y += (by - 40) * 0.2;
+        const ownGoalX = isHome ? 0 : 120;
+        const ballDistToGoal = Math.abs(bx - ownGoalX);
+        if (ballDistToGoal < 30) { x += atkDir * (30 - ballDistToGoal) * 0.15; }
+      } else if (isAttacking) {
+        const ballInfluenceX = (bx - 60) / 120;
+        const ballInfluenceY = (by - 40) / 80;
+        x += ballInfluenceX * 18; y += ballInfluenceY * 10;
+        const distToBall = Math.hypot(x - bx, y - by);
+        if (distToBall < 30 && distToBall > 8) { x += atkDir * 5; const spreadY = (y < by) ? -4 : 4; y += spreadY; }
+      } else {
+        const ballDepth = isHome ? (120 - bx) / 120 : bx / 120;
+        const retreatAmount = (1 - ballDepth) * 25;
+        x -= atkDir * retreatAmount;
+        y += (by - y) * 0.25;
+        const distToBall = Math.hypot(x - bx, y - by);
+        if (distToBall < 30) { const pressureStrength = (30 - distToBall) / 30 * 0.35; x += (bx - x) * pressureStrength; y += (by - y) * pressureStrength; }
+        if (isHome && x > bx + 5) x = bx + 3;
+        if (!isHome && x < bx - 5) x = bx - 3;
+      }
+
+      const rt = performance.now() / 1000;
+      const jitterScale = isAttacking ? 1.0 : 0.6;
+      x += Math.sin(rt * 0.8 + p.jersey * 7.3) * jitterScale;
+      y += Math.cos(rt * 0.6 + p.jersey * 11.7) * jitterScale;
+      x = Math.max(2, Math.min(118, x)); y = Math.max(2, Math.min(78, y));
+      players.push({ x, y, teammate: isHome, keeper: p.keeper, actor: false, jersey: p.jersey });
+    });
+  }
+
+  processTeam(homeLineup, true);
+  processTeam(awayLineup, false);
+  return players;
+}
+
+function updatePlayerPositions(ev) {
+  const carrierId = ev.playerId || 0;
+  const carrierIsHome = ev.teamId === homeId;
+  const targets = getFormationPositions(ballX, ballY, carrierId, carrierIsHome);
+
+  if (smoothedPlayers.length !== targets.length) {
+    smoothedPlayers = targets.map(p => ({ ...p }));
+    currentPlayers = smoothedPlayers;
+    return;
+  }
+
+  const lerpSpeed = 0.10;
+  const carrierLerp = 0.20;
+  for (let i = 0; i < targets.length; i++) {
+    const t = targets[i];
+    const s = smoothedPlayers[i];
+    const speed = t.actor ? carrierLerp : lerpSpeed;
+    s.x += (t.x - s.x) * speed; s.y += (t.y - s.y) * speed;
+    s.teammate = t.teammate; s.keeper = t.keeper; s.actor = t.actor; s.jersey = t.jersey;
+  }
+  currentPlayers = smoothedPlayers;
+}
+
+function updateTimeDisplay() {
+  let minDisplay;
+  if (currentPeriod === 1) { minDisplay = Math.min(45, Math.floor(totalMatchSeconds / 60)); }
+  else if (currentPeriod === 2) { minDisplay = Math.min(90, 45 + Math.floor((totalMatchSeconds - 2700) / 60)); }
+  else { minDisplay = Math.floor(totalMatchSeconds / 60); }
+  const timeStr = minDisplay + "'";
+  const ctd = document.getElementById('current-time-display');
+  if (ctd) ctd.textContent = timeStr;
+}
+
+function updateTimeAxisLabels() {
+  const el = document.getElementById('time-axis-labels');
+  if (!el) return;
+  const labels = ["0'", "15'", "30'", "HT", "60'", "75'", "90'"];
+  el.innerHTML = labels.map(l => `<span>${l}</span>`).join('');
+}
+
+// ===============================================================
+// SCENE SYSTEM (kept for legacy goal animation)
+// ===============================================================
+function renderSceneFrame(elapsed) {
+  if (!currentScene) return;
+  const { keyframes, ke } = currentScene;
+  let kfA = keyframes[0], kfB = keyframes[0];
+  for (let i = 0; i < keyframes.length - 1; i++) {
+    if (elapsed >= keyframes[i].t && elapsed < keyframes[i+1].t) { kfA = keyframes[i]; kfB = keyframes[i+1]; break; }
+    if (i === keyframes.length - 2) { kfA = kfB = keyframes[keyframes.length-1]; }
+  }
+  const segDur = kfB.t - kfA.t || 1;
+  const t = Math.min((elapsed - kfA.t) / segDur, 1);
+  const smooth = t < 0.5 ? 2*t*t : -1 + (4 - 2*t)*t;
+  ballX = kfA.bx + (kfB.bx - kfA.bx) * smooth;
+  ballY = kfA.by + (kfB.by - kfA.by) * smooth;
+  const carrier = kfB.carrier || kfA.carrier;
+  const fakeEv = { playerId: carrier?.playerId || 0, teamId: ke.teamId, period: currentPeriod };
+  updatePlayerPositions(fakeEv);
+  drawPitch();
+  drawPlayers(currentPlayers);
+  const ballOnPitch = ballX >= 0 && ballX <= 120 && ballY >= 0 && ballY <= 80;
+  if (ballOnPitch) drawBall(ballX, ballY);
+  const overlay = document.getElementById('event-overlay');
+  const label = kfA.label || (t > 0.8 ? kfB.label : null);
+  if (label) {
+    overlay.style.display = '';
+    document.getElementById('event-icon').textContent = '';
+    document.getElementById('event-minute').textContent = ke.minute + "'";
+    document.getElementById('event-text').textContent = label;
+    if (!overlay.dataset.shown) {
+      overlay.style.animation = 'none'; void overlay.offsetHeight;
+      overlay.style.animation = 'eventPop 0.4s ease-out'; overlay.dataset.shown = '1';
+    }
+  } else { overlay.style.display = 'none'; delete overlay.dataset.shown; }
+}
+
+function stopScene() {
+  if (sceneTimer) { clearInterval(sceneTimer); sceneTimer = null; }
+  currentScene = null;
+  document.getElementById('event-overlay').style.display = 'none';
+  delete document.getElementById('event-overlay').dataset.shown;
+}
+
+// ===============================================================
+// MATCH SETUP PANEL
+// ===============================================================
+const SETUP_DEFAULT_ROSTER_A = [
+  { n: 1, name: '守門員', gk: true },
+  { n: 2, name: '右後衛' }, { n: 4, name: '右中衛' },
+  { n: 5, name: '左中衛' }, { n: 3, name: '左後衛' },
+  { n: 8, name: '右中場' }, { n: 6, name: '防守中場' },
+  { n: 10, name: '左中場' },
+  { n: 7, name: '右翼' }, { n: 9, name: '前鋒' }, { n: 11, name: '左翼' },
+];
+const SETUP_DEFAULT_ROSTER_B = [
+  { n: 1, name: '守門員', gk: true },
+  { n: 2, name: '右後衛' }, { n: 4, name: '右中衛' },
+  { n: 5, name: '左中衛' }, { n: 3, name: '左後衛' },
+  { n: 8, name: '右中場' }, { n: 6, name: '防守中場' },
+  { n: 10, name: '左中場' },
+  { n: 7, name: '右翼' }, { n: 9, name: '前鋒' }, { n: 11, name: '左翼' },
+];
+
+function setupRenderRoster(teamId, defaults) {
+  const container = document.getElementById(`setup-${teamId}-roster`);
+  container.innerHTML = '';
+  for (let i = 0; i < 11; i++) {
+    const d = defaults[i] || { n: i+1, name: `球員 ${i+1}` };
+    const row = document.createElement('div');
+    row.className = 'setup-player-row' + (d.gk ? ' gk-row' : '');
+    row.innerHTML = `<input type="number" min="1" max="99" value="${d.n}" class="sp-jersey">` +
+      `<input type="text" value="${d.name}" class="sp-name" placeholder="球員姓名">` +
+      `<input type="checkbox" class="sp-gk" title="門將"${d.gk ? ' checked' : ''}>`;
+    container.appendChild(row);
+  }
+}
+
+function setupQuickFill() {
+  document.getElementById('setup-a-name').value = '主隊 FC';
+  document.getElementById('setup-b-name').value = '客隊聯隊';
+  document.getElementById('setup-a-color').value = '#5ba3f5';
+  document.getElementById('setup-b-color').value = '#f5a623';
+  document.getElementById('setup-a-numcolor').value = '#ffffff';
+  document.getElementById('setup-b-numcolor').value = '#ffffff';
+  setupRenderRoster('a', SETUP_DEFAULT_ROSTER_A);
+  setupRenderRoster('b', SETUP_DEFAULT_ROSTER_B);
+}
+
+function setupReadRoster(teamId) {
+  const rows = document.querySelectorAll(`#setup-${teamId}-roster .setup-player-row`);
+  const lineup = [];
+  rows.forEach((row, i) => {
+    const jersey = parseInt(row.querySelector('.sp-jersey').value) || (i+1);
+    const name = row.querySelector('.sp-name').value || `球員 ${i+1}`;
+    const isGK = row.querySelector('.sp-gk').checked;
+    const slot = FORMATION_433[i] || FORMATION_433[0];
+    lineup.push({ playerId: jersey, jersey, name, position: slot.role, baseX: slot.x, baseY: slot.y, keeper: isGK });
+  });
+  return lineup;
+}
+
+function setupStartMatch() {
+  homeTeam = document.getElementById('setup-a-name').value || '主隊 FC';
+  awayTeam = document.getElementById('setup-b-name').value || '客隊聯隊';
+  homeColor = document.getElementById('setup-a-color').value;
+  awayColor = document.getElementById('setup-b-color').value;
+  homeNumColor = document.getElementById('setup-a-numcolor').value;
+  awayNumColor = document.getElementById('setup-b-numcolor').value;
+  homeLineup = setupReadRoster('a');
+  awayLineup = setupReadRoster('b');
+  const homeGKs = homeLineup.filter(p => p.keeper).length;
+  const awayGKs = awayLineup.filter(p => p.keeper).length;
+  if (homeGKs !== 1 || awayGKs !== 1) { alert('每隊必須有且僅有 1 名門將'); return; }
+  document.getElementById('match-setup-overlay').style.display = 'none';
+  startVirtualMatch();
+}
+
+document.getElementById('setup-quick-fill').onclick = setupQuickFill;
+document.getElementById('setup-start').onclick = setupStartMatch;
+
+// ===============================================================
+// ENTITY SELECTION (Player/Ball)
+// ===============================================================
+function selectEntity(key) {
+  selectedEntities = new Set([key]);
+  selectedEntity = key;
+  document.querySelectorAll('#selector-bar .sel-btn').forEach(b => b.classList.toggle('active', key === b.dataset.entity));
+  initEntityNodes();
+  editorDraw();
+}
+
+function toggleEntity(key) {
+  // Toggle in selectedEntities (for node editing)
+  if (selectedEntities.has(key)) {
+    selectedEntities.delete(key);
+    if (selectedEntity === key) selectedEntity = selectedEntities.values().next().value || 'ball';
+  } else {
+    selectedEntities.add(key);
+    selectedEntity = key;
+  }
+
+  // Also toggle in active segment's visible list
+  const seg = activeSegmentId ? segments.find(s => s.id === activeSegmentId) : null;
+  if (seg) {
+    if (!seg.visible) seg.visible = ['ball'];
+    const idx = seg.visible.indexOf(key);
+    if (idx >= 0) {
+      // Don't remove ball
+      if (key !== 'ball') seg.visible.splice(idx, 1);
+    } else {
+      seg.visible.push(key);
+    }
+  }
+
+  // Update button highlights
+  updateButtonStates();
+  // Init nodes for all selected entities
+  selectedEntities.forEach(e => { selectedEntity = e; initEntityNodes(); });
+  selectedEntity = key;
+  editorDraw();
+  saveSession();
+}
+
+function updateButtonStates() {
+  const seg = activeSegmentId ? segments.find(s => s.id === activeSegmentId) : null;
+  const visibleSet = seg && seg.visible ? new Set(seg.visible) : new Set(['ball']);
+  document.querySelectorAll('#selector-bar .sel-btn').forEach(b => {
+    const key = b.dataset.entity;
+    const isVisible = visibleSet.has(key);
+    const isSelected = selectedEntities.has(key);
+    b.classList.toggle('active', isSelected);
+    b.classList.toggle('visible', isVisible);
+    b.style.opacity = isVisible ? '1' : '0.35';
+  });
+}
+
+function buildPlayerButtons() {
+  const homeWrap = document.getElementById('home-player-btns');
+  const awayWrap = document.getElementById('away-player-btns');
+  homeWrap.innerHTML = '';
+  awayWrap.innerHTML = '';
+
+  homeLineup.forEach(p => {
+    const btn = document.createElement('button');
+    const key = 'home-' + p.jersey;
+    btn.className = 'sel-btn ' + (p.keeper ? 'sel-btn-gk' : 'sel-btn-home');
+    btn.dataset.entity = key;
+    btn.textContent = p.jersey;
+    btn.title = p.name;
+    btn.onclick = () => toggleEntity(key);
+    homeWrap.appendChild(btn);
+  });
+
+  awayLineup.forEach(p => {
+    const btn = document.createElement('button');
+    const key = 'away-' + p.jersey;
+    btn.className = 'sel-btn ' + (p.keeper ? 'sel-btn-gk' : 'sel-btn-away');
+    btn.dataset.entity = key;
+    btn.textContent = p.jersey;
+    btn.title = p.name;
+    btn.onclick = () => toggleEntity(key);
+    awayWrap.appendChild(btn);
+  });
+
+  // Ball button
+  const ballBtn = document.getElementById('ball-btn');
+  ballBtn.dataset.entity = 'ball';
+}
+
+// ===============================================================
+// EDITOR CANVAS
+// ===============================================================
+function editorInit() {
+  editorCanvas = document.getElementById('editorCanvas');
+  if (!editorCanvas) return;
+  editorCtx = editorCanvas.getContext('2d');
+  const wrap = document.getElementById('editor-canvas-wrap');
+  if (!wrap) return;
+  // Fixed size: 420 x 280 (120:80 ratio), capped by container
+  const maxW = Math.min(420, wrap.clientWidth - 4);
+  const w = maxW;
+  const h = Math.round(w * 80 / 120);
+  editorW = w; editorH = h;
+  editorCanvas.width = w * 2;
+  editorCanvas.height = h * 2;
+  editorCanvas.style.width = w + 'px';
+  editorCanvas.style.height = h + 'px';
+
+  editorCanvas.onmousedown = (e) => { const p = editorPitchCoords(e); editorHandleDown(p.x, p.y); };
+  editorCanvas.onmousemove = (e) => { const p = editorPitchCoords(e); editorHandleMove(p.x, p.y); };
+  editorCanvas.onmouseup = () => editorHandleUp();
+  editorCanvas.onmouseleave = () => editorHandleUp();
+  editorCanvas.ontouchstart = (e) => { e.preventDefault(); const p = editorPitchCoordsTouch(e); editorHandleDown(p.x, p.y); };
+  editorCanvas.ontouchmove = (e) => { e.preventDefault(); const p = editorPitchCoordsTouch(e); editorHandleMove(p.x, p.y); };
+  editorCanvas.ontouchend = () => editorHandleUp();
+
+  editorDraw();
+}
+
+function editorPitchCoords(e) {
+  const rect = editorCanvas.getBoundingClientRect();
+  return { x: ((e.clientX - rect.left) / rect.width) * 120, y: ((e.clientY - rect.top) / rect.height) * 80 };
+}
+
+function editorPitchCoordsTouch(e) {
+  const t = e.touches[0];
+  const rect = editorCanvas.getBoundingClientRect();
+  return { x: ((t.clientX - rect.left) / rect.width) * 120, y: ((t.clientY - rect.top) / rect.height) * 80 };
+}
+
+function editorHandleDown(pitchX, pitchY) {
+  if (!activeSegmentId) return;
+  const seg = segments.find(s => s.id === activeSegmentId);
+  if (!seg) return;
+
+  // Find closest node across ALL selected entities
+  const threshold = 8;
+  let bestEntity = null, bestNode = -1, bestDist = Infinity;
+  selectedEntities.forEach(entityKey => {
+    const nodes = seg.nodes[entityKey];
+    if (!nodes) return;
+    for (let i = 0; i < 4; i++) {
+      const d = Math.hypot(nodes[i].x - pitchX, nodes[i].y - pitchY);
+      if (d < bestDist) { bestDist = d; bestNode = i; bestEntity = entityKey; }
+    }
+  });
+  if (bestDist < threshold && bestEntity) {
+    selectedEntity = bestEntity; // set active for dragging
+    editorDraggingNode = bestNode;
+    editorCanvas.classList.add('dragging');
+  }
+}
+
+function editorHandleMove(pitchX, pitchY) {
+  if (editorDraggingNode < 0) return;
+  const seg = segments.find(s => s.id === activeSegmentId);
+  if (!seg || !seg.nodes[selectedEntity]) return;
+  pitchX = Math.max(1, Math.min(119, pitchX));
+  pitchY = Math.max(1, Math.min(79, pitchY));
+  seg.nodes[selectedEntity][editorDraggingNode] = { x: pitchX, y: pitchY };
+  editorDraw();
+}
+
+function editorHandleUp() {
+  if (editorDraggingNode >= 0) {
+    editorDraggingNode = -1;
+    editorCanvas.classList.remove('dragging');
+    saveSession();
+  }
+}
+
+function editorDraw() {
+  if (!editorCtx) return;
+  const ctx = editorCtx;
+  const w = editorCanvas.width, h = editorCanvas.height;
+  const sx = w / 120, sy = h / 80;
+
+  // Draw pitch
+  drawPitchOnCtx(ctx, w, h);
+
+  const seg = activeSegmentId ? segments.find(s => s.id === activeSegmentId) : null;
+
+  // Draw attack direction indicators based on half
+  const segTime = seg ? seg.startSeconds : totalMatchSeconds;
+  const isSecondHalf = segTime >= 2700; // 45 min
+  // First half: home→right, away→left. Second half: swap.
+  const homeGoalX = isSecondHalf ? 0 : 120;
+  const awayGoalX = isSecondHalf ? 120 : 0;
+  const hColor = homeColor || '#5ba3f5';
+  const aColor = awayColor || '#f5a623';
+
+  // Home attack arrow
+  const hArrowX = homeGoalX === 120 ? (w - 30) : 30;
+  const hArrowDir = homeGoalX === 120 ? 1 : -1;
+  ctx.fillStyle = hColor;
+  ctx.globalAlpha = 0.25;
+  ctx.beginPath();
+  ctx.moveTo(hArrowX, h * 0.35);
+  ctx.lineTo(hArrowX + hArrowDir * 18, h * 0.5);
+  ctx.lineTo(hArrowX, h * 0.65);
+  ctx.fill();
+  ctx.globalAlpha = 0.5;
+  ctx.font = 'bold 10px sans-serif';
+  ctx.textAlign = hArrowDir > 0 ? 'right' : 'left';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(homeTeam + '→', hArrowX - hArrowDir * 4, h * 0.5);
+
+  // Away attack arrow
+  const aArrowX = awayGoalX === 120 ? (w - 30) : 30;
+  const aArrowDir = awayGoalX === 120 ? 1 : -1;
+  ctx.fillStyle = aColor;
+  ctx.globalAlpha = 0.25;
+  ctx.beginPath();
+  ctx.moveTo(aArrowX, h * 0.35 - 30);
+  ctx.lineTo(aArrowX + aArrowDir * 18, h * 0.5 - 30);
+  ctx.lineTo(aArrowX, h * 0.65 - 30);
+  ctx.fill();
+  ctx.globalAlpha = 0.5;
+  ctx.textAlign = aArrowDir > 0 ? 'right' : 'left';
+  ctx.fillText(awayTeam + '→', aArrowX - aArrowDir * 4, h * 0.5 - 30);
+  ctx.globalAlpha = 1;
+
+  // Half label
+  ctx.fillStyle = 'rgba(255,255,255,0.3)';
+  ctx.font = 'bold 11px sans-serif';
+  ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+  ctx.fillText(isSecondHalf ? '下半場' : '上半場', w / 2, 6);
+
+  // Draw players — only visible ones, non-selected as faded
+  const visibleSet = seg && seg.visible ? new Set(seg.visible) : new Set(['ball']);
+  const allPlayers = [
+    ...homeLineup.map(p => ({ x: p.baseX, y: p.baseY, jersey: p.jersey, isHome: true, keeper: p.keeper, key: 'home-' + p.jersey })),
+    ...awayLineup.map(p => ({ x: 120 - p.baseX, y: p.baseY, jersey: p.jersey, isHome: false, keeper: p.keeper, key: 'away-' + p.jersey }))
+  ];
+  allPlayers.forEach(p => {
+    if (!visibleSet.has(p.key)) return; // hidden — skip entirely
+    if (selectedEntities.has(p.key)) return; // skip — drawn as nodes below
+    const ppx = p.x * sx, ppy = p.y * sy;
+    ctx.globalAlpha = 0.25;
+    ctx.beginPath(); ctx.arc(ppx, ppy, 14, 0, Math.PI*2);
+    ctx.fillStyle = p.keeper ? (p.isHome ? '#44dd66' : '#dddd44') : (p.isHome ? homeColor : awayColor);
+    ctx.fill();
+    ctx.fillStyle = '#fff'; ctx.font = 'bold 10px sans-serif';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText(p.jersey, ppx, ppy);
+    ctx.globalAlpha = 1;
+  });
+
+  if (!seg) {
+    ctx.fillStyle = 'rgba(255,255,255,0.3)';
+    ctx.font = 'bold 16px sans-serif';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText('請先新增或選擇一個片段', w/2, h/2);
+    return;
+  }
+
+  // Draw ALL selected entities' nodes
+  selectedEntities.forEach(entityKey => {
+    if (!seg.nodes[entityKey]) return;
+    const nodes = seg.nodes[entityKey];
+    const isBall = entityKey === 'ball';
+    const isHome = entityKey.startsWith('home-');
+    let nodeColor = '#fff';
+    let entityLabel = '⚽';
+    if (!isBall) {
+      const jersey = parseInt(entityKey.split('-')[1]);
+      const lineup = isHome ? homeLineup : awayLineup;
+      const player = lineup.find(p => p.jersey === jersey);
+      nodeColor = (player && player.keeper) ? (isHome ? '#44dd66' : '#dddd44') : (isHome ? homeColor : awayColor);
+      entityLabel = '#' + jersey;
+    }
+
+    // Connecting lines
+    ctx.beginPath();
+    for (let i = 0; i < 4; i++) {
+      const nx = nodes[i].x * sx, ny = nodes[i].y * sy;
+      if (i === 0) ctx.moveTo(nx, ny); else ctx.lineTo(nx, ny);
+    }
+    ctx.strokeStyle = nodeColor;
+    ctx.lineWidth = 2.5;
+    ctx.setLineDash([8, 5]);
+    ctx.globalAlpha = 0.8;
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.globalAlpha = 1;
+
+    // Draw node circles — LARGE with clear numbers
+    for (let i = 0; i < 4; i++) {
+      const nx = nodes[i].x * sx, ny = nodes[i].y * sy;
+      const r = isBall ? 18 : 22;
+      const isDragging = editorDraggingNode === i && selectedEntity === entityKey;
+
+      // Glow for active drag
+      if (isDragging) {
+        ctx.beginPath(); ctx.arc(nx, ny, r + 8, 0, Math.PI*2);
+        ctx.fillStyle = 'rgba(255,255,255,0.2)'; ctx.fill();
+      }
+
+      // Node circle
+      ctx.beginPath(); ctx.arc(nx, ny, r, 0, Math.PI*2);
+      ctx.fillStyle = nodeColor; ctx.fill();
+      ctx.strokeStyle = '#fff'; ctx.lineWidth = 3; ctx.stroke();
+
+      // Node number — BIG and clear
+      ctx.fillStyle = isBall ? '#333' : '#fff';
+      ctx.font = `bold ${r}px sans-serif`;
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText(i + 1, nx, ny + 1);
+    }
+
+    // Entity label near node 1
+    ctx.fillStyle = nodeColor;
+    ctx.font = 'bold 11px sans-serif';
+    ctx.textAlign = 'left'; ctx.textBaseline = 'bottom';
+    ctx.fillText(entityLabel, nodes[0].x * sx + 14, nodes[0].y * sy - 4);
+  });
+}
+
+// ===============================================================
+// GOAL TEMPLATES (20+ patterns)
+// ===============================================================
+// Each template returns {ball, players} node data for 4 keyframes
+// Coords assume HOME attacks RIGHT (x→120). Away auto-mirrors.
+// Players: key → [{x,y},{x,y},{x,y},{x,y}] (4 nodes)
+
+const GOAL_TEMPLATES = [
+  // ══════ 前場進攻 (禁區內) ══════
+  { id:'fa1', cat:'前場', zone:'禁區', icon:'🎯', name:'中路直塞', desc:'中場直傳，前鋒單刀破門',
+    build: () => ({
+      ball: [{x:55,y:40},{x:78,y:38},{x:100,y:40},{x:118,y:40}],
+      players: {'home-9':[{x:70,y:40},{x:85,y:39},{x:105,y:40},{x:116,y:40}], 'home-10':[{x:55,y:40},{x:58,y:41},{x:62,y:40},{x:65,y:40}], 'away-4':[{x:85,y:38},{x:90,y:38},{x:100,y:40},{x:105,y:40}]} }) },
+  { id:'fa2', cat:'前場', zone:'禁區', icon:'👆', name:'門前搶點', desc:'禁區內混戰，搶點射門',
+    build: () => ({
+      ball: [{x:95,y:30},{x:105,y:35},{x:112,y:38},{x:118,y:40}],
+      players: {'home-9':[{x:100,y:35},{x:106,y:37},{x:112,y:39},{x:116,y:40}], 'home-10':[{x:95,y:30},{x:100,y:32},{x:105,y:35},{x:108,y:36}], 'away-4':[{x:105,y:35},{x:108,y:36},{x:110,y:38},{x:112,y:39}]} }) },
+  { id:'fa3', cat:'前場', zone:'禁區', icon:'🏃', name:'個人突破', desc:'前鋒盤帶突破射門',
+    build: () => ({
+      ball: [{x:65,y:35},{x:80,y:32},{x:98,y:36},{x:118,y:40}],
+      players: {'home-9':[{x:65,y:35},{x:80,y:32},{x:97,y:35},{x:115,y:40}], 'away-4':[{x:78,y:38},{x:85,y:36},{x:95,y:38},{x:100,y:40}], 'away-5':[{x:82,y:42},{x:88,y:40},{x:96,y:40},{x:100,y:42}]} }) },
+  { id:'fa4', cat:'前場', zone:'禁區', icon:'🌙', name:'挑射過人', desc:'前鋒挑球過守門員',
+    build: () => ({
+      ball: [{x:75,y:40},{x:95,y:38},{x:110,y:40},{x:118,y:40}],
+      players: {'home-9':[{x:75,y:40},{x:94,y:38},{x:108,y:40},{x:115,y:40}], 'away-1':[{x:115,y:40},{x:112,y:40},{x:108,y:42},{x:106,y:44}]} }) },
+
+  // ══════ 前場進攻 (禁區外) ══════
+  { id:'fb1', cat:'前場', zone:'禁區外', icon:'💥', name:'禁區外遠射', desc:'禁區邊緣大力抽射',
+    build: () => ({
+      ball: [{x:55,y:38},{x:70,y:40},{x:85,y:40},{x:118,y:39}],
+      players: {'home-8':[{x:55,y:38},{x:68,y:40},{x:83,y:40},{x:85,y:40}], 'home-9':[{x:85,y:35},{x:95,y:36},{x:105,y:38},{x:110,y:38}], 'away-6':[{x:75,y:42},{x:80,y:42},{x:85,y:42},{x:88,y:42}]} }) },
+  { id:'fb2', cat:'前場', zone:'禁區外', icon:'🔄', name:'撞牆配合', desc:'中路一二腳配合射門',
+    build: () => ({
+      ball: [{x:65,y:38},{x:80,y:35},{x:75,y:40},{x:118,y:39}],
+      players: {'home-9':[{x:65,y:38},{x:72,y:36},{x:82,y:38},{x:115,y:39}], 'home-10':[{x:75,y:42},{x:80,y:35},{x:75,y:40},{x:80,y:40}], 'away-6':[{x:78,y:40},{x:80,y:40},{x:82,y:40},{x:90,y:40}]} }) },
+
+  // ══════ 右路進攻 ══════
+  { id:'ra1', cat:'右路', zone:'傳中', icon:'➡️', name:'右路傳中頭球', desc:'右翼突破傳中，前鋒頭球',
+    build: () => ({
+      ball: [{x:55,y:20},{x:85,y:12},{x:108,y:25},{x:118,y:38}],
+      players: {'home-7':[{x:55,y:18},{x:80,y:10},{x:105,y:15},{x:108,y:25}], 'home-9':[{x:70,y:40},{x:85,y:35},{x:105,y:30},{x:116,y:38}], 'away-3':[{x:90,y:25},{x:95,y:22},{x:108,y:28},{x:114,y:36}]} }) },
+  { id:'ra2', cat:'右路', zone:'內切', icon:'↗️', name:'右路內切射門', desc:'右翼內切禁區邊緣射門',
+    build: () => ({
+      ball: [{x:70,y:15},{x:85,y:18},{x:95,y:30},{x:118,y:38}],
+      players: {'home-7':[{x:70,y:14},{x:84,y:16},{x:94,y:28},{x:98,y:32}], 'home-9':[{x:80,y:40},{x:90,y:38},{x:100,y:35},{x:108,y:38}], 'away-3':[{x:82,y:20},{x:88,y:22},{x:94,y:30},{x:98,y:34}]} }) },
+  { id:'ra3', cat:'右路', zone:'倒三角', icon:'↩️', name:'右路倒三角', desc:'右路底線回傳中路射門',
+    build: () => ({
+      ball: [{x:85,y:15},{x:105,y:10},{x:115,y:20},{x:118,y:40}],
+      players: {'home-7':[{x:85,y:14},{x:104,y:9},{x:114,y:18},{x:112,y:22}], 'home-9':[{x:90,y:40},{x:95,y:38},{x:100,y:36},{x:105,y:38}], 'away-3':[{x:100,y:18},{x:108,y:15},{x:112,y:20},{x:110,y:25}]} }) },
+  { id:'ra4', cat:'右路', zone:'套邊', icon:'🌀', name:'右路套邊傳中', desc:'邊後衛套邊上前傳中射門',
+    build: () => ({
+      ball: [{x:50,y:15},{x:70,y:10},{x:100,y:8},{x:118,y:38}],
+      players: {'home-2':[{x:50,y:14},{x:68,y:9},{x:98,y:7},{x:105,y:15}], 'home-7':[{x:65,y:20},{x:75,y:18},{x:85,y:15},{x:90,y:20}], 'home-9':[{x:85,y:40},{x:95,y:38},{x:105,y:36},{x:116,y:38}]} }) },
+
+  // ══════ 左路進攻 ══════
+  { id:'la1', cat:'左路', zone:'傳中', icon:'⬅️', name:'左路傳中頭球', desc:'左翼突破傳中，前鋒頭球',
+    build: () => ({
+      ball: [{x:55,y:60},{x:85,y:68},{x:108,y:55},{x:118,y:42}],
+      players: {'home-11':[{x:55,y:62},{x:80,y:70},{x:105,y:65},{x:108,y:55}], 'home-9':[{x:70,y:40},{x:85,y:45},{x:105,y:50},{x:116,y:42}], 'away-2':[{x:90,y:55},{x:95,y:58},{x:108,y:52},{x:114,y:44}]} }) },
+  { id:'la2', cat:'左路', zone:'內切', icon:'↙️', name:'左路內切射門', desc:'左翼內切禁區邊緣射門',
+    build: () => ({
+      ball: [{x:70,y:65},{x:85,y:62},{x:95,y:50},{x:118,y:42}],
+      players: {'home-11':[{x:70,y:66},{x:84,y:64},{x:94,y:52},{x:98,y:48}], 'home-9':[{x:80,y:40},{x:90,y:42},{x:100,y:45},{x:108,y:42}], 'away-2':[{x:82,y:60},{x:88,y:58},{x:94,y:50},{x:98,y:46}]} }) },
+  { id:'la3', cat:'左路', zone:'倒三角', icon:'↪️', name:'左路倒三角', desc:'左路底線回傳中路射門',
+    build: () => ({
+      ball: [{x:85,y:65},{x:105,y:70},{x:115,y:60},{x:118,y:42}],
+      players: {'home-11':[{x:85,y:66},{x:104,y:71},{x:114,y:62},{x:112,y:58}], 'home-9':[{x:90,y:40},{x:95,y:42},{x:100,y:44},{x:105,y:42}], 'away-2':[{x:100,y:62},{x:108,y:65},{x:112,y:60},{x:110,y:55}]} }) },
+  { id:'la4', cat:'左路', zone:'套邊', icon:'🌀', name:'左路套邊傳中', desc:'邊後衛套邊上前傳中射門',
+    build: () => ({
+      ball: [{x:50,y:65},{x:70,y:70},{x:100,y:72},{x:118,y:42}],
+      players: {'home-3':[{x:50,y:66},{x:68,y:71},{x:98,y:73},{x:105,y:65}], 'home-11':[{x:65,y:60},{x:75,y:62},{x:85,y:65},{x:90,y:60}], 'home-9':[{x:85,y:40},{x:95,y:42},{x:105,y:44},{x:116,y:42}]} }) },
+
+  // ══════ 反擊 ══════
+  { id:'ct1', cat:'反擊', zone:'中路', icon:'⚡', name:'中路快速反擊', desc:'後場搶斷快速反擊長傳',
+    build: () => ({
+      ball: [{x:25,y:35},{x:55,y:30},{x:90,y:35},{x:118,y:40}],
+      players: {'home-6':[{x:25,y:35},{x:30,y:36},{x:35,y:38},{x:40,y:38}], 'home-9':[{x:60,y:38},{x:75,y:35},{x:95,y:36},{x:115,y:40}], 'home-7':[{x:55,y:20},{x:70,y:18},{x:90,y:22},{x:105,y:30}]} }) },
+  { id:'ct2', cat:'反擊', zone:'長傳', icon:'⬆️', name:'後衛長傳反擊', desc:'後衛長傳找前鋒快速反擊',
+    build: () => ({
+      ball: [{x:20,y:50},{x:50,y:30},{x:90,y:35},{x:118,y:40}],
+      players: {'home-5':[{x:20,y:50},{x:22,y:48},{x:25,y:48},{x:28,y:48}], 'home-9':[{x:70,y:38},{x:80,y:34},{x:95,y:36},{x:115,y:40}]} }) },
+  { id:'ct3', cat:'反擊', zone:'短傳', icon:'💨', name:'短傳推進反擊', desc:'多人短傳配合快速推進',
+    build: () => ({
+      ball: [{x:35,y:42},{x:55,y:35},{x:80,y:38},{x:118,y:40}],
+      players: {'home-6':[{x:35,y:42},{x:40,y:40},{x:45,y:40},{x:50,y:40}], 'home-8':[{x:50,y:35},{x:55,y:35},{x:60,y:36},{x:65,y:38}], 'home-10':[{x:60,y:40},{x:70,y:38},{x:80,y:38},{x:85,y:38}], 'home-9':[{x:80,y:42},{x:90,y:40},{x:100,y:40},{x:115,y:40}]} }) },
+
+  // ══════ 主隊角球 ══════
+  { id:'ck1', cat:'主隊角球', zone:'上方', icon:'🚩', name:'主隊角球(上)', desc:'主隊進攻方右上角球開出，禁區頭球',
+    build: () => ({
+      ball: [{x:119,y:1},{x:112,y:15},{x:108,y:35},{x:118,y:38}],
+      players: {'home-10':[{x:117,y:2},{x:115,y:5},{x:112,y:15},{x:112,y:20}], 'home-9':[{x:105,y:45},{x:106,y:40},{x:107,y:35},{x:116,y:38}], 'home-4':[{x:105,y:30},{x:106,y:32},{x:107,y:34},{x:110,y:36}], 'away-4':[{x:108,y:38},{x:108,y:36},{x:108,y:35},{x:112,y:38}], 'away-5':[{x:108,y:42},{x:108,y:40},{x:108,y:38},{x:112,y:42}]} }) },
+  { id:'ck2', cat:'主隊角球', zone:'下方', icon:'🚩', name:'主隊角球(下)', desc:'主隊進攻方右下角球開出，禁區頭球',
+    build: () => ({
+      ball: [{x:119,y:79},{x:112,y:65},{x:108,y:45},{x:118,y:42}],
+      players: {'home-10':[{x:117,y:78},{x:115,y:75},{x:112,y:65},{x:112,y:60}], 'home-9':[{x:105,y:35},{x:106,y:40},{x:107,y:45},{x:116,y:42}], 'home-4':[{x:105,y:50},{x:106,y:48},{x:107,y:46},{x:110,y:44}], 'away-4':[{x:108,y:42},{x:108,y:44},{x:108,y:45},{x:112,y:42}], 'away-5':[{x:108,y:38},{x:108,y:40},{x:108,y:42},{x:112,y:38}]} }) },
+
+  // ══════ 客隊角球 ══════
+  { id:'ck3', cat:'客隊角球', zone:'上方', icon:'🏴', name:'客隊角球(上)', desc:'客隊進攻方左上角球開出，禁區頭球',
+    build: () => ({
+      ball: [{x:1,y:1},{x:8,y:15},{x:12,y:35},{x:2,y:38}],
+      players: {'away-10':[{x:3,y:2},{x:5,y:5},{x:8,y:15},{x:8,y:20}], 'away-9':[{x:15,y:45},{x:14,y:40},{x:13,y:35},{x:4,y:38}], 'away-4':[{x:15,y:30},{x:14,y:32},{x:13,y:34},{x:10,y:36}], 'home-4':[{x:12,y:38},{x:12,y:36},{x:12,y:35},{x:8,y:38}], 'home-5':[{x:12,y:42},{x:12,y:40},{x:12,y:38},{x:8,y:42}]} }) },
+  { id:'ck4', cat:'客隊角球', zone:'下方', icon:'🏴', name:'客隊角球(下)', desc:'客隊進攻方左下角球開出，禁區頭球',
+    build: () => ({
+      ball: [{x:1,y:79},{x:8,y:65},{x:12,y:45},{x:2,y:42}],
+      players: {'away-10':[{x:3,y:78},{x:5,y:75},{x:8,y:65},{x:8,y:60}], 'away-9':[{x:15,y:35},{x:14,y:40},{x:13,y:45},{x:4,y:42}], 'away-4':[{x:15,y:50},{x:14,y:48},{x:13,y:46},{x:10,y:44}], 'home-4':[{x:12,y:42},{x:12,y:44},{x:12,y:45},{x:8,y:42}], 'home-5':[{x:12,y:38},{x:12,y:40},{x:12,y:42},{x:8,y:38}]} }) },
+
+  // ══════ 自由球 ══════
+  { id:'fk1', cat:'定位球', zone:'正面', icon:'🎯', name:'自由球直射', desc:'禁區前正面自由球直射',
+    build: () => ({
+      ball: [{x:85,y:40},{x:85,y:40},{x:100,y:40},{x:118,y:39}],
+      players: {'home-10':[{x:84,y:42},{x:84,y:42},{x:84,y:42},{x:86,y:42}], 'home-7':[{x:84,y:38},{x:84,y:38},{x:84,y:38},{x:86,y:38}]} }) },
+  { id:'fk2', cat:'定位球', zone:'右側', icon:'🔀', name:'自由球配合', desc:'自由球短傳配合射門',
+    build: () => ({
+      ball: [{x:75,y:25},{x:80,y:28},{x:88,y:32},{x:118,y:38}],
+      players: {'home-10':[{x:74,y:26},{x:78,y:28},{x:80,y:30},{x:82,y:30}], 'home-7':[{x:76,y:24},{x:80,y:28},{x:87,y:31},{x:90,y:33}], 'home-8':[{x:78,y:30},{x:82,y:32},{x:88,y:32},{x:90,y:34}]} }) },
+
+  // ══════ 邊線球 ══════
+  { id:'ti1', cat:'邊線球', zone:'右側', icon:'📥', name:'右側邊線球', desc:'右邊線球發到禁區射門',
+    build: () => ({
+      ball: [{x:90,y:0},{x:95,y:5},{x:105,y:25},{x:118,y:38}],
+      players: {'home-2':[{x:89,y:1},{x:90,y:2},{x:92,y:3},{x:94,y:5}], 'home-9':[{x:95,y:30},{x:100,y:28},{x:105,y:30},{x:116,y:38}], 'home-10':[{x:92,y:20},{x:95,y:18},{x:100,y:20},{x:105,y:25}]} }) },
+  { id:'ti2', cat:'邊線球', zone:'左側', icon:'📥', name:'左側邊線球', desc:'左邊線球發到禁區射門',
+    build: () => ({
+      ball: [{x:90,y:80},{x:95,y:75},{x:105,y:55},{x:118,y:42}],
+      players: {'home-3':[{x:89,y:79},{x:90,y:78},{x:92,y:77},{x:94,y:75}], 'home-9':[{x:95,y:50},{x:100,y:52},{x:105,y:50},{x:116,y:42}], 'home-10':[{x:92,y:60},{x:95,y:62},{x:100,y:60},{x:105,y:55}]} }) },
+
+  // ══════ 點球 PK ══════
+  { id:'pk1', cat:'點球', zone:'左', icon:'⚽', name:'PK罰進左側', desc:'點球射向守門員左側',
+    build: () => ({
+      ball: [{x:108,y:40},{x:108,y:40},{x:114,y:40},{x:118,y:34}],
+      players: {'home-9':[{x:105,y:40},{x:106,y:40},{x:107,y:40},{x:108,y:41}], 'away-1':[{x:118,y:40},{x:118,y:40},{x:117,y:42},{x:117,y:46}]} }) },
+  { id:'pk2', cat:'點球', zone:'中', icon:'⚽', name:'PK罰進中路', desc:'點球射向中路',
+    build: () => ({
+      ball: [{x:108,y:40},{x:108,y:40},{x:114,y:40},{x:118,y:40}],
+      players: {'home-9':[{x:105,y:40},{x:106,y:40},{x:107,y:40},{x:108,y:41}], 'away-1':[{x:118,y:40},{x:118,y:40},{x:116,y:38},{x:114,y:34}]} }) },
+  { id:'pk3', cat:'點球', zone:'右', icon:'⚽', name:'PK罰進右側', desc:'點球射向守門員右側',
+    build: () => ({
+      ball: [{x:108,y:40},{x:108,y:40},{x:114,y:40},{x:118,y:46}],
+      players: {'home-9':[{x:105,y:40},{x:106,y:40},{x:107,y:40},{x:108,y:41}], 'away-1':[{x:118,y:40},{x:118,y:40},{x:117,y:38},{x:117,y:34}]} }) },
+
+  // ══════ 其他 ══════
+  { id:'ot1', cat:'其他', zone:'失誤', icon:'🔙', name:'門將失誤', desc:'回傳門將失誤被搶射門',
+    build: () => ({
+      ball: [{x:90,y:30},{x:108,y:35},{x:112,y:40},{x:118,y:40}],
+      players: {'away-4':[{x:90,y:30},{x:95,y:32},{x:100,y:35},{x:105,y:38}], 'away-1':[{x:115,y:40},{x:113,y:38},{x:112,y:40},{x:112,y:42}], 'home-9':[{x:95,y:42},{x:100,y:40},{x:108,y:40},{x:115,y:40}]} }) },
+  { id:'ot2', cat:'其他', zone:'烏龍', icon:'😱', name:'烏龍球', desc:'防守球員不慎自擺烏龍',
+    build: () => ({
+      ball: [{x:85,y:25},{x:100,y:30},{x:110,y:36},{x:118,y:40}],
+      players: {'away-4':[{x:95,y:28},{x:102,y:32},{x:110,y:36},{x:114,y:38}], 'away-1':[{x:118,y:40},{x:117,y:40},{x:116,y:40},{x:115,y:41}], 'home-9':[{x:85,y:30},{x:88,y:32},{x:92,y:34},{x:95,y:36}]} }) },
+];
+
+function mirrorNodes(nodes) {
+  // Mirror x coords for away team attack (attack LEFT toward x=0)
+  const mirrored = {};
+  Object.entries(nodes).forEach(([key, positions]) => {
+    mirrored[key] = positions.map(p => ({ x: 120 - p.x, y: p.y }));
+  });
+  return mirrored;
+}
+
+function applyTemplate(tplId, forceAway) {
+  const tpl = GOAL_TEMPLATES.find(t => t.id === tplId);
+  if (!tpl) return;
+
+  const isAway = forceAway === true;
+  const minute = parseInt(document.getElementById('tpl-minute').value) || 0;
+  const second = parseInt(document.getElementById('tpl-second').value) || 0;
+  const goalSec = minute * 60 + second;
+
+  // Check overlap
+  const dur = 8; // 8 second segment for goal
+  const startSec = Math.max(0, goalSec - dur);
+  const endSec = goalSec;
+  const hasOverlap = segments.some(s => !(endSec <= s.startSeconds || startSec >= s.endSeconds));
+  if (hasOverlap) {
+    alert('此時間與現有片段重疊，請調整時間');
+    return;
+  }
+
+  // Build node data from template
+  const raw = tpl.build();
+  let ballNodes = raw.ball;
+  let playerNodes = raw.players;
+
+  // Mirror for away attack
+  if (isAway) {
+    ballNodes = ballNodes.map(p => ({ x: 120 - p.x, y: p.y }));
+    playerNodes = mirrorNodes(playerNodes);
+    // Swap home-/away- prefixes
+    const swapped = {};
+    Object.entries(playerNodes).forEach(([key, val]) => {
+      const newKey = key.startsWith('home-') ? key.replace('home-', 'away-') : key.replace('away-', 'home-');
+      swapped[newKey] = val;
+    });
+    playerNodes = swapped;
+  }
+
+  // Create segment
+  const seg = {
+    id: 'seg-' + Date.now(),
+    startSeconds: startSec,
+    endSeconds: endSec,
+    published: true, // auto-publish
+    templateName: (isAway ? '客' : '主') + ' ' + tpl.icon + ' ' + tpl.name,
+    visible: ['ball', ...Object.keys(playerNodes)],
+    nodes: { 'ball': ballNodes, ...playerNodes }
+  };
+
+  segments.push(seg);
+  segments.sort((a, b) => a.startSeconds - b.startSeconds);
+  selectSegment(seg.id);
+  renderSegmentsList();
+  renderPublishedTimeline();
+  saveSession();
+
+  // Auto-preview immediately
+  playSegment(seg.id);
+
+  // Auto-set next minute for convenience
+  document.getElementById('tpl-minute').value = minute;
+  document.getElementById('tpl-second').value = second;
+}
+
+function renderTemplateGrid() {
+  const grid = document.getElementById('template-grid');
+  if (!grid) return;
+
+  // Merge cats: skip 主隊角球/客隊角球, unify to 角球 etc
+  const catMap = {};
+  GOAL_TEMPLATES.forEach(t => {
+    let displayCat = t.cat;
+    if (displayCat === '主隊角球' || displayCat === '客隊角球') displayCat = '角球';
+    if (!catMap[displayCat]) catMap[displayCat] = [];
+    catMap[displayCat].push(t);
+  });
+  const cats = Object.keys(catMap);
+  let activeCat = cats[0];
+
+  function render(cat) {
+    activeCat = cat;
+    const filtered = catMap[cat] || [];
+    // For templates that already specify team (角球), show as-is
+    // For other templates, show 主隊 and 客隊 buttons side by side
+    let cardsHtml = '';
+    filtered.forEach(t => {
+      const isTeamSpecific = t.cat === '主隊角球' || t.cat === '客隊角球';
+      if (isTeamSpecific) {
+        const teamLabel = t.cat.includes('主隊') ? '主' : '客';
+        const teamClass = t.cat.includes('主隊') ? 'tpl-home' : 'tpl-away';
+        cardsHtml += `<div class="tpl-card ${teamClass}" onclick="applyTemplate('${t.id}',${t.cat.includes('客隊')})"
+          onmouseenter="previewTemplate('${t.id}',${t.cat.includes('客隊')})"
+          onmouseleave="stopPreviewTemplate()"
+          title="${t.desc}">
+          <span class="tpl-icon">${t.icon}</span>
+          <span class="tpl-team-tag ${teamClass}">${teamLabel}</span>
+          <span class="tpl-name">${t.name}</span>
+        </div>`;
+      } else {
+        // Two buttons: 主隊 + 客隊
+        cardsHtml += `<div class="tpl-card tpl-home" onclick="applyTemplate('${t.id}',false)"
+          onmouseenter="previewTemplate('${t.id}',false)"
+          onmouseleave="stopPreviewTemplate()"
+          title="主隊：${t.desc}">
+          <span class="tpl-icon">${t.icon}</span>
+          <span class="tpl-team-tag tpl-home">主</span>
+          <span class="tpl-name">${t.name}</span>
+        </div>`;
+        cardsHtml += `<div class="tpl-card tpl-away" onclick="applyTemplate('${t.id}',true)"
+          onmouseenter="previewTemplate('${t.id}',true)"
+          onmouseleave="stopPreviewTemplate()"
+          title="客隊：${t.desc}">
+          <span class="tpl-icon">${t.icon}</span>
+          <span class="tpl-team-tag tpl-away">客</span>
+          <span class="tpl-name">${t.name}</span>
+        </div>`;
+      }
+    });
+    grid.innerHTML = `
+      <div class="tpl-tabs">${cats.map(c =>
+        `<button class="tpl-tab ${c === cat ? 'active' : ''}" onclick="renderTemplateGridCat('${c}')">${c}</button>`
+      ).join('')}</div>
+      <div class="tpl-cards">${cardsHtml}</div>
+    `;
+  }
+
+  render(activeCat);
+  window.renderTemplateGridCat = render;
+}
+
+let tplPreviewTimer = null;
+
+function previewTemplate(tplId, isAway) {
+  const tpl = GOAL_TEMPLATES.find(t => t.id === tplId);
+  if (!tpl) return;
+
+  if (tplPreviewTimer) { clearInterval(tplPreviewTimer); tplPreviewTimer = null; }
+
+  isAway = isAway === true;
+  const raw = tpl.build();
+  let ballNodes = raw.ball;
+  let playerNodes = raw.players;
+
+  if (isAway) {
+    ballNodes = ballNodes.map(p => ({ x: 120 - p.x, y: p.y }));
+    const mirrored = {};
+    Object.entries(playerNodes).forEach(([key, positions]) => {
+      const newKey = key.startsWith('home-') ? key.replace('home-', 'away-') : key.replace('away-', 'home-');
+      mirrored[newKey] = positions.map(p => ({ x: 120 - p.x, y: p.y }));
+    });
+    playerNodes = mirrored;
+  }
+
+  // Animate on the editor canvas
+  const start = performance.now();
+  const dur = 2000; // 2 second preview loop
+
+  tplPreviewTimer = setInterval(() => {
+    const elapsed = (performance.now() - start) % dur;
+    const progress = elapsed / dur;
+
+    if (!editorCtx) return;
+    const ctx = editorCtx;
+    const w = editorCanvas.width, h = editorCanvas.height;
+    const sx = w / 120, sy = h / 80;
+
+    drawPitchOnCtx(ctx, w, h);
+
+    // Interpolate ball
+    const bp = interpolateNodes(ballNodes, progress);
+
+    // Draw player paths as dashed lines
+    Object.entries(playerNodes).forEach(([key, nodes]) => {
+      const isHome = key.startsWith('home-');
+      const color = isHome ? (homeColor || '#5ba3f5') : (awayColor || '#f5a623');
+      // Path line
+      ctx.beginPath();
+      nodes.forEach((n, i) => { if (i === 0) ctx.moveTo(n.x * sx, n.y * sy); else ctx.lineTo(n.x * sx, n.y * sy); });
+      ctx.strokeStyle = color; ctx.lineWidth = 1.5; ctx.globalAlpha = 0.3;
+      ctx.setLineDash([4, 3]); ctx.stroke(); ctx.setLineDash([]); ctx.globalAlpha = 1;
+
+      // Current position
+      const pp = interpolateNodes(nodes, progress);
+      ctx.beginPath(); ctx.arc(pp.x * sx, pp.y * sy, 16, 0, Math.PI * 2);
+      ctx.fillStyle = color; ctx.globalAlpha = 0.8; ctx.fill(); ctx.globalAlpha = 1;
+      ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.stroke();
+      const jersey = key.split('-')[1];
+      ctx.fillStyle = '#fff'; ctx.font = 'bold 12px sans-serif';
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText(jersey, pp.x * sx, pp.y * sy);
+    });
+
+    // Ball path
+    ctx.beginPath();
+    ballNodes.forEach((n, i) => { if (i === 0) ctx.moveTo(n.x * sx, n.y * sy); else ctx.lineTo(n.x * sx, n.y * sy); });
+    ctx.strokeStyle = 'rgba(255,255,255,0.3)'; ctx.lineWidth = 1.5;
+    ctx.setLineDash([4, 3]); ctx.stroke(); ctx.setLineDash([]);
+
+    // Ball
+    ctx.beginPath(); ctx.arc(bp.x * sx, bp.y * sy, 10, 0, Math.PI * 2);
+    ctx.fillStyle = '#fff'; ctx.fill();
+    ctx.strokeStyle = '#333'; ctx.lineWidth = 2; ctx.stroke();
+
+    // Label
+    ctx.fillStyle = 'rgba(255,255,255,0.6)';
+    ctx.font = 'bold 12px sans-serif';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+    const tplObj = GOAL_TEMPLATES.find(t => t.id === tplId);
+    ctx.fillText(tplObj ? tplObj.name : '', w/2, 6);
+  }, 33);
+}
+
+function stopPreviewTemplate() {
+  if (tplPreviewTimer) {
+    clearInterval(tplPreviewTimer);
+    tplPreviewTimer = null;
+    editorDraw(); // restore normal view
+  }
+}
+
+// ===============================================================
+// SEGMENT MANAGEMENT
+// ===============================================================
+function addSegment() {
+  const startSec = findNextAvailableTime(10);
+  const endSec = startSec + 10;
+  const seg = {
+    id: 'seg-' + Date.now(),
+    startSeconds: startSec,
+    endSeconds: endSec,
+    published: false,
+    visible: ['ball'], // only visible entities get animated
+    nodes: {
+      'ball': [
+        { x: 60, y: 40 },
+        { x: 60, y: 40 },
+        { x: 60, y: 40 },
+        { x: 60, y: 40 }
+      ]
+    }
+  };
+  segments.push(seg);
+  segments.sort((a, b) => a.startSeconds - b.startSeconds);
+  selectSegment(seg.id);
+  renderSegmentsList();
+  saveSession();
+}
+
+function selectSegment(id) {
+  activeSegmentId = id;
+  // Restore selectedEntities from segment's visible list
+  const seg = segments.find(s => s.id === id);
+  if (seg && seg.visible) {
+    selectedEntities = new Set(seg.visible);
+    selectedEntity = seg.visible[seg.visible.length - 1] || 'ball';
+  }
+  initEntityNodes();
+  updateButtonStates();
+  renderSegmentsList();
+  editorDraw();
+}
+
+function deleteSegment(id) {
+  segments = segments.filter(s => s.id !== id);
+  if (activeSegmentId === id) {
+    activeSegmentId = segments.length > 0 ? segments[0].id : null;
+  }
+  renderSegmentsList();
+  renderPublishedTimeline();
+  editorDraw();
+  saveSession();
+}
+
+function saveSegment(id) {
+  // Mark as saved (data is already in memory)
+  const seg = segments.find(s => s.id === id);
+  if (seg) seg._saved = true;
+  renderSegmentsList();
+  saveSession();
+}
+
+function updateSegmentTime(id, field, value) {
+  const seg = segments.find(s => s.id === id);
+  if (!seg) return;
+  const seconds = parseTimeInput(value);
+  if (field === 'start') seg.startSeconds = seconds;
+  else seg.endSeconds = seconds;
+  if (seg.endSeconds <= seg.startSeconds) seg.endSeconds = seg.startSeconds + 5;
+  segments.sort((a, b) => a.startSeconds - b.startSeconds);
+  renderSegmentsList();
+  saveSession();
+}
+
+function initEntityNodes() {
+  if (!activeSegmentId) return;
+  const seg = segments.find(s => s.id === activeSegmentId);
+  if (!seg) return;
+
+  // If entity has no nodes yet in this segment, initialize them
+  if (!seg.nodes[selectedEntity]) {
+    if (selectedEntity === 'ball') {
+      seg.nodes['ball'] = [
+        { x: 60, y: 40 }, { x: 60, y: 40 }, { x: 60, y: 40 }, { x: 60, y: 40 }
+      ];
+    } else {
+      // Player — init at their formation position
+      const isHome = selectedEntity.startsWith('home-');
+      const jersey = parseInt(selectedEntity.split('-')[1]);
+      const lineup = isHome ? homeLineup : awayLineup;
+      const player = lineup.find(p => p.jersey === jersey);
+      if (player) {
+        const fx = isHome ? player.baseX : 120 - player.baseX;
+        const fy = player.baseY;
+        seg.nodes[selectedEntity] = [
+          { x: fx, y: fy }, { x: fx, y: fy }, { x: fx, y: fy }, { x: fx, y: fy }
+        ];
+      }
+    }
+  }
+}
+
+function findNextAvailableTime(duration) {
+  let candidate = 0;
+  segments.sort((a, b) => a.startSeconds - b.startSeconds);
+  for (const seg of segments) {
+    if (candidate + duration <= seg.startSeconds) break;
+    if (candidate < seg.endSeconds) candidate = seg.endSeconds;
+  }
+  return candidate;
+}
+
+function renderSegmentsList() {
+  const list = document.getElementById('segments-list');
+  if (!list) return;
+
+  if (segments.length === 0) {
+    list.innerHTML = '<div style="color:#667;font-size:11px;padding:8px 0;text-align:center">尚無片段 — 點擊「新增片段」開始</div>';
+    return;
+  }
+
+  list.innerHTML = '';
+  segments.forEach((seg, idx) => {
+    const card = document.createElement('div');
+    card.className = 'segment-card' + (seg.id === activeSegmentId ? ' active' : '');
+    card.onclick = (e) => {
+      if (e.target.tagName === 'BUTTON' || e.target.tagName === 'INPUT') return;
+      selectSegment(seg.id);
+    };
+
+    const startMin = Math.floor(seg.startSeconds / 60);
+    const startSec = seg.startSeconds % 60;
+    const endMin = Math.floor(seg.endSeconds / 60);
+    const endSec = seg.endSeconds % 60;
+    const pubLabel = seg.published ? ' <span style="color:#5ddf5d;font-size:10px">[已上架]</span>' : '';
+
+    const entityCount = Object.keys(seg.nodes).length;
+    const entityInfo = entityCount > 0 ? `(${entityCount} 個物件)` : '';
+
+    // Build minute options (0-90)
+    let minOpts = '';
+    for (let m = 0; m <= 90; m++) minOpts += `<option value="${m}">${m}</option>`;
+    // Build second options (00-59)
+    let secOpts = '';
+    for (let s = 0; s < 60; s++) secOpts += `<option value="${s}">${String(s).padStart(2,'0')}</option>`;
+
+    // Header with dropdown selectors
+    const header = document.createElement('div');
+    header.className = 'segment-header';
+    header.innerHTML = `
+      <span class="seg-label">片段${idx+1}</span>${seg.templateName ? ` <span style="color:#f5a623;font-size:10px">${seg.templateName}</span>` : ''}${pubLabel}
+      <select class="seg-time-sel" data-seg="${seg.id}" data-field="start-min" onclick="event.stopPropagation()">${minOpts}</select>
+      <span style="color:#667;font-size:10px">'</span>
+      <select class="seg-time-sel" data-seg="${seg.id}" data-field="start-sec" onclick="event.stopPropagation()">${secOpts}</select>
+      <span style="color:#667;font-size:10px">"</span>
+      <span style="color:#667;margin:0 2px">至</span>
+      <select class="seg-time-sel" data-seg="${seg.id}" data-field="end-min" onclick="event.stopPropagation()">${minOpts}</select>
+      <span style="color:#667;font-size:10px">'</span>
+      <select class="seg-time-sel" data-seg="${seg.id}" data-field="end-sec" onclick="event.stopPropagation()">${secOpts}</select>
+      <span style="color:#667;font-size:10px">"</span>
+      <span style="color:#556;font-size:10px;margin-left:auto">${entityInfo}</span>
+    `;
+    // Set selected values
+    const selects = header.querySelectorAll('.seg-time-sel');
+    selects[0].value = startMin;
+    selects[1].value = startSec;
+    selects[2].value = endMin;
+    selects[3].value = endSec;
+    // Change handlers
+    selects.forEach(sel => {
+      sel.onchange = () => {
+        const sm = parseInt(header.querySelectorAll('.seg-time-sel')[0].value);
+        const ss = parseInt(header.querySelectorAll('.seg-time-sel')[1].value);
+        const em = parseInt(header.querySelectorAll('.seg-time-sel')[2].value);
+        const es = parseInt(header.querySelectorAll('.seg-time-sel')[3].value);
+        seg.startSeconds = sm * 60 + ss;
+        seg.endSeconds = em * 60 + es;
+        if (seg.endSeconds <= seg.startSeconds) seg.endSeconds = seg.startSeconds + 5;
+        segments.sort((a, b) => a.startSeconds - b.startSeconds);
+        renderSegmentsList();
+        editorDraw();
+        saveSession();
+      };
+    });
+    card.appendChild(header);
+
+    // Actions: 播放 + 儲存 + 刪除
+    const actions = document.createElement('div');
+    actions.className = 'segment-actions';
+    actions.innerHTML = `
+      <button class="seg-play-btn" onclick="event.stopPropagation();playSegment('${seg.id}')">▶ 播放</button>
+      <button class="seg-save-btn" onclick="event.stopPropagation();saveSegment('${seg.id}')">儲存</button>
+      <button class="seg-delete-btn" onclick="event.stopPropagation();deleteSegment('${seg.id}')">刪除</button>
+    `;
+    card.appendChild(actions);
+
+    list.appendChild(card);
+  });
+}
+
+// ===============================================================
+// SEGMENT PLAYBACK
+// ===============================================================
+function generateSegmentFrames(segment) {
+  const dur = segment.endSeconds - segment.startSeconds;
+  if (dur <= 0) return [];
+  const fps = 30;
+  const totalFrames = Math.round(dur * fps);
+  const frames = [];
+
+  for (let f = 0; f <= totalFrames; f++) {
+    const progress = f / totalFrames;
+    const t = segment.startSeconds + progress * dur;
+
+    // Interpolate ball position (always has nodes)
+    const ballNodes = segment.nodes['ball'];
+    const ballPos = interpolateNodes(ballNodes, progress);
+
+    // Build player array — only include visible entities
+    const visibleSet = new Set(segment.visible || ['ball']);
+    const playerList = [];
+
+    // Process home players — only visible ones
+    homeLineup.forEach(p => {
+      const key = 'home-' + p.jersey;
+      if (!visibleSet.has(key)) return; // skip hidden players
+      if (segment.nodes[key]) {
+        const pos = interpolateNodes(segment.nodes[key], progress);
+        playerList.push({ x: pos.x, y: pos.y, jersey: p.jersey, teammate: true, keeper: p.keeper, actor: false });
+      } else {
+        // Visible but no nodes — use formation position
+        playerList.push({ x: p.baseX, y: p.baseY, jersey: p.jersey, teammate: true, keeper: p.keeper, actor: false });
+      }
+    });
+
+    // Process away players — only visible ones
+    awayLineup.forEach(p => {
+      const key = 'away-' + p.jersey;
+      if (!visibleSet.has(key)) return; // skip hidden players
+      if (segment.nodes[key]) {
+        const pos = interpolateNodes(segment.nodes[key], progress);
+        playerList.push({ x: pos.x, y: pos.y, jersey: p.jersey, teammate: false, keeper: p.keeper, actor: false });
+      } else {
+        playerList.push({ x: 120 - p.baseX, y: p.baseY, jersey: p.jersey, teammate: false, keeper: p.keeper, actor: false });
+      }
+    });
+
+    frames.push({
+      t: progress,
+      matchT: t,
+      ball: ballPos,
+      players: playerList
+    });
+  }
+  return frames;
+}
+
+function interpolateNodes(nodes, progress) {
+  if (!nodes || nodes.length !== 4) return { x: 60, y: 40 };
+  // progress 0..1 maps to nodes 0..3
+  const idx = progress * 3;
+  const i = Math.min(Math.floor(idx), 2);
+  const localT = idx - i;
+  const ease = localT < 0.5 ? 2*localT*localT : -1 + (4 - 2*localT)*localT;
+  const a = nodes[i], b = nodes[i+1];
+  return {
+    x: a.x + (b.x - a.x) * ease,
+    y: a.y + (b.y - a.y) * ease
+  };
+}
+
+function playSegment(id) {
+  const seg = segments.find(s => s.id === id);
+  if (!seg) return;
+
+  if (segPreviewTimer) { clearInterval(segPreviewTimer); segPreviewTimer = null; }
+
+  const frames = generateSegmentFrames(seg);
+  if (frames.length === 0) return;
+
+  pauseVirtualMatch();
+  const dur = (seg.endSeconds - seg.startSeconds) * 1000;
+  const start = performance.now();
+
+  segPreviewTimer = setInterval(() => {
+    const elapsed = performance.now() - start;
+    const progress = Math.min(elapsed / dur, 1);
+
+    // Find surrounding frames
+    let fA = frames[0], fB = frames[frames.length-1];
+    for (let i = 0; i < frames.length - 1; i++) {
+      if (progress >= frames[i].t && progress <= frames[i+1].t) {
+        fA = frames[i]; fB = frames[i+1]; break;
+      }
+    }
+    const segDur = fB.t - fA.t || 1;
+    const localT = Math.min((progress - fA.t) / segDur, 1);
+
+    ballX = fA.ball.x + (fB.ball.x - fA.ball.x) * localT;
+    ballY = fA.ball.y + (fB.ball.y - fA.ball.y) * localT;
+
+    if (fA.players && fB.players && fA.players.length === fB.players.length) {
+      currentPlayers = fA.players.map((pa, i) => {
+        const pb = fB.players[i];
+        return {
+          x: pa.x + (pb.x - pa.x) * localT,
+          y: pa.y + (pb.y - pa.y) * localT,
+          jersey: pa.jersey, teammate: pa.teammate, keeper: pa.keeper, actor: false
+        };
+      });
+      smoothedPlayers = currentPlayers.map(p => ({ ...p }));
+    }
+
+    drawPitch();
+    drawPlayers(currentPlayers);
+    if (ballX >= 0 && ballX <= 120 && ballY >= 0 && ballY <= 80) drawBall(ballX, ballY);
+
+    if (progress >= 1) {
+      clearInterval(segPreviewTimer);
+      segPreviewTimer = null;
+      setTimeout(() => resumeVirtualMatch(), 500);
+    }
+  }, 33);
+}
+
+function previewSegmentAtProgress(id, progress) {
+  const seg = segments.find(s => s.id === id);
+  if (!seg) return;
+  const frames = generateSegmentFrames(seg);
+  if (frames.length === 0) return;
+
+  progress = Math.max(0, Math.min(1, progress));
+
+  // Find surrounding frames
+  let fA = frames[0], fB = frames[frames.length - 1];
+  for (let i = 0; i < frames.length - 1; i++) {
+    if (progress >= frames[i].t && progress <= frames[i + 1].t) {
+      fA = frames[i]; fB = frames[i + 1]; break;
+    }
+  }
+  const segDur = fB.t - fA.t || 1;
+  const localT = Math.min((progress - fA.t) / segDur, 1);
+
+  ballX = fA.ball.x + (fB.ball.x - fA.ball.x) * localT;
+  ballY = fA.ball.y + (fB.ball.y - fA.ball.y) * localT;
+
+  if (fA.players && fB.players && fA.players.length === fB.players.length) {
+    currentPlayers = fA.players.map((pa, i) => {
+      const pb = fB.players[i];
+      return {
+        x: pa.x + (pb.x - pa.x) * localT,
+        y: pa.y + (pb.y - pa.y) * localT,
+        jersey: pa.jersey, teammate: pa.teammate, keeper: pa.keeper, actor: false
+      };
+    });
+    smoothedPlayers = currentPlayers.map(p => ({ ...p }));
+  }
+
+  drawPitch();
+  drawPlayers(currentPlayers);
+  if (ballX >= 0 && ballX <= 120 && ballY >= 0 && ballY <= 80) drawBall(ballX, ballY);
+}
+
+// ===============================================================
+// PUBLISHING
+// ===============================================================
+function publishAll() {
+  let count = 0;
+  segments.forEach(s => {
+    if (!s.published) { s.published = true; count++; }
+  });
+  renderPublishedTimeline();
+  renderSegmentsList();
+  saveSession();
+  if (count > 0) {
+    alert(`已上架 ${count} 個片段到時間軸`);
+  } else {
+    alert('所有片段已經上架');
+  }
+}
+
+function renderPublishedTimeline() {
+  const track = document.getElementById('timeline-track');
+  if (!track) return;
+  track.querySelectorAll('.timeline-segment').forEach(el => el.remove());
+
+  segments.forEach(seg => {
+    if (!seg.published) return;
+    const leftPct = (seg.startSeconds / maxMatchSeconds) * 100;
+    const widthPct = ((seg.endSeconds - seg.startSeconds) / maxMatchSeconds) * 100;
+    const div = document.createElement('div');
+    div.className = 'timeline-segment';
+    div.style.left = leftPct + '%';
+    div.style.width = Math.max(widthPct, 0.5) + '%';
+    const dur = seg.endSeconds - seg.startSeconds;
+    div.textContent = dur + 's';
+    track.appendChild(div);
+  });
+}
+
+// ===============================================================
+// VIRTUAL MATCH ENGINE
+// ===============================================================
+function startVirtualMatch() {
+  stopScene();
+  if (vmInterval) clearInterval(vmInterval);
+
+  vmActive = true; vmPaused = false; isPlaying = true;
+  vmHomeScore = 0; vmAwayScore = 0; vmGoals = [];
+  homeId = 'vm-home'; awayId = 'vm-away';
+  totalMatchSeconds = 0; currentPeriod = 1; currentMatchMinute = 0; maxMatchSeconds = 5400;
+  vmPossessionHome = true;
+  ballX = 60; ballY = 40; smoothedPlayers = [];
+
+  document.getElementById('home-name').textContent = homeTeam;
+  document.getElementById('away-name').textContent = awayTeam;
+  document.getElementById('home-flag').innerHTML = `<span style="display:inline-block;width:24px;height:24px;border-radius:50%;background:${homeColor};border:2px solid rgba(255,255,255,0.3)"></span>`;
+  document.getElementById('away-flag').innerHTML = `<span style="display:inline-block;width:24px;height:24px;border-radius:50%;background:${awayColor};border:2px solid rgba(255,255,255,0.3)"></span>`;
+  document.getElementById('home-score').textContent = '0';
+  document.getElementById('away-score').textContent = '0';
+
+  const track = document.getElementById('timeline-track');
+  track.querySelectorAll('.timeline-event, .timeline-half, .timeline-segment').forEach(el => el.remove());
+  const homeHalf = document.createElement('div');
+  homeHalf.className = 'timeline-half home';
+  homeHalf.innerHTML = `<span class="team-name-bg">${homeTeam}</span>`;
+  track.appendChild(homeHalf);
+  const awayHalf = document.createElement('div');
+  awayHalf.className = 'timeline-half away';
+  awayHalf.innerHTML = `<span class="team-name-bg">${awayTeam}</span>`;
+  track.appendChild(awayHalf);
+
+  updateTimeAxisLabels();
+  resizePitch();
+
+  // Set initial static formation
+  const initPlayers = [];
+  homeLineup.forEach(p => initPlayers.push({ x: p.baseX, y: p.baseY, teammate: true, keeper: p.keeper, actor: false, jersey: p.jersey }));
+  awayLineup.forEach(p => initPlayers.push({ x: 120 - p.baseX, y: p.baseY, teammate: false, keeper: p.keeper, actor: false, jersey: p.jersey }));
+  currentPlayers = initPlayers;
+  smoothedPlayers = initPlayers.map(p => ({ ...p }));
+
+  playSpeed = 1;
+  document.querySelectorAll('.speed-btn').forEach(b => b.classList.remove('active'));
+  document.querySelector('.speed-btn[data-speed="1"]').classList.add('active');
+
+  initTimelineSeek();
+  buildPlayerButtons();
+  selectEntity('ball');
+  editorInit();
+  renderTemplateGrid();
+  renderPublishedTimeline();
+  renderSegmentsList();
+
+  // Auto-select first segment if exists
+  if (segments.length > 0 && !activeSegmentId) {
+    activeSegmentId = segments[0].id;
+    renderSegmentsList();
+    editorDraw();
+  }
+
+  vmLastTick = performance.now();
+  vmInterval = setInterval(vmTick, 33);
+
+  // Draw initial frame
+  drawPitch();
+  drawPlayers(currentPlayers);
+  drawBall(ballX, ballY);
+
+  updatePlayButton();
+}
+
+function vmTick() {
+  if (!vmActive || vmPaused) return;
+  const now = performance.now();
+  const dt = (now - vmLastTick) / 1000;
+  vmLastTick = now;
+
+  const gameDt = dt * playSpeed;
+  totalMatchSeconds += gameDt;
+
+  if (totalMatchSeconds >= 2700 && currentPeriod === 1) { currentPeriod = 2; }
+  if (totalMatchSeconds >= 5400) { stopVirtualMatch(); return; }
+
+  currentMatchMinute = Math.floor(totalMatchSeconds / 60);
+  updateTimeDisplay();
+
+  // Check for active published segment
+  const activeSeg = segments.find(s => s.published && totalMatchSeconds >= s.startSeconds && totalMatchSeconds < s.endSeconds);
+  if (activeSeg) {
+    const progress = (totalMatchSeconds - activeSeg.startSeconds) / (activeSeg.endSeconds - activeSeg.startSeconds);
+    renderSegmentAtProgress(activeSeg, progress);
+  } else {
+    // No active segment — show static formation
+    drawPitch();
+    drawPlayers(currentPlayers);
+    drawBall(ballX, ballY);
+  }
+
+  // Update timeline progress + score
+  const timePct = Math.min((totalMatchSeconds / maxMatchSeconds) * 100, 100);
+  document.getElementById('timeline-progress').style.width = timePct + '%';
+  const timeInd = document.getElementById('timeline-time-indicator');
+  if (timeInd) { timeInd.style.left = timePct + '%'; timeInd.textContent = currentMatchMinute + "'"; }
+  document.getElementById('home-score').textContent = vmHomeScore;
+  document.getElementById('away-score').textContent = vmAwayScore;
+}
+
+function renderSegmentAtProgress(segment, progress) {
+  // Interpolate ball
+  const ballNodes = segment.nodes['ball'];
+  const ballPos = interpolateNodes(ballNodes, progress);
+  ballX = ballPos.x;
+  ballY = ballPos.y;
+
+  // Build player positions
+  const playerList = [];
+  const explicitKeys = new Set();
+
+  // Players with explicit nodes
+  Object.keys(segment.nodes).forEach(key => {
+    if (key === 'ball') return;
+    const isHome = key.startsWith('home-');
+    const jersey = parseInt(key.split('-')[1]);
+    const lineup = isHome ? homeLineup : awayLineup;
+    const player = lineup.find(p => p.jersey === jersey);
+    if (!player) return;
+    const pos = interpolateNodes(segment.nodes[key], progress);
+    playerList.push({ x: pos.x, y: pos.y, jersey: player.jersey, teammate: isHome, keeper: player.keeper, actor: false });
+    explicitKeys.add(key);
+  });
+
+  // Auto-position remaining players
+  const autoPlayers = getFormationPositions(ballX, ballY, 0, true);
+  autoPlayers.forEach(ap => {
+    const key = (ap.teammate ? 'home-' : 'away-') + ap.jersey;
+    if (!explicitKeys.has(key)) {
+      playerList.push(ap);
+    }
+  });
+
+  currentPlayers = playerList;
+  smoothedPlayers = playerList.map(p => ({ ...p }));
+
+  drawPitch();
+  drawPlayers(currentPlayers);
+  if (ballX >= 0 && ballX <= 120 && ballY >= 0 && ballY <= 80) drawBall(ballX, ballY);
+}
+
+function togglePlayPause() {
+  if (vmPaused) {
+    // If we have published segments and time is before the first one, jump to it
+    const published = segments.filter(s => s.published).sort((a,b) => a.startSeconds - b.startSeconds);
+    if (published.length > 0 && totalMatchSeconds < published[0].startSeconds) {
+      totalMatchSeconds = published[0].startSeconds;
+      currentMatchMinute = Math.floor(totalMatchSeconds / 60);
+      currentPeriod = totalMatchSeconds >= 2700 ? 2 : 1;
+    }
+    resumeVirtualMatch();
+    isPlaying = true;
+  } else {
+    pauseVirtualMatch();
+    isPlaying = false;
+  }
+  updatePlayButton();
+}
+
+function updatePlayButton() {
+  const btn = document.getElementById('btn-play');
+  if (btn) btn.innerHTML = vmPaused ? '&#9654;' : '&#9208;';
+}
+
+function pauseVirtualMatch() { vmPaused = true; updatePlayButton(); }
+function resumeVirtualMatch() { vmPaused = false; vmLastTick = performance.now(); updatePlayButton(); }
+function stopVirtualMatch() { vmActive = false; if (vmInterval) { clearInterval(vmInterval); vmInterval = null; } }
+
+// ===============================================================
+// TIMELINE SEEKING
+// ===============================================================
+function initTimelineSeek() {
+  const track = document.getElementById('timeline-track');
+  if (track.dataset.seekInit) return;
+  track.dataset.seekInit = '1';
+
+  function getTimeFromEvent(e) {
+    const rect = track.getBoundingClientRect();
+    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+    const pct = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
+    return pct * maxMatchSeconds;
+  }
+
+  track.addEventListener('mousedown', (e) => {
+    timelineDragging = true; pauseVirtualMatch();
+    seekToTime(getTimeFromEvent(e)); track.classList.add('seeking');
+  });
+  document.addEventListener('mousemove', (e) => {
+    if (!timelineDragging) return; seekToTime(getTimeFromEvent(e));
+  });
+  document.addEventListener('mouseup', () => {
+    if (!timelineDragging) return; timelineDragging = false;
+    track.classList.remove('seeking');
+  });
+  track.addEventListener('touchstart', (e) => {
+    timelineDragging = true; pauseVirtualMatch();
+    seekToTime(getTimeFromEvent(e)); track.classList.add('seeking');
+  }, {passive:true});
+  document.addEventListener('touchmove', (e) => {
+    if (!timelineDragging) return; seekToTime(getTimeFromEvent(e));
+  }, {passive:true});
+  document.addEventListener('touchend', () => {
+    if (!timelineDragging) return; timelineDragging = false;
+    track.classList.remove('seeking');
+  });
+}
+
+function seekToTime(targetSeconds) {
+  totalMatchSeconds = Math.max(0, Math.min(maxMatchSeconds, targetSeconds));
+  currentMatchMinute = Math.floor(totalMatchSeconds / 60);
+  currentPeriod = totalMatchSeconds >= 2700 ? 2 : 1;
+
+  // Recalculate score
+  vmHomeScore = 0; vmAwayScore = 0;
+  vmGoals.forEach(g => {
+    const gs = g.goalMatchSeconds || g.minute * 60;
+    if (gs <= totalMatchSeconds) { if (g.team === 'home') vmHomeScore++; else vmAwayScore++; }
+  });
+  document.getElementById('home-score').textContent = vmHomeScore;
+  document.getElementById('away-score').textContent = vmAwayScore;
+  updateTimeDisplay();
+
+  const timePct = Math.min((totalMatchSeconds / maxMatchSeconds) * 100, 100);
+  document.getElementById('timeline-progress').style.width = timePct + '%';
+  const ti = document.getElementById('timeline-time-indicator');
+  if (ti) { ti.style.left = timePct + '%'; ti.textContent = currentMatchMinute + "'"; }
+
+  // Check if we're inside a published segment
+  const activeSeg = segments.find(s => s.published && totalMatchSeconds >= s.startSeconds && totalMatchSeconds < s.endSeconds);
+  if (activeSeg) {
+    const progress = (totalMatchSeconds - activeSeg.startSeconds) / (activeSeg.endSeconds - activeSeg.startSeconds);
+    renderSegmentAtProgress(activeSeg, progress);
+  } else {
+    drawPitch(); drawPlayers(currentPlayers); drawBall(ballX, ballY);
+  }
+}
+
+// ===============================================================
+// GOAL KEYFRAMES BUILDER (kept for goal support)
+// ===============================================================
+function bcBuildGoalKeyframes(params) {
+  const { isHome, originX, originY, shotType, playerName, playerJersey } = params;
+  const mirr = (x) => isHome ? x : 120 - x;
+  const shotX = mirr(originX) + (Math.random()-0.5)*4;
+  const shotY = originY + (Math.random()-0.5)*4;
+  const goalX = isHome ? 119 : 1;
+  const goalY = 37 + Math.random()*6;
+  const startX = mirr(35+Math.random()*10);
+  const startY = 25+Math.random()*30;
+  const midX = mirr(55+Math.random()*10);
+  const midY = 15+Math.random()*50;
+  const preX = mirr(75+Math.random()*10);
+  const preY = originY + (Math.random()-0.5)*20;
+  const scorer = { jersey: playerJersey, playerId: playerJersey };
+  const keyframes = [
+    { t: 0, bx: startX, by: startY, carrier: scorer },
+    { t: 1.0, bx: midX, by: midY, carrier: scorer },
+    { t: 2.2, bx: preX, by: preY, carrier: scorer },
+    { t: 3.2, bx: shotX, by: shotY, carrier: scorer },
+    { t: 4.2, bx: goalX, by: goalY, carrier: scorer, effect: 'shot' },
+    { t: 4.7, bx: goalX, by: goalY, carrier: scorer, label: `\u26BD 進球！ ${playerName}`, effect: 'burst' },
+    { t: 7.7, bx: goalX, by: goalY, carrier: null }
+  ];
+  return keyframes;
+}
+
+function bcInsertGoal(params) {
+  const { minute, second, isHome, playerName, playerJersey, goalMatchSeconds } = params;
+  if (isHome) vmHomeScore++; else vmAwayScore++;
+  document.getElementById('home-score').textContent = vmHomeScore;
+  document.getElementById('away-score').textContent = vmAwayScore;
+  vmGoals.push({
+    minute, second: second || 0, team: isHome ? 'home' : 'away',
+    playerName, playerJersey, goalMatchSeconds
+  });
+  vmGoals.sort((a, b) => (a.goalMatchSeconds || a.minute*60) - (b.goalMatchSeconds || b.minute*60));
+  vmRenderTimeline();
+  saveSession();
+}
+
+function vmRenderTimeline() {
+  const track = document.getElementById('timeline-track');
+  track.querySelectorAll('.timeline-event').forEach(el => el.remove());
+  vmGoals.forEach(g => {
+    const pct = (g.minute / 90) * 100;
+    const isHome = g.team === 'home';
+    const shortName = (g.playerName || '').split(' ').pop();
+    const div = document.createElement('div');
+    div.className = `timeline-event ${isHome ? 'home' : 'away'}`;
+    div.style.left = pct + '%';
+    div.innerHTML = '\u26BD';
+    div.dataset.label = `${g.minute}' ${shortName}`;
+    div.title = `${g.minute}' ${g.playerName || ''}`;
+    track.appendChild(div);
+  });
+}
+
+// ===============================================================
+// DATA PERSISTENCE
+// ===============================================================
+const STORAGE_KEY = 'fbBroadcastSession';
+
+function saveSession() {
+  try {
+    const data = {
+      version: 2,
+      savedAt: new Date().toISOString(),
+      setup: { homeTeam, awayTeam, homeColor, awayColor, homeNumColor, awayNumColor, homeLineup, awayLineup },
+      match: { totalMatchSeconds, currentPeriod, vmHomeScore, vmAwayScore, playSpeed },
+      goals: vmGoals,
+      segments: segments
+    };
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+  } catch(e) { console.warn('儲存失敗:', e); }
+}
+
+function loadSession() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return null;
+    const data = JSON.parse(raw);
+    return (data.version === 1 || data.version === 2) ? data : null;
+  } catch(e) { return null; }
+}
+
+function restoreSession(data) {
+  if (!data) data = _pendingRestore;
+  if (!data) return;
+  homeTeam = data.setup.homeTeam; awayTeam = data.setup.awayTeam;
+  homeColor = data.setup.homeColor; awayColor = data.setup.awayColor;
+  homeNumColor = data.setup.homeNumColor; awayNumColor = data.setup.awayNumColor;
+  homeLineup = data.setup.homeLineup; awayLineup = data.setup.awayLineup;
+  homeId = 'vm-home'; awayId = 'vm-away';
+  vmHomeScore = data.match.vmHomeScore; vmAwayScore = data.match.vmAwayScore;
+  vmGoals = data.goals || [];
+  totalMatchSeconds = data.match.totalMatchSeconds || 0;
+  currentPeriod = data.match.currentPeriod || 1;
+  playSpeed = data.match.playSpeed || 1;
+
+  // Handle segments — migrate from v1 if needed
+  if (data.version === 1 && data.segments && data.segments.length > 0 && data.segments[0].frames) {
+    // v1 segments had frames, not nodes. Convert to node-based.
+    segments = [];
+    // Can't easily convert frame-based to node-based, just start fresh
+  } else {
+    segments = data.segments || [];
+  }
+
+  document.getElementById('match-setup-overlay').style.display = 'none';
+  const restoreOv = document.getElementById('restore-overlay');
+  if (restoreOv) restoreOv.remove();
+  startVirtualMatchFromRestore();
+}
+
+function startVirtualMatchFromRestore() {
+  if (vmInterval) clearInterval(vmInterval);
+  vmActive = true; vmPaused = false; isPlaying = true;
+  maxMatchSeconds = 5400;
+  vmPossessionHome = true;
+  ballX = 60; ballY = 40;
+  smoothedPlayers = [];
+  currentMatchMinute = Math.floor(totalMatchSeconds / 60);
+
+  document.getElementById('home-name').textContent = homeTeam;
+  document.getElementById('away-name').textContent = awayTeam;
+  document.getElementById('home-flag').innerHTML = `<span style="display:inline-block;width:24px;height:24px;border-radius:50%;background:${homeColor};border:2px solid rgba(255,255,255,0.3)"></span>`;
+  document.getElementById('away-flag').innerHTML = `<span style="display:inline-block;width:24px;height:24px;border-radius:50%;background:${awayColor};border:2px solid rgba(255,255,255,0.3)"></span>`;
+  document.getElementById('home-score').textContent = vmHomeScore;
+  document.getElementById('away-score').textContent = vmAwayScore;
+
+  const track = document.getElementById('timeline-track');
+  track.querySelectorAll('.timeline-event, .timeline-half, .timeline-segment').forEach(el => el.remove());
+  const homeHalf = document.createElement('div');
+  homeHalf.className = 'timeline-half home';
+  homeHalf.innerHTML = `<span class="team-name-bg">${homeTeam}</span>`;
+  track.appendChild(homeHalf);
+  const awayHalf = document.createElement('div');
+  awayHalf.className = 'timeline-half away';
+  awayHalf.innerHTML = `<span class="team-name-bg">${awayTeam}</span>`;
+  track.appendChild(awayHalf);
+  vmRenderTimeline();
+  updateTimeAxisLabels();
+
+  document.querySelectorAll('.speed-btn').forEach(b => b.classList.remove('active'));
+  document.querySelector(`.speed-btn[data-speed="${playSpeed}"]`)?.classList.add('active');
+  resizePitch();
+  initTimelineSeek();
+
+  // Set initial static formation
+  const initPlayers = [];
+  homeLineup.forEach(p => initPlayers.push({ x: p.baseX, y: p.baseY, teammate: true, keeper: p.keeper, actor: false, jersey: p.jersey }));
+  awayLineup.forEach(p => initPlayers.push({ x: 120 - p.baseX, y: p.baseY, teammate: false, keeper: p.keeper, actor: false, jersey: p.jersey }));
+  currentPlayers = initPlayers;
+  smoothedPlayers = initPlayers.map(p => ({ ...p }));
+
+  buildPlayerButtons();
+  selectEntity('ball');
+  editorInit();
+  renderTemplateGrid();
+  renderPublishedTimeline();
+  renderSegmentsList();
+
+  if (segments.length > 0 && !activeSegmentId) {
+    activeSegmentId = segments[0].id;
+    renderSegmentsList();
+    editorDraw();
+  }
+
+  vmLastTick = performance.now();
+  vmInterval = setInterval(vmTick, 33);
+
+  drawPitch();
+  drawPlayers(currentPlayers);
+  drawBall(ballX, ballY);
+  updatePlayButton();
+}
+
+function exportSessionJSON() {
+  saveSession();
+  const raw = localStorage.getItem(STORAGE_KEY);
+  if (!raw) return;
+  const blob = new Blob([raw], {type: 'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `match-${homeTeam}-vs-${awayTeam}-${Date.now()}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function importSessionJSON(file) {
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    try {
+      const data = JSON.parse(e.target.result);
+      if (data.version !== 1 && data.version !== 2) { alert('無效的檔案格式'); return; }
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+      restoreSession(data);
+    } catch(err) { alert('匯入失敗: ' + err.message); }
+  };
+  reader.readAsText(file);
+}
+
+function clearSession() {
+  if (!confirm('確定要清除所有已儲存的資料嗎？')) return;
+  localStorage.removeItem(STORAGE_KEY);
+  location.reload();
+}
+
+function showRestoreDialog(data) {
+  _pendingRestore = data;
+  const div = document.createElement('div');
+  div.id = 'restore-overlay';
+  div.style.cssText = 'position:fixed;inset:0;z-index:1002;display:flex;align-items:center;justify-content:center;background:rgba(10,22,40,0.97)';
+  const score = `${data.match.vmHomeScore} : ${data.match.vmAwayScore}`;
+  const min = Math.floor((data.match.totalMatchSeconds||0) / 60);
+  div.innerHTML = `<div style="background:linear-gradient(180deg,#0f1e36,#0a1628);border:1px solid rgba(91,163,245,0.3);border-radius:12px;padding:24px;text-align:center;max-width:400px">
+    <h2 style="color:#5ba3f5;margin-bottom:16px">發現上次的比賽資料</h2>
+    <p style="color:#aab;font-size:14px;margin-bottom:8px">${data.setup.homeTeam} vs ${data.setup.awayTeam}</p>
+    <p style="color:#fff;font-size:24px;font-weight:800;margin-bottom:8px">${score}</p>
+    <p style="color:#5ddf5d;font-size:13px;margin-bottom:20px">第 ${min} 分鐘 · ${(data.goals||[]).length} 個進球 · ${(data.segments||[]).length} 個片段</p>
+    <div style="display:flex;gap:12px;justify-content:center">
+      <button onclick="restoreSession(_pendingRestore)" style="background:linear-gradient(135deg,#2ecc71,#27ae60);color:#fff;border:none;padding:10px 24px;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer">恢復比賽</button>
+      <button onclick="document.getElementById('restore-overlay').remove();localStorage.removeItem(STORAGE_KEY);document.getElementById('match-setup-overlay').style.display='flex';setupRenderRoster('a',SETUP_DEFAULT_ROSTER_A);setupRenderRoster('b',SETUP_DEFAULT_ROSTER_B);setupQuickFill();" style="background:#1a3050;color:#aab;border:1px solid rgba(255,255,255,0.15);padding:10px 24px;border-radius:8px;font-size:14px;cursor:pointer">重新開始</button>
+    </div>
+  </div>`;
+  document.body.appendChild(div);
+}
+
+window.addEventListener('beforeunload', saveSession);
+
+// ===============================================================
+// SPEED BUTTONS
+// ===============================================================
+document.querySelectorAll('.speed-btn').forEach(btn => {
+  btn.onclick = () => {
+    document.querySelectorAll('.speed-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    playSpeed = parseInt(btn.dataset.speed);
+  };
+});
+
+// ===============================================================
+// INIT
+// ===============================================================
+async function init() {
+  resizePitch();
+  drawPitch();
+  drawBall(60, 40);
+
+  document.getElementById('loading').classList.add('hidden');
+
+  const saved = loadSession();
+  if (saved) {
+    showRestoreDialog(saved);
+  } else {
+    document.getElementById('match-setup-overlay').style.display = 'flex';
+    setupRenderRoster('a', SETUP_DEFAULT_ROSTER_A);
+    setupRenderRoster('b', SETUP_DEFAULT_ROSTER_B);
+    setupQuickFill();
+  }
+}
+
+window.addEventListener('resize', () => {
+  resizePitch();
+  drawPitch();
+  drawPlayers(currentPlayers);
+  drawBall(ballX, ballY);
+  editorInit();
+});
+
+init();
+</script>
+</body>
+</html>
