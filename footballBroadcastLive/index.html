@@ -18,8 +18,8 @@ body {
 
 /* ── Split-screen Layout ── */
 #app-layout { display: flex; width: 100%; height: 100vh; overflow: hidden; }
-#control-panel { width: 55%; overflow-y: auto; background: #0a1628; padding: 12px; display: flex; flex-direction: column; gap: 8px; }
-#preview-panel { width: 45%; background: linear-gradient(180deg, #1a2744, #0d1a30); display: flex; flex-direction: column; align-items: stretch; overflow: hidden; }
+#control-panel { width: 67%; overflow-y: auto; background: #0a1628; padding: 12px; display: flex; flex-direction: column; gap: 8px; }
+#preview-panel { width: 33%; background: linear-gradient(180deg, #1a2744, #0d1a30); display: flex; flex-direction: column; align-items: stretch; overflow: hidden; }
 #preview-panel #score-bar { padding: 6px 12px; flex-shrink: 0; }
 #preview-panel #timeline-section { padding: 6px 12px 4px; flex-shrink: 0; }
 #preview-panel #stadium-wrap { flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center; }
@@ -250,11 +250,19 @@ body {
 
 /* ── Segments Panel ── */
 #segments-panel { flex: 1; min-height: 80px; overflow-y: auto; border: 1px solid rgba(255,255,255,0.05); border-radius: 6px; padding: 4px; }
+.seg-columns-header { display: flex; gap: 6px; margin-bottom: 4px; }
+.seg-col-title { flex: 1; text-align: center; font-size: 11px; font-weight: 700; padding: 3px 0; border-radius: 4px; }
+.seg-col-title.seg-col-home { background: rgba(91,163,245,0.1); color: #5ba3f5; }
+.seg-col-title.seg-col-away { background: rgba(245,166,35,0.1); color: #f5a623; }
+#segments-list { display: flex; gap: 6px; }
+#segments-list .seg-column { flex: 1; display: flex; flex-direction: column; gap: 4px; min-width: 0; }
 .segment-card {
   background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06);
   border-radius: 6px; padding: 8px; margin-bottom: 6px;
 }
 .segment-card.active { border-color: rgba(91,163,245,0.4); background: rgba(91,163,245,0.05); }
+.segment-card.seg-home { border-left: 3px solid rgba(91,163,245,0.4); }
+.segment-card.seg-away { border-left: 3px solid rgba(245,166,35,0.4); }
 .segment-card:hover { border-color: rgba(255,255,255,0.12); }
 .segment-header { display: flex; align-items: center; gap: 6px; margin-bottom: 6px; font-size: 12px; flex-wrap: wrap; }
 .segment-header input {
@@ -284,6 +292,9 @@ body {
   padding: 4px 10px; border-radius: 4px; cursor: pointer; font-size: 11px; white-space: nowrap;
 }
 .seg-play-btn:hover { background: #254070; color: #fff; }
+.seg-toggle { display: flex; align-items: center; gap: 4px; cursor: pointer; font-size: 10px; }
+.seg-toggle input { width: 14px; height: 14px; accent-color: #5ddf5d; cursor: pointer; }
+.seg-toggle-label { color: #889; }
 .segment-actions { display: flex; gap: 4px; margin-top: 6px; }
 .segment-actions button {
   background: #1a3050; border: 1px solid rgba(255,255,255,0.12); color: #aab;
@@ -307,7 +318,7 @@ body {
 .tpl-tab.active { background: rgba(245,166,35,0.2); color: #f5a623; border-color: rgba(245,166,35,0.4); }
 
 /* Template cards */
-.tpl-cards { display: flex; gap: 4px; flex-wrap: wrap; }
+/* .tpl-cards removed — replaced by tpl-two-col layout */
 .tpl-card { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 4px; padding: 4px 6px; cursor: pointer; font-size: 10px; color: #aab; transition: all 0.2s; display: flex; align-items: center; gap: 3px; white-space: nowrap; }
 .tpl-card:hover { background: rgba(245,166,35,0.15); border-color: rgba(245,166,35,0.4); color: #fff; transform: translateY(-1px); box-shadow: 0 2px 8px rgba(245,166,35,0.2); }
 .tpl-card .tpl-icon { font-size: 12px; }
@@ -320,6 +331,12 @@ body {
 .tpl-team-tag { font-size: 9px; font-weight: 800; padding: 1px 4px; border-radius: 3px; }
 .tpl-team-tag.tpl-home { background: rgba(91,163,245,0.3); color: #5ba3f5; }
 .tpl-team-tag.tpl-away { background: rgba(245,166,35,0.3); color: #f5a623; }
+.tpl-two-col { display: flex; gap: 6px; }
+.tpl-col { flex: 1; min-width: 0; }
+.tpl-col-header { text-align: center; font-size: 10px; font-weight: 700; padding: 2px 0; border-radius: 3px; margin-bottom: 4px; }
+.tpl-col-header.tpl-home { background: rgba(91,163,245,0.1); color: #5ba3f5; }
+.tpl-col-header.tpl-away { background: rgba(245,166,35,0.1); color: #f5a623; }
+.tpl-col-cards { display: flex; flex-wrap: wrap; gap: 3px; }
 
 .publish-btn {
   width: 100%; padding: 14px;
@@ -439,12 +456,16 @@ document.addEventListener('touchmove', (e) => { if (e.touches.length > 1) e.prev
 
     <!-- Segments -->
     <div id="segments-panel">
+      <div class="seg-columns-header">
+        <span class="seg-col-title seg-col-home">主場片段</span>
+        <span class="seg-col-title seg-col-away">客場片段</span>
+      </div>
       <div id="segments-list"></div>
       <button id="add-segment-btn" class="cmd-btn" onclick="addSegment()" style="width:100%;margin-top:6px">＋ 手動新增片段</button>
     </div>
 
     <!-- Publish -->
-    <button id="publish-btn" class="publish-btn" onclick="publishAll()">推送主時間軸</button>
+    <button id="export-timeline-btn" class="publish-btn" onclick="exportTimelineJSON()">匯出時間軸 JSON</button>
 
     <!-- Data actions -->
     <div id="data-bar">
@@ -1137,7 +1158,31 @@ function editorHandleMove(pitchX, pitchY) {
   if (!seg || !seg.nodes[selectedEntity]) return;
   pitchX = Math.max(1, Math.min(119, pitchX));
   pitchY = Math.max(1, Math.min(79, pitchY));
-  seg.nodes[selectedEntity][editorDraggingNode] = { x: pitchX, y: pitchY };
+
+  const nodes = seg.nodes[selectedEntity];
+  const dragIdx = editorDraggingNode;
+
+  // Check if all 4 nodes are at roughly the same position (initial state)
+  const allSame = nodes.every(n => Math.hypot(n.x - nodes[0].x, n.y - nodes[0].y) < 3);
+
+  if (allSame) {
+    // First drag: spread all nodes into a path
+    // Origin = where nodes started, Target = where dragging to
+    const originX = nodes[0].x, originY = nodes[0].y;
+    // Node 4 = drag target (end), Node 1 = origin (start)
+    // Spread nodes 1→4 from origin to target
+    for (let i = 0; i < 4; i++) {
+      const t = i / 3; // 0, 0.33, 0.67, 1
+      nodes[i] = {
+        x: originX + (pitchX - originX) * t,
+        y: originY + (pitchY - originY) * t
+      };
+    }
+  } else {
+    // Normal: only move the dragged node
+    nodes[dragIdx] = { x: pitchX, y: pitchY };
+  }
+
   editorDraw();
 }
 
@@ -1537,38 +1582,33 @@ function renderTemplateGrid() {
   function render(cat) {
     activeCat = cat;
     const filtered = catMap[cat] || [];
-    // For templates that already specify team (角球), show as-is
-    // For other templates, show 主隊 and 客隊 buttons side by side
-    let cardsHtml = '';
+    let homeCards = '', awayCards = '';
+
     filtered.forEach(t => {
       const isTeamSpecific = t.cat === '主隊角球' || t.cat === '客隊角球';
       if (isTeamSpecific) {
-        const teamLabel = t.cat.includes('主隊') ? '主' : '客';
-        const teamClass = t.cat.includes('主隊') ? 'tpl-home' : 'tpl-away';
-        cardsHtml += `<div class="tpl-card ${teamClass}" onclick="applyTemplate('${t.id}',${t.cat.includes('客隊')})"
-          onmouseenter="previewTemplate('${t.id}',${t.cat.includes('客隊')})"
+        const isAwayTpl = t.cat.includes('客隊');
+        const card = `<div class="tpl-card ${isAwayTpl ? 'tpl-away' : 'tpl-home'}" onclick="applyTemplate('${t.id}',${isAwayTpl})"
+          onmouseenter="previewTemplate('${t.id}',${isAwayTpl})"
           onmouseleave="stopPreviewTemplate()"
           title="${t.desc}">
           <span class="tpl-icon">${t.icon}</span>
-          <span class="tpl-team-tag ${teamClass}">${teamLabel}</span>
-          <span class="tpl-name">${t.name}</span>
+          <span class="tpl-name">${t.name.replace(/主隊|客隊/,'')}</span>
         </div>`;
+        if (isAwayTpl) awayCards += card; else homeCards += card;
       } else {
-        // Two buttons: 主隊 + 客隊
-        cardsHtml += `<div class="tpl-card tpl-home" onclick="applyTemplate('${t.id}',false)"
+        homeCards += `<div class="tpl-card tpl-home" onclick="applyTemplate('${t.id}',false)"
           onmouseenter="previewTemplate('${t.id}',false)"
           onmouseleave="stopPreviewTemplate()"
           title="主隊：${t.desc}">
           <span class="tpl-icon">${t.icon}</span>
-          <span class="tpl-team-tag tpl-home">主</span>
           <span class="tpl-name">${t.name}</span>
         </div>`;
-        cardsHtml += `<div class="tpl-card tpl-away" onclick="applyTemplate('${t.id}',true)"
+        awayCards += `<div class="tpl-card tpl-away" onclick="applyTemplate('${t.id}',true)"
           onmouseenter="previewTemplate('${t.id}',true)"
           onmouseleave="stopPreviewTemplate()"
           title="客隊：${t.desc}">
           <span class="tpl-icon">${t.icon}</span>
-          <span class="tpl-team-tag tpl-away">客</span>
           <span class="tpl-name">${t.name}</span>
         </div>`;
       }
@@ -1577,7 +1617,16 @@ function renderTemplateGrid() {
       <div class="tpl-tabs">${cats.map(c =>
         `<button class="tpl-tab ${c === cat ? 'active' : ''}" onclick="renderTemplateGridCat('${c}')">${c}</button>`
       ).join('')}</div>
-      <div class="tpl-cards">${cardsHtml}</div>
+      <div class="tpl-two-col">
+        <div class="tpl-col">
+          <div class="tpl-col-header tpl-home">主場</div>
+          <div class="tpl-col-cards">${homeCards || '<div style="color:#667;font-size:10px;text-align:center">—</div>'}</div>
+        </div>
+        <div class="tpl-col">
+          <div class="tpl-col-header tpl-away">客場</div>
+          <div class="tpl-col-cards">${awayCards || '<div style="color:#667;font-size:10px;text-align:center">—</div>'}</div>
+        </div>
+      </div>
     `;
   }
 
@@ -1790,17 +1839,31 @@ function renderSegmentsList() {
   const list = document.getElementById('segments-list');
   if (!list) return;
 
+  // Create left/right columns
+  list.innerHTML = '';
+  const homeCol = document.createElement('div');
+  homeCol.className = 'seg-column';
+  const awayCol = document.createElement('div');
+  awayCol.className = 'seg-column';
+  list.appendChild(homeCol);
+  list.appendChild(awayCol);
+
   if (segments.length === 0) {
-    list.innerHTML = '<div style="color:#667;font-size:11px;padding:8px 0;text-align:center">尚無片段 — 點擊「新增片段」開始</div>';
+    homeCol.innerHTML = '<div style="color:#667;font-size:10px;text-align:center;padding:8px 0">無片段</div>';
+    awayCol.innerHTML = '<div style="color:#667;font-size:10px;text-align:center;padding:8px 0">無片段</div>';
     return;
   }
 
-  list.innerHTML = '';
-  segments.forEach((seg, idx) => {
+  let homeIdx = 0, awayIdx = 0;
+  segments.forEach((seg) => {
+    // Determine home or away from templateName
+    const isAway = seg.templateName && seg.templateName.startsWith('客');
+    const idx = isAway ? awayIdx++ : homeIdx++;
+
     const card = document.createElement('div');
-    card.className = 'segment-card' + (seg.id === activeSegmentId ? ' active' : '');
+    card.className = 'segment-card' + (seg.id === activeSegmentId ? ' active' : '') + (isAway ? ' seg-away' : ' seg-home');
     card.onclick = (e) => {
-      if (e.target.tagName === 'BUTTON' || e.target.tagName === 'INPUT') return;
+      if (e.target.tagName === 'BUTTON' || e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT' || e.target.tagName === 'LABEL') return;
       selectSegment(seg.id);
     };
 
@@ -1860,17 +1923,22 @@ function renderSegmentsList() {
     });
     card.appendChild(header);
 
-    // Actions: 播放 + 儲存 + 刪除
+    // Actions: 時間軸開關 + 播放 + 刪除
     const actions = document.createElement('div');
     actions.className = 'segment-actions';
+    const isOn = seg.published !== false;
     actions.innerHTML = `
+      <label class="seg-toggle" onclick="event.stopPropagation()" title="顯示在主時間軸">
+        <input type="checkbox" ${isOn ? 'checked' : ''} onchange="toggleSegmentPublish('${seg.id}',this.checked)">
+        <span class="seg-toggle-label">時間軸</span>
+      </label>
       <button class="seg-play-btn" onclick="event.stopPropagation();playSegment('${seg.id}')">▶ 播放</button>
       <button class="seg-save-btn" onclick="event.stopPropagation();saveSegment('${seg.id}')">儲存</button>
       <button class="seg-delete-btn" onclick="event.stopPropagation();deleteSegment('${seg.id}')">刪除</button>
     `;
     card.appendChild(actions);
 
-    list.appendChild(card);
+    (isAway ? awayCol : homeCol).appendChild(card);
   });
 }
 
@@ -2040,19 +2108,36 @@ function previewSegmentAtProgress(id, progress) {
 // ===============================================================
 // PUBLISHING
 // ===============================================================
-function publishAll() {
-  let count = 0;
-  segments.forEach(s => {
-    if (!s.published) { s.published = true; count++; }
-  });
+function toggleSegmentPublish(id, checked) {
+  const seg = segments.find(s => s.id === id);
+  if (!seg) return;
+  seg.published = checked;
   renderPublishedTimeline();
-  renderSegmentsList();
   saveSession();
-  if (count > 0) {
-    alert(`已上架 ${count} 個片段到時間軸`);
-  } else {
-    alert('所有片段已經上架');
-  }
+}
+
+function exportTimelineJSON() {
+  const published = segments.filter(s => s.published);
+  if (published.length === 0) { alert('沒有已啟用的片段'); return; }
+  const data = {
+    version: 1,
+    exportedAt: new Date().toISOString(),
+    match: { homeTeam, awayTeam, homeColor, awayColor },
+    segments: published.map(seg => ({
+      id: seg.id,
+      startSeconds: seg.startSeconds,
+      endSeconds: seg.endSeconds,
+      templateName: seg.templateName || '',
+      frames: generateSegmentFrames(seg)
+    }))
+  };
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `timeline-${homeTeam}-vs-${awayTeam}-${Date.now()}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
 }
 
 function renderPublishedTimeline() {
@@ -2162,15 +2247,39 @@ function vmTick() {
   updateTimeDisplay();
 
   // Check for active published segment
-  const activeSeg = segments.find(s => s.published && totalMatchSeconds >= s.startSeconds && totalMatchSeconds < s.endSeconds);
+  const published = segments.filter(s => s.published).sort((a,b) => a.startSeconds - b.startSeconds);
+  const activeSeg = published.find(s => totalMatchSeconds >= s.startSeconds && totalMatchSeconds < s.endSeconds);
+
   if (activeSeg) {
     const progress = (totalMatchSeconds - activeSeg.startSeconds) / (activeSeg.endSeconds - activeSeg.startSeconds);
     renderSegmentAtProgress(activeSeg, progress);
   } else {
-    // No active segment — show static formation
+    // No active segment — show "比賽進行中" on empty pitch
     drawPitch();
-    drawPlayers(currentPlayers);
-    drawBall(ballX, ballY);
+    const ctx = pitchCtx;
+    ctx.fillStyle = 'rgba(255,255,255,0.15)';
+    ctx.font = `bold ${Math.max(16, canvasW * 0.03)}px sans-serif`;
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText('比賽進行中', pitchCanvas.width / 2, pitchCanvas.height / 2);
+    // Show match time large
+    ctx.fillStyle = 'rgba(255,255,255,0.25)';
+    ctx.font = `bold ${Math.max(24, canvasW * 0.05)}px sans-serif`;
+    ctx.fillText(currentMatchMinute + "'", pitchCanvas.width / 2, pitchCanvas.height / 2 + 30);
+
+    // Auto-skip to next segment if there is one
+    const nextSeg = published.find(s => s.startSeconds > totalMatchSeconds);
+    if (nextSeg) {
+      // Fast-forward to next segment (skip empty time)
+      totalMatchSeconds = nextSeg.startSeconds;
+      currentMatchMinute = Math.floor(totalMatchSeconds / 60);
+      currentPeriod = totalMatchSeconds >= 2700 ? 2 : 1;
+    } else if (published.length > 0) {
+      // All segments played — pause at end
+      const lastSeg = published[published.length - 1];
+      if (totalMatchSeconds >= lastSeg.endSeconds) {
+        pauseVirtualMatch();
+      }
+    }
   }
 
   // Update timeline progress + score
@@ -2189,13 +2298,14 @@ function renderSegmentAtProgress(segment, progress) {
   ballX = ballPos.x;
   ballY = ballPos.y;
 
-  // Build player positions
+  // Build player positions — only visible entities
+  const visibleSet = new Set(segment.visible || []);
   const playerList = [];
-  const explicitKeys = new Set();
 
-  // Players with explicit nodes
+  // Only show players that are in the visible list
   Object.keys(segment.nodes).forEach(key => {
     if (key === 'ball') return;
+    if (!visibleSet.has(key)) return; // skip hidden
     const isHome = key.startsWith('home-');
     const jersey = parseInt(key.split('-')[1]);
     const lineup = isHome ? homeLineup : awayLineup;
@@ -2203,16 +2313,6 @@ function renderSegmentAtProgress(segment, progress) {
     if (!player) return;
     const pos = interpolateNodes(segment.nodes[key], progress);
     playerList.push({ x: pos.x, y: pos.y, jersey: player.jersey, teammate: isHome, keeper: player.keeper, actor: false });
-    explicitKeys.add(key);
-  });
-
-  // Auto-position remaining players
-  const autoPlayers = getFormationPositions(ballX, ballY, 0, true);
-  autoPlayers.forEach(ap => {
-    const key = (ap.teammate ? 'home-' : 'away-') + ap.jersey;
-    if (!explicitKeys.has(key)) {
-      playerList.push(ap);
-    }
   });
 
   currentPlayers = playerList;
@@ -2225,10 +2325,19 @@ function renderSegmentAtProgress(segment, progress) {
 
 function togglePlayPause() {
   if (vmPaused) {
-    // If we have published segments and time is before the first one, jump to it
     const published = segments.filter(s => s.published).sort((a,b) => a.startSeconds - b.startSeconds);
-    if (published.length > 0 && totalMatchSeconds < published[0].startSeconds) {
-      totalMatchSeconds = published[0].startSeconds;
+    if (published.length > 0) {
+      // Find next segment to play (from current time or restart from first)
+      const next = published.find(s => s.endSeconds > totalMatchSeconds);
+      if (next) {
+        // Jump to start of next segment if we're not inside one
+        if (totalMatchSeconds < next.startSeconds) {
+          totalMatchSeconds = next.startSeconds;
+        }
+      } else {
+        // All played — restart from first
+        totalMatchSeconds = published[0].startSeconds;
+      }
       currentMatchMinute = Math.floor(totalMatchSeconds / 60);
       currentPeriod = totalMatchSeconds >= 2700 ? 2 : 1;
     }
