@@ -346,6 +346,70 @@ body {
 }
 .publish-btn:hover { box-shadow: 0 4px 20px rgba(245,166,35,0.4); transform: translateY(-1px); }
 
+/* ── Goal Lightbox ── */
+#goal-lightbox {
+  position: fixed; inset: 0; z-index: 2000;
+  background: rgba(0,0,0,0.92);
+  display: none; flex-direction: column;
+  align-items: center; justify-content: center;
+  cursor: pointer;
+}
+#goal-lightbox.show { display: flex; }
+#goal-lightbox .lb-header {
+  text-align: center; margin-bottom: 16px;
+  animation: lbSlideDown 0.6s ease-out;
+}
+#goal-lightbox .lb-team-name {
+  font-size: 42px; font-weight: 900; letter-spacing: 3px;
+  text-shadow: 0 4px 20px rgba(0,0,0,0.5);
+}
+#goal-lightbox .lb-goal-text {
+  font-size: 80px; font-weight: 900; letter-spacing: 8px;
+  background: linear-gradient(135deg, #f5c542, #ff6b3d);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  animation: lbPulse 1s ease-in-out infinite;
+  text-shadow: none;
+}
+#goal-lightbox .lb-player {
+  font-size: 28px; font-weight: 700; color: #fff;
+  margin-top: 8px; animation: lbSlideUp 0.8s ease-out;
+}
+#goal-lightbox .lb-minute {
+  font-size: 22px; color: #5ddf5d; font-weight: 600;
+  margin-top: 4px;
+}
+#goal-lightbox .lb-score {
+  font-size: 64px; font-weight: 900; color: #fff;
+  margin: 16px 0; letter-spacing: 6px;
+  animation: lbScoreIn 0.5s ease-out 0.3s both;
+}
+#goal-lightbox .lb-canvas-wrap {
+  width: 80%; max-width: 900px; position: relative;
+  border-radius: 12px; overflow: hidden;
+  box-shadow: 0 8px 40px rgba(0,0,0,0.5);
+  animation: lbFadeIn 0.5s ease-out 0.2s both;
+}
+#lbCanvas { width: 100%; display: block; }
+#goal-lightbox .lb-close {
+  position: absolute; top: 20px; right: 30px;
+  font-size: 28px; color: rgba(255,255,255,0.5); cursor: pointer;
+}
+#goal-lightbox .lb-close:hover { color: #fff; }
+/* Firework particles */
+.lb-firework {
+  position: absolute; width: 6px; height: 6px; border-radius: 50%;
+  animation: lbFirework 1.5s ease-out forwards;
+}
+@keyframes lbSlideDown { from { transform: translateY(-40px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+@keyframes lbSlideUp { from { transform: translateY(30px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+@keyframes lbPulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.05); } }
+@keyframes lbScoreIn { from { transform: scale(0.3); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+@keyframes lbFadeIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
+@keyframes lbFirework {
+  0% { transform: translate(0,0) scale(1); opacity: 1; }
+  100% { transform: translate(var(--fx), var(--fy)) scale(0); opacity: 0; }
+}
+
 /* ── Data Bar ── */
 #data-bar { display: flex; gap: 6px; padding: 6px 0; justify-content: flex-end; }
 .cmd-btn { background: #1a3050; border: 1px solid rgba(255,255,255,0.12); color: #aab; padding: 6px 14px; border-radius: 6px; font-size: 12px; cursor: pointer; font-weight: 600; }
@@ -417,6 +481,21 @@ document.addEventListener('touchmove', (e) => { if (e.touches.length > 1) e.prev
 </div>
 
 <!-- App Layout -->
+<!-- Goal Lightbox -->
+<div id="goal-lightbox" onclick="closeLightbox(event)">
+  <span class="lb-close" onclick="closeLightbox()">✕</span>
+  <div class="lb-header">
+    <div class="lb-goal-text">G O A L !</div>
+    <div class="lb-team-name" id="lb-team"></div>
+    <div class="lb-player" id="lb-player"></div>
+    <div class="lb-minute" id="lb-minute"></div>
+    <div class="lb-score" id="lb-score"></div>
+  </div>
+  <div class="lb-canvas-wrap">
+    <canvas id="lbCanvas" width="900" height="600"></canvas>
+  </div>
+</div>
+
 <div id="app-layout">
   <!-- Control Panel (left 55%) -->
   <div id="control-panel">
@@ -722,14 +801,51 @@ function drawPitch() {
 function drawBall(x, y) {
   const ctx = pitchCtx;
   const bx = px(x), by = py(y);
-  const glow = ctx.createRadialGradient(bx, by, 3, bx, by, 24);
-  glow.addColorStop(0, 'rgba(255,255,255,0.5)');
-  glow.addColorStop(1, 'rgba(255,255,255,0)');
-  ctx.fillStyle = glow;
-  ctx.beginPath(); ctx.arc(bx, by, 28, 0, Math.PI*2); ctx.fill();
-  ctx.fillStyle = '#fff';
-  ctx.beginPath(); ctx.arc(bx, by, 14, 0, Math.PI*2); ctx.fill();
-  ctx.strokeStyle = '#333'; ctx.lineWidth = 1.5; ctx.stroke();
+  const r = 18;
+
+  // Shadow
+  ctx.beginPath(); ctx.arc(bx + 2, by + 2, r, 0, Math.PI * 2);
+  ctx.fillStyle = 'rgba(0,0,0,0.3)'; ctx.fill();
+
+  // White body
+  ctx.beginPath(); ctx.arc(bx, by, r, 0, Math.PI * 2);
+  const grad = ctx.createRadialGradient(bx - 4, by - 4, 2, bx, by, r);
+  grad.addColorStop(0, '#fff');
+  grad.addColorStop(1, '#ddd');
+  ctx.fillStyle = grad; ctx.fill();
+  ctx.strokeStyle = '#999'; ctx.lineWidth = 1; ctx.stroke();
+
+  // Pentagon pattern (5 black patches)
+  ctx.fillStyle = '#333';
+  // Center pentagon
+  const pr = r * 0.35;
+  ctx.beginPath();
+  for (let i = 0; i < 5; i++) {
+    const a = (i * 72 - 90) * Math.PI / 180;
+    const px2 = bx + Math.cos(a) * pr;
+    const py2 = by + Math.sin(a) * pr;
+    if (i === 0) ctx.moveTo(px2, py2); else ctx.lineTo(px2, py2);
+  }
+  ctx.closePath(); ctx.fill();
+
+  // 5 outer pentagons (partial, visible as dark patches on edge)
+  for (let i = 0; i < 5; i++) {
+    const a = (i * 72 - 90) * Math.PI / 180;
+    const cx = bx + Math.cos(a) * r * 0.7;
+    const cy = by + Math.sin(a) * r * 0.7;
+    ctx.beginPath();
+    for (let j = 0; j < 5; j++) {
+      const a2 = (j * 72 - 90 + i * 72) * Math.PI / 180;
+      const px3 = cx + Math.cos(a2) * pr * 0.6;
+      const py3 = cy + Math.sin(a2) * pr * 0.6;
+      if (j === 0) ctx.moveTo(px3, py3); else ctx.lineTo(px3, py3);
+    }
+    ctx.closePath(); ctx.fill();
+  }
+
+  // Highlight shine
+  ctx.beginPath(); ctx.arc(bx - 5, by - 5, r * 0.3, 0, Math.PI * 2);
+  ctx.fillStyle = 'rgba(255,255,255,0.5)'; ctx.fill();
 }
 
 function drawPlayers(players) {
@@ -1427,25 +1543,41 @@ const GOAL_TEMPLATES = [
       ball: [{x:35,y:42},{x:55,y:35},{x:80,y:38},{x:118,y:40}],
       players: {'home-6':[{x:35,y:42},{x:40,y:40},{x:45,y:40},{x:50,y:40}], 'home-8':[{x:50,y:35},{x:55,y:35},{x:60,y:36},{x:65,y:38}], 'home-10':[{x:60,y:40},{x:70,y:38},{x:80,y:38},{x:85,y:38}], 'home-9':[{x:80,y:42},{x:90,y:40},{x:100,y:40},{x:115,y:40}]} }) },
 
-  // ══════ 主隊角球 ══════
-  { id:'ck1', cat:'主隊角球', zone:'上方', icon:'🚩', name:'主隊角球(上)', desc:'主隊進攻方右上角球開出，禁區頭球',
+  // ══════ 主隊角球（4方向）══════
+  { id:'ck1', cat:'主隊角球', zone:'右上', icon:'🚩', name:'右上角球', desc:'右上角旗開出，傳向禁區中央頭球攻門',
     build: () => ({
       ball: [{x:119,y:1},{x:112,y:15},{x:108,y:35},{x:118,y:38}],
-      players: {'home-10':[{x:117,y:2},{x:115,y:5},{x:112,y:15},{x:112,y:20}], 'home-9':[{x:105,y:45},{x:106,y:40},{x:107,y:35},{x:116,y:38}], 'home-4':[{x:105,y:30},{x:106,y:32},{x:107,y:34},{x:110,y:36}], 'away-4':[{x:108,y:38},{x:108,y:36},{x:108,y:35},{x:112,y:38}], 'away-5':[{x:108,y:42},{x:108,y:40},{x:108,y:38},{x:112,y:42}]} }) },
-  { id:'ck2', cat:'主隊角球', zone:'下方', icon:'🚩', name:'主隊角球(下)', desc:'主隊進攻方右下角球開出，禁區頭球',
+      players: {'home-10':[{x:117,y:2},{x:115,y:5},{x:112,y:15},{x:112,y:20}], 'home-9':[{x:105,y:45},{x:106,y:40},{x:107,y:35},{x:116,y:38}], 'home-4':[{x:105,y:30},{x:106,y:32},{x:107,y:34},{x:110,y:36}], 'away-4':[{x:108,y:38},{x:108,y:36},{x:108,y:35},{x:112,y:38}]} }) },
+  { id:'ck2', cat:'主隊角球', zone:'右下', icon:'🚩', name:'右下角球', desc:'右下角旗開出，傳向禁區中央頭球攻門',
     build: () => ({
       ball: [{x:119,y:79},{x:112,y:65},{x:108,y:45},{x:118,y:42}],
-      players: {'home-10':[{x:117,y:78},{x:115,y:75},{x:112,y:65},{x:112,y:60}], 'home-9':[{x:105,y:35},{x:106,y:40},{x:107,y:45},{x:116,y:42}], 'home-4':[{x:105,y:50},{x:106,y:48},{x:107,y:46},{x:110,y:44}], 'away-4':[{x:108,y:42},{x:108,y:44},{x:108,y:45},{x:112,y:42}], 'away-5':[{x:108,y:38},{x:108,y:40},{x:108,y:42},{x:112,y:38}]} }) },
+      players: {'home-10':[{x:117,y:78},{x:115,y:75},{x:112,y:65},{x:112,y:60}], 'home-9':[{x:105,y:35},{x:106,y:40},{x:107,y:45},{x:116,y:42}], 'home-4':[{x:105,y:50},{x:106,y:48},{x:107,y:46},{x:110,y:44}], 'away-4':[{x:108,y:42},{x:108,y:44},{x:108,y:45},{x:112,y:42}]} }) },
+  { id:'ck3', cat:'主隊角球', zone:'左上', icon:'🚩', name:'左上角球', desc:'左上角旗開出，傳向禁區中央頭球攻門',
+    build: () => ({
+      ball: [{x:1,y:1},{x:15,y:10},{x:108,y:30},{x:118,y:38}],
+      players: {'home-10':[{x:3,y:2},{x:10,y:5},{x:50,y:20},{x:108,y:30}], 'home-9':[{x:105,y:45},{x:106,y:40},{x:107,y:35},{x:116,y:38}], 'home-4':[{x:105,y:30},{x:106,y:32},{x:107,y:34},{x:110,y:36}], 'away-4':[{x:108,y:38},{x:108,y:36},{x:108,y:35},{x:112,y:38}]} }) },
+  { id:'ck4', cat:'主隊角球', zone:'左下', icon:'🚩', name:'左下角球', desc:'左下角旗開出，傳向禁區中央頭球攻門',
+    build: () => ({
+      ball: [{x:1,y:79},{x:15,y:70},{x:108,y:50},{x:118,y:42}],
+      players: {'home-10':[{x:3,y:78},{x:10,y:75},{x:50,y:60},{x:108,y:50}], 'home-9':[{x:105,y:35},{x:106,y:40},{x:107,y:45},{x:116,y:42}], 'home-4':[{x:105,y:50},{x:106,y:48},{x:107,y:46},{x:110,y:44}], 'away-4':[{x:108,y:42},{x:108,y:44},{x:108,y:45},{x:112,y:42}]} }) },
 
-  // ══════ 客隊角球 ══════
-  { id:'ck3', cat:'客隊角球', zone:'上方', icon:'🏴', name:'客隊角球(上)', desc:'客隊進攻方左上角球開出，禁區頭球',
+  // ══════ 客隊角球（4方向）══════
+  { id:'ck5', cat:'客隊角球', zone:'左上', icon:'🏴', name:'左上角球', desc:'左上角旗開出，傳向禁區中央頭球攻門',
     build: () => ({
       ball: [{x:1,y:1},{x:8,y:15},{x:12,y:35},{x:2,y:38}],
-      players: {'away-10':[{x:3,y:2},{x:5,y:5},{x:8,y:15},{x:8,y:20}], 'away-9':[{x:15,y:45},{x:14,y:40},{x:13,y:35},{x:4,y:38}], 'away-4':[{x:15,y:30},{x:14,y:32},{x:13,y:34},{x:10,y:36}], 'home-4':[{x:12,y:38},{x:12,y:36},{x:12,y:35},{x:8,y:38}], 'home-5':[{x:12,y:42},{x:12,y:40},{x:12,y:38},{x:8,y:42}]} }) },
-  { id:'ck4', cat:'客隊角球', zone:'下方', icon:'🏴', name:'客隊角球(下)', desc:'客隊進攻方左下角球開出，禁區頭球',
+      players: {'away-10':[{x:3,y:2},{x:5,y:5},{x:8,y:15},{x:8,y:20}], 'away-9':[{x:15,y:45},{x:14,y:40},{x:13,y:35},{x:4,y:38}], 'away-4':[{x:15,y:30},{x:14,y:32},{x:13,y:34},{x:10,y:36}], 'home-4':[{x:12,y:38},{x:12,y:36},{x:12,y:35},{x:8,y:38}]} }) },
+  { id:'ck6', cat:'客隊角球', zone:'左下', icon:'🏴', name:'左下角球', desc:'左下角旗開出，傳向禁區中央頭球攻門',
     build: () => ({
       ball: [{x:1,y:79},{x:8,y:65},{x:12,y:45},{x:2,y:42}],
-      players: {'away-10':[{x:3,y:78},{x:5,y:75},{x:8,y:65},{x:8,y:60}], 'away-9':[{x:15,y:35},{x:14,y:40},{x:13,y:45},{x:4,y:42}], 'away-4':[{x:15,y:50},{x:14,y:48},{x:13,y:46},{x:10,y:44}], 'home-4':[{x:12,y:42},{x:12,y:44},{x:12,y:45},{x:8,y:42}], 'home-5':[{x:12,y:38},{x:12,y:40},{x:12,y:42},{x:8,y:38}]} }) },
+      players: {'away-10':[{x:3,y:78},{x:5,y:75},{x:8,y:65},{x:8,y:60}], 'away-9':[{x:15,y:35},{x:14,y:40},{x:13,y:45},{x:4,y:42}], 'away-4':[{x:15,y:50},{x:14,y:48},{x:13,y:46},{x:10,y:44}], 'home-4':[{x:12,y:42},{x:12,y:44},{x:12,y:45},{x:8,y:42}]} }) },
+  { id:'ck7', cat:'客隊角球', zone:'右上', icon:'🏴', name:'右上角球', desc:'右上角旗開出，傳向禁區中央頭球攻門',
+    build: () => ({
+      ball: [{x:119,y:1},{x:105,y:10},{x:12,y:30},{x:2,y:38}],
+      players: {'away-10':[{x:117,y:2},{x:110,y:5},{x:50,y:20},{x:12,y:30}], 'away-9':[{x:15,y:45},{x:14,y:40},{x:13,y:35},{x:4,y:38}], 'away-4':[{x:15,y:30},{x:14,y:32},{x:13,y:34},{x:10,y:36}], 'home-4':[{x:12,y:38},{x:12,y:36},{x:12,y:35},{x:8,y:38}]} }) },
+  { id:'ck8', cat:'客隊角球', zone:'右下', icon:'🏴', name:'右下角球', desc:'右下角旗開出，傳向禁區中央頭球攻門',
+    build: () => ({
+      ball: [{x:119,y:79},{x:105,y:70},{x:12,y:50},{x:2,y:42}],
+      players: {'away-10':[{x:117,y:78},{x:110,y:75},{x:50,y:60},{x:12,y:50}], 'away-9':[{x:15,y:35},{x:14,y:40},{x:13,y:45},{x:4,y:42}], 'away-4':[{x:15,y:50},{x:14,y:48},{x:13,y:46},{x:10,y:44}], 'home-4':[{x:12,y:42},{x:12,y:44},{x:12,y:45},{x:8,y:42}]} }) },
 
   // ══════ 自由球 ══════
   { id:'fk1', cat:'定位球', zone:'正面', icon:'🎯', name:'自由球直射', desc:'禁區前正面自由球直射',
@@ -1525,11 +1657,39 @@ function applyTemplate(tplId, forceAway) {
   let ballNodes = raw.ball;
   let playerNodes = raw.players;
 
-  // Mirror for away attack
-  if (isAway) {
+  // Determine if second half (teams swap sides)
+  const isSecondHalf = goalSec >= 2700; // >= 45'
+
+  // Mirror logic:
+  // 1st half: home attacks RIGHT, away attacks LEFT (default)
+  // 2nd half: home attacks LEFT, away attacks RIGHT (mirror all)
+  const isTeamSpecific = tpl.cat === '主隊角球' || tpl.cat === '客隊角球';
+
+  // Need mirror if: (away team in 1st half) OR (home team in 2nd half)
+  // For team-specific templates: only mirror for 2nd half swap
+  let needMirror = false;
+  let needSwapKeys = false;
+
+  if (isTeamSpecific) {
+    // Team-specific templates: only mirror x for 2nd half (side swap)
+    needMirror = isSecondHalf;
+    needSwapKeys = false; // keys already correct
+  } else {
+    // Generic templates (home attacks right by default)
+    // Away in 1st half: mirror + swap keys
+    // Home in 2nd half: mirror only (keys stay)
+    // Away in 2nd half: swap keys only (mirror cancels out)
+    if (!isAway && !isSecondHalf) { needMirror = false; needSwapKeys = false; }
+    else if (isAway && !isSecondHalf) { needMirror = true; needSwapKeys = true; }
+    else if (!isAway && isSecondHalf) { needMirror = true; needSwapKeys = false; }
+    else { needSwapKeys = true; needMirror = false; } // away + 2nd half
+  }
+
+  if (needMirror) {
     ballNodes = ballNodes.map(p => ({ x: 120 - p.x, y: p.y }));
     playerNodes = mirrorNodes(playerNodes);
-    // Swap home-/away- prefixes
+  }
+  if (needSwapKeys) {
     const swapped = {};
     Object.entries(playerNodes).forEach(([key, val]) => {
       const newKey = key.startsWith('home-') ? key.replace('home-', 'away-') : key.replace('away-', 'home-');
@@ -2016,9 +2176,51 @@ function interpolateNodes(nodes, progress) {
 function playSegment(id) {
   const seg = segments.find(s => s.id === id);
   if (!seg) return;
+  openGoalLightbox(seg);
+}
 
-  if (segPreviewTimer) { clearInterval(segPreviewTimer); segPreviewTimer = null; }
+// ── Goal Lightbox ──
+let lbTimer = null;
+let lbCanvas = null;
+let lbCtx = null;
 
+function openGoalLightbox(seg) {
+  const lb = document.getElementById('goal-lightbox');
+  lbCanvas = document.getElementById('lbCanvas');
+  lbCtx = lbCanvas.getContext('2d');
+
+  // Set canvas size
+  const wrap = lbCanvas.parentElement;
+  const w = Math.min(900, window.innerWidth * 0.8);
+  const h = Math.round(w * 80 / 120);
+  lbCanvas.width = w * 2; lbCanvas.height = h * 2;
+  lbCanvas.style.width = w + 'px'; lbCanvas.style.height = h + 'px';
+
+  // Fill info
+  const isHome = seg.templateName && !seg.templateName.startsWith('客');
+  const teamColor = isHome ? (homeColor || '#5ba3f5') : (awayColor || '#f5a623');
+  const teamName = isHome ? homeTeam : awayTeam;
+  const minute = Math.floor(seg.endSeconds / 60);
+
+  document.getElementById('lb-team').textContent = teamName;
+  document.getElementById('lb-team').style.color = teamColor;
+
+  // Find scorer from template name or nodes
+  let scorerText = '';
+  if (seg.templateName) {
+    scorerText = seg.templateName;
+  }
+  document.getElementById('lb-player').textContent = scorerText;
+  document.getElementById('lb-minute').textContent = minute + "' 分鐘";
+  document.getElementById('lb-score').textContent = vmHomeScore + ' : ' + vmAwayScore;
+
+  // Show lightbox
+  lb.classList.add('show');
+
+  // Spawn fireworks
+  spawnFireworks(lb, teamColor);
+
+  // Play animation on lightbox canvas
   const frames = generateSegmentFrames(seg);
   if (frames.length === 0) return;
 
@@ -2026,45 +2228,139 @@ function playSegment(id) {
   const dur = (seg.endSeconds - seg.startSeconds) * 1000;
   const start = performance.now();
 
-  segPreviewTimer = setInterval(() => {
+  if (lbTimer) clearInterval(lbTimer);
+  lbTimer = setInterval(() => {
     const elapsed = performance.now() - start;
     const progress = Math.min(elapsed / dur, 1);
 
-    // Find surrounding frames
-    let fA = frames[0], fB = frames[frames.length-1];
+    let fA = frames[0], fB = frames[frames.length - 1];
     for (let i = 0; i < frames.length - 1; i++) {
-      if (progress >= frames[i].t && progress <= frames[i+1].t) {
-        fA = frames[i]; fB = frames[i+1]; break;
+      if (progress >= frames[i].t && progress <= frames[i + 1].t) {
+        fA = frames[i]; fB = frames[i + 1]; break;
       }
     }
     const segDur = fB.t - fA.t || 1;
     const localT = Math.min((progress - fA.t) / segDur, 1);
 
-    ballX = fA.ball.x + (fB.ball.x - fA.ball.x) * localT;
-    ballY = fA.ball.y + (fB.ball.y - fA.ball.y) * localT;
+    const bx = fA.ball.x + (fB.ball.x - fA.ball.x) * localT;
+    const by = fA.ball.y + (fB.ball.y - fA.ball.y) * localT;
 
-    if (fA.players && fB.players && fA.players.length === fB.players.length) {
-      currentPlayers = fA.players.map((pa, i) => {
-        const pb = fB.players[i];
-        return {
-          x: pa.x + (pb.x - pa.x) * localT,
-          y: pa.y + (pb.y - pa.y) * localT,
-          jersey: pa.jersey, teammate: pa.teammate, keeper: pa.keeper, actor: false
-        };
-      });
-      smoothedPlayers = currentPlayers.map(p => ({ ...p }));
-    }
-
-    drawPitch();
-    drawPlayers(currentPlayers);
-    if (ballX >= 0 && ballX <= 120 && ballY >= 0 && ballY <= 80) drawBall(ballX, ballY);
+    // Draw on lightbox canvas
+    drawLbFrame(bx, by, fA, fB, localT, progress);
 
     if (progress >= 1) {
-      clearInterval(segPreviewTimer);
-      segPreviewTimer = null;
-      setTimeout(() => resumeVirtualMatch(), 500);
+      clearInterval(lbTimer); lbTimer = null;
+      // Loop replay after 1 second
+      setTimeout(() => {
+        if (document.getElementById('goal-lightbox').classList.contains('show')) {
+          openGoalLightbox(seg); // replay
+        }
+      }, 2000);
     }
   }, 33);
+}
+
+function drawLbFrame(bx, by, fA, fB, localT, progress) {
+  if (!lbCtx) return;
+  const ctx = lbCtx;
+  const w = lbCanvas.width, h = lbCanvas.height;
+  const sx = w / 120, sy = h / 80;
+
+  // Draw pitch
+  drawPitchOnCtx(ctx, w, h);
+
+  // Draw players
+  if (fA.players && fB.players) {
+    const r = Math.max(22, sx * 3);
+    fA.players.forEach((pa, i) => {
+      const pb = fB.players[i];
+      if (!pb) return;
+      const px = (pa.x + (pb.x - pa.x) * localT) * sx;
+      const py = (pa.y + (pb.y - pa.y) * localT) * sy;
+
+      // Trail effect
+      if (progress > 0.1) {
+        ctx.beginPath(); ctx.arc(px, py, r + 4, 0, Math.PI * 2);
+        ctx.fillStyle = pa.teammate ? `rgba(91,163,245,0.15)` : `rgba(245,166,35,0.15)`;
+        ctx.fill();
+      }
+
+      ctx.beginPath(); ctx.arc(px, py, r, 0, Math.PI * 2);
+      if (pa.keeper) ctx.fillStyle = pa.teammate ? '#44dd66' : '#dddd44';
+      else ctx.fillStyle = pa.teammate ? (homeColor || '#5ba3f5') : (awayColor || '#f5a623');
+      ctx.fill();
+      ctx.strokeStyle = '#fff'; ctx.lineWidth = 3; ctx.stroke();
+
+      ctx.fillStyle = '#fff';
+      ctx.font = `bold ${Math.max(14, r * 0.65)}px sans-serif`;
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText(pa.jersey, px, py);
+    });
+  }
+
+  // Draw ball (realistic)
+  const bpx = bx * sx, bpy = by * sy;
+  const br = 20;
+  ctx.beginPath(); ctx.arc(bpx + 3, bpy + 3, br, 0, Math.PI * 2);
+  ctx.fillStyle = 'rgba(0,0,0,0.3)'; ctx.fill();
+  ctx.beginPath(); ctx.arc(bpx, bpy, br, 0, Math.PI * 2);
+  const grad = ctx.createRadialGradient(bpx - 5, bpy - 5, 2, bpx, bpy, br);
+  grad.addColorStop(0, '#fff'); grad.addColorStop(1, '#ddd');
+  ctx.fillStyle = grad; ctx.fill();
+  ctx.strokeStyle = '#999'; ctx.lineWidth = 1; ctx.stroke();
+  // Pentagon
+  ctx.fillStyle = '#333';
+  const pr = br * 0.35;
+  ctx.beginPath();
+  for (let i = 0; i < 5; i++) {
+    const a = (i * 72 - 90) * Math.PI / 180;
+    if (i === 0) ctx.moveTo(bpx + Math.cos(a) * pr, bpy + Math.sin(a) * pr);
+    else ctx.lineTo(bpx + Math.cos(a) * pr, bpy + Math.sin(a) * pr);
+  }
+  ctx.closePath(); ctx.fill();
+
+  // Goal flash effect at end
+  if (progress > 0.85) {
+    const flashAlpha = (progress - 0.85) / 0.15 * 0.4;
+    ctx.fillStyle = `rgba(255,255,100,${flashAlpha})`;
+    ctx.fillRect(0, 0, w, h);
+  }
+}
+
+function spawnFireworks(container, color) {
+  // Remove old fireworks
+  container.querySelectorAll('.lb-firework').forEach(el => el.remove());
+  // Create bursts
+  for (let burst = 0; burst < 5; burst++) {
+    setTimeout(() => {
+      const cx = Math.random() * 80 + 10; // %
+      const cy = Math.random() * 60 + 10; // %
+      for (let i = 0; i < 20; i++) {
+        const spark = document.createElement('div');
+        spark.className = 'lb-firework';
+        const angle = (i / 20) * Math.PI * 2;
+        const dist = 80 + Math.random() * 120;
+        spark.style.cssText = `
+          left:${cx}%; top:${cy}%;
+          background: ${['#f5c542','#ff6b3d','#5ba3f5','#5ddf5d','#fff',color][Math.floor(Math.random()*6)]};
+          --fx: ${Math.cos(angle) * dist}px;
+          --fy: ${Math.sin(angle) * dist}px;
+          animation-delay: ${Math.random() * 0.3}s;
+          animation-duration: ${1 + Math.random()}s;
+        `;
+        container.appendChild(spark);
+      }
+    }, burst * 600);
+  }
+}
+
+function closeLightbox(e) {
+  if (e && e.target !== e.currentTarget && !e.target.classList.contains('lb-close')) return;
+  const lb = document.getElementById('goal-lightbox');
+  lb.classList.remove('show');
+  lb.querySelectorAll('.lb-firework').forEach(el => el.remove());
+  if (lbTimer) { clearInterval(lbTimer); lbTimer = null; }
+  resumeVirtualMatch();
 }
 
 function previewSegmentAtProgress(id, progress) {
@@ -2327,10 +2623,9 @@ function togglePlayPause() {
   if (vmPaused) {
     const published = segments.filter(s => s.published).sort((a,b) => a.startSeconds - b.startSeconds);
     if (published.length > 0) {
-      // Find next segment to play (from current time or restart from first)
+      // Find next segment to play
       const next = published.find(s => s.endSeconds > totalMatchSeconds);
       if (next) {
-        // Jump to start of next segment if we're not inside one
         if (totalMatchSeconds < next.startSeconds) {
           totalMatchSeconds = next.startSeconds;
         }
@@ -2341,6 +2636,8 @@ function togglePlayPause() {
       currentMatchMinute = Math.floor(totalMatchSeconds / 60);
       currentPeriod = totalMatchSeconds >= 2700 ? 2 : 1;
     }
+    // IMPORTANT: reset vmLastTick BEFORE resume to avoid time jump
+    vmLastTick = performance.now();
     resumeVirtualMatch();
     isPlaying = true;
   } else {
@@ -2418,13 +2715,22 @@ function seekToTime(targetSeconds) {
   const ti = document.getElementById('timeline-time-indicator');
   if (ti) { ti.style.left = timePct + '%'; ti.textContent = currentMatchMinute + "'"; }
 
-  // Check if we're inside a published segment
+  // Check if we're inside a published segment — render that frame
   const activeSeg = segments.find(s => s.published && totalMatchSeconds >= s.startSeconds && totalMatchSeconds < s.endSeconds);
   if (activeSeg) {
     const progress = (totalMatchSeconds - activeSeg.startSeconds) / (activeSeg.endSeconds - activeSeg.startSeconds);
     renderSegmentAtProgress(activeSeg, progress);
   } else {
-    drawPitch(); drawPlayers(currentPlayers); drawBall(ballX, ballY);
+    // Show "比賽進行中" with time
+    drawPitch();
+    const ctx = pitchCtx;
+    ctx.fillStyle = 'rgba(255,255,255,0.15)';
+    ctx.font = `bold ${Math.max(16, canvasW * 0.03)}px sans-serif`;
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText('比賽進行中', pitchCanvas.width / 2, pitchCanvas.height / 2);
+    ctx.fillStyle = 'rgba(255,255,255,0.25)';
+    ctx.font = `bold ${Math.max(24, canvasW * 0.05)}px sans-serif`;
+    ctx.fillText(currentMatchMinute + "'", pitchCanvas.width / 2, pitchCanvas.height / 2 + 30);
   }
 }
 
