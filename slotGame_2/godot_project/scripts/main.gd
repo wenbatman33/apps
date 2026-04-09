@@ -12,11 +12,11 @@ const SYMBOL_W: float = 264.0
 const SYMBOL_H: float = 264.0
 const REEL_COLS: int = 5
 const REEL_ROWS: int = 3
-# 滾輪區域（對齊 Line 圖 1345x728）
+# 滾輪區域
 const REEL_AREA_W: float = 1345.0
 const REEL_AREA_H: float = 792.0  # 3 * 264
-const REEL_AREA_X: float = (GAME_W - REEL_AREA_W) / 2.0  # 287.5
-const REEL_AREA_Y: float = 140.0
+const REEL_AREA_X: float = 288.0
+const REEL_AREA_Y: float = 105.0
 const REEL_GAP_X: float = REEL_AREA_W / REEL_COLS  # 269
 
 # ===== 節點引用 =====
@@ -43,6 +43,16 @@ var overlay: ColorRect
 var info_popup_node: Control
 var history_panel_node: Control
 var win_effect_node: Control
+var gamble_button: TextureButton
+
+# ===== Loading Screen 節點 =====
+var loading_layer: Control
+var loading_bar_fill: ColorRect
+var loading_progress: float = 0.0
+var loading_active: bool = true
+
+# ===== 自訂字型 =====
+var game_font: Font
 
 # ===== 紋理快取 =====
 var sym_tex: Dictionary = {}
@@ -60,10 +70,15 @@ var win_cycle_timer: float = 0.0
 # ===== 初始化 =====
 
 func _ready() -> void:
+	# 載入自訂字型
+	game_font = load("res://fonts/SaranaiGame-Bold.ttf")
 	_cache_textures()
+	_build_loading_screen()
 	_build_scene()
 	_connect_signals()
 	_refresh_ui()
+	# 主遊戲初始隱藏，等 loading 完成
+	_set_game_visible(false)
 
 func _cache_textures() -> void:
 	# 符號紋理
@@ -86,10 +101,65 @@ func _cache_textures() -> void:
 		if ResourceLoader.exists(p):
 			bg_frames_free.append(load(p))
 
+# ---------- Loading Screen ----------
+
+func _build_loading_screen() -> void:
+	loading_layer = Control.new()
+	loading_layer.name = "LoadingScreen"
+	loading_layer.set_anchors_preset(PRESET_FULL_RECT)
+	loading_layer.z_index = 100
+	add_child(loading_layer)
+
+	# 背景
+	var bg := TextureRect.new()
+	bg.texture = load("res://assets/game_files/Loading/loading_back.jpg")
+	bg.set_anchors_preset(PRESET_FULL_RECT)
+	bg.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+	loading_layer.add_child(bg)
+
+	# Logo 圖片
+	var logo := TextureRect.new()
+	logo.texture = load("res://assets/game_files/Loading/loading_logo.png")
+	logo.position = Vector2(568, 180)
+	logo.size = Vector2(783, 582)
+	logo.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	logo.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	loading_layer.add_child(logo)
+
+	# "LOADING:" 文字圖片
+	var loading_text := TextureRect.new()
+	loading_text.texture = load("res://assets/game_files/Loading/loading_text.png")
+	loading_text.position = Vector2(836, 750)
+	loading_text.size = Vector2(248, 44)
+	loading_text.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	loading_text.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	loading_layer.add_child(loading_text)
+
+	# 進度條背景（框架）
+	var bar_bg := TextureRect.new()
+	bar_bg.texture = load("res://assets/game_files/Loading/loading_bar.png")
+	bar_bg.position = Vector2(660, 810)
+	bar_bg.size = Vector2(599, 44)
+	bar_bg.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	bar_bg.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	loading_layer.add_child(bar_bg)
+
+	# 進度條填充（模擬用 ColorRect）
+	loading_bar_fill = ColorRect.new()
+	loading_bar_fill.position = Vector2(665, 815)
+	loading_bar_fill.size = Vector2(0, 34)  # 初始寬度 0
+	loading_bar_fill.color = Color(0.95, 0.75, 0.1)
+	loading_layer.add_child(loading_bar_fill)
+
+func _set_game_visible(vis: bool) -> void:
+	# 控制除了 loading_layer 以外的所有子節點可見性
+	for child in get_children():
+		if child != loading_layer:
+			child.visible = vis
+
 func _build_scene() -> void:
 	# 1) 動畫背景
 	background = TextureRect.new()
-	# 如果有動畫幀就用第一幀，否則用靜態圖
 	if bg_frames_main.size() > 0:
 		background.texture = bg_frames_main[0]
 	else:
@@ -110,7 +180,10 @@ func _build_scene() -> void:
 	# 5) 連線圖層
 	_build_paylines()
 
-	# 6) 彈窗層
+	# 6) Gamble 按鈕（中獎後出現）
+	_build_gamble_button()
+
+	# 7) 彈窗層
 	_build_popups()
 
 # ---------- 滾輪 ----------
@@ -142,135 +215,162 @@ func _build_reels() -> void:
 			col_arr.append(tr)
 		symbol_nodes.append(col_arr)
 
-# ---------- 上方介面（對齊參考圖）----------
+# ---------- 上方介面（精確對齊參考圖）----------
 
 func _build_upper_bar() -> void:
 	# 背景條
 	var bar := TextureRect.new()
 	bar.texture = load("res://assets/game_files/interface/interface/upper_back.png")
-	bar.position = Vector2.ZERO
+	bar.position = Vector2(0, 0)
 	bar.size = Vector2(1920, 122)
 	bar.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
 	add_child(bar)
 
 	# LOBBY 按鈕（左上角）
-	var lobby_btn := _tex_btn("lobby_button", Vector2(15, 15), Vector2(155, 80))
+	var lobby_btn := _tex_btn("lobby_button", Vector2(15, 12), Vector2(155, 70))
 	add_child(lobby_btn)
 
 	# 金幣圖示
 	var ci := TextureRect.new()
 	ci.texture = load("res://assets/game_files/interface/interface/coins_icon.png")
-	ci.position = Vector2(180, 18)
-	ci.size = Vector2(60, 60)
+	ci.position = Vector2(185, 12)
+	ci.size = Vector2(55, 55)
 	ci.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	ci.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	add_child(ci)
 
-	# 餘額數字
-	balance_label = _make_label(Vector2(245, 22), Vector2(220, 50), 28, Color.WHITE, HORIZONTAL_ALIGNMENT_LEFT)
+	# 餘額數字 — 使用自訂字型
+	balance_label = _make_label(Vector2(245, 15), Vector2(200, 50), 30, Color.WHITE, HORIZONTAL_ALIGNMENT_LEFT)
+	balance_label.add_theme_font_override("font", game_font)
 	add_child(balance_label)
 
 	# BUY COINS 按鈕（頂部中央）
-	var buy_btn := _tex_btn("buy_coins", Vector2(700, 8), Vector2(500, 100))
+	var buy_btn := _tex_btn("buy_coins", Vector2(680, 5), Vector2(500, 80))
 	add_child(buy_btn)
 
 	# 經驗值星星
 	var star := TextureRect.new()
 	if ResourceLoader.exists("res://assets/game_files/interface/experience_bar/experience_star.png"):
 		star.texture = load("res://assets/game_files/interface/experience_bar/experience_star.png")
-	star.position = Vector2(1280, 18)
-	star.size = Vector2(70, 75)
+	star.position = Vector2(1250, 10)
+	star.size = Vector2(65, 70)
 	star.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	star.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	add_child(star)
 
 	# 經驗值條背景
 	var exp_bar := TextureRect.new()
 	if ResourceLoader.exists("res://assets/game_files/interface/experience_bar/experience_bar.png"):
 		exp_bar.texture = load("res://assets/game_files/interface/experience_bar/experience_bar.png")
-	exp_bar.position = Vector2(1360, 28)
+	exp_bar.position = Vector2(1320, 20)
 	exp_bar.size = Vector2(380, 50)
 	exp_bar.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	exp_bar.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	add_child(exp_bar)
 
 	# Info 按鈕（右上角）
-	info_button = _tex_btn("info_button", Vector2(1755, 18), Vector2(70, 72))
+	info_button = _tex_btn("info_button", Vector2(1755, 12), Vector2(70, 72))
 	add_child(info_button)
 
 	# 設定（注單記錄）按鈕
-	settings_button = _tex_btn("settings_button", Vector2(1840, 18), Vector2(70, 72))
+	settings_button = _tex_btn("settings_button", Vector2(1840, 12), Vector2(80, 72))
 	add_child(settings_button)
 
 	# 免費旋轉提示（覆蓋在 BUY COINS 位置上）
 	free_spin_label = _make_label(Vector2(600, 35), Vector2(720, 50), 34, Color.YELLOW, HORIZONTAL_ALIGNMENT_CENTER)
+	free_spin_label.add_theme_font_override("font", game_font)
 	free_spin_label.visible = false
 	add_child(free_spin_label)
 
-# ---------- 下方介面（對齊參考圖：[-] [TOTAL BET] [+] [WIN] [MAX BET] [SPIN]）----------
+# ---------- 下方介面（精確對齊參考圖：[-] [TOTAL BET] [+] [WIN] [MAX BET] [SPIN]）----------
 
 func _build_bottom_bar() -> void:
 	# 背景條
 	var bar := TextureRect.new()
 	bar.texture = load("res://assets/game_files/interface/interface/bottom_back.png")
-	bar.position = Vector2(0, 894)
-	bar.size = Vector2(1920, 186)
+	bar.position = Vector2(0, 897)
+	bar.size = Vector2(1920, 183)
 	bar.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
 	add_child(bar)
 
-	var bottom_y: float = 910.0  # 底部元素基準 Y
-
 	# [-] 按鈕（最左邊）
-	minus_button = _tex_btn("minus_button", Vector2(20, bottom_y), Vector2(100, 130))
+	minus_button = _tex_btn("minus_button", Vector2(20, 920), Vector2(100, 120))
 	add_child(minus_button)
 
 	# TOTAL BET 背景
 	var tb := TextureRect.new()
 	tb.texture = load("res://assets/game_files/interface/interface/total_bet_back_01.png")
-	tb.position = Vector2(130, bottom_y - 5)
-	tb.size = Vector2(340, 140)
+	tb.position = Vector2(130, 912)
+	tb.size = Vector2(320, 130)
 	tb.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	tb.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	add_child(tb)
 
 	# TOTAL BET 標題
-	var bt := _make_label(Vector2(160, bottom_y + 5), Vector2(280, 30), 18, Color(0.7, 0.7, 0.7), HORIZONTAL_ALIGNMENT_CENTER)
+	var bt := _make_label(Vector2(155, 920), Vector2(280, 30), 18, Color(0.7, 0.7, 0.7), HORIZONTAL_ALIGNMENT_CENTER)
 	bt.text = "TOTAL BET"
 	add_child(bt)
 
-	# 注金數字
-	bet_label = _make_label(Vector2(160, bottom_y + 40), Vector2(280, 55), 38, Color.WHITE, HORIZONTAL_ALIGNMENT_CENTER)
+	# 注金數字 — 使用自訂字型
+	bet_label = _make_label(Vector2(155, 958), Vector2(280, 55), 38, Color.WHITE, HORIZONTAL_ALIGNMENT_CENTER)
+	bet_label.add_theme_font_override("font", game_font)
 	add_child(bet_label)
 
 	# [+] 按鈕
-	plus_button = _tex_btn("plus_button", Vector2(480, bottom_y), Vector2(100, 130))
+	plus_button = _tex_btn("plus_button", Vector2(460, 920), Vector2(100, 120))
 	add_child(plus_button)
 
 	# WIN 背景（中間）
 	var wb := TextureRect.new()
 	wb.texture = load("res://assets/game_files/interface/interface/win_back_01.png")
-	wb.position = Vector2(620, bottom_y - 10)
-	wb.size = Vector2(500, 150)
+	wb.position = Vector2(610, 908)
+	wb.size = Vector2(500, 140)
 	wb.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	wb.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	add_child(wb)
 
 	# WIN 標題
-	var wt := _make_label(Vector2(780, bottom_y + 5), Vector2(140, 30), 18, Color(0.7, 0.7, 0.7), HORIZONTAL_ALIGNMENT_CENTER)
+	var wt := _make_label(Vector2(770, 918), Vector2(140, 30), 18, Color(0.7, 0.7, 0.7), HORIZONTAL_ALIGNMENT_CENTER)
 	wt.text = "WIN"
 	add_child(wt)
 
-	# WIN 數字
-	win_label = _make_label(Vector2(700, bottom_y + 40), Vector2(300, 55), 44, Color.YELLOW, HORIZONTAL_ALIGNMENT_CENTER)
+	# WIN 數字 — 使用自訂字型
+	win_label = _make_label(Vector2(690, 955), Vector2(310, 55), 48, Color.YELLOW, HORIZONTAL_ALIGNMENT_CENTER)
+	win_label.add_theme_font_override("font", game_font)
 	add_child(win_label)
 
 	# MAX BET 按鈕
-	max_bet_button = _tex_btn("max_bet", Vector2(1190, bottom_y), Vector2(160, 130))
+	max_bet_button = _tex_btn("max_bet", Vector2(1170, 920), Vector2(155, 120))
 	add_child(max_bet_button)
 
 	# SPIN 按鈕（右側）
-	spin_button = _tex_btn("spin_button", Vector2(1430, bottom_y - 15), Vector2(449, 170))
+	spin_button = _tex_btn("spin_button", Vector2(1420, 900), Vector2(470, 175))
 	add_child(spin_button)
 
 	# STOP 按鈕（初始隱藏，同位置）
-	stop_button = _tex_btn("stop_button", Vector2(1430, bottom_y - 15), Vector2(449, 170))
+	stop_button = _tex_btn("stop_button", Vector2(1420, 900), Vector2(470, 175))
 	stop_button.visible = false
 	add_child(stop_button)
+
+# ---------- Gamble 按鈕 ----------
+
+func _build_gamble_button() -> void:
+	gamble_button = TextureButton.new()
+	gamble_button.name = "GambleButton"
+	var base_path := "res://assets/game_files/interface/gamble/gamble_button/"
+	if ResourceLoader.exists(base_path + "gamble_button_normal.png"):
+		gamble_button.texture_normal = load(base_path + "gamble_button_normal.png")
+	if ResourceLoader.exists(base_path + "gamble_button_hover.png"):
+		gamble_button.texture_hover = load(base_path + "gamble_button_hover.png")
+	if ResourceLoader.exists(base_path + "gamble_button_clicked.png"):
+		gamble_button.texture_pressed = load(base_path + "gamble_button_clicked.png")
+	# 置中 x，y=830，尺寸 500x80
+	gamble_button.position = Vector2((GAME_W - 500.0) / 2.0, 830)
+	gamble_button.size = Vector2(500, 80)
+	gamble_button.stretch_mode = TextureButton.STRETCH_KEEP_ASPECT_CENTERED
+	gamble_button.ignore_texture_size = true
+	gamble_button.visible = false
+	add_child(gamble_button)
 
 # ---------- 連線圖層 ----------
 
@@ -339,6 +439,7 @@ func _connect_signals() -> void:
 		if ev is InputEventMouseButton and ev.pressed:
 			_close_popups()
 	)
+	gamble_button.pressed.connect(_on_gamble)
 	GameState.balance_changed.connect(func(v: float): balance_label.text = "%.2f" % v)
 	GameState.bet_changed.connect(func(_v: float): bet_label.text = "%.2f" % GameState.total_bet)
 	GameState.free_spins_started.connect(func(c: int, m: int):
@@ -359,9 +460,20 @@ func _refresh_ui() -> void:
 	bet_label.text = "%.2f" % GameState.total_bet
 	win_label.text = ""
 
-# ===== 每幀更新（中獎連線輪播）=====
+# ===== 每幀更新 =====
 
 func _process(delta: float) -> void:
+	# Loading Screen 進度條更新
+	if loading_active:
+		loading_progress += delta / 2.0  # 2 秒填滿
+		if loading_progress >= 1.0:
+			loading_progress = 1.0
+		# 最大填充寬度 589（留邊距）
+		loading_bar_fill.size.x = loading_progress * 589.0
+		if loading_progress >= 1.0:
+			_finish_loading()
+		return  # loading 期間不更新遊戲邏輯
+
 	# 背景動畫
 	_update_bg_animation(delta)
 
@@ -373,6 +485,18 @@ func _process(delta: float) -> void:
 			_hide_lines()
 			win_cycle_idx = (win_cycle_idx + 1) % current_wins.size()
 			_highlight_win(current_wins[win_cycle_idx])
+
+func _finish_loading() -> void:
+	loading_active = false
+	# 淡出 loading 畫面
+	var tw := create_tween()
+	tw.tween_property(loading_layer, "modulate:a", 0.0, 0.5)
+	tw.tween_callback(func():
+		loading_layer.visible = false
+		loading_layer.queue_free()
+	)
+	# 顯示主遊戲
+	_set_game_visible(true)
 
 func _update_bg_animation(delta: float) -> void:
 	var frames: Array = bg_frames_free if GameState.is_free_spinning else bg_frames_main
@@ -395,6 +519,7 @@ func _on_spin() -> void:
 	showing_win_lines = false
 	current_wins.clear()
 	win_label.text = ""
+	gamble_button.visible = false
 
 	if not GameState.deduct_bet():
 		return
@@ -500,6 +625,9 @@ func _evaluate_result() -> void:
 	if did_win:
 		GameState.add_winnings(total_win)
 		win_label.text = "%.2f" % total_win
+		# 顯示 Gamble 按鈕（非免費旋轉模式下）
+		if not GameState.is_free_spinning:
+			gamble_button.visible = true
 		if wins.size() > 0:
 			showing_win_lines = true
 			win_cycle_idx = 0
@@ -536,6 +664,13 @@ func _evaluate_result() -> void:
 		await get_tree().create_timer(1.0).timeout
 		if GameState.is_auto_play and is_inside_tree():
 			_on_spin()
+
+# ===== Gamble 按鈕回調 =====
+
+func _on_gamble() -> void:
+	# 目前僅隱藏按鈕（未來可接入 Gamble 場景）
+	gamble_button.visible = false
+	SoundManager.play("button_click", -6.0)
 
 # ===== 中獎展示 =====
 
@@ -604,6 +739,8 @@ func _set_controls(on: bool) -> void:
 	settings_button.disabled = not on
 
 func _input(event: InputEvent) -> void:
+	if loading_active:
+		return
 	if event.is_action_pressed("spin"):
 		if GameState.is_spinning:
 			_on_stop()
