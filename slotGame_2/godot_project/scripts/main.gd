@@ -73,12 +73,10 @@ func _ready() -> void:
 	# 載入自訂字型
 	game_font = load("res://fonts/SaranaiGame-Bold.ttf")
 	_cache_textures()
-	_build_loading_screen()
 	_build_scene()
 	_connect_signals()
 	_refresh_ui()
-	# 主遊戲初始隱藏，等 loading 完成
-	_set_game_visible(false)
+	loading_active = false
 
 func _cache_textures() -> void:
 	# 符號紋理
