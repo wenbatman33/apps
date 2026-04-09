@@ -17,6 +17,7 @@ const SOUND_FILES: Dictionary = {
 	"coin": "res://assets/audio/coin.wav",
 	"scatter": "res://assets/audio/scatter.wav",
 	"bet": "res://assets/audio/bet.wav",
+	"spin_loop": "res://assets/audio/spin_loop.wav",
 }
 
 func _ready() -> void:

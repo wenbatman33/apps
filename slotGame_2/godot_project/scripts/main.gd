@@ -44,6 +44,8 @@ var info_popup_node: Control
 var history_panel_node: Control
 var win_effect_node: Control
 var gamble_button: TextureButton
+var buy_coins_btn: TextureButton
+var buy_coins_popup: Panel
 
 # ===== Loading Screen 節點 =====
 var loading_layer: Control
@@ -225,26 +227,35 @@ func _build_upper_bar() -> void:
 	add_child(bar)
 
 	# LOBBY 按鈕（左上角）
-	var lobby_btn := _tex_btn("lobby_button", Vector2(15, 12), Vector2(155, 70))
+	var lobby_btn := _tex_btn("lobby_button", Vector2(15, 15), Vector2(155, 70))
 	add_child(lobby_btn)
 
-	# 金幣圖示
+	# 金幣餘額背景條
+	var coins_bg := TextureRect.new()
+	coins_bg.texture = load("res://assets/game_files/interface/interface/coins_back.png")
+	coins_bg.position = Vector2(175, 22)
+	coins_bg.size = Vector2(340, 48)
+	coins_bg.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	coins_bg.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	add_child(coins_bg)
+
+	# 金幣圖示（在背景條左端）
 	var ci := TextureRect.new()
 	ci.texture = load("res://assets/game_files/interface/interface/coins_icon.png")
-	ci.position = Vector2(185, 12)
+	ci.position = Vector2(175, 12)
 	ci.size = Vector2(55, 55)
 	ci.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	ci.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	add_child(ci)
 
-	# 餘額數字 — 使用自訂字型
-	balance_label = _make_label(Vector2(245, 15), Vector2(200, 50), 30, Color.WHITE, HORIZONTAL_ALIGNMENT_LEFT)
+	# 餘額數字（在背景條內，金幣右邊）
+	balance_label = _make_label(Vector2(240, 25), Vector2(250, 40), 28, Color.WHITE, HORIZONTAL_ALIGNMENT_CENTER)
 	balance_label.add_theme_font_override("font", game_font)
 	add_child(balance_label)
 
 	# BUY COINS 按鈕（頂部中央）
-	var buy_btn := _tex_btn("buy_coins", Vector2(680, 5), Vector2(500, 80))
-	add_child(buy_btn)
+	buy_coins_btn = _tex_btn("buy_coins", Vector2(680, 5), Vector2(500, 80))
+	add_child(buy_coins_btn)
 
 	# 經驗值星星
 	var star := TextureRect.new()
@@ -295,22 +306,17 @@ func _build_bottom_bar() -> void:
 	minus_button = _tex_btn("minus_button", Vector2(20, 920), Vector2(100, 120))
 	add_child(minus_button)
 
-	# TOTAL BET 背景
+	# TOTAL BET 背景（素材已含 "TOTAL BET" 文字）
 	var tb := TextureRect.new()
 	tb.texture = load("res://assets/game_files/interface/interface/total_bet_back_01.png")
-	tb.position = Vector2(130, 912)
-	tb.size = Vector2(320, 130)
+	tb.position = Vector2(130, 910)
+	tb.size = Vector2(320, 135)
 	tb.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	tb.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	add_child(tb)
 
-	# TOTAL BET 標題
-	var bt := _make_label(Vector2(155, 920), Vector2(280, 30), 18, Color(0.7, 0.7, 0.7), HORIZONTAL_ALIGNMENT_CENTER)
-	bt.text = "TOTAL BET"
-	add_child(bt)
-
-	# 注金數字 — 使用自訂字型
-	bet_label = _make_label(Vector2(155, 958), Vector2(280, 55), 38, Color.WHITE, HORIZONTAL_ALIGNMENT_CENTER)
+	# 注金數字 — 放在框的下半部
+	bet_label = _make_label(Vector2(145, 975), Vector2(290, 55), 42, Color.WHITE, HORIZONTAL_ALIGNMENT_CENTER)
 	bet_label.add_theme_font_override("font", game_font)
 	add_child(bet_label)
 
@@ -318,22 +324,17 @@ func _build_bottom_bar() -> void:
 	plus_button = _tex_btn("plus_button", Vector2(460, 920), Vector2(100, 120))
 	add_child(plus_button)
 
-	# WIN 背景（中間）
+	# WIN 背景（素材已含 "WIN" 文字）
 	var wb := TextureRect.new()
 	wb.texture = load("res://assets/game_files/interface/interface/win_back_01.png")
-	wb.position = Vector2(610, 908)
-	wb.size = Vector2(500, 140)
+	wb.position = Vector2(610, 905)
+	wb.size = Vector2(500, 145)
 	wb.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	wb.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	add_child(wb)
 
-	# WIN 標題
-	var wt := _make_label(Vector2(770, 918), Vector2(140, 30), 18, Color(0.7, 0.7, 0.7), HORIZONTAL_ALIGNMENT_CENTER)
-	wt.text = "WIN"
-	add_child(wt)
-
-	# WIN 數字 — 使用自訂字型
-	win_label = _make_label(Vector2(690, 955), Vector2(310, 55), 48, Color.YELLOW, HORIZONTAL_ALIGNMENT_CENTER)
+	# WIN 數字 — 放在框的下半部
+	win_label = _make_label(Vector2(680, 975), Vector2(340, 55), 48, Color.WHITE, HORIZONTAL_ALIGNMENT_CENTER)
 	win_label.add_theme_font_override("font", game_font)
 	add_child(win_label)
 
@@ -419,6 +420,77 @@ func _build_popups() -> void:
 	win_effect_node.visible = false
 	add_child(win_effect_node)
 
+	# Buy Coins 彈窗
+	_build_buy_coins_popup()
+
+func _build_buy_coins_popup() -> void:
+	buy_coins_popup = Panel.new()
+	buy_coins_popup.position = Vector2(510, 250)
+	buy_coins_popup.size = Vector2(900, 550)
+	buy_coins_popup.visible = false
+	var style := StyleBoxFlat.new()
+	style.bg_color = Color(0.12, 0.08, 0.18, 0.95)
+	style.border_color = Color(0.85, 0.65, 0.2)
+	style.set_border_width_all(4)
+	style.set_corner_radius_all(20)
+	buy_coins_popup.add_theme_stylebox_override("panel", style)
+	add_child(buy_coins_popup)
+
+	# 標題
+	var title := Label.new()
+	title.text = "BUY COINS"
+	title.position = Vector2(280, 20)
+	title.size = Vector2(340, 60)
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	title.add_theme_font_size_override("font_size", 42)
+	title.add_theme_color_override("font_color", Color(1, 0.85, 0.3))
+	if game_font:
+		title.add_theme_font_override("font", game_font)
+	buy_coins_popup.add_child(title)
+
+	# 加幣選項按鈕
+	var coin_options: Array = [
+		{"amount": 500, "label": "500 COINS", "color": Color(0.3, 0.7, 0.3)},
+		{"amount": 2000, "label": "2,000 COINS", "color": Color(0.3, 0.5, 0.9)},
+		{"amount": 5000, "label": "5,000 COINS", "color": Color(0.8, 0.4, 0.9)},
+		{"amount": 20000, "label": "20,000 COINS", "color": Color(1.0, 0.7, 0.2)},
+	]
+
+	for i in range(coin_options.size()):
+		var opt: Dictionary = coin_options[i]
+		var btn := Button.new()
+		btn.text = opt["label"]
+		btn.position = Vector2(100, 110 + i * 100)
+		btn.size = Vector2(700, 80)
+		btn.add_theme_font_size_override("font_size", 32)
+		if game_font:
+			btn.add_theme_font_override("font", game_font)
+		var btn_style := StyleBoxFlat.new()
+		btn_style.bg_color = opt["color"]
+		btn_style.set_corner_radius_all(12)
+		btn.add_theme_stylebox_override("normal", btn_style)
+		var hover_style := StyleBoxFlat.new()
+		hover_style.bg_color = opt["color"].lightened(0.2)
+		hover_style.set_corner_radius_all(12)
+		btn.add_theme_stylebox_override("hover", hover_style)
+		var amount: int = opt["amount"]
+		btn.pressed.connect(func():
+			SoundManager.play("coin")
+			GameState.balance += amount
+			_refresh_ui()
+			_close_popups()
+		)
+		buy_coins_popup.add_child(btn)
+
+	# 關閉按鈕
+	var close_btn := Button.new()
+	close_btn.text = "X"
+	close_btn.position = Vector2(830, 15)
+	close_btn.size = Vector2(55, 55)
+	close_btn.add_theme_font_size_override("font_size", 28)
+	close_btn.pressed.connect(_close_popups)
+	buy_coins_popup.add_child(close_btn)
+
 # ===== 信號連接 =====
 
 func _connect_signals() -> void:
@@ -431,6 +503,7 @@ func _connect_signals() -> void:
 			GameState.max_bet()
 			_refresh_ui()
 	)
+	buy_coins_btn.pressed.connect(_on_buy_coins)
 	info_button.pressed.connect(_on_info)
 	settings_button.pressed.connect(_on_history)
 	overlay.gui_input.connect(func(ev: InputEvent):
@@ -540,6 +613,8 @@ func _on_spin() -> void:
 
 	# 啟動滾輪動畫
 	reels_still_spinning = REEL_COLS
+	# 播放旋轉持續音效
+	SoundManager.play("spin_loop", -4.0)
 	for col in range(REEL_COLS):
 		reel_spin_flags[col] = true
 		_run_spin_anim(col)
@@ -548,17 +623,17 @@ func _on_spin() -> void:
 		get_tree().create_timer(delay).timeout.connect(_land_reel.bind(col))
 
 func _run_spin_anim(col: int) -> void:
-	## 模擬滾動：快速隨機切換符號圖片 + 滴答音效
+	## 模擬滾動：快速隨機切換符號圖片 + 機械齒輪聲
 	var tick_count: int = 0
 	while reel_spin_flags[col]:
 		for row in range(REEL_ROWS):
 			var rid: int = GameConfig.pick_symbol(col)
 			symbol_nodes[col][row].texture = sym_tex.get(rid, null)
 			symbol_nodes[col][row].modulate = Color(0.6, 0.6, 0.6, 0.7)
-		# 只有第一軸播放 tick 聲（避免太吵）
+		# 每軸獨立的機械咔嗒聲（降低頻率避免太密集）
 		tick_count += 1
-		if col == 0 and tick_count % 3 == 0:
-			SoundManager.play("reel_tick", -12.0)
+		if tick_count % 4 == 0:
+			SoundManager.play("reel_tick", -14.0)
 		await get_tree().create_timer(0.055).timeout
 		if not is_inside_tree():
 			return
@@ -708,6 +783,13 @@ func _change_bet(dir: int) -> void:
 		GameState.decrease_bet()
 	_refresh_ui()
 
+func _on_buy_coins() -> void:
+	if GameState.is_spinning:
+		return
+	SoundManager.play("button_click", -6.0)
+	overlay.visible = true
+	buy_coins_popup.visible = true
+
 func _on_info() -> void:
 	if GameState.is_spinning:
 		return
@@ -728,6 +810,7 @@ func _close_popups() -> void:
 	overlay.visible = false
 	info_popup_node.visible = false
 	history_panel_node.visible = false
+	buy_coins_popup.visible = false
 
 func _set_controls(on: bool) -> void:
 	plus_button.disabled = not on
