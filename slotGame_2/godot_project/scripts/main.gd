@@ -142,7 +142,7 @@ func _build_reels() -> void:
 			col_arr.append(tr)
 		symbol_nodes.append(col_arr)
 
-# ---------- 上方介面 ----------
+# ---------- 上方介面（對齊參考圖）----------
 
 func _build_upper_bar() -> void:
 	# 背景條
@@ -153,44 +153,58 @@ func _build_upper_bar() -> void:
 	bar.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
 	add_child(bar)
 
-	# 金幣背景
-	var cb := TextureRect.new()
-	cb.texture = load("res://assets/game_files/interface/interface/coins_back.png")
-	cb.position = Vector2(30, 30)
-	cb.size = Vector2(280, 55)
-	cb.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-	add_child(cb)
+	# LOBBY 按鈕（左上角）
+	var lobby_btn := _tex_btn("lobby_button", Vector2(15, 15), Vector2(155, 80))
+	add_child(lobby_btn)
 
 	# 金幣圖示
 	var ci := TextureRect.new()
 	ci.texture = load("res://assets/game_files/interface/interface/coins_icon.png")
-	ci.position = Vector2(32, 20)
-	ci.size = Vector2(65, 65)
+	ci.position = Vector2(180, 18)
+	ci.size = Vector2(60, 60)
 	ci.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	add_child(ci)
 
 	# 餘額數字
-	balance_label = _make_label(Vector2(100, 30), Vector2(200, 50), 26, Color.WHITE, HORIZONTAL_ALIGNMENT_CENTER)
+	balance_label = _make_label(Vector2(245, 22), Vector2(220, 50), 28, Color.WHITE, HORIZONTAL_ALIGNMENT_LEFT)
 	add_child(balance_label)
 
-	# Info 按鈕
-	info_button = _tex_btn(
-		"info_button", Vector2(1660, 18), Vector2(88, 89)
-	)
+	# BUY COINS 按鈕（頂部中央）
+	var buy_btn := _tex_btn("buy_coins", Vector2(700, 8), Vector2(500, 100))
+	add_child(buy_btn)
+
+	# 經驗值星星
+	var star := TextureRect.new()
+	if ResourceLoader.exists("res://assets/game_files/interface/experience_bar/experience_star.png"):
+		star.texture = load("res://assets/game_files/interface/experience_bar/experience_star.png")
+	star.position = Vector2(1280, 18)
+	star.size = Vector2(70, 75)
+	star.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	add_child(star)
+
+	# 經驗值條背景
+	var exp_bar := TextureRect.new()
+	if ResourceLoader.exists("res://assets/game_files/interface/experience_bar/experience_bar.png"):
+		exp_bar.texture = load("res://assets/game_files/interface/experience_bar/experience_bar.png")
+	exp_bar.position = Vector2(1360, 28)
+	exp_bar.size = Vector2(380, 50)
+	exp_bar.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	add_child(exp_bar)
+
+	# Info 按鈕（右上角）
+	info_button = _tex_btn("info_button", Vector2(1755, 18), Vector2(70, 72))
 	add_child(info_button)
 
 	# 設定（注單記錄）按鈕
-	settings_button = _tex_btn(
-		"settings_button", Vector2(1780, 18), Vector2(101, 89)
-	)
+	settings_button = _tex_btn("settings_button", Vector2(1840, 18), Vector2(70, 72))
 	add_child(settings_button)
 
-	# 免費旋轉提示
+	# 免費旋轉提示（覆蓋在 BUY COINS 位置上）
 	free_spin_label = _make_label(Vector2(600, 35), Vector2(720, 50), 34, Color.YELLOW, HORIZONTAL_ALIGNMENT_CENTER)
 	free_spin_label.visible = false
 	add_child(free_spin_label)
 
-# ---------- 下方介面 ----------
+# ---------- 下方介面（對齊參考圖：[-] [TOTAL BET] [+] [WIN] [MAX BET] [SPIN]）----------
 
 func _build_bottom_bar() -> void:
 	# 背景條
@@ -201,64 +215,60 @@ func _build_bottom_bar() -> void:
 	bar.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
 	add_child(bar)
 
+	var bottom_y: float = 910.0  # 底部元素基準 Y
+
+	# [-] 按鈕（最左邊）
+	minus_button = _tex_btn("minus_button", Vector2(20, bottom_y), Vector2(100, 130))
+	add_child(minus_button)
+
 	# TOTAL BET 背景
 	var tb := TextureRect.new()
 	tb.texture = load("res://assets/game_files/interface/interface/total_bet_back_01.png")
-	tb.position = Vector2(30, 905)
-	tb.size = Vector2(320, 140)
+	tb.position = Vector2(130, bottom_y - 5)
+	tb.size = Vector2(340, 140)
 	tb.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	add_child(tb)
 
 	# TOTAL BET 標題
-	var bt := _make_label(Vector2(50, 910), Vector2(200, 30), 18, Color(0.7, 0.7, 0.7), HORIZONTAL_ALIGNMENT_LEFT)
+	var bt := _make_label(Vector2(160, bottom_y + 5), Vector2(280, 30), 18, Color(0.7, 0.7, 0.7), HORIZONTAL_ALIGNMENT_CENTER)
 	bt.text = "TOTAL BET"
 	add_child(bt)
 
 	# 注金數字
-	bet_label = _make_label(Vector2(50, 950), Vector2(200, 50), 34, Color.WHITE, HORIZONTAL_ALIGNMENT_CENTER)
+	bet_label = _make_label(Vector2(160, bottom_y + 40), Vector2(280, 55), 38, Color.WHITE, HORIZONTAL_ALIGNMENT_CENTER)
 	add_child(bet_label)
 
-	# +/- 按鈕
-	minus_button = _tex_btn("minus_button", Vector2(360, 910), Vector2(90, 120))
-	add_child(minus_button)
-	plus_button = _tex_btn("plus_button", Vector2(460, 910), Vector2(90, 120))
+	# [+] 按鈕
+	plus_button = _tex_btn("plus_button", Vector2(480, bottom_y), Vector2(100, 130))
 	add_child(plus_button)
 
-	# WIN 背景
+	# WIN 背景（中間）
 	var wb := TextureRect.new()
 	wb.texture = load("res://assets/game_files/interface/interface/win_back_01.png")
-	wb.position = Vector2(620, 900)
+	wb.position = Vector2(620, bottom_y - 10)
 	wb.size = Vector2(500, 150)
 	wb.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	add_child(wb)
 
 	# WIN 標題
-	var wt := _make_label(Vector2(800, 905), Vector2(100, 30), 18, Color(0.7, 0.7, 0.7), HORIZONTAL_ALIGNMENT_CENTER)
+	var wt := _make_label(Vector2(780, bottom_y + 5), Vector2(140, 30), 18, Color(0.7, 0.7, 0.7), HORIZONTAL_ALIGNMENT_CENTER)
 	wt.text = "WIN"
 	add_child(wt)
 
 	# WIN 數字
-	win_label = _make_label(Vector2(700, 940), Vector2(300, 60), 40, Color.YELLOW, HORIZONTAL_ALIGNMENT_CENTER)
+	win_label = _make_label(Vector2(700, bottom_y + 40), Vector2(300, 55), 44, Color.YELLOW, HORIZONTAL_ALIGNMENT_CENTER)
 	add_child(win_label)
 
-	# MAX BET
-	max_bet_button = _tex_btn("max_bet", Vector2(1190, 910), Vector2(160, 130))
+	# MAX BET 按鈕
+	max_bet_button = _tex_btn("max_bet", Vector2(1190, bottom_y), Vector2(160, 130))
 	add_child(max_bet_button)
 
-	# SPIN 背景
-	var sb := TextureRect.new()
-	sb.texture = load("res://assets/game_files/interface/buttons_interface/spin_button_back.png")
-	sb.position = Vector2(1430, 895)
-	sb.size = Vector2(449, 194)
-	sb.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-	add_child(sb)
-
-	# SPIN 按鈕
-	spin_button = _tex_btn("spin_button", Vector2(1430, 895), Vector2(449, 194))
+	# SPIN 按鈕（右側）
+	spin_button = _tex_btn("spin_button", Vector2(1430, bottom_y - 15), Vector2(449, 170))
 	add_child(spin_button)
 
-	# STOP 按鈕（初始隱藏）
-	stop_button = _tex_btn("stop_button", Vector2(1430, 895), Vector2(449, 194))
+	# STOP 按鈕（初始隱藏，同位置）
+	stop_button = _tex_btn("stop_button", Vector2(1430, bottom_y - 15), Vector2(449, 170))
 	stop_button.visible = false
 	add_child(stop_button)
 
