@@ -1,0 +1,804 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>⚽ 12碼PK大挑戰</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: 'Segoe UI', 'PingFang TC', 'Microsoft JhengHei', sans-serif;
+  background: #000;
+  overflow: hidden;
+  touch-action: manipulation;
+  user-select: none;
+  -webkit-user-select: none;
+}
+#gameContainer { width: 100vw; height: 100vh; position: relative; overflow: hidden; }
+canvas { display: block; width: 100%; height: 100%; }
+
+/* HUD */
+#hud {
+  position: absolute; top: 0; left: 0; width: 100%;
+  padding: 10px 16px; display: none;
+  justify-content: space-between; align-items: center;
+  z-index: 30;
+  background: linear-gradient(180deg, rgba(0,0,0,0.5) 0%, transparent 100%);
+}
+.hud-item { color: #fff; font-size: 14px; display: flex; align-items: center; gap: 6px; }
+.hud-item .value { font-weight: bold; font-size: 18px; color: #ffd700; }
+#shopBtn {
+  background: linear-gradient(135deg, #ffd700, #ff8c00);
+  border: none; color: #1a1a2e;
+  padding: 8px 16px; border-radius: 20px;
+  font-size: 14px; font-weight: bold; cursor: pointer;
+}
+
+/* 瞄準條 */
+.aim-bar-container { position: absolute; z-index: 20; display: none; }
+#hBar {
+  bottom: 8%; left: 50%; transform: translateX(-50%);
+  width: min(80vw, 400px); height: 40px;
+}
+#hBar .bar-track {
+  width: 100%; height: 100%; background: rgba(0,0,0,0.7);
+  border-radius: 20px; border: 2px solid rgba(255,255,255,0.4);
+  position: relative; overflow: hidden;
+}
+#hBar .bar-zones { position: absolute; width: 100%; height: 100%; display: flex; }
+#hBar .zone { height: 100%; display: flex; align-items: center; justify-content: center; font-size: 11px; color: rgba(255,255,255,0.6); font-weight: bold; }
+#hBar .zone-miss-l { width: 12%; background: rgba(255,50,50,0.35); }
+#hBar .zone-corner-l { width: 15%; background: rgba(255,215,0,0.3); }
+#hBar .zone-mid-l { width: 11%; background: rgba(100,255,100,0.2); }
+#hBar .zone-center { width: 14%; background: rgba(100,255,100,0.4); }
+#hBar .zone-mid-r { width: 11%; background: rgba(100,255,100,0.2); }
+#hBar .zone-corner-r { width: 15%; background: rgba(255,215,0,0.3); }
+#hBar .zone-miss-r { width: 12%; background: rgba(255,50,50,0.35); }
+#hBar .bar-indicator {
+  position: absolute; top: 2px; height: calc(100% - 4px); width: 6px;
+  background: #fff; border-radius: 3px;
+  box-shadow: 0 0 12px #fff, 0 0 24px rgba(255,255,255,0.5);
+}
+#vBar {
+  right: 6%; top: 50%; transform: translateY(-50%);
+  width: 42px; height: min(50vh, 300px);
+}
+#vBar .bar-track {
+  width: 100%; height: 100%; background: rgba(0,0,0,0.7);
+  border-radius: 20px; border: 2px solid rgba(255,255,255,0.4);
+  position: relative; overflow: hidden;
+}
+#vBar .bar-zones { position: absolute; width: 100%; height: 100%; display: flex; flex-direction: column; }
+#vBar .zone { width: 100%; display: flex; align-items: center; justify-content: center; font-size: 11px; color: rgba(255,255,255,0.6); font-weight: bold; }
+#vBar .zone-over { height: 15%; background: rgba(255,50,50,0.35); }
+#vBar .zone-top { height: 20%; background: rgba(255,215,0,0.3); }
+#vBar .zone-mid { height: 30%; background: rgba(100,255,100,0.4); }
+#vBar .zone-low { height: 20%; background: rgba(100,255,100,0.2); }
+#vBar .zone-ground { height: 15%; background: rgba(100,200,100,0.2); }
+#vBar .bar-indicator {
+  position: absolute; left: 2px; width: calc(100% - 4px); height: 6px;
+  background: #fff; border-radius: 3px;
+  box-shadow: 0 0 12px #fff, 0 0 24px rgba(255,255,255,0.5);
+}
+.bar-label {
+  position: absolute; color: #fff; font-size: 14px; font-weight: bold;
+  text-shadow: 0 2px 8px rgba(0,0,0,0.9); white-space: nowrap;
+  top: -28px; left: 50%; transform: translateX(-50%);
+}
+
+#instruction {
+  position: absolute; bottom: 16%; left: 50%; transform: translateX(-50%);
+  color: #fff; font-size: 20px; font-weight: bold;
+  text-shadow: 0 2px 12px rgba(0,0,0,0.9);
+  z-index: 15; text-align: center;
+  animation: pulse 1.5s infinite; pointer-events: none;
+}
+@keyframes pulse { 0%,100%{opacity:1;} 50%{opacity:0.5;} }
+
+/* 結果 */
+#resultOverlay {
+  position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+  display: none; flex-direction: column;
+  justify-content: center; align-items: center;
+  z-index: 50; background: rgba(0,0,0,0.45); cursor: pointer;
+}
+.result-text {
+  font-size: clamp(44px, 12vw, 90px); font-weight: 900;
+  text-shadow: 0 4px 30px rgba(0,0,0,0.6);
+  animation: resultPop 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+.result-text.goal { color: #4ecdc4; }
+.result-text.miss { color: #ff6b6b; }
+.result-text.save { color: #ffa500; }
+.result-points { font-size: 26px; color: #ffd700; margin-top: 10px; animation: resultPop 0.5s 0.2s both; }
+.continue-hint { margin-top: 30px; font-size: 16px; color: rgba(255,255,255,0.7); animation: pulse 1.5s infinite; }
+@keyframes resultPop { 0%{transform:scale(0);opacity:0;} 100%{transform:scale(1);opacity:1;} }
+
+/* 回合結算 */
+#roundSummary {
+  position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+  display: none; justify-content: center; align-items: center;
+  z-index: 60; background: rgba(10,10,30,0.92);
+}
+.summary-card {
+  background: linear-gradient(135deg, #16213e, #1a1a2e);
+  border: 2px solid rgba(255,215,0,0.3); border-radius: 20px;
+  padding: 30px; text-align: center; max-width: 360px; width: 85vw;
+  animation: slideUp 0.5s ease;
+}
+@keyframes slideUp { 0%{transform:translateY(50px);opacity:0;} 100%{transform:translateY(0);opacity:1;} }
+#roundSummary h2 { color: #ffd700; font-size: 28px; margin-bottom: 20px; }
+.shot-results { display: flex; flex-direction: column; gap: 8px; margin-bottom: 20px; }
+.shot-row { display: flex; justify-content: space-between; padding: 8px 12px; background: rgba(255,255,255,0.05); border-radius: 8px; color: #fff; font-size: 14px; }
+.shot-row .pts { color: #ffd700; font-weight: bold; }
+.total-score { font-size: 36px; font-weight: 900; color: #4ecdc4; margin: 10px 0; }
+.total-label { color: #aaa; font-size: 14px; }
+.btn-row { display: flex; gap: 10px; margin-top: 20px; justify-content: center; }
+.btn-primary { background: linear-gradient(135deg, #4ecdc4, #44b09e); border: none; color: #fff; padding: 12px 28px; border-radius: 30px; font-size: 16px; font-weight: bold; cursor: pointer; }
+.btn-secondary { background: rgba(255,255,255,0.1); border: 2px solid rgba(255,255,255,0.2); color: #fff; padding: 12px 28px; border-radius: 30px; font-size: 16px; cursor: pointer; }
+
+/* 商店 */
+#shopOverlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: none; justify-content: center; align-items: center; z-index: 70; background: rgba(10,10,30,0.95); }
+.shop-card { background: linear-gradient(135deg, #16213e, #0f3460); border: 2px solid rgba(255,215,0,0.3); border-radius: 20px; padding: 24px; max-width: 420px; width: 90vw; max-height: 85vh; overflow-y: auto; animation: slideUp 0.4s ease; }
+#shopOverlay h2 { color: #ffd700; font-size: 24px; text-align: center; margin-bottom: 6px; }
+.shop-points { text-align: center; color: #aaa; font-size: 14px; margin-bottom: 16px; }
+.shop-points span { color: #ffd700; font-weight: bold; font-size: 20px; }
+.shop-tabs { display: flex; gap: 8px; margin-bottom: 16px; justify-content: center; }
+.shop-tab { padding: 6px 16px; border-radius: 16px; border: 1px solid rgba(255,255,255,0.2); color: #aaa; font-size: 13px; cursor: pointer; background: transparent; }
+.shop-tab.active { background: rgba(255,215,0,0.2); color: #ffd700; border-color: rgba(255,215,0,0.5); }
+.shop-items { display: flex; flex-direction: column; gap: 10px; }
+.shop-item { display: flex; align-items: center; gap: 12px; padding: 14px; background: rgba(255,255,255,0.05); border-radius: 12px; }
+.shop-item .item-icon { font-size: 36px; }
+.shop-item .item-info { flex: 1; }
+.shop-item .item-name { color: #fff; font-weight: bold; font-size: 15px; }
+.shop-item .item-desc { color: #aaa; font-size: 12px; margin-top: 2px; }
+.shop-item .item-cost { color: #ffd700; font-size: 13px; margin-top: 4px; }
+.redeem-btn { padding: 8px 16px; border-radius: 20px; border: none; font-size: 13px; font-weight: bold; cursor: pointer; }
+.redeem-btn.can-afford { background: linear-gradient(135deg, #ffd700, #ff8c00); color: #1a1a2e; }
+.redeem-btn.cannot-afford { background: rgba(255,255,255,0.1); color: #666; cursor: not-allowed; }
+.redeem-btn.redeemed { background: rgba(78,205,196,0.2); color: #4ecdc4; cursor: default; }
+.redeemed-item { opacity: 0.5; }
+.redeemed-item .item-name::after { content: ' ✓ 已兌換'; color: #4ecdc4; font-size: 12px; }
+.shop-close { display: block; margin: 16px auto 0; padding: 10px 30px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: #fff; border-radius: 20px; font-size: 14px; cursor: pointer; }
+
+/* 開始畫面 */
+#startScreen {
+  position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+  display: flex; flex-direction: column; justify-content: center; align-items: center;
+  z-index: 80;
+}
+#startScreen h1 { font-size: clamp(32px, 8vw, 56px); color: #fff; text-shadow: 0 4px 20px rgba(78,205,196,0.5); margin-bottom: 8px; }
+#startScreen .subtitle { color: #ddd; font-size: 16px; margin-bottom: 40px; }
+#startScreen .start-icon { font-size: 80px; margin-bottom: 20px; animation: bounce 1s infinite; }
+@keyframes bounce { 0%,100%{transform:translateY(0);} 50%{transform:translateY(-12px);} }
+.start-btn { background: linear-gradient(135deg, #4ecdc4, #44b09e); border: none; color: #fff; padding: 16px 48px; border-radius: 40px; font-size: 20px; font-weight: bold; cursor: pointer; box-shadow: 0 4px 20px rgba(78,205,196,0.4); }
+
+#redeemToast { position: fixed; top: 20%; left: 50%; transform: translateX(-50%) translateY(-20px); background: linear-gradient(135deg, #4ecdc4, #44b09e); color: #fff; padding: 16px 32px; border-radius: 12px; font-size: 16px; font-weight: bold; z-index: 100; opacity: 0; transition: all 0.4s ease; pointer-events: none; }
+#redeemToast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+</style>
+</head>
+<body>
+<div id="gameContainer">
+  <canvas id="gameCanvas"></canvas>
+
+  <div id="startScreen">
+    <div class="start-icon">⚽</div>
+    <h1>12碼PK大挑戰</h1>
+    <p class="subtitle">挑戰守門員，贏取獎品！</p>
+    <button class="start-btn" onclick="startGame()">開始挑戰</button>
+  </div>
+
+  <div id="hud">
+    <div class="hud-item">⚽ 第 <span class="value" id="shotNum">1</span>/3 球</div>
+    <div class="hud-item">🏆 點數: <span class="value" id="totalPoints">0</span></div>
+    <button id="shopBtn" onclick="openShop()">🎁 獎品</button>
+  </div>
+  <div id="instruction" style="display:none"></div>
+
+  <div id="hBar" class="aim-bar-container">
+    <div class="bar-label">◀ 瞄準方向 ▶</div>
+    <div class="bar-track">
+      <div class="bar-zones">
+        <div class="zone zone-miss-l">偏</div><div class="zone zone-corner-l">角</div>
+        <div class="zone zone-mid-l"></div><div class="zone zone-center">中</div>
+        <div class="zone zone-mid-r"></div><div class="zone zone-corner-r">角</div>
+        <div class="zone zone-miss-r">偏</div>
+      </div>
+      <div class="bar-indicator" id="hIndicator"></div>
+    </div>
+  </div>
+  <div id="vBar" class="aim-bar-container">
+    <div class="bar-label">▲ 力度 ▼</div>
+    <div class="bar-track">
+      <div class="bar-zones">
+        <div class="zone zone-over">飛</div><div class="zone zone-top">上</div>
+        <div class="zone zone-mid">中</div><div class="zone zone-low">下</div>
+        <div class="zone zone-ground">地</div>
+      </div>
+      <div class="bar-indicator" id="vIndicator"></div>
+    </div>
+  </div>
+
+  <div id="resultOverlay">
+    <div class="result-text" id="resultText"></div>
+    <div class="result-points" id="resultPoints"></div>
+    <div class="continue-hint" id="continueHint" style="display:none">👆 點擊任意處繼續</div>
+  </div>
+
+  <div id="roundSummary">
+    <div class="summary-card">
+      <h2>⚽ 回合結束</h2>
+      <div class="shot-results" id="shotResults"></div>
+      <div class="total-label">本回合得分</div>
+      <div class="total-score" id="roundTotal">0</div>
+      <div class="btn-row">
+        <button class="btn-secondary" onclick="openShop()">🎁 獎品商店</button>
+        <button class="btn-primary" onclick="startGame()">再來一局</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="shopOverlay">
+    <div class="shop-card">
+      <h2>🎁 獎品商店</h2>
+      <div class="shop-points">目前點數：<span id="shopPoints">0</span></div>
+      <div class="shop-tabs">
+        <button class="shop-tab active" onclick="switchShopTab('prizes',this)">獎品兌換</button>
+        <button class="shop-tab" onclick="switchShopTab('history',this)">兌換記錄</button>
+      </div>
+      <div class="shop-items" id="shopItems"></div>
+      <button class="shop-close" onclick="closeShop()">返回遊戲</button>
+    </div>
+  </div>
+  <div id="redeemToast"></div>
+</div>
+
+<script>
+// ===== Canvas 3D 場景 =====
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+let W, H;
+
+function resizeCanvas() {
+  W = canvas.width = window.innerWidth * devicePixelRatio;
+  H = canvas.height = window.innerHeight * devicePixelRatio;
+  ctx.scale(devicePixelRatio, devicePixelRatio);
+  W /= devicePixelRatio; H /= devicePixelRatio;
+}
+resizeCanvas();
+window.addEventListener('resize', resizeCanvas);
+
+// 3D 透視投影
+const horizon = () => H * 0.35;
+function project(x3d, y3d, z3d) {
+  // x3d: -1~1 水平, y3d: 高度, z3d: 0(近)~1(遠，球門)
+  const fov = 1.2;
+  const depth = 1 + z3d * fov;
+  const screenX = W / 2 + (x3d * W * 0.5) / depth;
+  const screenY = horizon() + (H * 0.65 - y3d * H * 0.4) / depth;
+  const scale = 1 / depth;
+  return { x: screenX, y: screenY, s: scale };
+}
+
+// ===== 繪製場景 =====
+function drawScene() {
+  // 天空
+  const skyGrad = ctx.createLinearGradient(0, 0, 0, horizon());
+  skyGrad.addColorStop(0, '#87CEEB');
+  skyGrad.addColorStop(0.6, '#B0D4F1');
+  skyGrad.addColorStop(1, '#d4e8c2');
+  ctx.fillStyle = skyGrad;
+  ctx.fillRect(0, 0, W, horizon());
+
+  // 草地
+  const grassGrad = ctx.createLinearGradient(0, horizon(), 0, H);
+  grassGrad.addColorStop(0, '#2d8f3e');
+  grassGrad.addColorStop(0.3, '#35a849');
+  grassGrad.addColorStop(1, '#2aa038');
+  ctx.fillStyle = grassGrad;
+  ctx.fillRect(0, horizon(), W, H - horizon());
+
+  // 草地條紋
+  ctx.fillStyle = 'rgba(255,255,255,0.03)';
+  for (let i = 0; i < 12; i++) {
+    if (i % 2 === 0) {
+      const z1 = i / 12, z2 = (i + 1) / 12;
+      const p1 = project(-1.5, 0, z1), p2 = project(1.5, 0, z1);
+      const p3 = project(1.5, 0, z2), p4 = project(-1.5, 0, z2);
+      ctx.beginPath();
+      ctx.moveTo(p1.x, p1.y); ctx.lineTo(p2.x, p2.y);
+      ctx.lineTo(p3.x, p3.y); ctx.lineTo(p4.x, p4.y);
+      ctx.fill();
+    }
+  }
+
+  // 場地線條
+  ctx.strokeStyle = '#fff';
+  ctx.lineWidth = 2.5;
+
+  // 禁區大框
+  drawLine3D(-0.55, 0, 0.3, 0.55, 0, 0.3);
+  drawLine3D(-0.55, 0, 0.3, -0.55, 0, 1.0);
+  drawLine3D(0.55, 0, 0.3, 0.55, 0, 1.0);
+  drawLine3D(-0.55, 0, 1.0, 0.55, 0, 1.0);
+
+  // 小禁區
+  ctx.lineWidth = 2;
+  drawLine3D(-0.25, 0, 0.7, 0.25, 0, 0.7);
+  drawLine3D(-0.25, 0, 0.7, -0.25, 0, 1.0);
+  drawLine3D(0.25, 0, 0.7, 0.25, 0, 1.0);
+
+  // 禁區弧線（D型）
+  ctx.lineWidth = 2.5;
+  ctx.beginPath();
+  const arcPts = 20;
+  for (let i = 0; i <= arcPts; i++) {
+    const angle = -Math.PI * 0.35 + (Math.PI * 0.7) * (i / arcPts);
+    const ax = Math.sin(angle) * 0.32;
+    const az = 0.3 - Math.cos(angle) * 0.15;
+    const p = project(ax, 0, az);
+    if (i === 0) ctx.moveTo(p.x, p.y);
+    else ctx.lineTo(p.x, p.y);
+  }
+  ctx.stroke();
+
+  // 12碼點
+  const penSpot = project(0, 0, 0.42);
+  ctx.fillStyle = '#fff';
+  ctx.beginPath();
+  ctx.arc(penSpot.x, penSpot.y, 3, 0, Math.PI * 2);
+  ctx.fill();
+}
+
+function drawLine3D(x1, y1, z1, x2, y2, z2) {
+  const p1 = project(x1, y1, z1), p2 = project(x2, y2, z2);
+  ctx.beginPath(); ctx.moveTo(p1.x, p1.y); ctx.lineTo(p2.x, p2.y); ctx.stroke();
+}
+
+// ===== 球門 =====
+function drawGoal() {
+  const postW = 0.35, postH = 0.28;
+  const tl = project(-postW, postH, 1.0);
+  const tr = project(postW, postH, 1.0);
+  const bl = project(-postW, 0, 1.0);
+  const br = project(postW, 0, 1.0);
+
+  // 球網
+  ctx.fillStyle = 'rgba(200,200,200,0.15)';
+  ctx.beginPath();
+  ctx.moveTo(tl.x, tl.y); ctx.lineTo(tr.x, tr.y); ctx.lineTo(br.x, br.y); ctx.lineTo(bl.x, bl.y);
+  ctx.fill();
+
+  // 網格線
+  ctx.strokeStyle = 'rgba(255,255,255,0.12)';
+  ctx.lineWidth = 0.8;
+  const netCols = 12, netRows = 6;
+  for (let i = 1; i < netCols; i++) {
+    const t = i / netCols;
+    const x = -postW + t * postW * 2;
+    const top = project(x, postH, 1.0);
+    const bot = project(x, 0, 1.0);
+    ctx.beginPath(); ctx.moveTo(top.x, top.y); ctx.lineTo(bot.x, bot.y); ctx.stroke();
+  }
+  for (let i = 1; i < netRows; i++) {
+    const t = i / netRows;
+    const y = t * postH;
+    const l = project(-postW, y, 1.0);
+    const r = project(postW, y, 1.0);
+    ctx.beginPath(); ctx.moveTo(l.x, l.y); ctx.lineTo(r.x, r.y); ctx.stroke();
+  }
+
+  // 門柱
+  ctx.strokeStyle = '#fff';
+  ctx.lineWidth = 4;
+  ctx.beginPath(); ctx.moveTo(bl.x, bl.y); ctx.lineTo(tl.x, tl.y); ctx.lineTo(tr.x, tr.y); ctx.lineTo(br.x, br.y); ctx.stroke();
+}
+
+// ===== 人物 =====
+function drawPerson(x3d, z3d, colors, scale3d, facing) {
+  const p = project(x3d, 0, z3d);
+  const s = p.s * (scale3d || 1);
+  const h = 70 * s; // 身高
+  const cx = p.x, cy = p.y;
+
+  ctx.save();
+  ctx.translate(cx, cy);
+
+  // 頭
+  const headR = h * 0.16;
+  const headY = -h + headR;
+  // 頭髮
+  ctx.fillStyle = colors.hair;
+  ctx.beginPath();
+  ctx.arc(0, headY, headR * 1.15, -Math.PI, 0);
+  ctx.fill();
+  // 臉
+  ctx.fillStyle = colors.skin;
+  ctx.beginPath();
+  ctx.arc(0, headY, headR, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.strokeStyle = '#333';
+  ctx.lineWidth = 1;
+  ctx.stroke();
+
+  if (facing !== 'back') {
+    // 眼睛
+    ctx.fillStyle = '#fff';
+    ctx.beginPath();
+    ctx.ellipse(-headR*0.35, headY - headR*0.05, headR*0.22, headR*0.28, 0, 0, Math.PI*2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.ellipse(headR*0.35, headY - headR*0.05, headR*0.22, headR*0.28, 0, 0, Math.PI*2);
+    ctx.fill();
+    ctx.fillStyle = '#1a1a2e';
+    ctx.beginPath();
+    ctx.arc(-headR*0.3, headY, headR*0.13, 0, Math.PI*2);
+    ctx.arc(headR*0.3, headY, headR*0.13, 0, Math.PI*2);
+    ctx.fill();
+  }
+
+  // 身體（球衣）
+  const bodyTop = -h + headR * 2;
+  const bodyH = h * 0.35;
+  const bodyW = h * 0.28;
+  ctx.fillStyle = colors.shirt;
+  roundRect(-bodyW/2, bodyTop, bodyW, bodyH, 4);
+  ctx.fill();
+
+  // 號碼
+  if (colors.number) {
+    ctx.fillStyle = '#fff';
+    ctx.font = `bold ${h*0.12}px Arial`;
+    ctx.textAlign = 'center';
+    ctx.fillText(colors.number, 0, bodyTop + bodyH * 0.65);
+  }
+
+  // 手臂
+  const armW = h * 0.07, armH = h * 0.22;
+  ctx.fillStyle = colors.shirt;
+  roundRect(-bodyW/2 - armW, bodyTop + 2, armW, armH * 0.5, 3);
+  ctx.fill();
+  roundRect(bodyW/2, bodyTop + 2, armW, armH * 0.5, 3);
+  ctx.fill();
+  // 手膚色
+  ctx.fillStyle = colors.skin;
+  roundRect(-bodyW/2 - armW, bodyTop + armH * 0.5, armW, armH * 0.5, 3);
+  ctx.fill();
+  roundRect(bodyW/2, bodyTop + armH * 0.5, armW, armH * 0.5, 3);
+  ctx.fill();
+
+  // 手套（守門員）
+  if (colors.gloves) {
+    ctx.fillStyle = colors.gloves;
+    roundRect(-bodyW/2 - armW - 2, bodyTop + armH - 2, armW + 4, h * 0.08, 4);
+    ctx.fill();
+    roundRect(bodyW/2 - 2, bodyTop + armH - 2, armW + 4, h * 0.08, 4);
+    ctx.fill();
+  }
+
+  // 褲子
+  const legTop = bodyTop + bodyH;
+  const legH = h * 0.25;
+  const legW = h * 0.11;
+  const legGap = h * 0.04;
+  ctx.fillStyle = colors.shorts;
+  roundRect(-legGap - legW, legTop, legW, legH, 3);
+  ctx.fill();
+  roundRect(legGap, legTop, legW, legH, 3);
+  ctx.fill();
+
+  // 球襪
+  const sockH = h * 0.12;
+  ctx.fillStyle = colors.socks || colors.shirt;
+  roundRect(-legGap - legW, legTop + legH, legW, sockH, 3);
+  ctx.fill();
+  roundRect(legGap, legTop + legH, legW, sockH, 3);
+  ctx.fill();
+
+  // 球鞋
+  const shoeH = h * 0.06;
+  ctx.fillStyle = colors.shoes || '#111';
+  roundRect(-legGap - legW - 2, legTop + legH + sockH - 1, legW + 4, shoeH, 3);
+  ctx.fill();
+  roundRect(legGap - 2, legTop + legH + sockH - 1, legW + 4, shoeH, 3);
+  ctx.fill();
+
+  ctx.restore();
+}
+
+function roundRect(x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x+r, y);
+  ctx.lineTo(x+w-r, y);
+  ctx.quadraticCurveTo(x+w, y, x+w, y+r);
+  ctx.lineTo(x+w, y+h-r);
+  ctx.quadraticCurveTo(x+w, y+h, x+w-r, y+h);
+  ctx.lineTo(x+r, y+h);
+  ctx.quadraticCurveTo(x, y+h, x, y+h-r);
+  ctx.lineTo(x, y+r);
+  ctx.quadraticCurveTo(x, y, x+r, y);
+  ctx.closePath();
+}
+
+// ===== 足球 =====
+function drawBall(x3d, y3d, z3d) {
+  const p = project(x3d, y3d, z3d);
+  const r = 10 * p.s;
+  ctx.save();
+  // 陰影
+  ctx.fillStyle = 'rgba(0,0,0,0.3)';
+  const shadow = project(x3d, 0, z3d);
+  ctx.beginPath(); ctx.ellipse(shadow.x, shadow.y, r*1.2, r*0.4, 0, 0, Math.PI*2); ctx.fill();
+  // 球
+  const grad = ctx.createRadialGradient(p.x - r*0.3, p.y - r*0.3, 0, p.x, p.y, r);
+  grad.addColorStop(0, '#fff');
+  grad.addColorStop(0.8, '#e8e8e8');
+  grad.addColorStop(1, '#ccc');
+  ctx.fillStyle = grad;
+  ctx.beginPath(); ctx.arc(p.x, p.y, r, 0, Math.PI*2); ctx.fill();
+  ctx.strokeStyle = '#999'; ctx.lineWidth = 0.8; ctx.stroke();
+  // 五邊形花紋
+  ctx.fillStyle = 'rgba(40,40,40,0.5)';
+  drawPentagon(p.x, p.y, r * 0.35);
+  ctx.restore();
+}
+
+function drawPentagon(cx, cy, r) {
+  ctx.beginPath();
+  for (let i = 0; i < 5; i++) {
+    const a = (i * 2 * Math.PI / 5) - Math.PI / 2;
+    const x = cx + r * Math.cos(a), y = cy + r * Math.sin(a);
+    if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+  }
+  ctx.closePath(); ctx.fill();
+}
+
+// ===== 動畫狀態 =====
+const anim = {
+  ballX: 0, ballY: 0, ballZ: 0.08,
+  gkX: 0, gkTargetX: 0,
+  ballFlying: false, ballT: 0,
+  ballStartX: 0, ballStartZ: 0.08,
+  ballEndX: 0, ballEndY: 0, ballEndZ: 1.0,
+  kickerKicking: false, kickT: 0
+};
+
+const gkColors = { hair: '#e85d2a', skin: '#f5deb3', shirt: '#8b5cf6', shorts: '#f59e0b', socks: '#8b5cf6', shoes: '#333', gloves: '#4ecdc4', number: '1' };
+const kickerColors = { hair: '#222', skin: '#f5deb3', shirt: '#fff', shorts: '#1a1a2e', socks: '#fff', shoes: '#111', number: '10' };
+const spectatorColors = [
+  { hair: '#333', skin: '#e8c89e', shirt: '#ef4444', shorts: '#111', socks: '#ef4444', shoes: '#222' },
+  { hair: '#4a2800', skin: '#f5deb3', shirt: '#fff', shorts: '#111', socks: '#fff', shoes: '#222' },
+  { hair: '#111', skin: '#d4a574', shirt: '#22c55e', shorts: '#111', socks: '#22c55e', shoes: '#222' },
+  { hair: '#6b3a00', skin: '#f5deb3', shirt: '#fff', shorts: '#111', socks: '#fff', shoes: '#222' }
+];
+
+function renderFrame() {
+  ctx.clearRect(0, 0, W, H);
+  drawScene();
+  drawGoal();
+
+  // 旁觀球員
+  drawPerson(-0.85, 0.05, spectatorColors[0], 0.9, 'back');
+  drawPerson(-0.72, 0.02, spectatorColors[1], 0.9, 'back');
+  drawPerson(0.72, 0.02, spectatorColors[2], 0.9, 'back');
+  drawPerson(0.85, 0.05, spectatorColors[3], 0.9, 'back');
+
+  // 守門員
+  drawPerson(anim.gkX, 0.98, gkColors, 1.0, 'front');
+
+  // 足球
+  if (anim.ballFlying) {
+    anim.ballT += 0.025;
+    if (anim.ballT > 1) anim.ballT = 1;
+    const t = anim.ballT;
+    const ease = t < 0.5 ? 2*t*t : -1+(4-2*t)*t;
+    anim.ballX = anim.ballStartX + (anim.ballEndX - anim.ballStartX) * ease;
+    anim.ballZ = anim.ballStartZ + (anim.ballEndZ - anim.ballStartZ) * ease;
+    anim.ballY = anim.ballEndY * Math.sin(t * Math.PI * 0.7) * 1.3;
+  }
+  drawBall(anim.ballX, anim.ballY, anim.ballZ);
+
+  // 射手（背面）
+  drawPerson(0, 0.08, kickerColors, 1.4, 'back');
+
+  requestAnimationFrame(renderFrame);
+}
+renderFrame();
+
+// ===== 遊戲邏輯 =====
+const state = {
+  phase: 'idle', currentShot: 0, maxShots: 3,
+  shotResults: [], totalPoints: 0,
+  hPos: 0, vPos: 0, animFrame: null,
+  barSpeed: 0.012, barDir: 1
+};
+
+const PRIZES = [
+  { id: 'bronze', name: '銅牌獎勵', desc: '初階挑戰達成', cost: 100, icon: '🥉' },
+  { id: 'silver', name: '銀牌獎勵', desc: '中階射手認證', cost: 300, icon: '🥈' },
+  { id: 'gold', name: '金牌獎勵', desc: '金靴射手殊榮', cost: 500, icon: '🥇' },
+  { id: 'diamond', name: '鑽石獎勵', desc: '傳奇射手成就', cost: 1000, icon: '💎' },
+  { id: 'trophy', name: '冠軍獎盃', desc: '終極榮耀獎勵', cost: 2000, icon: '🏆' }
+];
+
+const $ = id => document.getElementById(id);
+function loadData() { try { const d = JSON.parse(localStorage.getItem('pkGame') || '{}'); state.totalPoints = d.points || 0; return d; } catch { return {}; } }
+function saveData() { const d = JSON.parse(localStorage.getItem('pkGame') || '{}'); d.points = state.totalPoints; localStorage.setItem('pkGame', JSON.stringify(d)); }
+function getRedeemed() { try { return JSON.parse(localStorage.getItem('pkGame') || '{}').redeemed || []; } catch { return []; } }
+function addRedeemed(id) { const d = JSON.parse(localStorage.getItem('pkGame') || '{}'); if (!d.redeemed) d.redeemed = []; d.redeemed.push({ id, date: new Date().toLocaleDateString('zh-TW') }); localStorage.setItem('pkGame', JSON.stringify(d)); }
+
+function updateHUD() { $('totalPoints').textContent = state.totalPoints; $('shotNum').textContent = state.currentShot + 1; }
+
+function init() {
+  loadData(); updateHUD();
+  document.addEventListener('pointerdown', handleTap);
+}
+
+function startGame() {
+  state.currentShot = 0; state.shotResults = []; state.phase = 'idle';
+  $('startScreen').style.display = 'none';
+  $('roundSummary').style.display = 'none';
+  $('resultOverlay').style.display = 'none';
+  $('hud').style.display = 'flex';
+  resetShot();
+  updateHUD();
+  $('instruction').style.display = 'block';
+  $('instruction').textContent = '點擊畫面開始瞄準！';
+  state.phase = 'ready';
+}
+
+function resetShot() {
+  anim.ballX = 0; anim.ballY = 0; anim.ballZ = 0.08;
+  anim.ballFlying = false; anim.ballT = 0;
+  anim.gkX = 0; anim.gkTargetX = 0;
+}
+
+let lastTap = 0;
+function handleTap(e) {
+  const now = Date.now();
+  if (now - lastTap < 300) return;
+  lastTap = now;
+  if (e.target.closest('button') || e.target.closest('#shopOverlay') || e.target.closest('#roundSummary') || e.target.closest('#startScreen')) return;
+
+  switch (state.phase) {
+    case 'ready': startHorizontalAim(); break;
+    case 'h-aim': lockHorizontal(); break;
+    case 'v-aim': lockVertical(); break;
+    case 'result': nextShot(); break;
+  }
+}
+
+function startHorizontalAim() {
+  state.phase = 'h-aim'; state.hPos = 0; state.barDir = 1;
+  state.barSpeed = 0.014 + state.currentShot * 0.002;
+  $('instruction').textContent = '點擊鎖定方向！';
+  $('hBar').style.display = 'block';
+  animateHBar();
+}
+function animateHBar() {
+  if (state.phase !== 'h-aim') return;
+  state.hPos += state.barSpeed * state.barDir;
+  if (state.hPos >= 1) { state.hPos = 1; state.barDir = -1; }
+  if (state.hPos <= 0) { state.hPos = 0; state.barDir = 1; }
+  $('hIndicator').style.left = (state.hPos * 100) + '%';
+  state.animFrame = requestAnimationFrame(animateHBar);
+}
+function lockHorizontal() {
+  cancelAnimationFrame(state.animFrame);
+  state.phase = 'v-aim'; $('hBar').style.display = 'none';
+  state.vPos = 0; state.barDir = 1;
+  $('instruction').textContent = '點擊鎖定力度！';
+  $('vBar').style.display = 'block';
+  animateVBar();
+}
+function animateVBar() {
+  if (state.phase !== 'v-aim') return;
+  state.vPos += state.barSpeed * state.barDir;
+  if (state.vPos >= 1) { state.vPos = 1; state.barDir = -1; }
+  if (state.vPos <= 0) { state.vPos = 0; state.barDir = 1; }
+  $('vIndicator').style.top = (state.vPos * 100) + '%';
+  state.animFrame = requestAnimationFrame(animateVBar);
+}
+function lockVertical() {
+  cancelAnimationFrame(state.animFrame);
+  $('vBar').style.display = 'none';
+  $('instruction').style.display = 'none';
+  state.phase = 'shooting';
+  shoot();
+}
+
+function shoot() {
+  const h = state.hPos, v = state.vPos;
+  const shotZone = getShotZone(h, v);
+  const gkDir = getGKDive();
+  const result = calcResult(shotZone, gkDir);
+
+  // 守門員撲救
+  if (gkDir.dir === 'left') anim.gkX = -0.22;
+  else if (gkDir.dir === 'right') anim.gkX = 0.22;
+  else anim.gkX = 0;
+
+  // 球飛行
+  const targetX = (h - 0.5) * 0.6;
+  const targetY = result.type === 'miss' && shotZone.v === 'over' ? 0.45 : (1 - v) * 0.25;
+  if (shotZone.h === 'miss-l') anim.ballEndX = -0.5;
+  else if (shotZone.h === 'miss-r') anim.ballEndX = 0.5;
+  else anim.ballEndX = targetX;
+  anim.ballEndY = targetY;
+  anim.ballEndZ = 1.0;
+  anim.ballStartX = 0; anim.ballStartZ = 0.08;
+  anim.ballFlying = true; anim.ballT = 0;
+
+  setTimeout(() => showResult(result), 1200);
+}
+
+function getShotZone(h, v) {
+  let hZone;
+  if (h < 0.12) hZone = 'miss-l'; else if (h < 0.27) hZone = 'corner-l';
+  else if (h < 0.38) hZone = 'mid-l'; else if (h < 0.62) hZone = 'center';
+  else if (h < 0.73) hZone = 'mid-r'; else if (h < 0.88) hZone = 'corner-r';
+  else hZone = 'miss-r';
+  let vZone;
+  if (v < 0.15) vZone = 'over'; else if (v < 0.35) vZone = 'top';
+  else if (v < 0.65) vZone = 'mid'; else if (v < 0.85) vZone = 'low'; else vZone = 'ground';
+  return { h: hZone, v: vZone, rawH: h, rawV: v };
+}
+function getGKDive() { const d = ['left','center','right']; return { dir: d[Math.floor(Math.random()*3)] }; }
+function calcResult(shot, gk) {
+  if (shot.h === 'miss-l' || shot.h === 'miss-r' || shot.v === 'over') return { type: 'miss', points: 0 };
+  const shotL = ['corner-l','mid-l'].includes(shot.h), shotR = ['corner-r','mid-r'].includes(shot.h), shotC = shot.h === 'center';
+  let saved = (gk.dir === 'left' && shotL) || (gk.dir === 'right' && shotR) || (gk.dir === 'center' && shotC);
+  if (shot.h.includes('corner')) saved = saved && Math.random() < 0.5;
+  if (shot.h.includes('corner') && shot.v === 'top') saved = false;
+  if (saved) return { type: 'save', points: 0 };
+  let pts = 30;
+  if (shot.h.includes('corner')) pts = 50;
+  if (shot.v === 'top' && shot.h.includes('corner')) pts = 70;
+  return { type: 'goal', points: pts };
+}
+
+function showResult(result) {
+  $('resultOverlay').style.display = 'flex';
+  $('continueHint').style.display = 'none';
+  if (result.type === 'goal') { $('resultText').textContent = 'GOAL!!'; $('resultText').className = 'result-text goal'; $('resultPoints').textContent = '+' + result.points + ' 分'; }
+  else if (result.type === 'save') { $('resultText').textContent = '被擋住了！'; $('resultText').className = 'result-text save'; $('resultPoints').textContent = '+0 分'; }
+  else { $('resultText').textContent = '射偏了！'; $('resultText').className = 'result-text miss'; $('resultPoints').textContent = '+0 分'; }
+  state.shotResults.push(result); state.totalPoints += result.points; saveData(); updateHUD();
+  setTimeout(() => { $('continueHint').style.display = 'block'; state.phase = 'result'; }, 800);
+}
+
+function nextShot() {
+  $('resultOverlay').style.display = 'none';
+  state.currentShot++;
+  if (state.currentShot >= state.maxShots) { showSummary(); return; }
+  resetShot(); updateHUD();
+  $('instruction').style.display = 'block'; $('instruction').textContent = '點擊畫面開始瞄準！';
+  state.phase = 'ready';
+}
+
+function showSummary() {
+  state.phase = 'summary';
+  const results = $('shotResults'); results.innerHTML = '';
+  let total = 0;
+  state.shotResults.forEach((r, i) => {
+    total += r.points;
+    const row = document.createElement('div'); row.className = 'shot-row';
+    const label = r.type === 'goal' ? '⚽ 進球！' : r.type === 'save' ? '🧤 被擋' : '❌ 射偏';
+    row.innerHTML = `<span>第 ${i+1} 球 — ${label}</span><span class="pts">${r.points > 0 ? '+'+r.points : '0'} 分</span>`;
+    results.appendChild(row);
+  });
+  $('roundTotal').textContent = total;
+  $('roundSummary').style.display = 'flex';
+}
+
+function openShop() { loadData(); $('shopOverlay').style.display = 'flex'; $('shopPoints').textContent = state.totalPoints; renderPrizes($('shopItems')); document.querySelectorAll('.shop-tab').forEach((t,i) => t.classList.toggle('active', i===0)); }
+function closeShop() { $('shopOverlay').style.display = 'none'; }
+function switchShopTab(tab, btn) { document.querySelectorAll('.shop-tab').forEach(t => t.classList.remove('active')); btn.classList.add('active'); const c = $('shopItems'); c.innerHTML = ''; tab === 'prizes' ? renderPrizes(c) : renderHistory(c); }
+function renderPrizes(c) { const rd = getRedeemed(); PRIZES.forEach(p => { const ir = rd.some(r => r.id===p.id), ca = state.totalPoints>=p.cost; const d = document.createElement('div'); d.className = 'shop-item'+(ir?' redeemed-item':''); d.innerHTML = `<div class="item-icon">${p.icon}</div><div class="item-info"><div class="item-name">${p.name}</div><div class="item-desc">${p.desc}</div><div class="item-cost">💰 ${p.cost} 點</div></div><button class="redeem-btn ${ir?'redeemed':(ca?'can-afford':'cannot-afford')}" ${ir||!ca?'disabled':''} onclick="redeemPrize('${p.id}')">${ir?'已兌換':(ca?'兌換':'點數不足')}</button>`; c.appendChild(d); }); }
+function renderHistory(c) { const rd = getRedeemed(); if(!rd.length){c.innerHTML='<div style="color:#666;text-align:center;padding:30px;">尚無兌換記錄</div>';return;} rd.forEach(r => { const p = PRIZES.find(x=>x.id===r.id); if(!p)return; const d = document.createElement('div'); d.className='shop-item'; d.innerHTML=`<div class="item-icon">${p.icon}</div><div class="item-info"><div class="item-name">${p.name}</div><div class="item-desc">兌換日期：${r.date}</div></div>`; c.appendChild(d); }); }
+function redeemPrize(id) { const p = PRIZES.find(x=>x.id===id); if(!p||state.totalPoints<p.cost)return; state.totalPoints-=p.cost; saveData(); addRedeemed(id); updateHUD(); const t=$('redeemToast'); t.textContent=`🎉 成功兌換「${p.name}」！`; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),2000); openShop(); }
+
+init();
+</script>
+</body>
+</html>

@@ -199,6 +199,8 @@ body {
   padding: 6px 8px; border-radius: 6px; font-size: 12px; flex: 1; min-width: 0;
 }
 .setup-field input[type="color"] { width: 36px; height: 28px; border: none; border-radius: 4px; cursor: pointer; background: none; padding: 0; }
+.setup-field select { background: #1a3050; border: 1px solid rgba(255,255,255,0.15); color: #ddd; padding: 6px 8px; border-radius: 6px; font-size: 12px; }
+.espn-result:hover { background: rgba(91,163,245,0.15); }
 .setup-roster-header { display: flex; gap: 6px; font-size: 10px; color: #667; margin: 10px 0 4px; padding: 0 2px; }
 .setup-roster-header span:nth-child(1) { width: 44px; text-align: center; }
 .setup-roster-header span:nth-child(2) { flex: 1; }
@@ -515,6 +517,54 @@ document.addEventListener('touchmove', (e) => { if (e.touches.length > 1) e.prev
       <div class="setup-team home">
         <h3>主隊 (A)</h3>
         <div class="setup-field">
+          <label>選擇</label>
+          <select id="setup-a-preset" onchange="applyTeamPreset('a', this.value)" style="flex:1">
+            <option value="">-- 自訂球隊 --</option>
+            <optgroup label="英超">
+              <option value="arsenal">Arsenal 兵工廠</option>
+              <option value="chelsea">Chelsea 乍爾西</option>
+              <option value="liverpool">Liverpool 利物浦</option>
+              <option value="mancity">Man City 曼城</option>
+              <option value="manutd">Man United 曼聯</option>
+              <option value="tottenham">Tottenham 熱刺</option>
+            </optgroup>
+            <optgroup label="西甲">
+              <option value="barcelona">Barcelona 巴塞隆納</option>
+              <option value="realmadrid">Real Madrid 皇家馬德里</option>
+              <option value="atletico">Atlético Madrid 馬競</option>
+            </optgroup>
+            <optgroup label="德甲">
+              <option value="bayern">Bayern Munich 拜仁慕尼黑</option>
+              <option value="dortmund">Dortmund 多特蒙德</option>
+            </optgroup>
+            <optgroup label="意甲">
+              <option value="acmilan">AC Milan AC米蘭</option>
+              <option value="inter">Inter Milan 國際米蘭</option>
+              <option value="juventus">Juventus 尤文圖斯</option>
+            </optgroup>
+            <optgroup label="法甲">
+              <option value="psg">PSG 巴黎聖日耳曼</option>
+            </optgroup>
+            <optgroup label="國家隊">
+              <option value="nt_brazil">Brazil 巴西</option>
+              <option value="nt_argentina">Argentina 阿根廷</option>
+              <option value="nt_france">France 法國</option>
+              <option value="nt_germany">Germany 德國</option>
+              <option value="nt_spain">Spain 西班牙</option>
+              <option value="nt_england">England 英格蘭</option>
+              <option value="nt_portugal">Portugal 葡萄牙</option>
+              <option value="nt_japan">Japan 日本</option>
+              <option value="nt_korea">South Korea 韓國</option>
+            </optgroup>
+          </select>
+        </div>
+        <div class="setup-field">
+          <label>搜尋</label>
+          <input type="text" id="setup-a-search" placeholder="ESPN 搜尋球隊..." style="flex:1" onkeydown="if(event.key==='Enter')searchESPNTeam('a')">
+          <button onclick="searchESPNTeam('a')" style="background:#1a3050;border:1px solid rgba(255,255,255,0.15);color:#5ba3f5;padding:4px 10px;border-radius:4px;cursor:pointer;font-size:11px">搜尋</button>
+        </div>
+        <div id="setup-a-search-results" style="display:none;max-height:120px;overflow-y:auto;margin-bottom:6px"></div>
+        <div class="setup-field">
           <label>隊名</label>
           <input type="text" id="setup-a-name" value="主隊 FC">
         </div>
@@ -529,6 +579,54 @@ document.addEventListener('touchmove', (e) => { if (e.touches.length > 1) e.prev
       </div>
       <div class="setup-team away">
         <h3>客隊 (B)</h3>
+        <div class="setup-field">
+          <label>選擇</label>
+          <select id="setup-b-preset" onchange="applyTeamPreset('b', this.value)" style="flex:1">
+            <option value="">-- 自訂球隊 --</option>
+            <optgroup label="英超">
+              <option value="arsenal">Arsenal 兵工廠</option>
+              <option value="chelsea">Chelsea 乍爾西</option>
+              <option value="liverpool">Liverpool 利物浦</option>
+              <option value="mancity">Man City 曼城</option>
+              <option value="manutd">Man United 曼聯</option>
+              <option value="tottenham">Tottenham 熱刺</option>
+            </optgroup>
+            <optgroup label="西甲">
+              <option value="barcelona">Barcelona 巴塞隆納</option>
+              <option value="realmadrid">Real Madrid 皇家馬德里</option>
+              <option value="atletico">Atlético Madrid 馬競</option>
+            </optgroup>
+            <optgroup label="德甲">
+              <option value="bayern">Bayern Munich 拜仁慕尼黑</option>
+              <option value="dortmund">Dortmund 多特蒙德</option>
+            </optgroup>
+            <optgroup label="意甲">
+              <option value="acmilan">AC Milan AC米蘭</option>
+              <option value="inter">Inter Milan 國際米蘭</option>
+              <option value="juventus">Juventus 尤文圖斯</option>
+            </optgroup>
+            <optgroup label="法甲">
+              <option value="psg">PSG 巴黎聖日耳曼</option>
+            </optgroup>
+            <optgroup label="國家隊">
+              <option value="nt_brazil">Brazil 巴西</option>
+              <option value="nt_argentina">Argentina 阿根廷</option>
+              <option value="nt_france">France 法國</option>
+              <option value="nt_germany">Germany 德國</option>
+              <option value="nt_spain">Spain 西班牙</option>
+              <option value="nt_england">England 英格蘭</option>
+              <option value="nt_portugal">Portugal 葡萄牙</option>
+              <option value="nt_japan">Japan 日本</option>
+              <option value="nt_korea">South Korea 韓國</option>
+            </optgroup>
+          </select>
+        </div>
+        <div class="setup-field">
+          <label>搜尋</label>
+          <input type="text" id="setup-b-search" placeholder="ESPN 搜尋球隊..." style="flex:1" onkeydown="if(event.key==='Enter')searchESPNTeam('b')">
+          <button onclick="searchESPNTeam('b')" style="background:#1a3050;border:1px solid rgba(255,255,255,0.15);color:#5ba3f5;padding:4px 10px;border-radius:4px;cursor:pointer;font-size:11px">搜尋</button>
+        </div>
+        <div id="setup-b-search-results" style="display:none;max-height:120px;overflow-y:auto;margin-bottom:6px"></div>
         <div class="setup-field">
           <label>隊名</label>
           <input type="text" id="setup-b-name" value="客隊聯隊">
@@ -559,7 +657,7 @@ document.addEventListener('touchmove', (e) => { if (e.touches.length > 1) e.prev
 <!-- App Layout -->
 <!-- Goal Lightbox (American Dramatic Style) -->
 <div id="goal-lightbox" onclick="closeLightbox(event)">
-  <canvas id="burstCanvas" style="position:absolute;inset:0;width:100%;height:100%;z-index:1"></canvas>
+  <canvas id="burstCanvas" style="position:absolute;inset:0;width:100%;height:100%;z-index:0;pointer-events:none"></canvas>
   <span class="lb-close" onclick="closeLightbox()">✕</span>
 
   <!-- Pitch centered, everything overlaid on top -->
@@ -607,15 +705,9 @@ document.addEventListener('touchmove', (e) => { if (e.touches.length > 1) e.prev
 
     <!-- Template Library -->
     <div id="template-section">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+      <div style="margin-bottom:6px">
         <span style="font-size:13px;font-weight:700;color:#f5a623">📋 進球模板</span>
-        <div style="display:flex;gap:4px;align-items:center">
-          <span style="color:#667;font-size:11px">時間</span>
-          <input type="number" id="tpl-minute" min="0" max="90" value="0" style="background:#1a3050;border:1px solid rgba(255,255,255,0.12);color:#ddd;padding:3px 6px;border-radius:4px;font-size:11px;width:46px" title="分鐘">
-          <span style="color:#667;font-size:11px">'</span>
-          <input type="number" id="tpl-second" min="0" max="59" value="0" style="background:#1a3050;border:1px solid rgba(255,255,255,0.12);color:#ddd;padding:3px 6px;border-radius:4px;font-size:11px;width:46px" title="秒鐘">
-          <span style="color:#667;font-size:11px">"</span>
-        </div>
+        <span style="color:#667;font-size:10px;margin-left:8px">點擊模板自動建立片段，時間在片段卡片中調整</span>
       </div>
       <div id="template-grid"></div>
     </div>
@@ -1128,6 +1220,225 @@ function stopScene() {
 // ===============================================================
 // MATCH SETUP PANEL
 // ===============================================================
+
+// ═══════════════════════════════════════════════════════════
+// TEAM PRESETS
+// ═══════════════════════════════════════════════════════════
+const TEAM_PRESETS = {
+  // ── 英超 ──
+  arsenal: { name: 'Arsenal', color: '#EF0107', numColor: '#fff', logo: 'logos/arsenal.png', roster: [
+    {n:1,name:'Raya',gk:true},{n:2,name:'Saliba'},{n:4,name:'White'},{n:6,name:'Gabriel'},{n:35,name:'Zinchenko'},
+    {n:8,name:'Ødegaard'},{n:5,name:'Partey'},{n:41,name:'Rice'},{n:7,name:'Saka'},{n:9,name:'Havertz'},{n:11,name:'Martinelli'}]},
+  chelsea: { name: 'Chelsea', color: '#034694', numColor: '#fff', logo: 'logos/chelsea.png', roster: [
+    {n:1,name:'Sánchez',gk:true},{n:2,name:'Gusto'},{n:4,name:'Colwill'},{n:6,name:'Fofana'},{n:21,name:'Chilwell'},
+    {n:8,name:'Fernández'},{n:25,name:'Caicedo'},{n:7,name:'Sterling'},{n:10,name:'Mudryk'},{n:18,name:'Jackson'},{n:20,name:'Palmer'}]},
+  liverpool: { name: 'Liverpool', color: '#C8102E', numColor: '#fff', logo: 'logos/liverpool.png', roster: [
+    {n:1,name:'Alisson',gk:true},{n:66,name:'Alexander-Arnold'},{n:4,name:'Van Dijk'},{n:5,name:'Konaté'},{n:26,name:'Robertson'},
+    {n:6,name:'Gravenberch'},{n:8,name:'Szoboszlai'},{n:10,name:'Mac Allister'},{n:7,name:'Salah'},{n:9,name:'Núñez'},{n:11,name:'Díaz'}]},
+  mancity: { name: 'Manchester City', color: '#6CABDD', numColor: '#fff', logo: 'logos/mancity.png', roster: [
+    {n:31,name:'Ederson',gk:true},{n:2,name:'Walker'},{n:3,name:'Dias'},{n:25,name:'Akanji'},{n:6,name:'Gvardiol'},
+    {n:8,name:'Kovačić'},{n:16,name:'Rodri'},{n:17,name:'De Bruyne'},{n:47,name:'Foden'},{n:9,name:'Haaland'},{n:10,name:'Grealish'}]},
+  manutd: { name: 'Manchester United', color: '#DA291C', numColor: '#fff', logo: 'logos/manutd.png', roster: [
+    {n:24,name:'Onana',gk:true},{n:20,name:'Dalot'},{n:6,name:'Martínez'},{n:5,name:'Maguire'},{n:23,name:'Shaw'},
+    {n:18,name:'Casemiro'},{n:8,name:'Fernandes'},{n:14,name:'Eriksen'},{n:10,name:'Rashford'},{n:9,name:'Højlund'},{n:25,name:'Sancho'}]},
+  tottenham: { name: 'Tottenham', color: '#132257', numColor: '#fff', logo: 'logos/tottenham.png', roster: [
+    {n:1,name:'Vicario',gk:true},{n:23,name:'Porro'},{n:17,name:'Romero'},{n:37,name:'Van de Ven'},{n:33,name:'Udogie'},
+    {n:30,name:'Bentancur'},{n:29,name:'Bissouma'},{n:10,name:'Maddison'},{n:7,name:'Son'},{n:9,name:'Richarlison'},{n:16,name:'Werner'}]},
+  // ── 西甲 ──
+  barcelona: { name: 'FC Barcelona', color: '#A50044', numColor: '#FFD700', logo: 'logos/barcelona.png', roster: [
+    {n:1,name:'Ter Stegen',gk:true},{n:2,name:'Cancelo'},{n:4,name:'Araújo'},{n:15,name:'Christensen'},{n:28,name:'Baldé'},
+    {n:8,name:'Pedri'},{n:5,name:'Casadó'},{n:6,name:'Gavi'},{n:11,name:'Raphinha'},{n:9,name:'Lewandowski'},{n:19,name:'Yamal'}]},
+  realmadrid: { name: 'Real Madrid', color: '#FEBE10', numColor: '#000', logo: 'logos/realmadrid.png', roster: [
+    {n:1,name:'Courtois',gk:true},{n:2,name:'Carvajal'},{n:4,name:'Alaba'},{n:22,name:'Rüdiger'},{n:23,name:'Mendy'},
+    {n:8,name:'Kroos'},{n:15,name:'Valverde'},{n:5,name:'Bellingham'},{n:11,name:'Rodrygo'},{n:9,name:'Mbappé'},{n:7,name:'Vinícius Jr.'}]},
+  atletico: { name: 'Atlético Madrid', color: '#CB3524', numColor: '#fff', logo: 'logos/atletico.png', roster: [
+    {n:13,name:'Oblak',gk:true},{n:2,name:'Giménez'},{n:15,name:'Savić'},{n:23,name:'Reinildo'},{n:16,name:'Molina'},
+    {n:6,name:'Koke'},{n:8,name:'Barrios'},{n:5,name:'De Paul'},{n:10,name:'Correa'},{n:7,name:'Griezmann'},{n:9,name:'Morata'}]},
+  // ── 德甲 ──
+  bayern: { name: 'Bayern Munich', color: '#DC052D', numColor: '#fff', logo: 'logos/bayern.png', roster: [
+    {n:1,name:'Neuer',gk:true},{n:5,name:'Upamecano'},{n:21,name:'Hernández'},{n:4,name:'De Ligt'},{n:19,name:'Davies'},
+    {n:6,name:'Kimmich'},{n:42,name:'Musiala'},{n:25,name:'Müller'},{n:7,name:'Gnabry'},{n:9,name:'Kane'},{n:10,name:'Sané'}]},
+  dortmund: { name: 'Borussia Dortmund', color: '#FDE100', numColor: '#000', logo: 'logos/dortmund.png', roster: [
+    {n:1,name:'Kobel',gk:true},{n:26,name:'Ryerson'},{n:4,name:'Schlotterbeck'},{n:15,name:'Hummels'},{n:3,name:'Maatsen'},
+    {n:6,name:'Can'},{n:11,name:'Reus'},{n:7,name:'Sancho'},{n:10,name:'Sabitzer'},{n:9,name:'Füllkrug'},{n:27,name:'Adeyemi'}]},
+  // ── 意甲 ──
+  acmilan: { name: 'AC Milan', color: '#FB090B', numColor: '#000', logo: 'logos/acmilan.png', roster: [
+    {n:16,name:'Maignan',gk:true},{n:2,name:'Calabria'},{n:23,name:'Tomori'},{n:46,name:'Gabbia'},{n:19,name:'Hernández'},
+    {n:8,name:'Tonali'},{n:4,name:'Bennacer'},{n:10,name:'Díaz'},{n:11,name:'Pulišić'},{n:9,name:'Giroud'},{n:7,name:'Leão'}]},
+  inter: { name: 'Inter Milan', color: '#0068A8', numColor: '#fff', logo: 'logos/inter.png', roster: [
+    {n:1,name:'Sommer',gk:true},{n:36,name:'Darmian'},{n:6,name:'De Vrij'},{n:15,name:'Acerbi'},{n:32,name:'Dimarco'},
+    {n:23,name:'Barella'},{n:20,name:'Çalhanoğlu'},{n:22,name:'Mkhitaryan'},{n:10,name:'Lautaro'},{n:9,name:'Thuram'},{n:11,name:'Bastoni'}]},
+  juventus: { name: 'Juventus', color: '#000000', numColor: '#fff', logo: 'logos/juventus.png', roster: [
+    {n:1,name:'Szczęsny',gk:true},{n:6,name:'Danilo'},{n:3,name:'Bremer'},{n:4,name:'Gatti'},{n:12,name:'Alex Sandro'},
+    {n:25,name:'Rabiot'},{n:5,name:'Locatelli'},{n:10,name:'Pogba'},{n:7,name:'Chiesa'},{n:9,name:'Vlahović'},{n:11,name:'Kostić'}]},
+  // ── 法甲 ──
+  psg: { name: 'Paris Saint-Germain', color: '#004170', numColor: '#fff', logo: 'logos/psg.png', roster: [
+    {n:1,name:'Donnarumma',gk:true},{n:2,name:'Hakimi'},{n:5,name:'Marquinhos'},{n:35,name:'Škriniar'},{n:25,name:'Nuno Mendes'},
+    {n:8,name:'Fabián'},{n:17,name:'Vitinha'},{n:15,name:'Zaïre-Emery'},{n:7,name:'Dembélé'},{n:9,name:'Gonçalo Ramos'},{n:10,name:'Lee Kang-in'}]},
+  // ── 國家隊 ──
+  nt_brazil: { name: 'Brazil', color: '#FFDF00', numColor: '#009C3B', logo: 'logos/nt_brazil.png', roster: [
+    {n:1,name:'Alisson',gk:true},{n:2,name:'Danilo'},{n:3,name:'Thiago Silva'},{n:4,name:'Marquinhos'},{n:6,name:'Alex Sandro'},
+    {n:5,name:'Casemiro'},{n:8,name:'Paquetá'},{n:10,name:'Neymar'},{n:7,name:'Raphinha'},{n:9,name:'Richarlison'},{n:11,name:'Vinícius Jr.'}]},
+  nt_argentina: { name: 'Argentina', color: '#75AADB', numColor: '#000', logo: 'logos/nt_argentina.png', roster: [
+    {n:23,name:'E. Martínez',gk:true},{n:26,name:'Molina'},{n:13,name:'Romero'},{n:6,name:'Pezzella'},{n:3,name:'Tagliafico'},
+    {n:7,name:'De Paul'},{n:5,name:'Paredes'},{n:20,name:'Mac Allister'},{n:11,name:'Di María'},{n:10,name:'Messi'},{n:9,name:'J. Álvarez'}]},
+  nt_france: { name: 'France', color: '#002654', numColor: '#fff', logo: 'logos/nt_france.png', roster: [
+    {n:1,name:'Lloris',gk:true},{n:5,name:'Koundé'},{n:4,name:'Varane'},{n:21,name:'Upamecano'},{n:22,name:'T. Hernández'},
+    {n:8,name:'Tchouaméni'},{n:13,name:'Kanté'},{n:6,name:'Rabiot'},{n:10,name:'Mbappé'},{n:9,name:'Giroud'},{n:7,name:'Griezmann'}]},
+  nt_germany: { name: 'Germany', color: '#000000', numColor: '#fff', logo: 'logos/nt_germany.png', roster: [
+    {n:1,name:'Neuer',gk:true},{n:6,name:'Kimmich'},{n:2,name:'Rüdiger'},{n:4,name:'Schlotterbeck'},{n:3,name:'Raum'},
+    {n:8,name:'Kroos'},{n:21,name:'Gündoğan'},{n:10,name:'Musiala'},{n:7,name:'Havertz'},{n:9,name:'Füllkrug'},{n:13,name:'Müller'}]},
+  nt_spain: { name: 'Spain', color: '#AA151B', numColor: '#F1BF00', logo: 'logos/nt_spain.png', roster: [
+    {n:1,name:'Unai Simón',gk:true},{n:2,name:'Carvajal'},{n:4,name:'Le Normand'},{n:14,name:'Laporte'},{n:24,name:'Cucurella'},
+    {n:8,name:'Pedri'},{n:16,name:'Rodri'},{n:6,name:'F. López'},{n:19,name:'Yamal'},{n:9,name:'Morata'},{n:11,name:'N. Williams'}]},
+  nt_england: { name: 'England', color: '#FFFFFF', numColor: '#002366', logo: 'logos/nt_england.png', roster: [
+    {n:1,name:'Pickford',gk:true},{n:2,name:'Walker'},{n:5,name:'Stones'},{n:6,name:'Maguire'},{n:3,name:'Shaw'},
+    {n:4,name:'Rice'},{n:8,name:'Henderson'},{n:10,name:'Bellingham'},{n:7,name:'Saka'},{n:9,name:'Kane'},{n:11,name:'Foden'}]},
+  nt_portugal: { name: 'Portugal', color: '#006600', numColor: '#fff', logo: 'logos/nt_portugal.png', roster: [
+    {n:1,name:'Diogo Costa',gk:true},{n:2,name:'Cancelo'},{n:4,name:'Dias'},{n:3,name:'Pepe'},{n:5,name:'Nuno Mendes'},
+    {n:8,name:'Bruno Fernandes'},{n:6,name:'Palhinha'},{n:10,name:'Bernardo'},{n:7,name:'Cristiano Ronaldo'},{n:9,name:'Gonçalo Ramos'},{n:11,name:'Rafael Leão'}]},
+  nt_japan: { name: 'Japan', color: '#002366', numColor: '#fff', logo: 'logos/nt_japan.png', roster: [
+    {n:1,name:'Suzuki',gk:true},{n:2,name:'Sugawara'},{n:22,name:'Yoshida'},{n:4,name:'Itakura'},{n:5,name:'Nagatomo'},
+    {n:6,name:'Endo'},{n:8,name:'Doan'},{n:10,name:'Minamino'},{n:7,name:'Mitoma'},{n:9,name:'Kamada'},{n:11,name:'Kubo'}]},
+  nt_korea: { name: 'South Korea', color: '#CD2E3A', numColor: '#fff', logo: 'logos/nt_korea.png', roster: [
+    {n:1,name:'Kim Seunggyu',gk:true},{n:2,name:'Kim Moonhwan'},{n:4,name:'Kim Minjae'},{n:20,name:'Kwon Kyungwon'},{n:3,name:'Kim Jinsu'},
+    {n:6,name:'Hwang Inbeom'},{n:5,name:'Jung Wooyoung'},{n:10,name:'Lee Jaesun'},{n:7,name:'Son Heungmin'},{n:9,name:'Cho Guesung'},{n:11,name:'Hwang Hee-chan'}]},
+};
+
+function applyTeamPreset(side, presetKey) {
+  if (!presetKey) return;
+  const preset = TEAM_PRESETS[presetKey];
+  if (!preset) return;
+  document.getElementById(`setup-${side}-name`).value = preset.name;
+  document.getElementById(`setup-${side}-color`).value = preset.color;
+  document.getElementById(`setup-${side}-numcolor`).value = preset.numColor;
+  // 儲存 logo 路徑供燈箱等功能使用
+  if (side === 'a') window._homeTeamLogo = preset.logo || '';
+  else window._awayTeamLogo = preset.logo || '';
+  // 更新計分欄的旗幟/logo
+  const flagEl = document.getElementById(side === 'a' ? 'home-flag' : 'away-flag');
+  if (flagEl && preset.logo) {
+    flagEl.innerHTML = `<img src="${preset.logo}" style="width:24px;height:24px;border-radius:50%;object-fit:contain">`;
+  }
+  setupRenderRoster(side, preset.roster);
+}
+
+// ═══════════════════════════════════════════════════════════
+// ESPN TEAM SEARCH
+// ═══════════════════════════════════════════════════════════
+async function searchESPNTeam(side) {
+  const input = document.getElementById(`setup-${side}-search`);
+  const query = input.value.trim();
+  if (!query) return;
+
+  const resultsDiv = document.getElementById(`setup-${side}-search-results`);
+  resultsDiv.style.display = '';
+  resultsDiv.innerHTML = '<div style="color:#667;font-size:11px;padding:4px">搜尋中...</div>';
+
+  try {
+    // 搜尋多個聯賽
+    const leagues = ['eng.1','esp.1','ger.1','ita.1','fra.1','usa.1','mex.1','jpn.1','kor.1','bra.1','arg.1'];
+    const allTeams = [];
+
+    for (const league of leagues) {
+      try {
+        const res = await fetch(`https://site.api.espn.com/apis/site/v2/sports/soccer/${league}/teams`);
+        const data = await res.json();
+        if (data.sports && data.sports[0] && data.sports[0].leagues) {
+          data.sports[0].leagues.forEach(l => {
+            if (l.teams) {
+              l.teams.forEach(t => {
+                const team = t.team;
+                if (team.displayName.toLowerCase().includes(query.toLowerCase()) ||
+                    team.shortDisplayName.toLowerCase().includes(query.toLowerCase())) {
+                  allTeams.push({
+                    id: team.id,
+                    name: team.displayName,
+                    short: team.shortDisplayName,
+                    logo: team.logos?.[0]?.href,
+                    color: team.color ? '#' + team.color : '#5ba3f5',
+                    league: league
+                  });
+                }
+              });
+            }
+          });
+        }
+      } catch(e) {}
+    }
+
+    if (allTeams.length === 0) {
+      resultsDiv.innerHTML = '<div style="color:#e74c3c;font-size:11px;padding:4px">找不到球隊</div>';
+      return;
+    }
+
+    resultsDiv.innerHTML = allTeams.slice(0, 10).map(t =>
+      `<div class="espn-result" onclick="loadESPNRoster('${side}','${t.id}','${t.league}','${t.name.replace(/'/g,"\\'")}','${t.color}')" style="display:flex;align-items:center;gap:6px;padding:4px 6px;cursor:pointer;border-radius:4px;font-size:11px;color:#ddd">
+        ${t.logo ? `<img src="${t.logo}" style="width:20px;height:20px">` : ''}
+        <span>${t.name}</span>
+      </div>`
+    ).join('');
+  } catch(err) {
+    resultsDiv.innerHTML = `<div style="color:#e74c3c;font-size:11px;padding:4px">搜尋失敗: ${err.message}</div>`;
+  }
+}
+
+async function loadESPNRoster(side, teamId, league, teamName, teamColor) {
+  const resultsDiv = document.getElementById(`setup-${side}-search-results`);
+  resultsDiv.innerHTML = '<div style="color:#667;font-size:11px;padding:4px">載入陣容中...</div>';
+
+  try {
+    const res = await fetch(`https://site.api.espn.com/apis/site/v2/sports/soccer/${league}/teams/${teamId}/roster`);
+    const data = await res.json();
+
+    const athletes = data.athletes || [];
+    const posOrder = { 'Goalkeeper': 0, 'Defender': 1, 'Midfielder': 2, 'Forward': 3 };
+    const allPlayers = [];
+    athletes.forEach(group => {
+      if (group.items) {
+        group.items.forEach(p => {
+          allPlayers.push({
+            name: p.displayName || p.fullName || '',
+            number: parseInt(p.jersey) || 0,
+            position: group.position || p.position?.displayName || ''
+          });
+        });
+      }
+    });
+
+    // 嘗試平面格式
+    if (allPlayers.length === 0 && data.athletes) {
+      data.athletes.forEach(p => {
+        allPlayers.push({
+          name: p.displayName || p.fullName || '',
+          number: parseInt(p.jersey) || 0,
+          position: p.position?.displayName || ''
+        });
+      });
+    }
+
+    allPlayers.sort((a, b) => (posOrder[a.position] ?? 2) - (posOrder[b.position] ?? 2));
+
+    // 取前 11 名
+    const starters = allPlayers.slice(0, 11);
+    const rosterData = starters.map((p, i) => ({
+      n: p.number || (i + 1),
+      name: p.name,
+      gk: i === 0 && (p.position === 'Goalkeeper' || p.position === 'GK')
+    }));
+
+    // 套用
+    document.getElementById(`setup-${side}-name`).value = teamName;
+    document.getElementById(`setup-${side}-color`).value = teamColor;
+    setupRenderRoster(side, rosterData);
+    resultsDiv.style.display = 'none';
+    resultsDiv.innerHTML = '';
+    document.getElementById(`setup-${side}-search`).value = '';
+  } catch(err) {
+    resultsDiv.innerHTML = `<div style="color:#e74c3c;font-size:11px;padding:4px">載入失敗: ${err.message}</div>`;
+  }
+}
+
 const SETUP_DEFAULT_ROSTER_A = [
   { n: 1, name: '守門員', gk: true },
   { n: 2, name: '右後衛' }, { n: 4, name: '右中衛' },
@@ -1623,12 +1934,12 @@ const GOAL_TEMPLATES = [
       players: {'home-6':[{x:25,y:35},{x:30,y:36},{x:35,y:38},{x:40,y:38}], 'home-9':[{x:60,y:38},{x:75,y:35},{x:95,y:36},{x:115,y:40}], 'home-7':[{x:55,y:20},{x:70,y:18},{x:90,y:22},{x:105,y:30}]} }) },
   { id:'ct2', cat:'反擊', zone:'長傳', icon:'⬆️', name:'後衛長傳反擊', desc:'後衛長傳找前鋒快速反擊',
     build: () => ({
-      ball: [{x:20,y:50},{x:50,y:30},{x:90,y:35},{x:118,y:40}],
-      players: {'home-5':[{x:20,y:50},{x:22,y:48},{x:25,y:48},{x:28,y:48}], 'home-9':[{x:70,y:38},{x:80,y:34},{x:95,y:36},{x:115,y:40}]} }) },
+      ball: [{x:22,y:48},{x:70,y:38},{x:95,y:36},{x:118,y:40}],
+      players: {'home-5':[{x:20,y:50},{x:22,y:48},{x:24,y:48},{x:26,y:48}], 'home-9':[{x:68,y:40},{x:72,y:38},{x:95,y:36},{x:115,y:40}], 'away-4':[{x:60,y:40},{x:65,y:39},{x:85,y:38},{x:100,y:40}]} }) },
   { id:'ct3', cat:'反擊', zone:'短傳', icon:'💨', name:'短傳推進反擊', desc:'多人短傳配合快速推進',
     build: () => ({
       ball: [{x:35,y:42},{x:55,y:35},{x:80,y:38},{x:118,y:40}],
-      players: {'home-6':[{x:35,y:42},{x:40,y:40},{x:45,y:40},{x:50,y:40}], 'home-8':[{x:50,y:35},{x:55,y:35},{x:60,y:36},{x:65,y:38}], 'home-10':[{x:60,y:40},{x:70,y:38},{x:80,y:38},{x:85,y:38}], 'home-9':[{x:80,y:42},{x:90,y:40},{x:100,y:40},{x:115,y:40}]} }) },
+      players: {'home-6':[{x:35,y:42},{x:40,y:40},{x:45,y:40},{x:50,y:40}], 'home-8':[{x:50,y:35},{x:55,y:35},{x:60,y:36},{x:65,y:38}], 'home-10':[{x:60,y:40},{x:70,y:38},{x:80,y:38},{x:85,y:38}], 'home-9':[{x:80,y:42},{x:90,y:40},{x:100,y:40},{x:115,y:40}], 'away-6':[{x:55,y:45},{x:60,y:43},{x:70,y:42},{x:80,y:42}], 'away-4':[{x:75,y:38},{x:80,y:38},{x:90,y:40},{x:100,y:40}], 'away-5':[{x:78,y:48},{x:82,y:46},{x:92,y:44},{x:100,y:44}]} }) },
 
   // ══════ 主隊角球（4方向）══════
   { id:'ck1', cat:'主隊角球', zone:'右上', icon:'🚩', name:'右上角球', desc:'右上角旗開出，傳向禁區中央頭球攻門',
@@ -1725,19 +2036,12 @@ function applyTemplate(tplId, forceAway) {
   if (!tpl) return;
 
   const isAway = forceAway === true;
-  const minute = parseInt(document.getElementById('tpl-minute').value) || 0;
-  const second = parseInt(document.getElementById('tpl-second').value) || 0;
-  const goalSec = minute * 60 + second;
-
-  // Check overlap
-  const dur = 8; // 8 second segment for goal
-  const startSec = Math.max(0, goalSec - dur);
-  const endSec = goalSec;
-  const hasOverlap = segments.some(s => !(endSec <= s.startSeconds || startSec >= s.endSeconds));
-  if (hasOverlap) {
-    alert('此時間與現有片段重疊，請調整時間');
-    return;
-  }
+  const dur = 8;
+  const startSec = findNextAvailableTime(dur);
+  const endSec = startSec + dur;
+  const goalSec = endSec;
+  const minute = Math.floor(goalSec / 60);
+  const second = goalSec % 60;
 
   // Build node data from template
   const raw = tpl.build();
@@ -1804,11 +2108,8 @@ function applyTemplate(tplId, forceAway) {
   saveSession();
 
   // Auto-preview immediately
-  playSegment(seg.id);
+  // Don't auto-play lightbox — let user click "播放" when ready
 
-  // Auto-set next minute for convenience
-  document.getElementById('tpl-minute').value = minute;
-  document.getElementById('tpl-second').value = second;
 }
 
 function renderTemplateGrid() {
@@ -2192,7 +2493,7 @@ function renderSegmentsList() {
 // ===============================================================
 // SEGMENT PLAYBACK
 // ===============================================================
-function generateSegmentFrames(segment) {
+function generateSegmentFrames(segment, showAll) {
   const dur = segment.endSeconds - segment.startSeconds;
   if (dur <= 0) return [];
   const fps = 30;
@@ -2207,14 +2508,14 @@ function generateSegmentFrames(segment) {
     const ballNodes = segment.nodes['ball'];
     const ballPos = interpolateNodes(ballNodes, progress);
 
-    // Build player array — only include visible entities
-    const visibleSet = new Set(segment.visible || ['ball']);
+    // Build player array
+    const visibleSet = showAll ? null : new Set(segment.visible || ['ball']);
     const playerList = [];
 
-    // Process home players — only visible ones
+    // Process home players
     homeLineup.forEach(p => {
       const key = 'home-' + p.jersey;
-      if (!visibleSet.has(key)) return; // skip hidden players
+      if (visibleSet && !visibleSet.has(key)) return; // skip hidden players
       if (segment.nodes[key]) {
         const pos = interpolateNodes(segment.nodes[key], progress);
         playerList.push({ x: pos.x, y: pos.y, jersey: p.jersey, teammate: true, keeper: p.keeper, actor: false });
@@ -2224,10 +2525,10 @@ function generateSegmentFrames(segment) {
       }
     });
 
-    // Process away players — only visible ones
+    // Process away players
     awayLineup.forEach(p => {
       const key = 'away-' + p.jersey;
-      if (!visibleSet.has(key)) return; // skip hidden players
+      if (visibleSet && !visibleSet.has(key)) return; // skip hidden players
       if (segment.nodes[key]) {
         const pos = interpolateNodes(segment.nodes[key], progress);
         playerList.push({ x: pos.x, y: pos.y, jersey: p.jersey, teammate: false, keeper: p.keeper, actor: false });
@@ -2294,7 +2595,14 @@ function openGoalLightbox(seg) {
   const badge = document.getElementById('lb-team-badge');
   badge.className = 'lb-team-badge ' + (isHome ? 'home' : 'away');
   document.getElementById('lb-team-dot').style.background = teamColor;
-  document.getElementById('lb-team').textContent = teamName;
+  // 加入球隊 logo
+  const logo = isHome ? (window._homeTeamLogo || '') : (window._awayTeamLogo || '');
+  const teamEl = document.getElementById('lb-team');
+  if (logo) {
+    teamEl.innerHTML = `<img src="${logo}" style="height:40px;vertical-align:middle;margin-right:8px"> ${teamName}`;
+  } else {
+    teamEl.textContent = teamName;
+  }
 
   // Scorer info
   let scorerText = seg.templateName || '';
@@ -2322,10 +2630,7 @@ function openGoalLightbox(seg) {
     startBurstEffect(teamColor);
   }
 
-  // Play animation
-  const frames = generateSegmentFrames(seg);
-  if (frames.length === 0) return;
-
+  // Play animation — directly from segment nodes (no filtering)
   pauseVirtualMatch();
   const dur = (seg.endSeconds - seg.startSeconds) * 1000;
   const start = performance.now();
@@ -2335,19 +2640,21 @@ function openGoalLightbox(seg) {
     const elapsed = performance.now() - start;
     const progress = Math.min(elapsed / dur, 1);
 
-    let fA = frames[0], fB = frames[frames.length - 1];
-    for (let i = 0; i < frames.length - 1; i++) {
-      if (progress >= frames[i].t && progress <= frames[i + 1].t) {
-        fA = frames[i]; fB = frames[i + 1]; break;
-      }
-    }
-    const segDur = fB.t - fA.t || 1;
-    const localT = Math.min((progress - fA.t) / segDur, 1);
+    // Interpolate ball directly from nodes
+    const ballPos = interpolateNodes(seg.nodes['ball'], progress);
+    const bx = ballPos.x, by = ballPos.y;
 
-    const bx = fA.ball.x + (fB.ball.x - fA.ball.x) * localT;
-    const by = fA.ball.y + (fB.ball.y - fA.ball.y) * localT;
+    // Build player list directly from all segment nodes
+    const playerList = [];
+    Object.keys(seg.nodes).forEach(key => {
+      if (key === 'ball') return;
+      const isHome = key.startsWith('home-');
+      const jersey = parseInt(key.split('-')[1]);
+      const pos = interpolateNodes(seg.nodes[key], progress);
+      playerList.push({ x: pos.x, y: pos.y, jersey, teammate: isHome, keeper: false, actor: false });
+    });
 
-    drawLbFrame(bx, by, fA, fB, localT, progress);
+    drawLbFrameDirect(bx, by, playerList, progress);
 
     // At 85% progress, trigger screen shake + show celebration
     if (progress > 0.85 && !canvasWrap.classList.contains('lb-shake')) {
@@ -2372,7 +2679,7 @@ function openGoalLightbox(seg) {
   }, 33);
 }
 
-function drawLbFrame(bx, by, fA, fB, localT, progress) {
+function drawLbFrameDirect(bx, by, playerList, progress) {
   if (!lbCtx) return;
   const ctx = lbCtx;
   const w = lbCanvas.width, h = lbCanvas.height;
@@ -2382,33 +2689,27 @@ function drawLbFrame(bx, by, fA, fB, localT, progress) {
   drawPitchOnCtx(ctx, w, h);
 
   // Draw players
-  if (fA.players && fB.players) {
-    const r = Math.max(22, sx * 3);
-    fA.players.forEach((pa, i) => {
-      const pb = fB.players[i];
-      if (!pb) return;
-      const px = (pa.x + (pb.x - pa.x) * localT) * sx;
-      const py = (pa.y + (pb.y - pa.y) * localT) * sy;
+  const r = Math.max(24, sx * 3);
+  playerList.forEach(p => {
+    const ppx = p.x * sx, ppy = p.y * sy;
 
-      // Trail effect
-      if (progress > 0.1) {
-        ctx.beginPath(); ctx.arc(px, py, r + 4, 0, Math.PI * 2);
-        ctx.fillStyle = pa.teammate ? `rgba(91,163,245,0.15)` : `rgba(245,166,35,0.15)`;
-        ctx.fill();
-      }
+    // Trail glow
+    ctx.beginPath(); ctx.arc(ppx, ppy, r + 6, 0, Math.PI * 2);
+    ctx.fillStyle = p.teammate ? 'rgba(91,163,245,0.2)' : 'rgba(245,166,35,0.2)';
+    ctx.fill();
 
-      ctx.beginPath(); ctx.arc(px, py, r, 0, Math.PI * 2);
-      if (pa.keeper) ctx.fillStyle = pa.teammate ? '#44dd66' : '#dddd44';
-      else ctx.fillStyle = pa.teammate ? (homeColor || '#5ba3f5') : (awayColor || '#f5a623');
-      ctx.fill();
-      ctx.strokeStyle = '#fff'; ctx.lineWidth = 3; ctx.stroke();
+    // Player circle
+    ctx.beginPath(); ctx.arc(ppx, ppy, r, 0, Math.PI * 2);
+    ctx.fillStyle = p.teammate ? (homeColor || '#5ba3f5') : (awayColor || '#f5a623');
+    ctx.fill();
+    ctx.strokeStyle = '#fff'; ctx.lineWidth = 3; ctx.stroke();
 
-      ctx.fillStyle = '#fff';
-      ctx.font = `bold ${Math.max(14, r * 0.65)}px sans-serif`;
-      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-      ctx.fillText(pa.jersey, px, py);
-    });
-  }
+    // Jersey number
+    ctx.fillStyle = '#fff';
+    ctx.font = `bold ${Math.max(16, r * 0.65)}px sans-serif`;
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText(p.jersey, ppx, ppy);
+  });
 
   // Draw ball (realistic)
   const bpx = bx * sx, bpy = by * sy;
@@ -2533,7 +2834,7 @@ function startBurstEffect(teamColor) {
       ctx.closePath();
 
       ctx.fillStyle = ray.color;
-      ctx.globalAlpha = 0.7 * t;
+      ctx.globalAlpha = 0.4 * t;
       ctx.fill();
       ctx.globalAlpha = 1;
       ctx.restore();

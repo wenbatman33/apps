@@ -616,8 +616,8 @@ class SlotGame {
   evaluateGrid(grid) {
     const wins = [];
 
-    // Check paylines
-    PAYLINES.forEach((line, lineIdx) => {
+    // 只計算啟用的賠付線（前 activeLines 條）
+    PAYLINES.slice(0, this.activeLines).forEach((line, lineIdx) => {
       const syms = line.map((row, col) => grid[col][row]);
 
       // Resolve wilds
