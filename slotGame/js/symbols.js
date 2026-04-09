@@ -1,41 +1,42 @@
-/* ===== Classic Sevens Slots — Symbol Renderer (Individual PNGs) ===== */
+/* ===== Rock Climber Slots — Symbol Renderer ===== */
 'use strict';
 
 const SymbolRenderer = (() => {
   const SIZE = 140;
-  const BASE = 'assets/img/gameItems/';
+  const BASE_MAIN = 'assets/img/Rock climber slot game kit/main_game/';
+  const BASE_BONUS = 'assets/img/Rock climber slot game kit/bonus_game/';
 
-  // Map symbol name → image filename
+  // 符號名稱 → 圖片路徑對應
   const IMAGE_MAP = {
-    orange:     'Slice.png',
-    lemon:      'Slice Copy.png',
-    plum:       'Slice Copy 2.png',
-    watermelon: 'Slice Copy 3.png',
-    banana:     'Slice Copy 4.png',
-    cherry:     'Slice Copy 5.png',
-    grapes:     'Slice Copy 6.png',
-    scatter:    'Slice Copy 7.png',
-    bar:        'Slice Copy 8.png',
-    seven:      'Slice Copy 9.png',
-    wild:       'Slice Copy 10.png',
+    orange:     { path: BASE_MAIN,  file: 'icon_4.png' },   // 登山靴
+    lemon:      { path: BASE_MAIN,  file: 'icon_5.png' },   // 繩鉤
+    plum:       { path: BASE_MAIN,  file: 'icon_1.png' },   // 頭盔+繩索
+    watermelon: { path: BASE_MAIN,  file: 'icon_6.png' },   // 帳篷營火
+    banana:     { path: BASE_MAIN,  file: 'icon_2.png' },   // 冰鋤
+    cherry:     { path: BASE_BONUS, file: 'gem_red.png' },   // 紅寶石
+    grapes:     { path: BASE_BONUS, file: 'gem_purple.png' },// 紫寶石
+    bar:        { path: BASE_MAIN,  file: 'icon_8.png' },   // 冰雪巨人（高價值）
+    seven:      { path: BASE_MAIN,  file: 'icon_3.png' },   // 登山者（高價值）
+    scatter:    { path: BASE_MAIN,  file: 'icon_7.png' },   // ROCK CLIMBER Logo
+    wild:       { path: BASE_BONUS, file: 'gem_yellow.png' },// 金寶石（Wild）
   };
 
-  // Fallback colours shown before images load
+  // 載入前的佔位色
   const PLACEHOLDER = {
-    orange:'#ff8010', lemon:'#ffe020', plum:'#8020a0',
-    watermelon:'#20a030', banana:'#ffe030', cherry:'#dd1010',
-    grapes:'#8020cc', scatter:'#cc2020', bar:'#2050cc',
-    seven:'#cc0000', wild:'#cc8010',
+    orange:'#8B4513', lemon:'#C0C0C0', plum:'#FF6600',
+    watermelon:'#2E8B57', banana:'#4682B4', cherry:'#DC143C',
+    grapes:'#9400D3', scatter:'#228B22', bar:'#4169E1',
+    seven:'#B8860B', wild:'#FFD700',
   };
 
-  const cache = {}; // name → HTMLImageElement (once loaded)
+  const cache = {};
 
   function init() {
-    Object.entries(IMAGE_MAP).forEach(([name, file]) => {
+    Object.entries(IMAGE_MAP).forEach(([name, { path, file }]) => {
       const img = new Image();
       img.onload = () => { cache[name] = img; };
-      img.onerror = () => console.warn('[SymbolRenderer] Failed to load:', file);
-      img.src = BASE + file;
+      img.onerror = () => console.warn('[SymbolRenderer] 載入失敗:', path + file);
+      img.src = path + file;
     });
   }
 
@@ -48,7 +49,7 @@ const SymbolRenderer = (() => {
     if (img) {
       ctx.drawImage(img, x, y, w, h);
     } else {
-      // Placeholder circle while loading
+      // 載入中的佔位圓形
       ctx.fillStyle = PLACEHOLDER[name] || '#555';
       ctx.beginPath();
       ctx.arc(x + w / 2, y + h / 2, Math.min(w, h) / 2 - 2, 0, Math.PI * 2);

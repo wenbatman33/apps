@@ -1,31 +1,35 @@
-/* ===== Classic Sevens Slots — Game Engine ===== */
+/* ===== Rock Climber Slots — Game Engine ===== */
 'use strict';
 
 /* ============================================================
    CONFIGURATION
    ============================================================ */
 const COLS = 5, ROWS = 3;
+// 9 條賠付線（經典 Igrosoft 配置）
 const PAYLINES = [
-  [1,1,1,1,1],[0,0,0,0,0],[2,2,2,2,2],[0,1,2,1,0],[2,1,0,1,2],
-  [0,0,1,0,0],[2,2,1,2,2],[1,0,0,0,1],[1,2,2,2,1],[0,1,1,1,0],
-  [2,1,1,1,2],[1,0,1,0,1],[1,2,1,2,1],[0,1,0,1,0],[2,1,2,1,2],
-  [0,0,1,2,2],[2,2,1,0,0],[1,0,0,1,2],[1,2,2,1,0],[0,1,2,2,1],
+  [1,1,1,1,1], // 線 1：中間一排
+  [0,0,0,0,0], // 線 2：頂部一排
+  [2,2,2,2,2], // 線 3：底部一排
+  [0,1,2,1,0], // 線 4：V 字形
+  [2,1,0,1,2], // 線 5：倒 V 字形
+  [0,0,1,0,0], // 線 6：微凸
+  [2,2,1,2,2], // 線 7：微凹
+  [1,0,0,0,1], // 線 8：上弧
+  [1,2,2,2,1], // 線 9：下弧
 ];
 const LINE_COLORS = [
   '#ff4444','#44ff44','#4488ff','#ffff44','#ff44ff',
-  '#44ffff','#ff8844','#88ff44','#ff4488','#44ff88',
-  '#8844ff','#ffaa44','#44aaff','#aaff44','#ff44aa',
-  '#aa44ff','#44ffaa','#ffaa88','#88aaff','#aaff88',
+  '#44ffff','#ff8844','#88ff44','#ff4488',
 ];
 
-const BET_OPTIONS = [0.20, 0.40, 0.60, 0.80, 1, 2, 5, 10, 20, 50];
+const BET_OPTIONS = [1, 2, 5, 10, 20, 50, 100];
 
 // Symbol IDs (index matters for reel strips)
 const SYM_IDS = ['orange','lemon','watermelon','plum','banana','cherry','grapes','bar','seven','scatter','wild'];
 const SYM_NAMES = {
-  orange:'Orange', lemon:'Lemon', watermelon:'Watermelon', plum:'Plum',
-  banana:'Banana', cherry:'Cherry', grapes:'Grapes', bar:'BAR',
-  seven:'Lucky 7', scatter:'Scatter', wild:'Wild'
+  orange:'Boots', lemon:'Hook', watermelon:'Camp', plum:'Helmet',
+  banana:'Ice Pick', cherry:'Ruby', grapes:'Amethyst', bar:'Ice Giant',
+  seven:'Climber', scatter:'Scatter', wild:'Wild'
 };
 
 // Payouts: [3-match, 4-match, 5-match] as multiplier of line bet
@@ -195,7 +199,8 @@ class SlotGame {
     // State
     this.state = 'idle'; // idle, spinning, evaluating, win_show, freespin_intro, freespin, gamble
     this.balance = 1000;
-    this.betLevel = 4; // index into BET_OPTIONS
+    this.betLevel = 0; // index into BET_OPTIONS（每線下注）
+    this.activeLines = 9; // 啟用的賠付線數（1-9）
     this.lastWin = 0;
     this.totalWin = 0;
     this.grid = []; // 5 cols × 3 rows of symbol ids
@@ -273,44 +278,33 @@ class SlotGame {
 
   /* ---- Layout ---- */
   resize() {
-    const cont = document.getElementById('game-container');
-    const topBar = document.getElementById('top-bar');
-    const fsBar = document.getElementById('freespin-bar');
-    const msgBar = document.getElementById('msg-bar');
-    const botPanel = document.getElementById('bottom-panel');
-    const toolbar = document.getElementById('toolbar');
+    const wrap = document.getElementById('canvas-wrap');
+    if (!wrap) return;
 
-    const cw = cont.clientWidth;
-    const topH = topBar.offsetHeight + (fsBar.classList.contains('hidden') ? 0 : fsBar.offsetHeight);
-    const msgH = msgBar.offsetHeight;
-    const botH = botPanel.offsetHeight;
-    const toolH = toolbar.offsetHeight;
-    const availH = cont.clientHeight - topH - msgH - botH - toolH;
+    const cw = wrap.clientWidth;
+    const ch = wrap.clientHeight;
 
-    const padding = 12;
-    const sideWidth = 20; // rainbow strips
-    const gridW = cw - padding * 2 - sideWidth * 2;
+    const padding = 8;
+    const gridW = cw - padding * 2;
     const cellW = gridW / COLS;
-    // Cell height: keep cells near-square, never taller than 1.2× cell width
     const maxCellH = cellW * 1.2;
-    const cellH = Math.min(Math.max(availH - padding * 2, 100) / ROWS, maxCellH);
+    const cellH = Math.min(Math.max(ch - padding * 2, 100) / ROWS, maxCellH);
     const gridH = cellH * ROWS;
     const symSize = Math.min(cellW, cellH) * 0.88;
 
-    // Canvas height = grid + padding on both sides
-    const canvasH = Math.max(200, gridH + padding * 2);
-    this.canvas.width  = cw * window.devicePixelRatio;
+    const canvasW = cw;
+    const canvasH = ch;
+    this.canvas.width  = canvasW * window.devicePixelRatio;
     this.canvas.height = canvasH * window.devicePixelRatio;
-    this.canvas.style.width  = cw + 'px';
+    this.canvas.style.width  = canvasW + 'px';
     this.canvas.style.height = canvasH + 'px';
     this.ctx.setTransform(window.devicePixelRatio, 0, 0, window.devicePixelRatio, 0, 0);
 
-    const canvasW = cw;
-    const gridY = padding;
+    const gridY = (canvasH - gridH) / 2;
 
     this.layout = {
-      canvasW, canvasH, padding, sideWidth,
-      gridX: padding + sideWidth,
+      canvasW, canvasH, padding, sideWidth: 0,
+      gridX: padding,
       gridY,
       gridW, gridH, cellW, cellH, symSize,
     };
@@ -321,17 +315,45 @@ class SlotGame {
     const $ = id => document.getElementById(id);
 
     $('btn-spin').addEventListener('click', () => this.onSpin());
-    $('btn-bet-down').addEventListener('click', () => this.changeBet(-1));
+    // BET ONE: 每次點擊循環下一個下注等級
     $('btn-bet-up').addEventListener('click', () => this.changeBet(1));
-    $('btn-maxbet').addEventListener('click', () => { this.betLevel = BET_OPTIONS.length - 1; this.updateUI(); Audio.click(); });
+    $('btn-maxbet').addEventListener('click', () => {
+      this.betLevel = BET_OPTIONS.length - 1;
+      this.activeLines = 9;
+      this.updateUI(); Audio.click();
+    });
     $('btn-auto').addEventListener('click', () => this.toggleAuto());
+
+    // LINES 按鈕：循環切換線數 1→3→5→7→9→1...
+    if ($('btn-lines')) {
+      $('btn-lines').addEventListener('click', () => {
+        if (this.state !== 'idle') return;
+        const steps = [1, 3, 5, 7, 9];
+        const idx = steps.indexOf(this.activeLines);
+        const next = idx >= 0 ? steps[(idx + 1) % steps.length] : steps[0];
+        this.activeLines = next;
+        this.updateUI();
+        Audio.click();
+      });
+    }
+
+    // 底部線數數字點擊
+    document.querySelectorAll('.line-num').forEach(el => {
+      el.addEventListener('click', () => {
+        const n = parseInt(el.dataset.n);
+        if (n) this.setLines(n);
+      });
+    });
+
+    // 建立左右線號按鈕
+    this.buildLineButtons();
+
     $('btn-sound').addEventListener('click', () => {
       const on = Audio.toggle();
-      $('btn-sound').textContent = on ? '\u{1F50A}' : '\u{1F507}';
+      $('btn-sound').textContent = on ? '🔊 Sound' : '🔇 Sound';
     });
     $('btn-info').addEventListener('click', () => this.showPaytable());
     $('btn-paytable').addEventListener('click', () => this.showPaytable());
-    $('btn-settings').addEventListener('click', () => { /* placeholder */ });
     $('btn-rtp').addEventListener('click', () => $('rtp-panel').classList.toggle('hidden'));
 
     // History modal
@@ -380,14 +402,88 @@ class SlotGame {
   }
 
   /* ---- Bet ---- */
-  get bet() { return BET_OPTIONS[this.betLevel]; }
-  get lineBet() { return this.bet / PAYLINES.length; }
+  get bet() { return BET_OPTIONS[this.betLevel] * this.activeLines; }
+  get lineBet() { return BET_OPTIONS[this.betLevel]; }
 
   changeBet(dir) {
     if (this.state !== 'idle') return;
-    this.betLevel = Math.max(0, Math.min(BET_OPTIONS.length - 1, this.betLevel + dir));
+    // 循環切換下注等級
+    this.betLevel = (this.betLevel + dir + BET_OPTIONS.length) % BET_OPTIONS.length;
     this.updateUI();
     Audio.click();
+  }
+
+  changeLines(dir) {
+    if (this.state !== 'idle') return;
+    this.activeLines = Math.max(1, Math.min(PAYLINES.length, this.activeLines + dir));
+    this.updateUI();
+    Audio.click();
+  }
+
+  setLines(n) {
+    if (this.state !== 'idle') return;
+    this.activeLines = Math.max(1, Math.min(PAYLINES.length, n));
+    this.updateUI();
+    Audio.click();
+  }
+
+  // 建立左右兩側的線號按鈕（使用素材圖片）
+  buildLineButtons() {
+    const leftContainer = document.getElementById('line-btns-left');
+    const rightContainer = document.getElementById('line-btns-right');
+    if (!leftContainer || !rightContainer) return;
+
+    const basePath = 'assets/img/Rock climber slot game kit/main_game/ui/';
+    // 線號檔名對應：1_.png, 2.png, 3.png ... 9.png
+    const fileMap = { 1: '1_.png', 2: '2.png', 3: '3.png', 4: '4.png', 5: '5.png', 6: '6.png', 7: '7.png', 8: '8.png', 9: '9.png' };
+    const inactiveMap = { 1: '1_inactive.png', 2: '2_inactive.png', 3: '3_inactive.png', 4: '4_inactive.png', 5: '5_inactive.png', 6: '6_inactive.png', 7: '7_inactive.png', 8: '8_inactive.png', 9: '9_inactive.png' };
+
+    // 左側按鈕：1,3,5,7,9（奇數）
+    const leftLines = [1, 3, 5, 7, 9];
+    // 右側按鈕：2,4,6,8（偶數）
+    const rightLines = [2, 4, 6, 8];
+
+    const createBtn = (n) => {
+      if (n > PAYLINES.length) return null;
+      const btn = document.createElement('button');
+      btn.className = 'line-btn active';
+      btn.dataset.line = n;
+      // 使用圖片
+      const imgActive = document.createElement('img');
+      imgActive.src = basePath + fileMap[n];
+      imgActive.className = 'btn-active-img';
+      imgActive.alt = n;
+      const imgInactive = document.createElement('img');
+      imgInactive.src = basePath + inactiveMap[n];
+      imgInactive.className = 'btn-inactive';
+      imgInactive.alt = n;
+      btn.appendChild(imgActive);
+      btn.appendChild(imgInactive);
+      btn.addEventListener('click', () => this.setLines(n));
+      return btn;
+    };
+
+    leftLines.forEach(n => {
+      const btn = createBtn(n);
+      if (btn) leftContainer.appendChild(btn);
+    });
+
+    rightLines.forEach(n => {
+      const btn = createBtn(n);
+      if (btn) rightContainer.appendChild(btn);
+    });
+  }
+
+  // 更新線號按鈕 active 狀態（切換顯示的圖片）
+  updateLineButtons() {
+    document.querySelectorAll('.line-btn').forEach(btn => {
+      const lineNum = parseInt(btn.dataset.line);
+      if (lineNum <= this.activeLines) {
+        btn.classList.add('active');
+      } else {
+        btn.classList.remove('active');
+      }
+    });
   }
 
   /* ---- Auto ---- */
@@ -1128,26 +1224,34 @@ class SlotGame {
 
   /* ---- UI ---- */
   updateUI() {
-    document.getElementById('balance-top').textContent = this.balance.toFixed(2);
-    document.getElementById('bet-display').textContent = this.bet.toFixed(2);
-    document.getElementById('win-display').textContent = this.lastWin > 0 ? this.lastWin.toFixed(2) : '0';
+    document.getElementById('balance-top').textContent = Math.floor(this.balance);
+    document.getElementById('win-display').textContent = this.lastWin > 0 ? Math.floor(this.lastWin) : '0';
+    if (document.getElementById('totalbet-display')) document.getElementById('totalbet-display').textContent = this.bet;
+    if (document.getElementById('total-tickets')) document.getElementById('total-tickets').textContent = Math.floor(this.balance);
+
+    // 更新線號按鈕狀態
+    this.updateLineButtons();
+
+    // 更新底部 line-num 高亮
+    document.querySelectorAll('.line-num').forEach(el => {
+      const n = parseInt(el.dataset.n);
+      if (n <= this.activeLines) {
+        el.classList.add('active');
+      } else {
+        el.classList.remove('active');
+      }
+    });
 
     const spinBtn = document.getElementById('btn-spin');
     spinBtn.disabled = this.state === 'spinning' || this.state === 'evaluating';
-    if (this.state === 'spinning') {
-      spinBtn.textContent = 'STOP';
-      spinBtn.classList.add('stop-btn');
-    } else {
-      spinBtn.textContent = this.freeSpinsLeft > 0 ? 'FREE' : 'SPIN';
-      spinBtn.classList.remove('stop-btn');
-    }
 
     const autoBtn = document.getElementById('btn-auto');
+    const autoText = autoBtn.querySelector('.btn-text');
     if (this.autoActive) {
-      autoBtn.textContent = `STOP\n(${this.autoSpins})`;
+      if (autoText) autoText.innerHTML = `STOP<br>(${this.autoSpins})`;
       autoBtn.classList.add('active');
     } else {
-      autoBtn.textContent = 'AUTO\n10';
+      if (autoText) autoText.innerHTML = 'AUTO<br>SPIN';
       autoBtn.classList.remove('active');
     }
 

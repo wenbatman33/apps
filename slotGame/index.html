@@ -3,59 +3,119 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>Classic Sevens Slots</title>
+<title>Rock Climber Slots</title>
 <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
 <div id="game-container">
-  <!-- Top Bar -->
+
+  <!-- 背景 -->
+  <div id="game-bg"></div>
+
+  <!-- 頂部信息欄 -->
   <div id="top-bar">
-    <button id="btn-lobby" class="top-btn">LOBBY</button>
-    <div class="coins-display"><span class="coin-icon">&#x1FA99;</span><span id="balance-top">1000.00</span></div>
-    <div id="game-title">CLASSIC SEVENS</div>
-    <button id="btn-info" class="top-btn icon-btn" title="Paytable">&#x2139;</button>
-    <button id="btn-sound" class="top-btn icon-btn" title="Sound">&#x1F50A;</button>
+    <div class="info-box">
+      <div class="info-box-label">SUM OF TICKETS</div>
+      <div class="info-box-value" id="total-tickets">0</div>
+    </div>
+    <div id="freespin-badge" class="hidden">
+      <span id="fs-count-num">15</span>
+      <span id="fs-label">free games</span>
+    </div>
+    <div class="info-box">
+      <div class="info-box-label">CREDIT</div>
+      <div class="info-box-value" id="balance-top">1000</div>
+    </div>
   </div>
 
-  <!-- Free Spins Bar (hidden by default) -->
+  <!-- 訊息列 -->
+  <div id="msg-bar">&nbsp;</div>
+
+  <!-- 主遊戲區域 -->
+  <div id="reel-area">
+    <div class="line-buttons left" id="line-btns-left"></div>
+    <div id="reel-frame">
+      <div id="canvas-wrap">
+        <canvas id="gameCanvas"></canvas>
+      </div>
+    </div>
+    <div class="line-buttons right" id="line-btns-right"></div>
+  </div>
+
+  <!-- 中間資訊列 -->
+  <div id="info-bar">
+    <div class="info-box small">
+      <div class="info-box-label">NUMBER OF TICKETS</div>
+      <div class="info-box-value" id="totalbet-display">9</div>
+    </div>
+    <div class="info-box small">
+      <div class="info-box-label">WIN</div>
+      <div class="info-box-value" id="win-display">0</div>
+    </div>
+  </div>
+
+  <!-- 底部控制面板 -->
+  <div id="bottom-panel">
+    <button id="btn-auto" class="img-btn auto-btn" title="AUTO SPIN">
+      <img src="assets/img/Rock climber slot game kit/main_game/ui/auto_spin.png" class="btn-normal" alt="">
+      <img src="assets/img/Rock climber slot game kit/main_game/ui/auto_spin_active.png" class="btn-active" alt="">
+      <span class="btn-overlay-text">AUTO<br>SPIN</span>
+    </button>
+
+    <div id="lines-group">
+      <div id="lines-numbers">
+        <span class="line-num" data-n="1">1</span>
+        <span class="line-num" data-n="3">3</span>
+        <span class="line-num active" data-n="5">5</span>
+        <span class="line-num" data-n="7">7</span>
+        <span class="line-num" data-n="9">9</span>
+      </div>
+      <button id="btn-lines" class="img-btn rect-btn" title="LINES">
+        <img src="assets/img/Rock climber slot game kit/main_game/ui/lines.png" class="btn-normal" alt="">
+        <img src="assets/img/Rock climber slot game kit/main_game/ui/lines_active.png" class="btn-active" alt="">
+        <span class="btn-overlay-text">LINES</span>
+      </button>
+    </div>
+
+    <button id="btn-bet-up" class="img-btn rect-btn" title="BET ONE">
+      <img src="assets/img/Rock climber slot game kit/main_game/ui/betone.png" class="btn-normal" alt="">
+      <img src="assets/img/Rock climber slot game kit/main_game/ui/betone_active.png" class="btn-active" alt="">
+      <span class="btn-overlay-text">BET<br>ONE</span>
+    </button>
+
+    <button id="btn-maxbet" class="img-btn rect-btn" title="BET MAX">
+      <img src="assets/img/Rock climber slot game kit/main_game/ui/betmax.png" class="btn-normal" alt="">
+      <img src="assets/img/Rock climber slot game kit/main_game/ui/betmax_active.png" class="btn-active" alt="">
+      <span class="btn-overlay-text">BET<br>MAX</span>
+    </button>
+
+    <button id="btn-gamble-main" class="img-btn rect-btn" title="DOUBLE">
+      <img src="assets/img/Rock climber slot game kit/main_game/ui/double.png" class="btn-normal" alt="">
+      <img src="assets/img/Rock climber slot game kit/main_game/ui/double_active.png" class="btn-active" alt="">
+      <span class="btn-overlay-text double-text"><span class="x2">x2</span>DOUBLE</span>
+    </button>
+
+    <button id="btn-spin" class="img-btn spin-btn" title="START">
+      <img src="assets/img/Rock climber slot game kit/main_game/ui/start_btn.png" class="btn-normal" alt="">
+      <img src="assets/img/Rock climber slot game kit/main_game/ui/start_active_btn.png" class="btn-active" alt="">
+      <span class="btn-overlay-text">START<br>TAKE WIN</span>
+    </button>
+  </div>
+
+  <!-- Free Spins Bar -->
   <div id="freespin-bar" class="hidden">
     <span id="fs-multiplier">x2</span>
-    <span>FREE GAME MULTIPLIER</span>
+    <span>FREE GAME</span>
     <span id="fs-count">10 FREE SPINS</span>
   </div>
 
-  <!-- Message bar -->
-  <div id="msg-bar">&nbsp;</div>
-
-  <canvas id="gameCanvas"></canvas>
-
-  <!-- Bottom Panel -->
-  <div id="bottom-panel">
-    <div class="bet-section">
-      <div class="label">TOTAL BET</div>
-      <div class="bet-controls">
-        <button id="btn-bet-down" class="ctrl-btn">&minus;</button>
-        <span id="bet-display">1.00</span>
-        <button id="btn-bet-up" class="ctrl-btn">+</button>
-      </div>
-    </div>
-    <div class="win-section">
-      <div class="label">WIN</div>
-      <div id="win-display">0</div>
-    </div>
-    <div class="action-section">
-      <button id="btn-maxbet" class="action-btn">MAX<br>BET</button>
-      <button id="btn-auto" class="action-btn">AUTO<br>10</button>
-      <button id="btn-spin" class="spin-btn">SPIN</button>
-    </div>
-  </div>
-
-  <!-- Toolbar -->
+  <!-- 工具列 -->
   <div id="toolbar">
-    <button id="btn-paytable" class="tool-btn">&#x1F4DC; Paytable</button>
-    <button id="btn-settings" class="tool-btn">&#x2699; Settings</button>
-    <button id="btn-rtp" class="tool-btn">&#x2696; RTP</button>
-    <button id="btn-history" class="tool-btn">&#x1F4CB; 注單</button>
+    <button id="btn-info" class="tool-btn">ℹ Info</button>
+    <button id="btn-paytable" class="tool-btn">📜 Paytable</button>
+    <button id="btn-history" class="tool-btn">📋 注單</button>
+    <button id="btn-sound" class="tool-btn">🔊 Sound</button>
+    <button id="btn-rtp" class="tool-btn">⚖ RTP</button>
   </div>
 
   <!-- Paytable Modal -->
@@ -69,7 +129,7 @@
 
   <!-- Big Win Overlay -->
   <div id="bigwin-overlay" class="overlay hidden">
-    <div id="bigwin-text">BIG WIN!</div>
+    <div id="bigwin-img"><img src="assets/img/Rock climber slot game kit/main_game/mega_win.png" alt="MEGA WIN"></div>
     <div id="bigwin-amount">0</div>
     <div id="bigwin-particles"></div>
   </div>
@@ -77,7 +137,7 @@
   <!-- Gamble Overlay -->
   <div id="gamble-overlay" class="overlay hidden">
     <div class="gamble-content">
-      <div class="gamble-title">GAMBLE</div>
+      <div class="gamble-title">RISK GAME</div>
       <div class="gamble-subtitle">PICK A HIGHER CARD</div>
       <div id="gamble-cards">
         <div class="card dealer-card" id="dealer-card">?</div>
@@ -98,7 +158,7 @@
   <div id="history-modal" class="modal hidden">
     <div class="modal-content history-content">
       <button class="modal-close" id="history-close">&times;</button>
-      <h2 class="history-title">&#x1F4CB; 注單紀錄</h2>
+      <h2 class="history-title">📋 注單紀錄</h2>
       <div class="history-toolbar">
         <span id="history-count">0 筆</span>
         <button id="btn-history-clear" class="history-clear-btn">清除紀錄</button>
@@ -106,14 +166,7 @@
       <div class="history-table-wrap">
         <table class="history-table">
           <thead>
-            <tr>
-              <th>ID</th>
-              <th>時間</th>
-              <th>下注</th>
-              <th>贏分</th>
-              <th>餘額</th>
-              <th>類型</th>
-            </tr>
+            <tr><th>ID</th><th>時間</th><th>下注</th><th>贏分</th><th>餘額</th><th>類型</th></tr>
           </thead>
           <tbody id="history-tbody"></tbody>
         </table>
@@ -125,11 +178,8 @@
   <!-- RTP Dev Panel -->
   <div id="rtp-panel" class="hidden">
     <div class="rtp-title">RTP Developer Panel</div>
-    <label>
-      <input type="checkbox" id="rtp-enabled"> Kill Switch
-    </label>
-    <label>
-      Win Rate: <span id="rtp-val">50</span>%
+    <label><input type="checkbox" id="rtp-enabled"> Kill Switch</label>
+    <label>Win Rate: <span id="rtp-val">50</span>%
       <input type="range" id="rtp-slider" min="0" max="100" value="50">
     </label>
     <div>Last: <span id="rtp-last">—</span></div>
