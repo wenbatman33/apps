@@ -160,8 +160,10 @@ func _set_game_visible(vis: bool) -> void:
 		if child != loading_layer:
 			child.visible = vis
 
+var game_container: Control  # 所有遊戲元素的容器，用於置中
+
 func _build_scene() -> void:
-	# 1) 動畫背景
+	# 全螢幕背景（直接加到 self，填滿整個視窗）
 	background = TextureRect.new()
 	if bg_frames_main.size() > 0:
 		background.texture = bg_frames_main[0]
@@ -170,6 +172,13 @@ func _build_scene() -> void:
 	background.set_anchors_preset(PRESET_FULL_RECT)
 	background.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
 	add_child(background)
+
+	# 遊戲容器（固定 1920x1080，動態置中）
+	# 所有後續 add_child 都加到 self，build 完後統一搬到 container
+	game_container = Control.new()
+	game_container.name = "GameContainer"
+	game_container.size = Vector2(GAME_W, GAME_H)
+	game_container.clip_contents = false
 
 	# 2) 滾輪區域（含裁切）
 	_build_reels()
@@ -188,6 +197,17 @@ func _build_scene() -> void:
 
 	# 7) 彈窗層
 	_build_popups()
+
+	# 8) 把所有子節點（除了 background）搬到 game_container
+	var children_to_move: Array = []
+	for child in get_children():
+		if child != background and child != game_container:
+			children_to_move.append(child)
+	add_child(game_container)
+	for child in children_to_move:
+		remove_child(child)
+		game_container.add_child(child)
+	_center_game_container()
 
 # ---------- 滾輪 ----------
 
@@ -695,6 +715,7 @@ func _process(delta: float) -> void:
 
 	# 背景動畫
 	_update_bg_animation(delta)
+	_center_game_container()
 
 	# 滾輪旋轉動畫 + 停止計時（完全同步，不用 async）
 	if GameState.is_spinning:
@@ -737,6 +758,13 @@ func _finish_loading() -> void:
 	)
 	# 顯示主遊戲
 	_set_game_visible(true)
+
+func _center_game_container() -> void:
+	if game_container:
+		var vp_size: Vector2 = get_viewport().get_visible_rect().size
+		var offset_x: float = (vp_size.x - GAME_W) / 2.0
+		var offset_y: float = (vp_size.y - GAME_H) / 2.0
+		game_container.position = Vector2(maxf(offset_x, 0), maxf(offset_y, 0))
 
 func _update_bg_animation(delta: float) -> void:
 	var frames: Array = bg_frames_free if GameState.is_free_spinning else bg_frames_main
