@@ -1,0 +1,802 @@
+/* 全域重置 */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    width: 100vw;
+    height: 100vh;
+    overflow: hidden;
+    font-family: 'Segoe UI', 'Arial', sans-serif;
+    background: #0a0a0a;
+    user-select: none;
+}
+
+/* 畫面切換 */
+.screen {
+    display: none;
+    width: 100%;
+    height: 100%;
+    position: absolute;
+    top: 0;
+    left: 0;
+}
+.screen.active {
+    display: block;
+}
+
+.hidden {
+    display: none !important;
+}
+
+/* ====== 選單畫面 ====== */
+.menu-background {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+}
+.bg-image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    position: absolute;
+}
+.bg-elements {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    position: absolute;
+    opacity: 0.5;
+}
+
+.menu-content {
+    position: relative;
+    z-index: 2;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    gap: 20px;
+}
+
+.menu-dealer img {
+    width: 200px;
+    filter: drop-shadow(0 10px 30px rgba(0,0,0,0.5));
+    animation: dealer-float 3s ease-in-out infinite;
+}
+
+@keyframes dealer-float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-8px); }
+}
+
+.game-title {
+    font-size: 48px;
+    font-weight: 900;
+    color: #ffd700;
+    text-shadow: 0 0 20px rgba(255, 215, 0, 0.5), 0 4px 8px rgba(0,0,0,0.6);
+    letter-spacing: 6px;
+}
+
+.menu-player-info {
+    position: relative;
+    width: 280px;
+    height: 80px;
+}
+.player-panel-bg {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    position: absolute;
+}
+.player-panel-content {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 16px;
+    height: 100%;
+}
+.menu-avatar {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+}
+.player-stats {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+.stat-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: #fff;
+    font-weight: 700;
+    font-size: 16px;
+    text-shadow: 0 1px 3px rgba(0,0,0,0.5);
+}
+.stat-icon {
+    width: 22px;
+    height: 22px;
+}
+
+.menu-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    transition: transform 0.15s, filter 0.15s;
+}
+.menu-btn:hover {
+    transform: scale(1.08);
+    filter: brightness(1.2);
+}
+.menu-btn:active {
+    transform: scale(0.95);
+}
+.play-btn img {
+    width: 180px;
+}
+
+/* ====== 遊戲畫面 ====== */
+.game-background {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+}
+
+.table-container {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    z-index: 1;
+}
+
+.poker-table {
+    position: absolute;
+    width: 70%;
+    max-width: 900px;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 0;
+    filter: drop-shadow(0 10px 40px rgba(0,0,0,0.6));
+}
+
+/* 荷官 */
+.dealer-area {
+    position: absolute;
+    top: 2%;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 5;
+}
+.dealer-ingame {
+    width: 120px;
+    filter: drop-shadow(0 5px 15px rgba(0,0,0,0.4));
+}
+
+/* 公共牌 */
+.community-cards {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    display: flex;
+    gap: 8px;
+    z-index: 10;
+}
+.card-slot {
+    width: 62px;
+    height: 90px;
+    border-radius: 6px;
+    position: relative;
+}
+.card-slot img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    border-radius: 6px;
+    filter: drop-shadow(0 2px 6px rgba(0,0,0,0.4));
+}
+.card-slot .card-placeholder {
+    width: 100%;
+    height: 100%;
+    border: 2px dashed rgba(255,255,255,0.15);
+    border-radius: 6px;
+}
+
+/* 底池 */
+.pot-display {
+    position: absolute;
+    top: 40%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 11;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 140px;
+}
+.pot-bg {
+    width: 100%;
+    height: 100%;
+    position: absolute;
+    object-fit: contain;
+}
+.pot-amount {
+    position: relative;
+    z-index: 1;
+    color: #fff;
+    font-size: 18px;
+    font-weight: 800;
+    text-shadow: 0 1px 4px rgba(0,0,0,0.7);
+    padding: 6px 20px 6px 28px;
+}
+
+/* ====== 九人座位配置 ====== */
+.player-seat {
+    position: absolute;
+    z-index: 15;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    transition: opacity 0.3s;
+}
+.player-seat.folded {
+    opacity: 0.4;
+}
+.player-seat.active-turn .avatar-container {
+    filter: drop-shadow(0 0 12px rgba(255, 215, 0, 0.8));
+}
+
+/* 座位 0: 玩家自己 - 底部中間 */
+#seat-0 {
+    bottom: 2%;
+    left: 50%;
+    transform: translateX(-50%);
+}
+#seat-0 .seat-cards img {
+    width: 56px;
+    height: 82px;
+}
+/* 座位 1: 左下 */
+#seat-1 {
+    bottom: 14%;
+    left: 8%;
+}
+/* 座位 2: 左側 */
+#seat-2 {
+    top: 42%;
+    left: 4%;
+    transform: translateY(-50%);
+}
+/* 座位 3: 左上 */
+#seat-3 {
+    top: 12%;
+    left: 10%;
+}
+/* 座位 4: 上方偏左 */
+#seat-4 {
+    top: 5%;
+    left: 30%;
+}
+/* 座位 5: 上方偏右 */
+#seat-5 {
+    top: 5%;
+    right: 30%;
+}
+/* 座位 6: 右上 */
+#seat-6 {
+    top: 12%;
+    right: 10%;
+}
+/* 座位 7: 右側 */
+#seat-7 {
+    top: 42%;
+    right: 4%;
+    transform: translateY(-50%);
+}
+/* 座位 8: 右下 */
+#seat-8 {
+    bottom: 14%;
+    right: 8%;
+}
+
+/* 座位資訊 */
+.seat-info {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+}
+
+.avatar-container {
+    position: relative;
+    width: 72px;
+    height: 72px;
+    transition: filter 0.3s;
+}
+.avatar-frame {
+    width: 100%;
+    height: 100%;
+    position: absolute;
+    top: 0;
+    left: 0;
+    z-index: 2;
+    pointer-events: none;
+}
+.avatar-img {
+    width: 52px;
+    height: 52px;
+    border-radius: 50%;
+    position: absolute;
+    top: 6px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 1;
+}
+
+/* 計時條 */
+.timer-bar {
+    position: absolute;
+    bottom: -2px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 72px;
+    height: 12px;
+    z-index: 3;
+    display: none;
+}
+.timer-bg {
+    width: 100%;
+    height: 100%;
+    position: absolute;
+}
+.timer-fill-wrapper {
+    position: absolute;
+    top: 2px;
+    left: 3px;
+    width: calc(100% - 6px);
+    height: calc(100% - 4px);
+    overflow: hidden;
+}
+.timer-fill {
+    width: 100%;
+    height: 100%;
+    transition: width 0.1s linear;
+}
+.player-seat.active-turn .timer-bar {
+    display: block;
+}
+
+/* 莊家標記 */
+.dealer-chip {
+    position: absolute;
+    bottom: -4px;
+    right: -4px;
+    width: 22px;
+    height: 22px;
+    background: linear-gradient(135deg, #fff, #ddd);
+    color: #333;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    font-weight: 900;
+    z-index: 5;
+    border: 2px solid #333;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.4);
+}
+
+/* 玩家名稱與籌碼 */
+.player-name-chips {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    background: rgba(0,0,0,0.7);
+    border-radius: 8px;
+    padding: 2px 10px;
+    min-width: 80px;
+}
+.p-name {
+    color: #fff;
+    font-size: 11px;
+    font-weight: 600;
+    white-space: nowrap;
+}
+.p-chips {
+    color: #ffd700;
+    font-size: 12px;
+    font-weight: 800;
+}
+
+/* 座位上的牌 */
+.seat-cards {
+    display: flex;
+    gap: 3px;
+    margin-bottom: 4px;
+}
+.seat-cards img {
+    width: 44px;
+    height: 64px;
+    object-fit: contain;
+    border-radius: 4px;
+    filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5));
+    transition: transform 0.3s;
+}
+.seat-cards img.card-reveal {
+    animation: card-deal 0.4s ease-out;
+}
+@keyframes card-deal {
+    from { transform: translateY(-30px) rotateY(90deg); opacity: 0; }
+    to { transform: translateY(0) rotateY(0); opacity: 1; }
+}
+
+/* 座位下注籌碼 */
+.seat-bet {
+    position: absolute;
+    z-index: 20;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 13px;
+    font-weight: 800;
+    color: #fff;
+    text-shadow: 0 1px 3px rgba(0,0,0,0.8);
+    white-space: nowrap;
+}
+.seat-bet img {
+    width: 28px;
+    height: 28px;
+}
+/* 各座位的下注籌碼位置 */
+#bet-0 { top: -30px; left: 50%; transform: translateX(-50%); }
+#bet-1 { top: -20px; right: -40px; }
+#bet-2 { top: 10px; right: -50px; }
+#bet-3 { bottom: -10px; right: -40px; }
+#bet-4 { bottom: -30px; left: 50%; transform: translateX(-50%); }
+#bet-5 { bottom: -30px; left: 50%; transform: translateX(-50%); }
+#bet-6 { bottom: -10px; left: -40px; }
+#bet-7 { top: 10px; left: -50px; }
+#bet-8 { top: -20px; left: -40px; }
+
+/* ====== 操作面板 ====== */
+.action-panel {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 50;
+    padding: 10px 20px 16px;
+    background: linear-gradient(to top, rgba(0,0,0,0.8) 0%, transparent 100%);
+    display: none;
+}
+.action-panel.show {
+    display: block;
+}
+
+.action-buttons {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+.action-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    transition: transform 0.12s, filter 0.12s;
+    position: relative;
+}
+.action-btn:hover {
+    transform: scale(1.1);
+    filter: brightness(1.15);
+}
+.action-btn:active {
+    transform: scale(0.92);
+}
+.action-btn img {
+    width: 120px;
+    height: auto;
+}
+.action-btn .call-amount {
+    position: absolute;
+    bottom: -2px;
+    left: 50%;
+    transform: translateX(-50%);
+    color: #fff;
+    font-size: 11px;
+    font-weight: 700;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.8);
+}
+
+.allin-btn {
+    background: linear-gradient(180deg, #ff4444, #cc0000);
+    color: #fff;
+    font-size: 16px;
+    font-weight: 900;
+    padding: 10px 24px;
+    border-radius: 8px;
+    border: 2px solid #ff6666;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+    box-shadow: 0 4px 12px rgba(255, 0, 0, 0.3);
+}
+
+/* 加注滑桿 */
+.raise-slider-container {
+    margin-top: 10px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+}
+.raise-slider-container input[type="range"] {
+    width: 300px;
+    accent-color: #ffd700;
+    height: 8px;
+}
+.raise-display {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+#raise-value {
+    color: #ffd700;
+    font-size: 22px;
+    font-weight: 900;
+    min-width: 80px;
+    text-align: center;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.6);
+}
+.raise-confirm-btn {
+    background: linear-gradient(180deg, #8bc34a, #558b2f);
+    color: #fff;
+    font-weight: 800;
+    font-size: 14px;
+    padding: 8px 24px;
+    border: 2px solid #aed581;
+    border-radius: 8px;
+    cursor: pointer;
+}
+.raise-confirm-btn:hover { filter: brightness(1.15); }
+.raise-cancel-btn {
+    background: rgba(255,255,255,0.15);
+    color: #fff;
+    font-size: 18px;
+    border: none;
+    border-radius: 50%;
+    width: 32px;
+    height: 32px;
+    cursor: pointer;
+}
+
+/* ====== 頂部資訊列 ====== */
+.top-bar {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 40;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 16px;
+}
+.top-bar-left {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+.score-panel-bg {
+    width: 160px;
+    height: auto;
+}
+.score-text {
+    position: absolute;
+    left: 36px;
+    color: #ffd700;
+    font-size: 16px;
+    font-weight: 800;
+    text-shadow: 0 1px 3px rgba(0,0,0,0.6);
+}
+
+.icon-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    transition: transform 0.15s;
+}
+.icon-btn:hover {
+    transform: scale(1.1);
+}
+.icon-btn img {
+    width: 40px;
+    height: 40px;
+}
+
+/* ====== 遊戲訊息 ====== */
+.game-message {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 60;
+    background: rgba(0,0,0,0.85);
+    color: #ffd700;
+    font-size: 28px;
+    font-weight: 900;
+    padding: 16px 48px;
+    border-radius: 16px;
+    border: 2px solid rgba(255,215,0,0.3);
+    text-shadow: 0 2px 8px rgba(255,215,0,0.4);
+    animation: msg-pop 0.4s ease-out;
+    pointer-events: none;
+}
+@keyframes msg-pop {
+    from { transform: translate(-50%, -50%) scale(0.5); opacity: 0; }
+    to { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+}
+
+/* ====== 結果彈窗 ====== */
+.result-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 100;
+    background: rgba(0,0,0,0.7);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    animation: fade-in 0.3s;
+}
+@keyframes fade-in {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+.result-panel {
+    position: relative;
+    width: 400px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+}
+.result-panel-bg {
+    width: 100%;
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+}
+.result-title-img {
+    position: relative;
+    width: 280px;
+    z-index: 1;
+}
+.result-content {
+    position: relative;
+    z-index: 1;
+    text-align: center;
+}
+.result-hand {
+    color: #fff;
+    font-size: 22px;
+    font-weight: 700;
+    margin-bottom: 8px;
+}
+.result-amount {
+    color: #ffd700;
+    font-size: 32px;
+    font-weight: 900;
+    text-shadow: 0 2px 8px rgba(255,215,0,0.5);
+}
+.result-btn {
+    position: relative;
+    z-index: 1;
+    background: none;
+    border: none;
+    cursor: pointer;
+    transition: transform 0.15s;
+}
+.result-btn:hover { transform: scale(1.08); }
+.result-btn img { width: 140px; }
+
+/* ====== 暫停彈窗 ====== */
+.pause-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 100;
+    background: rgba(0,0,0,0.7);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.pause-panel {
+    position: relative;
+    width: 360px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+    padding: 40px;
+}
+.pause-bg {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    top: 0;
+    left: 0;
+    object-fit: fill;
+    border-radius: 16px;
+}
+.pause-title {
+    position: relative;
+    z-index: 1;
+    width: 220px;
+}
+.pause-btn {
+    position: relative;
+    z-index: 1;
+    background: none;
+    border: none;
+    cursor: pointer;
+    transition: transform 0.15s;
+}
+.pause-btn:hover { transform: scale(1.08); }
+.pause-btn img { width: 160px; }
+
+/* ====== 動畫 ====== */
+@keyframes chip-fly {
+    from { transform: translate(var(--from-x), var(--from-y)) scale(0.5); opacity: 0; }
+    to { transform: translate(0, 0) scale(1); opacity: 1; }
+}
+
+.chip-animation {
+    animation: chip-fly 0.5s ease-out;
+}
+
+/* 翻牌動畫 */
+@keyframes flip-card {
+    0% { transform: scaleX(0); }
+    100% { transform: scaleX(1); }
+}
+
+.card-flip {
+    animation: flip-card 0.3s ease-out;
+}
+
+/* 贏家高亮 */
+.player-seat.winner .avatar-container {
+    filter: drop-shadow(0 0 20px rgba(255, 215, 0, 1));
+}
+.player-seat.winner .player-name-chips {
+    background: rgba(255, 215, 0, 0.3);
+    border: 1px solid rgba(255, 215, 0, 0.6);
+}
+
+/* RWD 響應式 */
+@media (max-width: 768px) {
+    .poker-table { width: 92%; }
+    .dealer-ingame { width: 80px; }
+    .avatar-container { width: 56px; height: 56px; }
+    .avatar-img { width: 40px; height: 40px; top: 4px; }
+    .seat-cards img { width: 34px; height: 50px; }
+    .card-slot { width: 48px; height: 70px; }
+    .action-btn img { width: 90px; }
+    .game-title { font-size: 32px; }
+    .community-cards { gap: 5px; }
+    .player-name-chips { padding: 1px 6px; min-width: 60px; }
+    .p-name { font-size: 9px; }
+    .p-chips { font-size: 10px; }
+    .pot-amount { font-size: 14px; }
+}

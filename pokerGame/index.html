@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Texas Hold'em Poker</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="icon" href="assets/Icons/png/icon-512x512.png">
+</head>
+<body>
+    <!-- 選單畫面 -->
+    <div id="menu-screen" class="screen active">
+        <div class="menu-background">
+            <img src="assets/Menu/png/background_green.png" class="bg-image" alt="">
+            <img src="assets/Menu/png/background_elements.png" class="bg-elements" alt="">
+        </div>
+        <div class="menu-content">
+            <div class="menu-dealer">
+                <img src="assets/Croupier/png/woman_menu.png" alt="Dealer">
+            </div>
+            <h1 class="game-title">TEXAS HOLD'EM</h1>
+            <div class="menu-player-info">
+                <img src="assets/Menu/png/player_panel.png" class="player-panel-bg" alt="">
+                <div class="player-panel-content">
+                    <div class="player-avatar-wrapper">
+                        <img src="assets/Interface_game/png/default_avatar.png" class="menu-avatar" alt="">
+                    </div>
+                    <div class="player-stats">
+                        <div class="stat-row">
+                            <img src="assets/Menu/png/icon_coin.png" class="stat-icon" alt="">
+                            <span id="menu-money">10,000</span>
+                        </div>
+                        <div class="stat-row">
+                            <img src="assets/Menu/png/icon_chip.png" class="stat-icon" alt="">
+                            <span id="menu-chips">500</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <button class="menu-btn play-btn" onclick="startGame()">
+                <img src="assets/Menu/png/button_play.png" alt="Play">
+            </button>
+        </div>
+    </div>
+
+    <!-- 遊戲畫面 -->
+    <div id="game-screen" class="screen">
+        <div class="game-background">
+            <img src="assets/Interface_game/png/background_green.png" class="bg-image" alt="">
+        </div>
+
+        <!-- 牌桌 -->
+        <div class="table-container">
+            <img src="assets/Interface_game/png/table-green.png" class="poker-table" alt="">
+
+            <!-- 荷官 -->
+            <div class="dealer-area">
+                <img src="assets/Croupier/png/woman_ingame.png" class="dealer-ingame" alt="">
+            </div>
+
+            <!-- 公共牌區 -->
+            <div class="community-cards" id="community-cards">
+                <div class="card-slot" id="community-0"></div>
+                <div class="card-slot" id="community-1"></div>
+                <div class="card-slot" id="community-2"></div>
+                <div class="card-slot" id="community-3"></div>
+                <div class="card-slot" id="community-4"></div>
+            </div>
+
+            <!-- 底池 -->
+            <div class="pot-display" id="pot-display">
+                <img src="assets/Interface_game/png/score.png" class="pot-bg" alt="">
+                <span class="pot-amount" id="pot-amount">0</span>
+            </div>
+
+            <!-- 九個玩家座位 -->
+            <div class="player-seat" id="seat-0" data-seat="0">
+                <div class="seat-bet" id="bet-0"></div>
+                <div class="seat-cards" id="cards-0"></div>
+                <div class="seat-info">
+                    <div class="avatar-container">
+                        <img src="assets/Interface_game/png/avatar_player.png" class="avatar-frame" alt="">
+                        <img src="assets/Interface_game/png/default_avatar.png" class="avatar-img" alt="">
+                        <div class="timer-bar">
+                            <img src="assets/Interface_game/png/timeleft_panel.png" class="timer-bg" alt="">
+                            <div class="timer-fill-wrapper">
+                                <img src="assets/Interface_game/png/timeleft_fill.png" class="timer-fill" alt="">
+                            </div>
+                        </div>
+                        <div class="dealer-chip hidden" id="dealer-chip-0">D</div>
+                    </div>
+                    <div class="player-name-chips">
+                        <span class="p-name" id="name-0">You</span>
+                        <span class="p-chips" id="chips-0">$10,000</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="player-seat" id="seat-1" data-seat="1">
+                <div class="seat-bet" id="bet-1"></div>
+                <div class="seat-cards" id="cards-1"></div>
+                <div class="seat-info">
+                    <div class="avatar-container">
+                        <img src="assets/Interface_game/png/avatar_player.png" class="avatar-frame" alt="">
+                        <img src="assets/Interface_game/png/default_avatar.png" class="avatar-img" alt="">
+                        <div class="timer-bar">
+                            <img src="assets/Interface_game/png/timeleft_panel.png" class="timer-bg" alt="">
+                            <div class="timer-fill-wrapper"><img src="assets/Interface_game/png/timeleft_fill.png" class="timer-fill" alt=""></div>
+                        </div>
+                        <div class="dealer-chip hidden" id="dealer-chip-1">D</div>
+                    </div>
+                    <div class="player-name-chips">
+                        <span class="p-name" id="name-1">Player 2</span>
+                        <span class="p-chips" id="chips-1">$10,000</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="player-seat" id="seat-2" data-seat="2">
+                <div class="seat-bet" id="bet-2"></div>
+                <div class="seat-cards" id="cards-2"></div>
+                <div class="seat-info">
+                    <div class="avatar-container">
+                        <img src="assets/Interface_game/png/avatar_player.png" class="avatar-frame" alt="">
+                        <img src="assets/Interface_game/png/default_avatar.png" class="avatar-img" alt="">
+                        <div class="timer-bar">
+                            <img src="assets/Interface_game/png/timeleft_panel.png" class="timer-bg" alt="">
+                            <div class="timer-fill-wrapper"><img src="assets/Interface_game/png/timeleft_fill.png" class="timer-fill" alt=""></div>
+                        </div>
+                        <div class="dealer-chip hidden" id="dealer-chip-2">D</div>
+                    </div>
+                    <div class="player-name-chips">
+                        <span class="p-name" id="name-2">Player 3</span>
+                        <span class="p-chips" id="chips-2">$10,000</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="player-seat" id="seat-3" data-seat="3">
+                <div class="seat-bet" id="bet-3"></div>
+                <div class="seat-cards" id="cards-3"></div>
+                <div class="seat-info">
+                    <div class="avatar-container">
+                        <img src="assets/Interface_game/png/avatar_player.png" class="avatar-frame" alt="">
+                        <img src="assets/Interface_game/png/default_avatar.png" class="avatar-img" alt="">
+                        <div class="timer-bar">
+                            <img src="assets/Interface_game/png/timeleft_panel.png" class="timer-bg" alt="">
+                            <div class="timer-fill-wrapper"><img src="assets/Interface_game/png/timeleft_fill.png" class="timer-fill" alt=""></div>
+                        </div>
+                        <div class="dealer-chip hidden" id="dealer-chip-3">D</div>
+                    </div>
+                    <div class="player-name-chips">
+                        <span class="p-name" id="name-3">Player 4</span>
+                        <span class="p-chips" id="chips-3">$10,000</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="player-seat" id="seat-4" data-seat="4">
+                <div class="seat-bet" id="bet-4"></div>
+                <div class="seat-cards" id="cards-4"></div>
+                <div class="seat-info">
+                    <div class="avatar-container">
+                        <img src="assets/Interface_game/png/avatar_player.png" class="avatar-frame" alt="">
+                        <img src="assets/Interface_game/png/default_avatar.png" class="avatar-img" alt="">
+                        <div class="timer-bar">
+                            <img src="assets/Interface_game/png/timeleft_panel.png" class="timer-bg" alt="">
+                            <div class="timer-fill-wrapper"><img src="assets/Interface_game/png/timeleft_fill.png" class="timer-fill" alt=""></div>
+                        </div>
+                        <div class="dealer-chip hidden" id="dealer-chip-4">D</div>
+                    </div>
+                    <div class="player-name-chips">
+                        <span class="p-name" id="name-4">Player 5</span>
+                        <span class="p-chips" id="chips-4">$10,000</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="player-seat" id="seat-5" data-seat="5">
+                <div class="seat-bet" id="bet-5"></div>
+                <div class="seat-cards" id="cards-5"></div>
+                <div class="seat-info">
+                    <div class="avatar-container">
+                        <img src="assets/Interface_game/png/avatar_player.png" class="avatar-frame" alt="">
+                        <img src="assets/Interface_game/png/default_avatar.png" class="avatar-img" alt="">
+                        <div class="timer-bar">
+                            <img src="assets/Interface_game/png/timeleft_panel.png" class="timer-bg" alt="">
+                            <div class="timer-fill-wrapper"><img src="assets/Interface_game/png/timeleft_fill.png" class="timer-fill" alt=""></div>
+                        </div>
+                        <div class="dealer-chip hidden" id="dealer-chip-5">D</div>
+                    </div>
+                    <div class="player-name-chips">
+                        <span class="p-name" id="name-5">Player 6</span>
+                        <span class="p-chips" id="chips-5">$10,000</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="player-seat" id="seat-6" data-seat="6">
+                <div class="seat-bet" id="bet-6"></div>
+                <div class="seat-cards" id="cards-6"></div>
+                <div class="seat-info">
+                    <div class="avatar-container">
+                        <img src="assets/Interface_game/png/avatar_player.png" class="avatar-frame" alt="">
+                        <img src="assets/Interface_game/png/default_avatar.png" class="avatar-img" alt="">
+                        <div class="timer-bar">
+                            <img src="assets/Interface_game/png/timeleft_panel.png" class="timer-bg" alt="">
+                            <div class="timer-fill-wrapper"><img src="assets/Interface_game/png/timeleft_fill.png" class="timer-fill" alt=""></div>
+                        </div>
+                        <div class="dealer-chip hidden" id="dealer-chip-6">D</div>
+                    </div>
+                    <div class="player-name-chips">
+                        <span class="p-name" id="name-6">Player 7</span>
+                        <span class="p-chips" id="chips-6">$10,000</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="player-seat" id="seat-7" data-seat="7">
+                <div class="seat-bet" id="bet-7"></div>
+                <div class="seat-cards" id="cards-7"></div>
+                <div class="seat-info">
+                    <div class="avatar-container">
+                        <img src="assets/Interface_game/png/avatar_player.png" class="avatar-frame" alt="">
+                        <img src="assets/Interface_game/png/default_avatar.png" class="avatar-img" alt="">
+                        <div class="timer-bar">
+                            <img src="assets/Interface_game/png/timeleft_panel.png" class="timer-bg" alt="">
+                            <div class="timer-fill-wrapper"><img src="assets/Interface_game/png/timeleft_fill.png" class="timer-fill" alt=""></div>
+                        </div>
+                        <div class="dealer-chip hidden" id="dealer-chip-7">D</div>
+                    </div>
+                    <div class="player-name-chips">
+                        <span class="p-name" id="name-7">Player 8</span>
+                        <span class="p-chips" id="chips-7">$10,000</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="player-seat" id="seat-8" data-seat="8">
+                <div class="seat-bet" id="bet-8"></div>
+                <div class="seat-cards" id="cards-8"></div>
+                <div class="seat-info">
+                    <div class="avatar-container">
+                        <img src="assets/Interface_game/png/avatar_player.png" class="avatar-frame" alt="">
+                        <img src="assets/Interface_game/png/default_avatar.png" class="avatar-img" alt="">
+                        <div class="timer-bar">
+                            <img src="assets/Interface_game/png/timeleft_panel.png" class="timer-bg" alt="">
+                            <div class="timer-fill-wrapper"><img src="assets/Interface_game/png/timeleft_fill.png" class="timer-fill" alt=""></div>
+                        </div>
+                        <div class="dealer-chip hidden" id="dealer-chip-8">D</div>
+                    </div>
+                    <div class="player-name-chips">
+                        <span class="p-name" id="name-8">Player 9</span>
+                        <span class="p-chips" id="chips-8">$10,000</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 操作按鈕區 -->
+        <div class="action-panel" id="action-panel">
+            <div class="action-buttons">
+                <button class="action-btn" id="btn-fold" onclick="playerAction('fold')">
+                    <img src="assets/Interface_game/png/button_fold.png" alt="Fold">
+                </button>
+                <button class="action-btn" id="btn-check" onclick="playerAction('check')">
+                    <img src="assets/Interface_game/png/button_check.png" alt="Check">
+                </button>
+                <button class="action-btn" id="btn-call" onclick="playerAction('call')">
+                    <img src="assets/Interface_game/png/button_call.png" alt="Call">
+                    <span class="call-amount" id="call-amount"></span>
+                </button>
+                <button class="action-btn" id="btn-raise" onclick="showRaiseSlider()">
+                    <img src="assets/Interface_game/png/button_raise.png" alt="Raise">
+                </button>
+                <button class="action-btn allin-btn" id="btn-allin" onclick="playerAction('allin')">ALL IN</button>
+            </div>
+            <div class="raise-slider-container hidden" id="raise-slider">
+                <input type="range" id="raise-amount" min="0" max="10000" step="100">
+                <div class="raise-display">
+                    <span id="raise-value">0</span>
+                    <button class="raise-confirm-btn" onclick="confirmRaise()">RAISE</button>
+                    <button class="raise-cancel-btn" onclick="hideRaiseSlider()">✕</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 頂部資訊列 -->
+        <div class="top-bar">
+            <div class="top-bar-left">
+                <img src="assets/Interface_game/png/chip_score_panel.png" class="score-panel-bg" alt="">
+                <span class="score-text" id="player-chips-display">$10,000</span>
+            </div>
+            <div class="top-bar-right">
+                <button class="icon-btn" onclick="pauseGame()">
+                    <img src="assets/Interface_game/png/button_pause.png" alt="Pause">
+                </button>
+            </div>
+        </div>
+
+        <!-- 遊戲訊息 -->
+        <div class="game-message hidden" id="game-message">
+            <span id="message-text"></span>
+        </div>
+    </div>
+
+    <!-- 勝利/失敗彈窗 -->
+    <div class="result-overlay hidden" id="result-overlay">
+        <div class="result-panel">
+            <img src="" id="result-panel-bg" class="result-panel-bg" alt="">
+            <img src="" id="result-title-img" class="result-title-img" alt="">
+            <div class="result-content">
+                <div class="result-hand" id="result-hand"></div>
+                <div class="result-amount" id="result-amount"></div>
+            </div>
+            <button class="result-btn" onclick="nextRound()">
+                <img src="assets/Win/png/button_ok.png" alt="OK">
+            </button>
+        </div>
+    </div>
+
+    <!-- 暫停彈窗 -->
+    <div class="pause-overlay hidden" id="pause-overlay">
+        <div class="pause-panel">
+            <img src="assets/Pause/png/background-panel.png" class="pause-bg" alt="">
+            <img src="assets/Pause/png/game_paused.png" class="pause-title" alt="">
+            <button class="pause-btn" onclick="resumeGame()">
+                <img src="assets/Pause/png/button_resume.png" alt="Resume">
+            </button>
+            <button class="pause-btn" onclick="backToMenu()">
+                <img src="assets/Pause/png/button_lobby.png" alt="Lobby">
+            </button>
+        </div>
+    </div>
+
+    <script src="game.js"></script>
+</body>
+</html>

@@ -4,3 +4,6 @@ slotGame_2/godot_project/.godot/
 slotGame_2/godot_project/export/
 slotGame_2/godot_project/assets/game_files/
 slotGame_2/.DS_Store
+
+# pokerGame 設計原始檔（不需推上 repo）
+pokerGame/assets/**/*.psd
