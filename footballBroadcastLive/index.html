@@ -760,8 +760,10 @@ document.addEventListener('touchmove', (e) => { if (e.touches.length > 1) e.prev
         <select id="evt-player" style="flex:1;background:#1a3050;border:1px solid rgba(255,255,255,0.12);color:#ddd;padding:4px;border-radius:4px;font-size:11px">
           <option value="">選擇球員</option>
         </select>
-        <input type="number" id="evt-minute" min="0" max="120" value="0" style="width:45px;background:#1a3050;border:1px solid rgba(255,255,255,0.12);color:#ddd;padding:4px;border-radius:4px;font-size:11px" placeholder="分">
+        <select id="evt-minute" style="width:50px;background:#1a3050;border:1px solid rgba(255,255,255,0.12);color:#ddd;padding:4px;border-radius:4px;font-size:11px"></select>
         <span style="color:#667;line-height:28px">'</span>
+        <select id="evt-second" style="width:50px;background:#1a3050;border:1px solid rgba(255,255,255,0.12);color:#ddd;padding:4px;border-radius:4px;font-size:11px"></select>
+        <span style="color:#667;line-height:28px">"</span>
       </div>
       <!-- Step 2: 選事件類型 -->
       <div style="display:flex;gap:4px;flex-wrap:wrap">
@@ -1033,11 +1035,13 @@ function addTextEvent(type) {
   const playerSel = document.getElementById('evt-player');
   const playerName = playerSel.options[playerSel.selectedIndex]?.textContent || '';
   const minute = parseInt(document.getElementById('evt-minute').value) || 0;
+  const second = parseInt(document.getElementById('evt-second').value) || 0;
 
   const evt = {
     id: 'evt-' + Date.now(),
     type,
     minute,
+    second,
     team: teamVal,
     teamName,
     player: playerName,
@@ -1066,7 +1070,7 @@ function renderTextEvents() {
   }
   list.innerHTML = textEvents.map(evt => `
     <div class="text-event-item">
-      <span class="evt-time">${evt.minute}'</span>
+      <span class="evt-time">${evt.minute}'${String(evt.second||0).padStart(2,'0')}"</span>
       <span class="evt-icon">${evt.icon}</span>
       <span class="evt-team-tag ${evt.team}">${evt.team === 'home' ? '主' : '客'}</span>
       <span class="evt-desc">${evt.desc}</span>
@@ -1096,13 +1100,13 @@ function updateWidget() {
     if (item.isAnim) {
       const wIdx = widgetItems.indexOf(item);
       return `<div class="widget-event goal" style="cursor:pointer" onclick="playWidgetAnim(${wIdx})">
-        <div class="we-time">${item.minute}' ${item.icon}</div>
+        <div class="we-time">${item.minute}'${String(item.second||0).padStart(2,'0')}" ${item.icon}</div>
         <div class="we-desc">${item.desc}</div>
         <div style="font-size:9px;color:#5ddf5d;margin-top:2px">▶ 點擊播放動畫</div>
       </div>`;
     }
     return `<div class="widget-event ${item.type}">
-      <div class="we-time">${item.minute}' ${item.icon}</div>
+      <div class="we-time">${item.minute}'${String(item.second||0).padStart(2,'0')}" ${item.icon}</div>
       <div class="we-desc">${item.desc}</div>
     </div>`;
   }).join('');
@@ -1113,7 +1117,7 @@ function pushTextToWidget() {
   if (unpushed.length === 0) { alert('沒有新的文字事件'); return; }
   unpushed.forEach(e => {
     e.pushed = true;
-    widgetItems.push({ minute: e.minute, type: e.type, icon: e.icon, desc: e.desc, isAnim: false });
+    widgetItems.push({ minute: e.minute, second: e.second || 0, type: e.type, icon: e.icon, desc: e.desc, isAnim: false });
   });
   widgetItems.sort((a, b) => a.minute - b.minute);
   renderTextEvents();
@@ -1123,9 +1127,16 @@ function pushTextToWidget() {
 function pushAnimToWidget() {
   const unpushed = segments.filter(s => s.published && !s.pushedToWidget);
   if (unpushed.length === 0) { alert('沒有新的動畫片段'); return; }
+  // Read time from left panel selector OR from segment's own time
+  const evtMin = parseInt(document.getElementById('evt-minute')?.value);
+  const evtSec = parseInt(document.getElementById('evt-second')?.value);
   unpushed.forEach(seg => {
-    const min = Math.floor(seg.endSeconds / 60);
-    widgetItems.push({ minute: min, type: 'goal', icon: '⚽', desc: seg.templateName || '動畫片段', isAnim: true, segId: seg.id, segData: seg });
+    // Prefer left panel time if user set it (> 0), otherwise use segment time
+    const segMin = Math.floor(seg.startSeconds / 60);
+    const segSec = seg.startSeconds % 60;
+    const min = (evtMin > 0 || evtSec > 0) ? evtMin : segMin;
+    const sec = (evtMin > 0 || evtSec > 0) ? evtSec : segSec;
+    widgetItems.push({ minute: min, second: sec, type: 'goal', icon: '⚽', desc: seg.templateName || '動畫片段', isAnim: true, segId: seg.id, segData: seg });
   });
   // Remove pushed segments from list
   segments = segments.filter(s => !unpushed.includes(s));
@@ -1224,6 +1235,15 @@ function playWidgetAnim(idx) {
 }
 
 // 更新球員下拉選單
+function initEvtTimeSelectors() {
+  const minSel = document.getElementById('evt-minute');
+  const secSel = document.getElementById('evt-second');
+  if (!minSel || !secSel) return;
+  if (minSel.options.length > 0) return; // already init
+  for (let m = 0; m <= 120; m++) minSel.innerHTML += `<option value="${m}">${m}</option>`;
+  for (let s = 0; s < 60; s++) secSel.innerHTML += `<option value="${s}">${String(s).padStart(2,'0')}</option>`;
+}
+
 function updateEvtPlayerDropdown() {
   const teamSel = document.getElementById('evt-team');
   const playerSel = document.getElementById('evt-player');
@@ -3458,6 +3478,7 @@ function startVirtualMatch() {
   updateWidget();
   updateEvtPlayerDropdown();
   syncScoreControl();
+  initEvtTimeSelectors();
   document.getElementById('evt-team').onchange = updateEvtPlayerDropdown;
 }
 
@@ -3852,6 +3873,7 @@ function startVirtualMatchFromRestore() {
   updateWidget();
   updateEvtPlayerDropdown();
   syncScoreControl();
+  initEvtTimeSelectors();
   document.getElementById('evt-team').onchange = updateEvtPlayerDropdown;
 }
 
