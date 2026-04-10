@@ -23,11 +23,13 @@ func _ready() -> void:
 	_build_ui()
 
 func _build_ui() -> void:
-	# 背景
+	# 背景（1920x1080 全畫面）
 	var bg := TextureRect.new()
 	if ResourceLoader.exists("res://assets/game_files/Info/info_back.png"):
 		bg.texture = load("res://assets/game_files/Info/info_back.png")
-	bg.set_anchors_preset(Control.PRESET_FULL_RECT)
+	bg.position = Vector2(0, 0)
+	bg.size = Vector2(1920, 1080)
+	bg.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	bg.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	bg.mouse_filter = Control.MOUSE_FILTER_STOP
 	add_child(bg)
@@ -38,14 +40,16 @@ func _build_ui() -> void:
 	page_container.set_anchors_preset(Control.PRESET_FULL_RECT)
 	add_child(page_container)
 
-	# 預載所有頁面圖片
+	# 預載所有頁面圖片（1920x1080 全畫面）
 	for page_idx in range(TOTAL_PAGES):
 		var page_textures: Array = []
 		for img_path in PAGE_PATHS[page_idx]:
 			var tex_rect := TextureRect.new()
 			if ResourceLoader.exists(img_path):
 				tex_rect.texture = load(img_path)
-			tex_rect.set_anchors_preset(Control.PRESET_FULL_RECT)
+			tex_rect.position = Vector2(0, 0)
+			tex_rect.size = Vector2(1920, 1080)
+			tex_rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 			tex_rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 			tex_rect.visible = false
 			tex_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -53,7 +57,7 @@ func _build_ui() -> void:
 			page_textures.append(tex_rect)
 		page_images.append(page_textures)
 
-	# 關閉按鈕
+	# 關閉按鈕（右上角，確保可見可點擊）
 	close_button = TextureButton.new()
 	if ResourceLoader.exists("res://assets/game_files/Info/buttons/close_button_01.png"):
 		close_button.texture_normal = load("res://assets/game_files/Info/buttons/close_button_01.png")
@@ -61,10 +65,11 @@ func _build_ui() -> void:
 		close_button.texture_hover = load("res://assets/game_files/Info/buttons/close_button_02.png")
 	if ResourceLoader.exists("res://assets/game_files/Info/buttons/close_button_03.png"):
 		close_button.texture_pressed = load("res://assets/game_files/Info/buttons/close_button_03.png")
-	close_button.position = Vector2(1800, 20)
-	close_button.size = Vector2(80, 80)
+	close_button.position = Vector2(1810, 15)
+	close_button.size = Vector2(85, 85)
 	close_button.stretch_mode = TextureButton.STRETCH_KEEP_ASPECT_CENTERED
 	close_button.ignore_texture_size = true
+	close_button.z_index = 10  # 確保在最上層可點擊
 	close_button.pressed.connect(_on_close)
 	add_child(close_button)
 

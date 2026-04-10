@@ -4,6 +4,7 @@ extends Control
 const InfoPopup = preload("res://scripts/ui/info_popup.gd")
 const HistoryPanel = preload("res://scripts/ui/history_panel.gd")
 const WinEffect = preload("res://scripts/ui/win_effect.gd")
+const GambleScene = preload("res://scripts/ui/gamble_scene.gd")
 
 # ===== 滾輪視覺參數（根據素材實際尺寸計算）=====
 const GAME_W: float = 1920.0
@@ -46,6 +47,8 @@ var win_effect_node: Control
 var gamble_button: TextureButton
 var buy_coins_btn: TextureButton
 var buy_coins_popup: Panel
+var gamble_scene_node: Control
+var last_win_amount: float = 0.0
 
 # ===== Loading Screen 節點 =====
 var loading_layer: Control
@@ -222,19 +225,20 @@ func _build_upper_bar() -> void:
 	var bar := TextureRect.new()
 	bar.texture = load("res://assets/game_files/interface/interface/upper_back.png")
 	bar.position = Vector2(0, 0)
-	bar.size = Vector2(1920, 122)
+	bar.size = Vector2(1920, 90)
 	bar.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+	bar.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	add_child(bar)
 
 	# LOBBY 按鈕（左上角）
-	var lobby_btn := _tex_btn("lobby_button", Vector2(15, 15), Vector2(155, 70))
+	var lobby_btn := _tex_btn("lobby_button", Vector2(15, 12), Vector2(155, 70))
 	add_child(lobby_btn)
 
 	# 金幣餘額背景條
 	var coins_bg := TextureRect.new()
 	coins_bg.texture = load("res://assets/game_files/interface/interface/coins_back.png")
-	coins_bg.position = Vector2(175, 22)
-	coins_bg.size = Vector2(340, 48)
+	coins_bg.position = Vector2(185, 18)
+	coins_bg.size = Vector2(340, 52)
 	coins_bg.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	coins_bg.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	add_child(coins_bg)
@@ -242,15 +246,16 @@ func _build_upper_bar() -> void:
 	# 金幣圖示（在背景條左端）
 	var ci := TextureRect.new()
 	ci.texture = load("res://assets/game_files/interface/interface/coins_icon.png")
-	ci.position = Vector2(175, 12)
-	ci.size = Vector2(55, 55)
+	ci.position = Vector2(185, 10)
+	ci.size = Vector2(58, 58)
 	ci.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	ci.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	add_child(ci)
 
-	# 餘額數字（在背景條內，金幣右邊）
-	balance_label = _make_label(Vector2(240, 25), Vector2(250, 40), 28, Color.WHITE, HORIZONTAL_ALIGNMENT_CENTER)
+	# 餘額數字（金幣右邊，在背景條內）
+	balance_label = _make_label(Vector2(250, 20), Vector2(260, 48), 28, Color.WHITE, HORIZONTAL_ALIGNMENT_CENTER)
 	balance_label.add_theme_font_override("font", game_font)
+	balance_label.clip_text = true
 	add_child(balance_label)
 
 	# BUY COINS 按鈕（頂部中央）
@@ -261,8 +266,8 @@ func _build_upper_bar() -> void:
 	var star := TextureRect.new()
 	if ResourceLoader.exists("res://assets/game_files/interface/experience_bar/experience_star.png"):
 		star.texture = load("res://assets/game_files/interface/experience_bar/experience_star.png")
-	star.position = Vector2(1250, 10)
-	star.size = Vector2(65, 70)
+	star.position = Vector2(1220, 12)
+	star.size = Vector2(60, 65)
 	star.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	star.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	add_child(star)
@@ -271,22 +276,29 @@ func _build_upper_bar() -> void:
 	var exp_bar := TextureRect.new()
 	if ResourceLoader.exists("res://assets/game_files/interface/experience_bar/experience_bar.png"):
 		exp_bar.texture = load("res://assets/game_files/interface/experience_bar/experience_bar.png")
-	exp_bar.position = Vector2(1320, 20)
-	exp_bar.size = Vector2(380, 50)
+	exp_bar.position = Vector2(1290, 18)
+	exp_bar.size = Vector2(400, 50)
 	exp_bar.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	exp_bar.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	add_child(exp_bar)
 
+	# 100% 經驗值文字（條的右端）
+	var exp_text := _make_label(Vector2(1650, 22), Vector2(60, 40), 20, Color.WHITE, HORIZONTAL_ALIGNMENT_CENTER)
+	exp_text.text = "100%"
+	if game_font:
+		exp_text.add_theme_font_override("font", game_font)
+	add_child(exp_text)
+
 	# Info 按鈕（右上角）
-	info_button = _tex_btn("info_button", Vector2(1755, 12), Vector2(70, 72))
+	info_button = _tex_btn("info_button", Vector2(1740, 12), Vector2(88, 68))
 	add_child(info_button)
 
-	# 設定（注單記錄）按鈕
-	settings_button = _tex_btn("settings_button", Vector2(1840, 12), Vector2(80, 72))
+	# 設定按鈕
+	settings_button = _tex_btn("settings_button", Vector2(1830, 12), Vector2(88, 68))
 	add_child(settings_button)
 
-	# 免費旋轉提示（覆蓋在 BUY COINS 位置上）
-	free_spin_label = _make_label(Vector2(600, 35), Vector2(720, 50), 34, Color.YELLOW, HORIZONTAL_ALIGNMENT_CENTER)
+	# 免費旋轉提示（位於 BUY COINS 下方，不重疊）
+	free_spin_label = _make_label(Vector2(600, 88), Vector2(720, 20), 18, Color.YELLOW, HORIZONTAL_ALIGNMENT_CENTER)
 	free_spin_label.add_theme_font_override("font", game_font)
 	free_spin_label.visible = false
 	add_child(free_spin_label)
@@ -300,56 +312,89 @@ func _build_bottom_bar() -> void:
 	bar.position = Vector2(0, 897)
 	bar.size = Vector2(1920, 183)
 	bar.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+	bar.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	add_child(bar)
 
 	# [-] 按鈕（最左邊）
-	minus_button = _tex_btn("minus_button", Vector2(20, 920), Vector2(100, 120))
+	minus_button = _tex_btn("minus_button", Vector2(20, 925), Vector2(100, 110))
 	add_child(minus_button)
 
-	# TOTAL BET 背景（素材已含 "TOTAL BET" 文字）
+	# TOTAL BET 背景（素材已含 "TOTAL BET" 文字，不需額外 Label）
 	var tb := TextureRect.new()
 	tb.texture = load("res://assets/game_files/interface/interface/total_bet_back_01.png")
-	tb.position = Vector2(130, 910)
-	tb.size = Vector2(320, 135)
+	tb.position = Vector2(135, 918)
+	tb.size = Vector2(330, 120)
 	tb.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	tb.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	add_child(tb)
 
-	# 注金數字 — 放在框的下半部
-	bet_label = _make_label(Vector2(145, 975), Vector2(290, 55), 42, Color.WHITE, HORIZONTAL_ALIGNMENT_CENTER)
+	# 注金數字 — 在 TOTAL BET 框下半部居中
+	bet_label = _make_label(Vector2(160, 970), Vector2(280, 50), 40, Color.WHITE, HORIZONTAL_ALIGNMENT_CENTER)
 	bet_label.add_theme_font_override("font", game_font)
+	bet_label.clip_text = true
 	add_child(bet_label)
 
 	# [+] 按鈕
-	plus_button = _tex_btn("plus_button", Vector2(460, 920), Vector2(100, 120))
+	plus_button = _tex_btn("plus_button", Vector2(475, 925), Vector2(100, 110))
 	add_child(plus_button)
 
-	# WIN 背景（素材已含 "WIN" 文字）
+	# WIN 背景（素材已含 "WIN" 文字，不需額外 Label）
 	var wb := TextureRect.new()
 	wb.texture = load("res://assets/game_files/interface/interface/win_back_01.png")
-	wb.position = Vector2(610, 905)
-	wb.size = Vector2(500, 145)
+	wb.position = Vector2(620, 915)
+	wb.size = Vector2(520, 130)
 	wb.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	wb.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	add_child(wb)
 
-	# WIN 數字 — 放在框的下半部
-	win_label = _make_label(Vector2(680, 975), Vector2(340, 55), 48, Color.WHITE, HORIZONTAL_ALIGNMENT_CENTER)
+	# WIN 數字 — 在 WIN 框下半部居中
+	win_label = _make_label(Vector2(680, 972), Vector2(400, 50), 42, Color.WHITE, HORIZONTAL_ALIGNMENT_CENTER)
 	win_label.add_theme_font_override("font", game_font)
+	win_label.clip_text = true
 	add_child(win_label)
 
 	# MAX BET 按鈕
-	max_bet_button = _tex_btn("max_bet", Vector2(1170, 920), Vector2(155, 120))
+	max_bet_button = _tex_btn("max_bet", Vector2(1190, 925), Vector2(160, 110))
 	add_child(max_bet_button)
 
-	# SPIN 按鈕（右側）
-	spin_button = _tex_btn("spin_button", Vector2(1420, 900), Vector2(470, 175))
+	# SPIN 按鈕（右側大按鈕）
+	spin_button = _tex_btn("spin_button", Vector2(1420, 900), Vector2(470, 170))
 	add_child(spin_button)
 
-	# STOP 按鈕（初始隱藏，同位置）
-	stop_button = _tex_btn("stop_button", Vector2(1420, 900), Vector2(470, 175))
+	# STOP 按鈕（初始隱藏，同位置同尺寸）
+	stop_button = _tex_btn("stop_button", Vector2(1420, 900), Vector2(470, 170))
 	stop_button.visible = false
 	add_child(stop_button)
+
+	# 免費旋轉底部標籤（左半：倍率徽章，右半：免費次數）
+	_build_free_game_bottom_labels()
+
+func _build_free_game_bottom_labels() -> void:
+	# 免費旋轉倍率圖（free_game_multiplier_text.png）— 左半邊
+	var mult_img := TextureRect.new()
+	mult_img.name = "FreeMultImg"
+	if ResourceLoader.exists("res://assets/game_files/interface/interface/free_game_multiplier_text.png"):
+		mult_img.texture = load("res://assets/game_files/interface/interface/free_game_multiplier_text.png")
+	mult_img.position = Vector2(50, 910)
+	mult_img.size = Vector2(500, 130)
+	mult_img.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	mult_img.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	mult_img.visible = false
+	mult_img.mouse_filter = MOUSE_FILTER_IGNORE
+	add_child(mult_img)
+
+	# 免費旋轉次數圖（free_spins_text.png）— 右半邊
+	var spins_img := TextureRect.new()
+	spins_img.name = "FreeSpinsImg"
+	if ResourceLoader.exists("res://assets/game_files/interface/interface/free_spins_text.png"):
+		spins_img.texture = load("res://assets/game_files/interface/interface/free_spins_text.png")
+	spins_img.position = Vector2(1200, 910)
+	spins_img.size = Vector2(400, 130)
+	spins_img.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	spins_img.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	spins_img.visible = false
+	spins_img.mouse_filter = MOUSE_FILTER_IGNORE
+	add_child(spins_img)
 
 # ---------- Gamble 按鈕 ----------
 
@@ -363,9 +408,9 @@ func _build_gamble_button() -> void:
 		gamble_button.texture_hover = load(base_path + "gamble_button_hover.png")
 	if ResourceLoader.exists(base_path + "gamble_button_clicked.png"):
 		gamble_button.texture_pressed = load(base_path + "gamble_button_clicked.png")
-	# 置中 x，y=830，尺寸 500x80
-	gamble_button.position = Vector2((GAME_W - 500.0) / 2.0, 830)
-	gamble_button.size = Vector2(500, 80)
+	# 置中 x，y=835，使用原始素材尺寸 610x109
+	gamble_button.position = Vector2((GAME_W - 610.0) / 2.0, 835)
+	gamble_button.size = Vector2(610, 60)
 	gamble_button.stretch_mode = TextureButton.STRETCH_KEEP_ASPECT_CENTERED
 	gamble_button.ignore_texture_size = true
 	gamble_button.visible = false
@@ -420,76 +465,169 @@ func _build_popups() -> void:
 	win_effect_node.visible = false
 	add_child(win_effect_node)
 
+	# Gamble 場景
+	gamble_scene_node = Control.new()
+	gamble_scene_node.set_script(GambleScene)
+	gamble_scene_node.name = "GambleScene"
+	gamble_scene_node.set_anchors_preset(PRESET_FULL_RECT)
+	gamble_scene_node.mouse_filter = MOUSE_FILTER_IGNORE
+	gamble_scene_node.visible = false
+	add_child(gamble_scene_node)
+	gamble_scene_node.gamble_finished.connect(_on_gamble_finished)
+
 	# Buy Coins 彈窗
 	_build_buy_coins_popup()
 
 func _build_buy_coins_popup() -> void:
 	buy_coins_popup = Panel.new()
-	buy_coins_popup.position = Vector2(510, 250)
-	buy_coins_popup.size = Vector2(900, 550)
+	buy_coins_popup.position = Vector2(0, 0)
+	buy_coins_popup.size = Vector2(1920, 1080)
 	buy_coins_popup.visible = false
-	var style := StyleBoxFlat.new()
-	style.bg_color = Color(0.12, 0.08, 0.18, 0.95)
-	style.border_color = Color(0.85, 0.65, 0.2)
-	style.set_border_width_all(4)
-	style.set_corner_radius_all(20)
-	buy_coins_popup.add_theme_stylebox_override("panel", style)
+	# 透明背景的 Panel（只當容器用）
+	var transparent_style := StyleBoxFlat.new()
+	transparent_style.bg_color = Color(0, 0, 0, 0)
+	buy_coins_popup.add_theme_stylebox_override("panel", transparent_style)
 	add_child(buy_coins_popup)
 
-	# 標題
-	var title := Label.new()
-	title.text = "BUY COINS"
-	title.position = Vector2(280, 20)
-	title.size = Vector2(340, 60)
-	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	title.add_theme_font_size_override("font_size", 42)
-	title.add_theme_color_override("font_color", Color(1, 0.85, 0.3))
+	# 主背景圖片（置中）
+	var bg_img := TextureRect.new()
+	bg_img.texture = load("res://assets/game_files/Pop_Ups/buy_coins/buy_coins_back.png")
+	bg_img.position = Vector2(35, 190)
+	bg_img.size = Vector2(1849, 702)
+	bg_img.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	bg_img.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	buy_coins_popup.add_child(bg_img)
+
+	# 標題文字圖片
+	var title_img := TextureRect.new()
+	title_img.texture = load("res://assets/game_files/Pop_Ups/buy_coins/buy_coins_text.png")
+	title_img.position = Vector2(390, 210)
+	title_img.size = Vector2(1139, 59)
+	title_img.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	title_img.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	buy_coins_popup.add_child(title_img)
+
+	# "YOU ALREADY HAVE" 提示 + 金幣圖示 + 餘額
+	var already_lbl := _make_label(Vector2(600, 275), Vector2(220, 40), 22, Color.WHITE, HORIZONTAL_ALIGNMENT_RIGHT)
+	already_lbl.text = "YOU ALREADY HAVE"
 	if game_font:
-		title.add_theme_font_override("font", game_font)
-	buy_coins_popup.add_child(title)
+		already_lbl.add_theme_font_override("font", game_font)
+	buy_coins_popup.add_child(already_lbl)
 
-	# 加幣選項按鈕
-	var coin_options: Array = [
-		{"amount": 500, "label": "500 COINS", "color": Color(0.3, 0.7, 0.3)},
-		{"amount": 2000, "label": "2,000 COINS", "color": Color(0.3, 0.5, 0.9)},
-		{"amount": 5000, "label": "5,000 COINS", "color": Color(0.8, 0.4, 0.9)},
-		{"amount": 20000, "label": "20,000 COINS", "color": Color(1.0, 0.7, 0.2)},
-	]
+	var coin_icon := TextureRect.new()
+	coin_icon.texture = load("res://assets/game_files/Pop_Ups/buy_coins/coin_icon.png")
+	coin_icon.position = Vector2(830, 275)
+	coin_icon.size = Vector2(38, 38)
+	coin_icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	coin_icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	buy_coins_popup.add_child(coin_icon)
 
-	for i in range(coin_options.size()):
-		var opt: Dictionary = coin_options[i]
-		var btn := Button.new()
-		btn.text = opt["label"]
-		btn.position = Vector2(100, 110 + i * 100)
-		btn.size = Vector2(700, 80)
-		btn.add_theme_font_size_override("font_size", 32)
-		if game_font:
-			btn.add_theme_font_override("font", game_font)
-		var btn_style := StyleBoxFlat.new()
-		btn_style.bg_color = opt["color"]
-		btn_style.set_corner_radius_all(12)
-		btn.add_theme_stylebox_override("normal", btn_style)
-		var hover_style := StyleBoxFlat.new()
-		hover_style.bg_color = opt["color"].lightened(0.2)
-		hover_style.set_corner_radius_all(12)
-		btn.add_theme_stylebox_override("hover", hover_style)
-		var amount: int = opt["amount"]
-		btn.pressed.connect(func():
+	var balance_display := Label.new()
+	balance_display.name = "BuyCoinsBalance"
+	balance_display.position = Vector2(875, 275)
+	balance_display.size = Vector2(200, 40)
+	balance_display.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
+	balance_display.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	balance_display.add_theme_font_size_override("font_size", 26)
+	balance_display.add_theme_color_override("font_color", Color(1.0, 0.9, 0.3))
+	if game_font:
+		balance_display.add_theme_font_override("font", game_font)
+	balance_display.text = "%d" % int(GameState.balance)
+	buy_coins_popup.add_child(balance_display)
+
+	var coins_suffix := _make_label(Vector2(1060, 275), Vector2(120, 40), 22, Color.WHITE, HORIZONTAL_ALIGNMENT_LEFT)
+	coins_suffix.text = "COINS"
+	if game_font:
+		coins_suffix.add_theme_font_override("font", game_font)
+	buy_coins_popup.add_child(coins_suffix)
+
+	# 6 張幣包卡片，水平排列
+	var coin_amounts: Array = [2500, 5000, 11000, 27500, 56000, 110000]
+	var card_w: float = 275.0
+	var card_h: float = 440.0
+	var total_cards_w: float = card_w * 6 + 12.0 * 5  # 6 張 + 5 個間距
+	var cards_start_x: float = (1920.0 - total_cards_w) / 2.0
+	var cards_y: float = 335.0
+	var card_spacing: float = 12.0
+
+	for i in range(6):
+		var card := TextureButton.new()
+		var card_path := "res://assets/game_files/Pop_Ups/buy_coins/buy_coins_back%02d.png" % (i + 1)
+		if ResourceLoader.exists(card_path):
+			card.texture_normal = load(card_path)
+		card.position = Vector2(cards_start_x + i * (card_w + card_spacing), cards_y)
+		card.size = Vector2(card_w, card_h)
+		card.stretch_mode = TextureButton.STRETCH_KEEP_ASPECT_CENTERED
+		card.ignore_texture_size = true
+		var amount: int = coin_amounts[i]
+		card.pressed.connect(func():
 			SoundManager.play("coin")
 			GameState.balance += amount
+			balance_display.text = "%d" % int(GameState.balance)
 			_refresh_ui()
 			_close_popups()
 		)
-		buy_coins_popup.add_child(btn)
+		buy_coins_popup.add_child(card)
 
-	# 關閉按鈕
-	var close_btn := Button.new()
-	close_btn.text = "X"
-	close_btn.position = Vector2(830, 15)
+		# 卡片上的金額文字
+		var amount_lbl := Label.new()
+		amount_lbl.position = Vector2(cards_start_x + i * (card_w + card_spacing), cards_y + card_h - 75)
+		amount_lbl.size = Vector2(card_w, 50)
+		amount_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		amount_lbl.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		amount_lbl.add_theme_font_size_override("font_size", 26)
+		amount_lbl.add_theme_color_override("font_color", Color(1.0, 0.9, 0.3))
+		amount_lbl.add_theme_constant_override("outline_size", 3)
+		amount_lbl.add_theme_color_override("font_outline_color", Color(0.2, 0.1, 0.0))
+		if game_font:
+			amount_lbl.add_theme_font_override("font", game_font)
+		amount_lbl.text = _format_number(amount) if amount >= 1000 else str(amount)
+		buy_coins_popup.add_child(amount_lbl)
+
+	# "POPULAR" 徽章在第 4 張卡片下方（index 3）
+	var popular_badge := TextureRect.new()
+	popular_badge.texture = load("res://assets/game_files/Pop_Ups/buy_coins/buy_coins_popular.png")
+	var pop_x: float = cards_start_x + 3 * (card_w + card_spacing) + (card_w - 120) / 2.0
+	popular_badge.position = Vector2(pop_x, cards_y + card_h + 5)
+	popular_badge.size = Vector2(120, 35)
+	popular_badge.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	popular_badge.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	buy_coins_popup.add_child(popular_badge)
+
+	# "BEST PRICE" 徽章在第 6 張卡片下方（index 5）
+	var best_badge := TextureRect.new()
+	best_badge.texture = load("res://assets/game_files/Pop_Ups/buy_coins/buy_coins_best_price.png")
+	var best_x: float = cards_start_x + 5 * (card_w + card_spacing) + (card_w - 120) / 2.0
+	best_badge.position = Vector2(best_x, cards_y + card_h + 5)
+	best_badge.size = Vector2(120, 35)
+	best_badge.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	best_badge.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	buy_coins_popup.add_child(best_badge)
+
+	# 關閉按鈕（右上角）
+	var close_btn := TextureButton.new()
+	close_btn.texture_normal = load("res://assets/game_files/Pop_Ups/buy_coins/close_button_01.png")
+	if ResourceLoader.exists("res://assets/game_files/Pop_Ups/buy_coins/close_button_02.png"):
+		close_btn.texture_hover = load("res://assets/game_files/Pop_Ups/buy_coins/close_button_02.png")
+	if ResourceLoader.exists("res://assets/game_files/Pop_Ups/buy_coins/close_button_03.png"):
+		close_btn.texture_pressed = load("res://assets/game_files/Pop_Ups/buy_coins/close_button_03.png")
+	close_btn.position = Vector2(1820, 195)
 	close_btn.size = Vector2(55, 55)
-	close_btn.add_theme_font_size_override("font_size", 28)
+	close_btn.stretch_mode = TextureButton.STRETCH_KEEP_ASPECT_CENTERED
+	close_btn.ignore_texture_size = true
 	close_btn.pressed.connect(_close_popups)
 	buy_coins_popup.add_child(close_btn)
+
+func _format_number(n: int) -> String:
+	var s: String = str(n)
+	var result: String = ""
+	var count: int = 0
+	for i in range(s.length() - 1, -1, -1):
+		result = s[i] + result
+		count += 1
+		if count % 3 == 0 and i > 0:
+			result = "," + result
+	return result
 
 # ===== 信號連接 =====
 
@@ -516,12 +654,22 @@ func _connect_signals() -> void:
 	GameState.free_spins_started.connect(func(c: int, m: int):
 		free_spin_label.visible = true
 		free_spin_label.text = "FREE SPINS: %d (x%d)" % [c, m]
+		# 顯示底部免費旋轉圖片
+		var mult_node := get_node_or_null("FreeMultImg")
+		var spins_node := get_node_or_null("FreeSpinsImg")
+		if mult_node: mult_node.visible = true
+		if spins_node: spins_node.visible = true
 	)
 	GameState.free_spins_updated.connect(func(r: int):
 		free_spin_label.text = "FREE SPINS: %d (x%d)" % [r, GameState.free_spins_multiplier]
 	)
 	GameState.free_spins_ended.connect(func(tw: float):
 		free_spin_label.visible = false
+		# 隱藏底部免費旋轉圖片
+		var mult_node := get_node_or_null("FreeMultImg")
+		var spins_node := get_node_or_null("FreeSpinsImg")
+		if mult_node: mult_node.visible = false
+		if spins_node: spins_node.visible = false
 		if tw > 0:
 			win_effect_node.show_free_spin_total(tw)
 	)
@@ -547,6 +695,27 @@ func _process(delta: float) -> void:
 
 	# 背景動畫
 	_update_bg_animation(delta)
+
+	# 滾輪旋轉動畫 + 停止計時（完全同步，不用 async）
+	if GameState.is_spinning:
+		reel_spin_elapsed += delta
+		spin_anim_timer += delta
+
+		# 每 ~55ms 切換一次旋轉中的符號圖
+		if spin_anim_timer >= 0.055:
+			spin_anim_timer -= 0.055
+			for col in range(REEL_COLS):
+				if not reel_landed[col]:
+					for row in range(REEL_ROWS):
+						var rid: int = GameConfig.pick_symbol(col)
+						if sym_tex.has(rid):
+							symbol_nodes[col][row].texture = sym_tex[rid]
+						symbol_nodes[col][row].modulate = Color(0.6, 0.6, 0.6, 0.7)
+
+		# 按時間停止每軸
+		for col in range(REEL_COLS):
+			if not reel_landed[col] and reel_spin_elapsed >= reel_stop_timers[col]:
+				_land_reel(col)
 
 	# 中獎連線輪播
 	if showing_win_lines and current_wins.size() > 1:
@@ -605,42 +774,33 @@ func _on_spin() -> void:
 	_set_controls(false)
 
 	# 生成結果（RTP 控制）
-	var force: bool = GameState.should_force_win()
-	if GameState.force_rtp_control and GameState.spin_counter > 10:
-		current_grid = GameConfig.generate_forced_result(force)
+	# should_force_win 回傳: 1=強制贏, 0=自然隨機, -1=強制輸
+	var force_result: int = GameState.should_force_win()
+	if force_result == 1:
+		current_grid = GameConfig.generate_forced_result(true)
+	elif force_result == -1:
+		current_grid = GameConfig.generate_forced_result(false)
 	else:
 		current_grid = GameConfig.generate_spin_result()
 
-	# 啟動滾輪動畫
+	# 啟動滾輪動畫（全部在 _process 中同步管理，不用 async）
 	reels_still_spinning = REEL_COLS
-	# 播放旋轉持續音效
+	reel_landed = [false, false, false, false, false]
+	reel_stop_timers = [0.6, 0.95, 1.3, 1.65, 2.0]
+	reel_spin_elapsed = 0.0
+	spin_anim_timer = 0.0
 	SoundManager.play("spin_loop", -4.0)
-	for col in range(REEL_COLS):
-		reel_spin_flags[col] = true
-		_run_spin_anim(col)
-		# 排程停止（每軸延遲遞增）
-		var delay: float = 0.6 + col * 0.35
-		get_tree().create_timer(delay).timeout.connect(_land_reel.bind(col))
 
-func _run_spin_anim(col: int) -> void:
-	## 模擬滾動：快速隨機切換符號圖片 + 機械齒輪聲
-	var tick_count: int = 0
-	while reel_spin_flags[col]:
-		for row in range(REEL_ROWS):
-			var rid: int = GameConfig.pick_symbol(col)
-			symbol_nodes[col][row].texture = sym_tex.get(rid, null)
-			symbol_nodes[col][row].modulate = Color(0.6, 0.6, 0.6, 0.7)
-		# 每軸獨立的機械咔嗒聲（降低頻率避免太密集）
-		tick_count += 1
-		if tick_count % 4 == 0:
-			SoundManager.play("reel_tick", -14.0)
-		await get_tree().create_timer(0.055).timeout
-		if not is_inside_tree():
-			return
+# 追蹤哪些軸已經停了，避免重複呼叫
+var reel_landed: Array = [false, false, false, false, false]
+var reel_stop_timers: Array = [0.6, 0.95, 1.3, 1.65, 2.0]
+var reel_spin_elapsed: float = 0.0
+var spin_anim_timer: float = 0.0
 
 func _land_reel(col: int) -> void:
-	reel_spin_flags[col] = false
-	await get_tree().create_timer(0.04).timeout
+	if reel_landed[col]:
+		return
+	reel_landed[col] = true
 
 	# 停輪音效
 	SoundManager.play("reel_stop", -4.0)
@@ -651,7 +811,7 @@ func _land_reel(col: int) -> void:
 		symbol_nodes[col][row].texture = sym_tex.get(sid, null)
 		symbol_nodes[col][row].modulate = Color.WHITE
 
-	# 彈跳
+	# 彈跳動畫
 	for row in range(REEL_ROWS):
 		var node: TextureRect = symbol_nodes[col][row]
 		var base_x: float = col * REEL_GAP_X + (REEL_GAP_X - SYMBOL_W) / 2.0
@@ -661,14 +821,18 @@ func _land_reel(col: int) -> void:
 		tw.tween_property(node, "position", Vector2(base_x, base_y - 6), 0.06)
 		tw.tween_property(node, "position", Vector2(base_x, base_y), 0.05)
 
-	reels_still_spinning -= 1
-	if reels_still_spinning <= 0:
+	# 檢查是否全部都停了
+	var all_done: bool = true
+	for i in range(REEL_COLS):
+		if not reel_landed[i]:
+			all_done = false
+			break
+	if all_done:
 		_evaluate_result()
 
 func _on_stop() -> void:
-	# 快速停止
 	for col in range(REEL_COLS):
-		reel_spin_flags[col] = false
+		_land_reel(col)
 
 func _evaluate_result() -> void:
 	GameState.is_spinning = false
@@ -698,6 +862,11 @@ func _evaluate_result() -> void:
 	if did_win:
 		GameState.add_winnings(total_win)
 		win_label.text = "%.2f" % total_win
+		last_win_amount = total_win
+		# Debug: 印出中獎詳情
+		for w in wins:
+			var sym_name: String = GameConfig.SYMBOL_DISPLAY_NAMES[w["symbol"]]
+			print("WIN Line %d: %dx %s = %d" % [w["line"] + 1, w["count"], sym_name, w["payout"]])
 		# 顯示 Gamble 按鈕（非免費旋轉模式下）
 		if not GameState.is_free_spinning:
 			gamble_button.visible = true
@@ -706,10 +875,13 @@ func _evaluate_result() -> void:
 			win_cycle_idx = 0
 			win_cycle_timer = 0.0
 			_highlight_win(wins[0])
-		# 音效：大獎 vs 一般中獎
+		# 音效 + 彈窗：大獎 vs 普通中獎
 		if total_win >= GameState.total_bet * 10:
 			SoundManager.play("big_win")
 			win_effect_node.show_big_win(total_win)
+		elif total_win >= GameState.total_bet * 3:
+			SoundManager.play("win")
+			win_effect_node.show_normal_win(total_win)
 		else:
 			SoundManager.play("win")
 			SoundManager.play("coin", -3.0)
@@ -727,23 +899,36 @@ func _evaluate_result() -> void:
 
 	_refresh_ui()
 
-	# 自動繼續（免費旋轉 / AutoPlay）
-	if GameState.is_free_spinning:
-		await get_tree().create_timer(1.5).timeout
-		if is_inside_tree():
-			_on_spin()
-	elif GameState.is_auto_play and GameState.auto_play_remaining > 0:
-		GameState.auto_play_remaining -= 1
-		await get_tree().create_timer(1.0).timeout
-		if GameState.is_auto_play and is_inside_tree():
-			_on_spin()
+	# 免費旋轉和 AutoPlay 都不自動旋轉，等玩家手動按 SPIN
 
 # ===== Gamble 按鈕回調 =====
 
 func _on_gamble() -> void:
-	# 目前僅隱藏按鈕（未來可接入 Gamble 場景）
 	gamble_button.visible = false
 	SoundManager.play("button_click", -6.0)
+	# 取得目前中獎金額（從 win_label 解析）
+	var win_text: String = win_label.text.strip_edges()
+	var win_val: float = 0.0
+	if win_text != "":
+		win_val = win_text.to_float()
+	if win_val <= 0:
+		return
+	# 先從餘額扣除中獎金額（進入賭博池）
+	last_win_amount = win_val
+	GameState.balance -= win_val
+	_refresh_ui()
+	gamble_scene_node.show_gamble(win_val)
+
+func _on_gamble_finished(final_amount: float) -> void:
+	# 賭博結束：把最終金額加回餘額
+	if final_amount > 0:
+		GameState.balance += final_amount
+	last_win_amount = 0.0
+	win_label.text = ""
+	_refresh_ui()
+	# 隱藏中獎連線
+	_hide_lines()
+	showing_win_lines = false
 
 # ===== 中獎展示 =====
 
@@ -756,13 +941,14 @@ func _highlight_win(win_info: Dictionary) -> void:
 	if line_idx >= 0 and line_idx < line_sprites.size():
 		line_sprites[line_idx].visible = true
 
-	# 高亮中獎符號，暗化其餘
+	# 先全部稍微暗化，再把中獎符號提亮
 	for c in range(REEL_COLS):
 		for r in range(REEL_ROWS):
-			if c < count and r == line[c]:
-				symbol_nodes[c][r].modulate = Color.WHITE
-			else:
-				symbol_nodes[c][r].modulate = Color(0.35, 0.35, 0.35)
+			symbol_nodes[c][r].modulate = Color(0.5, 0.5, 0.5)
+	# 中獎符號全亮 + 稍微放大效果
+	for c in range(count):
+		var r: int = line[c]
+		symbol_nodes[c][r].modulate = Color(1.2, 1.2, 1.0)  # 略微過曝突顯
 
 func _hide_lines() -> void:
 	for ls in line_sprites:
@@ -811,6 +997,7 @@ func _close_popups() -> void:
 	info_popup_node.visible = false
 	history_panel_node.visible = false
 	buy_coins_popup.visible = false
+	gamble_scene_node.visible = false
 
 func _set_controls(on: bool) -> void:
 	plus_button.disabled = not on

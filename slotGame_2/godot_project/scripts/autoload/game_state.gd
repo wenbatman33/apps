@@ -94,24 +94,19 @@ func use_free_spin() -> void:
 			free_spins_multiplier = 1
 
 ## 根據中獎率控制判斷這次該不該中獎
-func should_force_win() -> bool:
+## 回傳: 1=強制贏, 0=自然隨機, -1=強制輸
+func should_force_win() -> int:
 	if not force_rtp_control:
-		return false  # 不強制，使用自然結果
+		return 0  # 不強制，使用自然結果
 
 	spin_counter += 1
-	var current_rate: float = 0.0
-	if spin_counter > 0:
-		current_rate = float(win_counter) / float(spin_counter)
 
-	# 如果當前中獎率低於目標，增加中獎機率
-	if current_rate < target_win_frequency - 0.05:
-		return true
-	# 如果當前中獎率高於目標，減少中獎機率
-	elif current_rate > target_win_frequency + 0.05:
-		return false
-
-	# 在正常範圍內，使用自然結果
-	return false
+	# 直接用目標頻率做隨機判定
+	var roll: float = randf()
+	if roll < target_win_frequency:
+		return 1  # 這次該贏
+	else:
+		return -1  # 這次該輸
 
 func record_win(did_win: bool) -> void:
 	if did_win:

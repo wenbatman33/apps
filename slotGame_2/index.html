@@ -5,17 +5,8 @@
 		<meta name="viewport" content="width=device-width, user-scalable=no, initial-scale=1.0">
 		<title>Classic Sevens Slots</title>
 		<style>
-html, body, #canvas {
-	margin: 0;
-	padding: 0;
-	border: 0;
-}
-body {
-	color: white;
-	background-color: #0d0815;
-	overflow: hidden;
-	touch-action: none;
-}
+html, body, #canvas { margin: 0; padding: 0; border: 0; }
+body { color: white; background-color: #0d0815; overflow: hidden; touch-action: none; }
 #canvas { display: block; }
 #canvas:focus { outline: none; }
 
@@ -27,33 +18,51 @@ body {
 	flex-direction: column;
 	justify-content: center;
 	align-items: center;
-	visibility: hidden;
 	z-index: 10;
 }
 #status-logo {
-	width: min(50vw, 500px);
+	width: min(45vw, 450px);
 	height: auto;
-	margin-bottom: 30px;
+	margin-bottom: 25px;
 }
 #status-text-img {
-	width: min(18vw, 180px);
+	width: min(16vw, 170px);
 	height: auto;
-	margin-bottom: 12px;
+	margin-bottom: 10px;
 }
-#status-progress {
-	width: min(42vw, 460px);
-	height: 32px;
-	-webkit-appearance: none;
-	appearance: none;
-	border-radius: 8px;
-	overflow: hidden;
+/* 自訂進度條 */
+#progress-wrap {
+	width: min(40vw, 440px);
+	height: 30px;
 	background: #3a2520;
 	border: 2px solid #5a3a2a;
+	border-radius: 8px;
+	overflow: hidden;
+	position: relative;
 }
-#status-progress::-webkit-progress-bar { background: #3a2520; border-radius: 8px; }
-#status-progress::-webkit-progress-value { background: linear-gradient(135deg, #1a8aff, #4dabff, #1a8aff); border-radius: 6px; }
-#status-progress::-moz-progress-bar { background: linear-gradient(135deg, #1a8aff, #4dabff, #1a8aff); border-radius: 6px; }
-
+#progress-fill {
+	height: 100%;
+	width: 0%;
+	background: linear-gradient(90deg, #1a6aff 0%, #4db8ff 50%, #1a6aff 100%);
+	background-size: 200% 100%;
+	border-radius: 6px;
+	animation: shimmer 1.5s infinite linear;
+}
+@keyframes shimmer {
+	0% { background-position: 200% 0; }
+	100% { background-position: -200% 0; }
+}
+#progress-text {
+	position: absolute;
+	top: 0; left: 0; right: 0; bottom: 0;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	font-family: Arial, sans-serif;
+	font-size: 14px;
+	color: #fff;
+	text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
+}
 #status-notice {
 	display: none;
 	background-color: #5b3943;
@@ -75,7 +84,10 @@ body {
 		<div id="status">
 			<img id="status-logo" src="godot_project/assets/game_files/Loading/loading_logo.png" alt="Classic Sevens Slots">
 			<img id="status-text-img" src="godot_project/assets/game_files/Loading/loading_text.png" alt="Loading...">
-			<progress id="status-progress"></progress>
+			<div id="progress-wrap">
+				<div id="progress-fill"></div>
+				<div id="progress-text">0%</div>
+			</div>
 			<div id="status-notice"></div>
 		</div>
 
@@ -96,27 +108,17 @@ const engine = new Engine(GODOT_CONFIG);
 
 (function () {
 	const statusOverlay = document.getElementById('status');
-	const statusProgress = document.getElementById('status-progress');
+	const progressFill = document.getElementById('progress-fill');
+	const progressText = document.getElementById('progress-text');
 	const statusNotice = document.getElementById('status-notice');
-	let initializing = true;
-	let statusMode = '';
 
-	function setStatusMode(mode) {
-		if (statusMode === mode || !initializing) return;
-		if (mode === 'hidden') {
-			statusOverlay.style.transition = 'opacity 0.5s';
-			statusOverlay.style.opacity = '0';
-			setTimeout(() => statusOverlay.remove(), 600);
-			initializing = false;
-			return;
-		}
-		statusOverlay.style.visibility = 'visible';
-		statusProgress.style.display = mode === 'progress' ? 'block' : 'none';
-		statusNotice.style.display = mode === 'notice' ? 'block' : 'none';
-		statusMode = mode;
+	function hideLoading() {
+		statusOverlay.style.transition = 'opacity 0.5s';
+		statusOverlay.style.opacity = '0';
+		setTimeout(() => statusOverlay.remove(), 600);
 	}
 
-	function displayFailureNotice(err) {
+	function showError(err) {
 		console.error(err);
 		const msg = err instanceof Error ? err.message : typeof err === 'string' ? err : 'An unknown error occurred.';
 		while (statusNotice.lastChild) statusNotice.removeChild(statusNotice.lastChild);
@@ -125,27 +127,46 @@ const engine = new Engine(GODOT_CONFIG);
 			statusNotice.appendChild(document.createElement('br'));
 		});
 		statusNotice.style.display = 'block';
-		statusProgress.style.display = 'none';
-		statusOverlay.style.visibility = 'visible';
-		initializing = false;
+		document.getElementById('progress-wrap').style.display = 'none';
 	}
 
 	const missing = Engine.getMissingFeatures({ threads: GODOT_THREADS_ENABLED });
 	if (missing.length !== 0) {
-		displayFailureNotice('Error\nThe following features required to run Godot projects on the Web are missing:\n' + missing.join('\n'));
+		showError('Error\nThe following features required to run Godot projects on the Web are missing:\n' + missing.join('\n'));
 	} else {
-		setStatusMode('progress');
+		let gameReady = false;
+		let displayPct = 0;
+		const startTime = Date.now();
+
+		// 平滑更新進度條（不直接跳到目標，而是漸進追趕）
+		let targetPct = 0;
+		const smoothInterval = setInterval(() => {
+			if (displayPct < targetPct) {
+				displayPct = Math.min(displayPct + 2, targetPct);
+			}
+			// 遊戲就緒後快速填滿到 100%
+			if (gameReady && displayPct < 100) {
+				displayPct = Math.min(displayPct + 5, 100);
+			}
+			progressFill.style.width = displayPct + '%';
+			progressText.textContent = displayPct + '%';
+			// 到 100% 且已經過最少 1 秒才隱藏
+			if (displayPct >= 100 && gameReady && (Date.now() - startTime) > 1500) {
+				clearInterval(smoothInterval);
+				setTimeout(hideLoading, 300);
+			}
+		}, 30);
+
 		engine.startGame({
 			'onProgress': function (current, total) {
-				if (current > 0 && total > 0) {
-					statusProgress.value = current;
-					statusProgress.max = total;
-				} else {
-					statusProgress.removeAttribute('value');
-					statusProgress.removeAttribute('max');
+				if (total > 0) {
+					targetPct = Math.round((current / total) * 100);
 				}
 			},
-		}).then(() => setStatusMode('hidden'), displayFailureNotice);
+		}).then(() => {
+			gameReady = true;
+			targetPct = 100;
+		}, showError);
 	}
 }());
 		</script>
