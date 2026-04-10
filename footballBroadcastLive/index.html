@@ -14,19 +14,21 @@ body {
   user-select: none;
   -webkit-user-select: none;
   touch-action: pan-y;
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
 }
 
-/* ── Split-screen Layout ── */
-#app-layout { display: flex; width: 100%; height: 100vh; overflow: hidden; }
-#control-panel { width: 67%; overflow-y: auto; background: #0a1628; padding: 12px; display: flex; flex-direction: column; gap: 8px; }
-#preview-panel { width: 33%; background: linear-gradient(180deg, #1a2744, #0d1a30); display: flex; flex-direction: column; align-items: stretch; overflow: hidden; }
-#preview-panel #score-bar { padding: 6px 12px; flex-shrink: 0; }
-#preview-panel #timeline-section { padding: 6px 12px 4px; flex-shrink: 0; }
-#preview-panel #stadium-wrap { flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center; }
+/* ── 3-Column Broadcast Layout ── */
+#app-layout { display: flex; width: 100%; flex: 1; overflow: hidden; }
+#animation-panel #score-bar { padding: 6px 12px; flex-shrink: 0; }
+#animation-panel #timeline-section { padding: 6px 12px 4px; flex-shrink: 0; }
+#animation-panel #stadium-wrap { flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center; }
 @media (max-width: 900px) {
-  #app-layout { flex-direction: column-reverse; }
-  #control-panel { width: 100%; height: 50vh; overflow-y: auto; }
-  #preview-panel { width: 100%; height: 50vh; }
+  #app-layout { flex-direction: column; height: auto; }
+  #text-panel { width: 100%; height: 40vh; }
+  #animation-panel { width: 100%; height: auto; }
+  #widget-panel { width: 100%; height: 30vh; }
 }
 
 /* ── Stadium Container ── */
@@ -256,8 +258,7 @@ body {
 .seg-col-title { flex: 1; text-align: center; font-size: 11px; font-weight: 700; padding: 3px 0; border-radius: 4px; }
 .seg-col-title.seg-col-home { background: rgba(91,163,245,0.1); color: #5ba3f5; }
 .seg-col-title.seg-col-away { background: rgba(245,166,35,0.1); color: #f5a623; }
-#segments-list { display: flex; gap: 6px; }
-#segments-list .seg-column { flex: 1; display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+#segments-list { display: flex; flex-direction: column; gap: 4px; }
 .segment-card {
   background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06);
   border-radius: 6px; padding: 8px; margin-bottom: 6px;
@@ -498,6 +499,47 @@ body {
 
 /* ── Mobile responsive ── */
 @media (max-width: 600px) { .setup-teams { flex-direction: column; } }
+
+/* ── 3-Column Broadcast Layout ── */
+#text-panel { width: 30%; background: #0a1628; display: flex; flex-direction: column; border-right: 1px solid rgba(255,255,255,0.06); overflow: hidden; }
+#animation-panel { flex: 1; background: linear-gradient(180deg, #1a2744, #0d1a30); display: flex; flex-direction: column; overflow: hidden; padding-right: 220px; }
+#widget-panel { position: fixed; right: 16px; top: 50%; transform: translateY(-50%); width: 200px; max-height: 350px; background: rgba(13,26,48,0.95); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 8px 32px rgba(0,0,0,0.4); z-index: 50; backdrop-filter: blur(10px); pointer-events: auto; }
+#bottom-bar { height: 46px; display: flex; flex-shrink: 0; border-top: 1px solid rgba(255,255,255,0.1); }
+#bottom-bar button { flex: 1; border: none; font-size: 13px; font-weight: 700; cursor: pointer; transition: all 0.15s; }
+#btn-push-text { background: #1a3050; color: #5ba3f5; border-right: 1px solid rgba(255,255,255,0.06); }
+#btn-push-text:hover { background: #254070; }
+#btn-push-anim { background: linear-gradient(135deg, #f5a623, #e09000); color: #fff; }
+#btn-push-anim:hover { box-shadow: 0 -2px 12px rgba(245,166,35,0.3); }
+
+/* Panel header */
+.panel-header { font-size: 13px; font-weight: 700; color: #5ba3f5; padding: 8px 10px; border-bottom: 1px solid rgba(255,255,255,0.06); flex-shrink: 0; }
+.evt-btn { background: #1a3050; border: 1px solid rgba(255,255,255,0.1); color: #aab; padding: 3px 8px; border-radius: 4px; cursor: pointer; font-size: 11px; transition: all 0.15s; }
+.evt-btn:hover { background: #254070; color: #fff; }
+
+/* Text event items */
+.text-event-item { display: flex; gap: 6px; padding: 6px 8px; border-bottom: 1px solid rgba(255,255,255,0.04); font-size: 12px; align-items: flex-start; }
+.text-event-item .evt-time { color: #5ddf5d; font-weight: 700; min-width: 35px; flex-shrink: 0; }
+.text-event-item .evt-icon { font-size: 14px; flex-shrink: 0; }
+.text-event-item .evt-desc { color: #ccc; flex: 1; }
+.text-event-item .evt-team-tag { font-size: 9px; font-weight: 700; padding: 1px 4px; border-radius: 3px; flex-shrink: 0; }
+.text-event-item .evt-team-tag.home { background: rgba(91,163,245,0.3); color: #5ba3f5; }
+.text-event-item .evt-team-tag.away { background: rgba(245,166,35,0.3); color: #f5a623; }
+.text-event-item .evt-delete { color: rgba(255,255,255,0.2); cursor: pointer; font-size: 10px; }
+.text-event-item .evt-delete:hover { color: #e74c3c; }
+
+/* Widget events */
+.widget-event { position: relative; padding: 10px 12px 10px 20px; margin-bottom: 2px; border-left: 2px solid rgba(255,255,255,0.1); }
+.widget-event::before { content: ''; position: absolute; left: -5px; top: 14px; width: 8px; height: 8px; border-radius: 50%; background: #5ba3f5; }
+.widget-event.goal::before { background: #5ddf5d; box-shadow: 0 0 8px rgba(93,223,93,0.5); }
+.widget-event.goal { border-left-color: #5ddf5d; background: rgba(93,223,93,0.05); border-radius: 6px; }
+.widget-event .we-time { font-size: 11px; color: #5ddf5d; font-weight: 700; }
+.widget-event .we-desc { font-size: 12px; color: #ddd; font-weight: 600; }
+.widget-event .we-team { font-size: 10px; color: #889; }
+
+/* Mode toggle */
+.mode-btn { background: #1a3050; border: 1px solid rgba(255,255,255,0.12); color: #889; padding: 4px 14px; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: 600; transition: all 0.15s; }
+.mode-btn:hover { background: #254070; color: #fff; }
+.mode-btn.active { background: #2a5090; color: #fff; border-color: #5ba3f5; }
 </style>
 <script>
 let _lastTap = 0;
@@ -682,116 +724,174 @@ document.addEventListener('touchmove', (e) => { if (e.touches.length > 1) e.prev
 </div>
 
 <div id="app-layout">
-  <!-- Control Panel (left 55%) -->
-  <div id="control-panel">
-
-    <!-- Pitch Editor -->
-    <div id="editor-canvas-wrap">
-      <canvas id="editorCanvas"></canvas>
-    </div>
-
-    <!-- Player/Ball Selector -->
-    <div id="selector-bar">
-      <div class="selector-row">
-        <span class="selector-label">主場</span>
-        <div class="selector-buttons" id="home-player-btns"></div>
-        <button id="ball-btn" class="sel-btn sel-btn-ball active" data-entity="ball" onclick="toggleEntity('ball')">足球</button>
-      </div>
-      <div class="selector-row">
-        <span class="selector-label">客場</span>
-        <div class="selector-buttons" id="away-player-btns"></div>
-      </div>
-    </div>
-
-    <!-- Template Library -->
-    <div id="template-section">
-      <div style="margin-bottom:6px">
-        <span style="font-size:13px;font-weight:700;color:#f5a623">📋 進球模板</span>
-        <span style="color:#667;font-size:10px;margin-left:8px">點擊模板自動建立片段，時間在片段卡片中調整</span>
-      </div>
-      <div id="template-grid"></div>
-    </div>
-
-    <!-- Segments -->
-    <div id="segments-panel">
-      <div class="seg-columns-header">
-        <span class="seg-col-title seg-col-home">主場片段</span>
-        <span class="seg-col-title seg-col-away">客場片段</span>
-      </div>
-      <div id="segments-list"></div>
-      <button id="add-segment-btn" class="cmd-btn" onclick="addSegment()" style="width:100%;margin-top:6px">＋ 手動新增片段</button>
-    </div>
-
-    <!-- Publish -->
-    <button id="export-timeline-btn" class="publish-btn" onclick="exportTimelineJSON()">匯出時間軸 JSON</button>
-
-    <!-- Data actions -->
-    <div id="data-bar">
-      <button onclick="exportSessionJSON()" class="cmd-btn-sm">匯出</button>
-      <button onclick="clearSession()" class="cmd-btn-sm cmd-btn-sm-danger">清除</button>
-      <label class="cmd-btn-sm" style="cursor:pointer">匯入<input type="file" accept=".json" onchange="importSessionJSON(this.files[0])" style="display:none"></label>
-    </div>
-
-  </div>
-
-  <!-- Preview Panel (right 45%) -->
-  <div id="preview-panel">
-
-    <!-- Score Bar -->
-    <div id="score-bar">
-      <div class="score-section">
-        <div class="team-info home">
-          <span class="team-label" id="home-name">Home</span>
-          <span class="team-flag" id="home-flag">&#127968;</span>
+  <!-- LEFT: Text Commentary -->
+  <div id="text-panel">
+    <!-- Score Control -->
+    <div id="score-control" style="padding:8px;border-bottom:1px solid rgba(255,255,255,0.06);flex-shrink:0">
+      <div style="display:flex;align-items:center;justify-content:center;gap:8px">
+        <div style="text-align:center">
+          <div id="sc-home-name" style="font-size:11px;color:#5ba3f5;font-weight:600;margin-bottom:2px">主隊</div>
+          <div style="display:flex;align-items:center;gap:4px">
+            <button onclick="updateScore('home',-1)" style="background:#1a3050;border:1px solid rgba(255,255,255,0.12);color:#fff;width:24px;height:24px;border-radius:4px;cursor:pointer;font-size:14px">-</button>
+            <span id="sc-home-score" style="font-size:28px;font-weight:900;color:#fff;min-width:30px;text-align:center">0</span>
+            <button onclick="updateScore('home',1)" style="background:#1a3050;border:1px solid rgba(255,255,255,0.12);color:#fff;width:24px;height:24px;border-radius:4px;cursor:pointer;font-size:14px">+</button>
+          </div>
         </div>
-        <div class="score-display"><span id="home-score">0</span> : <span id="away-score">0</span></div>
-        <div class="team-info away">
-          <span class="team-label" id="away-name">Away</span>
-          <span class="team-flag" id="away-flag">&#127937;</span>
-        </div>
-      </div>
-    </div>
-
-    <div id="stadium-wrap">
-      <div id="pitch-container">
-        <canvas id="pitchCanvas"></canvas>
-        <div id="possession-label" style="display:none">
-          <div class="team-name" id="poss-team-name"></div>
-          <div class="label">控球</div>
-        </div>
-        <div id="event-overlay" style="display:none">
-          <div id="event-icon"></div>
-          <div id="event-minute"></div>
-          <div id="event-text"></div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Timeline -->
-    <div id="timeline-section">
-      <div id="timeline-controls-row">
-        <button id="btn-play" onclick="togglePlayPause()">&#9654;</button>
-        <span id="current-time-display">0'</span>
-        <div id="timeline-container">
-          <div id="timeline-track">
-            <div id="timeline-progress"></div>
-            <div id="timeline-time-indicator">0'</div>
-            <canvas id="momentumCanvas"></canvas>
+        <span style="font-size:20px;font-weight:800;color:#556">:</span>
+        <div style="text-align:center">
+          <div id="sc-away-name" style="font-size:11px;color:#f5a623;font-weight:600;margin-bottom:2px">客隊</div>
+          <div style="display:flex;align-items:center;gap:4px">
+            <button onclick="updateScore('away',-1)" style="background:#1a3050;border:1px solid rgba(255,255,255,0.12);color:#fff;width:24px;height:24px;border-radius:4px;cursor:pointer;font-size:14px">-</button>
+            <span id="sc-away-score" style="font-size:28px;font-weight:900;color:#fff;min-width:30px;text-align:center">0</span>
+            <button onclick="updateScore('away',1)" style="background:#1a3050;border:1px solid rgba(255,255,255,0.12);color:#fff;width:24px;height:24px;border-radius:4px;cursor:pointer;font-size:14px">+</button>
           </div>
         </div>
       </div>
-      <div id="timeline-bottom-row">
-        <div class="time-axis" id="time-axis-labels"></div>
-        <div id="speed-buttons">
-          <button class="speed-btn active" data-speed="1">1x</button>
-          <button class="speed-btn" data-speed="2">2x</button>
-          <button class="speed-btn" data-speed="4">4x</button>
-          <button class="speed-btn" data-speed="8">8x</button>
+    </div>
+    <div class="panel-header">📝 文字轉播</div>
+    <div id="text-event-list" style="flex:1;overflow-y:auto;padding:8px"></div>
+    <div id="text-composer" style="padding:8px;border-top:1px solid rgba(255,255,255,0.06)">
+      <!-- Step 1: 選隊伍 + 球員 + 時間 -->
+      <div style="display:flex;gap:4px;margin-bottom:6px">
+        <select id="evt-team" style="background:#1a3050;border:1px solid rgba(255,255,255,0.12);color:#ddd;padding:4px;border-radius:4px;font-size:11px">
+          <option value="home">主隊</option>
+          <option value="away">客隊</option>
+        </select>
+        <select id="evt-player" style="flex:1;background:#1a3050;border:1px solid rgba(255,255,255,0.12);color:#ddd;padding:4px;border-radius:4px;font-size:11px">
+          <option value="">選擇球員</option>
+        </select>
+        <input type="number" id="evt-minute" min="0" max="120" value="0" style="width:45px;background:#1a3050;border:1px solid rgba(255,255,255,0.12);color:#ddd;padding:4px;border-radius:4px;font-size:11px" placeholder="分">
+        <span style="color:#667;line-height:28px">'</span>
+      </div>
+      <!-- Step 2: 選事件類型 -->
+      <div style="display:flex;gap:4px;flex-wrap:wrap">
+        <button class="evt-btn" onclick="addTextEvent('goal')">⚽ 進球</button>
+        <button class="evt-btn" onclick="addTextEvent('yellow')">🟨 黃牌</button>
+        <button class="evt-btn" onclick="addTextEvent('red')">🟥 紅牌</button>
+        <button class="evt-btn" onclick="addTextEvent('corner')">🚩 角球</button>
+        <button class="evt-btn" onclick="addTextEvent('sub')">🔄 換人</button>
+        <button class="evt-btn" onclick="addTextEvent('var')">⚠ VAR</button>
+        <button class="evt-btn" onclick="addTextEvent('halftime')">⏱ 半場</button>
+        <button class="evt-btn" onclick="addTextEvent('fulltime')">⏱ 終場</button>
+        <button class="evt-btn" onclick="addTextEvent('kickoff')">🏟 開賽</button>
+        <button class="evt-btn" onclick="addTextEvent('injury')">🩹 傷停</button>
+        <button class="evt-btn" onclick="addTextEvent('throwin')">📥 邊線球</button>
+        <button class="evt-btn" onclick="addTextEvent('freekick')">🎯 自由球</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- CENTER: Animation Display -->
+  <div id="animation-panel">
+    <!-- Mode toggle -->
+    <div style="display:flex;justify-content:center;gap:4px;padding:4px;flex-shrink:0">
+    </div>
+
+    <!-- Preview view (default) -->
+    <div id="preview-view" style="display:none;flex-direction:column;flex:1;min-height:0">
+      <!-- Score Bar -->
+      <div id="score-bar">
+        <div class="score-section">
+          <div class="team-info home">
+            <span class="team-label" id="home-name">Home</span>
+            <span class="team-flag" id="home-flag">&#127968;</span>
+          </div>
+          <div class="score-display"><span id="home-score">0</span> : <span id="away-score">0</span></div>
+          <div class="team-info away">
+            <span class="team-label" id="away-name">Away</span>
+            <span class="team-flag" id="away-flag">&#127937;</span>
+          </div>
+        </div>
+      </div>
+
+      <div id="stadium-wrap">
+        <div id="pitch-container">
+          <canvas id="pitchCanvas"></canvas>
+          <div id="possession-label" style="display:none">
+            <div class="team-name" id="poss-team-name"></div>
+            <div class="label">控球</div>
+          </div>
+          <div id="event-overlay" style="display:none">
+            <div id="event-icon"></div>
+            <div id="event-minute"></div>
+            <div id="event-text"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Timeline -->
+      <div id="timeline-section">
+        <div id="timeline-controls-row">
+          <button id="btn-play" onclick="togglePlayPause()">&#9654;</button>
+          <span id="current-time-display">0'</span>
+          <div id="timeline-container">
+            <div id="timeline-track">
+              <div id="timeline-progress"></div>
+              <div id="timeline-time-indicator">0'</div>
+              <canvas id="momentumCanvas"></canvas>
+            </div>
+          </div>
+        </div>
+        <div id="timeline-bottom-row">
+          <div class="time-axis" id="time-axis-labels"></div>
+          <div id="speed-buttons">
+            <button class="speed-btn active" data-speed="1">1x</button>
+            <button class="speed-btn" data-speed="2">2x</button>
+            <button class="speed-btn" data-speed="4">4x</button>
+            <button class="speed-btn" data-speed="8">8x</button>
+          </div>
         </div>
       </div>
     </div>
 
+    <!-- Editor view (hidden by default) -->
+    <div id="editor-view" style="display:flex;flex:1;overflow-y:auto;padding:12px;flex-direction:column;gap:8px">
+      <!-- Pitch Editor -->
+      <div id="editor-canvas-wrap">
+        <canvas id="editorCanvas"></canvas>
+      </div>
+
+      <!-- Player/Ball Selector -->
+      <div id="selector-bar">
+        <div class="selector-row">
+          <span class="selector-label">主場</span>
+          <div class="selector-buttons" id="home-player-btns"></div>
+          <button id="ball-btn" class="sel-btn sel-btn-ball active" data-entity="ball" onclick="toggleEntity('ball')">足球</button>
+        </div>
+        <div class="selector-row">
+          <span class="selector-label">客場</span>
+          <div class="selector-buttons" id="away-player-btns"></div>
+        </div>
+      </div>
+
+      <!-- Template Library -->
+      <div id="template-section">
+        <div style="margin-bottom:6px">
+          <span style="font-size:13px;font-weight:700;color:#f5a623">📋 進球模板</span>
+          <span style="color:#667;font-size:10px;margin-left:8px">點擊模板自動建立片段，時間在片段卡片中調整</span>
+        </div>
+        <div id="template-grid"></div>
+      </div>
+
+      <!-- Segments -->
+      <div id="segments-panel">
+        <div id="segments-list"></div>
+      </div>
+    </div>
   </div>
+
+  <!-- RIGHT: Widget -->
+  <div id="widget-panel">
+    <div class="panel-header widget-drag-handle" style="text-align:center;cursor:grab">📡 Live</div>
+    <div id="widget-match-title" style="text-align:center;padding:8px;font-size:13px;font-weight:700;color:#f5a623"></div>
+    <div id="widget-events" style="flex:1;overflow-y:auto;padding:0 8px"></div>
+  </div>
+</div>
+
+<!-- Bottom Bar -->
+<div id="bottom-bar">
+  <button id="btn-push-text" onclick="pushTextToWidget()">📝 推送文字推播</button>
+  <button id="btn-push-anim" onclick="pushAnimToWidget()">🎬 推送動畫推播</button>
 </div>
 
 <script>
@@ -905,6 +1005,282 @@ let vmHomeScore = 0, vmAwayScore = 0;
 // Segment preview animation
 let segPreviewTimer = null;
 
+// ═══════════════════════════════════════════════════════════
+// TEXT BROADCAST SYSTEM
+// ═══════════════════════════════════════════════════════════
+let textEvents = []; // {id, type, minute, team, player, desc, icon, pushed}
+
+const EVENT_TYPES = {
+  goal:     { icon: '⚽', label: '進球', desc: (t,p) => `${t} ${p} 進球！` },
+  yellow:   { icon: '🟨', label: '黃牌', desc: (t,p) => `${p} 被出示黃牌` },
+  red:      { icon: '🟥', label: '紅牌', desc: (t,p) => `${p} 被出示紅牌！` },
+  corner:   { icon: '🚩', label: '角球', desc: (t,p) => `${t} 獲得角球` },
+  sub:      { icon: '🔄', label: '換人', desc: (t,p) => `${t} 換人調整` },
+  var:      { icon: '⚠️', label: 'VAR', desc: (t,p) => `VAR 介入判定` },
+  halftime: { icon: '⏱', label: '半場', desc: (t,p) => '上半場結束' },
+  fulltime: { icon: '⏱', label: '終場', desc: (t,p) => '全場比賽結束' },
+  kickoff:  { icon: '🏟', label: '開賽', desc: (t,p) => '比賽開始！' },
+  injury:   { icon: '🩹', label: '傷停', desc: (t,p) => `傷停補時 ${p || ''}` },
+  throwin:  { icon: '📥', label: '邊線球', desc: (t,p) => `${t} 邊線球` },
+  freekick: { icon: '🎯', label: '自由球', desc: (t,p) => `${t} 獲得自由球` },
+};
+
+function addTextEvent(type) {
+  const evtType = EVENT_TYPES[type];
+  if (!evtType) return;
+  const teamVal = document.getElementById('evt-team').value;
+  const teamName = teamVal === 'home' ? homeTeam : awayTeam;
+  const playerSel = document.getElementById('evt-player');
+  const playerName = playerSel.options[playerSel.selectedIndex]?.textContent || '';
+  const minute = parseInt(document.getElementById('evt-minute').value) || 0;
+
+  const evt = {
+    id: 'evt-' + Date.now(),
+    type,
+    minute,
+    team: teamVal,
+    teamName,
+    player: playerName,
+    desc: evtType.desc(teamName, playerName),
+    icon: evtType.icon,
+    pushed: false
+  };
+  textEvents.push(evt);
+  textEvents.sort((a, b) => a.minute - b.minute);
+  renderTextEvents();
+  updateWidget();
+}
+
+function deleteTextEvent(id) {
+  textEvents = textEvents.filter(e => e.id !== id);
+  renderTextEvents();
+  updateWidget();
+}
+
+function renderTextEvents() {
+  const list = document.getElementById('text-event-list');
+  if (!list) return;
+  if (textEvents.length === 0) {
+    list.innerHTML = '<div style="color:#556;font-size:11px;text-align:center;padding:20px">點擊上方按鈕新增比賽事件</div>';
+    return;
+  }
+  list.innerHTML = textEvents.map(evt => `
+    <div class="text-event-item">
+      <span class="evt-time">${evt.minute}'</span>
+      <span class="evt-icon">${evt.icon}</span>
+      <span class="evt-team-tag ${evt.team}">${evt.team === 'home' ? '主' : '客'}</span>
+      <span class="evt-desc">${evt.desc}</span>
+      <span class="evt-delete" onclick="deleteTextEvent('${evt.id}')">✕</span>
+    </div>
+  `).join('');
+  list.scrollTop = list.scrollHeight;
+}
+
+// Widget: 顯示最新 4 個事件
+let widgetItems = []; // pushed items shown in widget
+
+function updateWidget() {
+  const container = document.getElementById('widget-events');
+  if (!container) return;
+
+  updateWidgetScore();
+
+  // Show latest 4 pushed items
+  const latest = widgetItems.slice(-4).reverse();
+
+  if (latest.length === 0) {
+    container.innerHTML = '<div style="color:#556;font-size:11px;text-align:center;padding:20px">等待推送事件...</div>';
+    return;
+  }
+  container.innerHTML = latest.map(item => {
+    if (item.isAnim) {
+      const wIdx = widgetItems.indexOf(item);
+      return `<div class="widget-event goal" style="cursor:pointer" onclick="playWidgetAnim(${wIdx})">
+        <div class="we-time">${item.minute}' ${item.icon}</div>
+        <div class="we-desc">${item.desc}</div>
+        <div style="font-size:9px;color:#5ddf5d;margin-top:2px">▶ 點擊播放動畫</div>
+      </div>`;
+    }
+    return `<div class="widget-event ${item.type}">
+      <div class="we-time">${item.minute}' ${item.icon}</div>
+      <div class="we-desc">${item.desc}</div>
+    </div>`;
+  }).join('');
+}
+
+function pushTextToWidget() {
+  const unpushed = textEvents.filter(e => !e.pushed);
+  if (unpushed.length === 0) { alert('沒有新的文字事件'); return; }
+  unpushed.forEach(e => {
+    e.pushed = true;
+    widgetItems.push({ minute: e.minute, type: e.type, icon: e.icon, desc: e.desc, isAnim: false });
+  });
+  widgetItems.sort((a, b) => a.minute - b.minute);
+  renderTextEvents();
+  updateWidget();
+}
+
+function pushAnimToWidget() {
+  const unpushed = segments.filter(s => s.published && !s.pushedToWidget);
+  if (unpushed.length === 0) { alert('沒有新的動畫片段'); return; }
+  unpushed.forEach(seg => {
+    const min = Math.floor(seg.endSeconds / 60);
+    widgetItems.push({ minute: min, type: 'goal', icon: '⚽', desc: seg.templateName || '動畫片段', isAnim: true, segId: seg.id, segData: seg });
+  });
+  // Remove pushed segments from list
+  segments = segments.filter(s => !unpushed.includes(s));
+  activeSegmentId = segments.length > 0 ? segments[0].id : null;
+  widgetItems.sort((a, b) => a.minute - b.minute);
+  renderSegmentsList();
+  editorDraw();
+  updateWidget();
+  saveSession();
+}
+
+// ── Widget Drag ──
+(function() {
+  const widget = document.getElementById('widget-panel');
+  const handle = widget?.querySelector('.widget-drag-handle');
+  if (!widget || !handle) return;
+  let dragging = false, offsetX = 0, offsetY = 0;
+  handle.addEventListener('mousedown', (e) => {
+    dragging = true;
+    const rect = widget.getBoundingClientRect();
+    offsetX = e.clientX - rect.left;
+    offsetY = e.clientY - rect.top;
+    widget.style.transition = 'none';
+    handle.style.cursor = 'grabbing';
+  });
+  document.addEventListener('mousemove', (e) => {
+    if (!dragging) return;
+    widget.style.left = (e.clientX - offsetX) + 'px';
+    widget.style.top = (e.clientY - offsetY) + 'px';
+    widget.style.right = 'auto';
+    widget.style.transform = 'none';
+  });
+  document.addEventListener('mouseup', () => {
+    if (dragging) { dragging = false; handle.style.cursor = 'grab'; }
+  });
+  // Touch
+  handle.addEventListener('touchstart', (e) => {
+    dragging = true;
+    const t = e.touches[0];
+    const rect = widget.getBoundingClientRect();
+    offsetX = t.clientX - rect.left;
+    offsetY = t.clientY - rect.top;
+    widget.style.transition = 'none';
+  }, {passive: true});
+  document.addEventListener('touchmove', (e) => {
+    if (!dragging) return;
+    const t = e.touches[0];
+    widget.style.left = (t.clientX - offsetX) + 'px';
+    widget.style.top = (t.clientY - offsetY) + 'px';
+    widget.style.right = 'auto';
+    widget.style.transform = 'none';
+  }, {passive: true});
+  document.addEventListener('touchend', () => { dragging = false; });
+})();
+
+function updateScore(team, delta) {
+  if (team === 'home') {
+    vmHomeScore = Math.max(0, vmHomeScore + delta);
+    document.getElementById('sc-home-score').textContent = vmHomeScore;
+  } else {
+    vmAwayScore = Math.max(0, vmAwayScore + delta);
+    document.getElementById('sc-away-score').textContent = vmAwayScore;
+  }
+  // Sync all score displays
+  document.getElementById('home-score').textContent = vmHomeScore;
+  document.getElementById('away-score').textContent = vmAwayScore;
+  updateWidgetScore();
+}
+
+function updateWidgetScore() {
+  const el = document.getElementById('widget-match-title');
+  if (!el) return;
+  const homeName = homeTeam || '主隊';
+  const awayName = awayTeam || '客隊';
+  el.innerHTML = `<span style="color:#5ba3f5">${homeName}</span> <span style="font-size:18px;color:#fff">${vmHomeScore} : ${vmAwayScore}</span> <span style="color:#f5a623">${awayName}</span>`;
+}
+
+function syncScoreControl() {
+  const hn = document.getElementById('sc-home-name');
+  const an = document.getElementById('sc-away-name');
+  if (hn) hn.textContent = homeTeam || '主隊';
+  if (an) an.textContent = awayTeam || '客隊';
+  const hs = document.getElementById('sc-home-score');
+  const as = document.getElementById('sc-away-score');
+  if (hs) hs.textContent = vmHomeScore;
+  if (as) as.textContent = vmAwayScore;
+  updateWidgetScore();
+}
+
+function playWidgetAnim(idx) {
+  const item = widgetItems[idx];
+  if (!item || !item.isAnim) return;
+  // Use stored segment data or find in segments array
+  const seg = item.segData || segments.find(s => s.id === item.segId);
+  if (seg) openGoalLightbox(seg);
+}
+
+// 更新球員下拉選單
+function updateEvtPlayerDropdown() {
+  const teamSel = document.getElementById('evt-team');
+  const playerSel = document.getElementById('evt-player');
+  if (!teamSel || !playerSel) return;
+  // Update team names
+  const homeName = homeTeam || '主隊';
+  const awayName = awayTeam || '客隊';
+  teamSel.innerHTML = `<option value="home">${homeName}</option><option value="away">${awayName}</option>`;
+  // Update players
+  const teamVal = teamSel.value;
+  playerSel.innerHTML = '<option value="">選擇球員</option>';
+  const lineup = teamVal === 'home' ? homeLineup : awayLineup;
+  if (!lineup) return;
+  lineup.forEach(p => {
+    playerSel.innerHTML += `<option value="${p.jersey}">#${p.jersey} ${p.name}</option>`;
+  });
+}
+
+// 推送功能（佔位）
+function pushTextBroadcast() {
+  const unpushed = textEvents.filter(e => !e.pushed);
+  if (unpushed.length === 0) { alert('沒有新的文字事件'); return; }
+  unpushed.forEach(e => e.pushed = true);
+  renderTextEvents();
+  alert(`已推送 ${unpushed.length} 個文字事件`);
+}
+
+function pushAnimBroadcast() {
+  const published = segments.filter(s => s.published);
+  if (published.length === 0) { alert('沒有已上架的動畫片段'); return; }
+  alert(`已推送 ${published.length} 個動畫片段`);
+}
+
+// 模式切換
+function setMode(mode) {
+  const previewView = document.getElementById('preview-view');
+  const editorView = document.getElementById('editor-view');
+  const btnPreview = document.getElementById('mode-preview');
+  const btnEditor = document.getElementById('mode-editor');
+  if (mode === 'editor') {
+    previewView.style.display = 'none';
+    editorView.style.display = 'flex';
+    btnPreview.classList.remove('active');
+    btnEditor.classList.add('active');
+    editorInit();
+  } else {
+    previewView.style.display = 'flex';
+    editorView.style.display = 'none';
+    btnPreview.classList.add('active');
+    btnEditor.classList.remove('active');
+    resizePitch();
+    drawPitch();
+    drawPlayers(currentPlayers);
+    drawBall(ballX, ballY);
+  }
+}
+
 // ===============================================================
 // PITCH DRAWING (Preview)
 // ===============================================================
@@ -914,7 +1290,7 @@ const PITCH_W = 120, PITCH_H = 80;
 let canvasW, canvasH, scaleX, scaleY, offsetX = 0, offsetY = 0;
 
 function resizePitch() {
-  const panel = document.getElementById('preview-panel');
+  const panel = document.getElementById('animation-panel');
   const container = document.getElementById('pitch-container');
   const maxW = panel ? panel.clientWidth - 40 : container.clientWidth - 40;
   const maxH = panel ? panel.clientHeight - 20 : Math.min(340, window.innerHeight * 0.42);
@@ -2297,6 +2673,7 @@ function addSegment() {
   segments.sort((a, b) => a.startSeconds - b.startSeconds);
   selectSegment(seg.id);
   renderSegmentsList();
+  updateWidget();
   saveSession();
 }
 
@@ -2386,32 +2763,21 @@ function findNextAvailableTime(duration) {
 function renderSegmentsList() {
   const list = document.getElementById('segments-list');
   if (!list) return;
-
-  // Create left/right columns
   list.innerHTML = '';
-  const homeCol = document.createElement('div');
-  homeCol.className = 'seg-column';
-  const awayCol = document.createElement('div');
-  awayCol.className = 'seg-column';
-  list.appendChild(homeCol);
-  list.appendChild(awayCol);
 
   if (segments.length === 0) {
-    homeCol.innerHTML = '<div style="color:#667;font-size:10px;text-align:center;padding:8px 0">無片段</div>';
-    awayCol.innerHTML = '<div style="color:#667;font-size:10px;text-align:center;padding:8px 0">無片段</div>';
+    list.innerHTML = '<div style="color:#667;font-size:10px;text-align:center;padding:8px 0">尚無片段</div>';
     return;
   }
 
-  let homeIdx = 0, awayIdx = 0;
-  segments.forEach((seg) => {
-    // Determine home or away from templateName
+  segments.forEach((seg, idx) => {
     const isAway = seg.templateName && seg.templateName.startsWith('客');
-    const idx = isAway ? awayIdx++ : homeIdx++;
 
     const card = document.createElement('div');
     card.className = 'segment-card' + (seg.id === activeSegmentId ? ' active' : '') + (isAway ? ' seg-away' : ' seg-home');
+    card.style.position = 'relative';
     card.onclick = (e) => {
-      if (e.target.tagName === 'BUTTON' || e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT' || e.target.tagName === 'LABEL') return;
+      if (e.target.tagName === 'BUTTON' || e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT' || e.target.tagName === 'LABEL' || e.target.classList.contains('seg-x')) return;
       selectSegment(seg.id);
     };
 
@@ -2436,33 +2802,21 @@ function renderSegmentsList() {
     header.className = 'segment-header';
     header.innerHTML = `
       <span class="seg-label">片段${idx+1}</span>${seg.templateName ? ` <span style="color:#f5a623;font-size:10px">${seg.templateName}</span>` : ''}${pubLabel}
-      <select class="seg-time-sel" data-seg="${seg.id}" data-field="start-min" onclick="event.stopPropagation()">${minOpts}</select>
+      <select class="seg-time-sel" onclick="event.stopPropagation()">${minOpts}</select>
       <span style="color:#667;font-size:10px">'</span>
-      <select class="seg-time-sel" data-seg="${seg.id}" data-field="start-sec" onclick="event.stopPropagation()">${secOpts}</select>
-      <span style="color:#667;font-size:10px">"</span>
-      <span style="color:#667;margin:0 2px">至</span>
-      <select class="seg-time-sel" data-seg="${seg.id}" data-field="end-min" onclick="event.stopPropagation()">${minOpts}</select>
-      <span style="color:#667;font-size:10px">'</span>
-      <select class="seg-time-sel" data-seg="${seg.id}" data-field="end-sec" onclick="event.stopPropagation()">${secOpts}</select>
+      <select class="seg-time-sel" onclick="event.stopPropagation()">${secOpts}</select>
       <span style="color:#667;font-size:10px">"</span>
       <span style="color:#556;font-size:10px;margin-left:auto">${entityInfo}</span>
     `;
-    // Set selected values
     const selects = header.querySelectorAll('.seg-time-sel');
     selects[0].value = startMin;
     selects[1].value = startSec;
-    selects[2].value = endMin;
-    selects[3].value = endSec;
-    // Change handlers
     selects.forEach(sel => {
       sel.onchange = () => {
-        const sm = parseInt(header.querySelectorAll('.seg-time-sel')[0].value);
-        const ss = parseInt(header.querySelectorAll('.seg-time-sel')[1].value);
-        const em = parseInt(header.querySelectorAll('.seg-time-sel')[2].value);
-        const es = parseInt(header.querySelectorAll('.seg-time-sel')[3].value);
+        const sm = parseInt(selects[0].value);
+        const ss = parseInt(selects[1].value);
         seg.startSeconds = sm * 60 + ss;
-        seg.endSeconds = em * 60 + es;
-        if (seg.endSeconds <= seg.startSeconds) seg.endSeconds = seg.startSeconds + 5;
+        seg.endSeconds = seg.startSeconds + (seg.endSeconds - seg.startSeconds || 8);
         segments.sort((a, b) => a.startSeconds - b.startSeconds);
         renderSegmentsList();
         editorDraw();
@@ -2471,22 +2825,26 @@ function renderSegmentsList() {
     });
     card.appendChild(header);
 
-    // Actions: 時間軸開關 + 播放 + 刪除
+    // Delete button (top-right corner)
+    const delBtn = document.createElement('span');
+    delBtn.className = 'seg-x';
+    delBtn.textContent = '✕';
+    delBtn.title = '刪除片段';
+    delBtn.style.cssText = 'position:absolute;top:4px;right:6px;cursor:pointer;color:rgba(255,255,255,0.3);font-size:12px';
+    delBtn.onmouseenter = () => delBtn.style.color = '#e74c3c';
+    delBtn.onmouseleave = () => delBtn.style.color = 'rgba(255,255,255,0.3)';
+    delBtn.onclick = (e) => { e.stopPropagation(); deleteSegment(seg.id); };
+    card.appendChild(delBtn);
+
+    // Actions: 播放
     const actions = document.createElement('div');
     actions.className = 'segment-actions';
-    const isOn = seg.published !== false;
     actions.innerHTML = `
-      <label class="seg-toggle" onclick="event.stopPropagation()" title="顯示在主時間軸">
-        <input type="checkbox" ${isOn ? 'checked' : ''} onchange="toggleSegmentPublish('${seg.id}',this.checked)">
-        <span class="seg-toggle-label">時間軸</span>
-      </label>
       <button class="seg-play-btn" onclick="event.stopPropagation();playSegment('${seg.id}')">▶ 播放</button>
-      <button class="seg-save-btn" onclick="event.stopPropagation();saveSegment('${seg.id}')">儲存</button>
-      <button class="seg-delete-btn" onclick="event.stopPropagation();deleteSegment('${seg.id}')">刪除</button>
     `;
     card.appendChild(actions);
 
-    (isAway ? awayCol : homeCol).appendChild(card);
+    list.appendChild(card);
   });
 }
 
@@ -3094,6 +3452,13 @@ function startVirtualMatch() {
   drawBall(ballX, ballY);
 
   updatePlayButton();
+
+  // 初始化文字轉播系統
+  renderTextEvents();
+  updateWidget();
+  updateEvtPlayerDropdown();
+  syncScoreControl();
+  document.getElementById('evt-team').onchange = updateEvtPlayerDropdown;
 }
 
 function vmTick() {
@@ -3481,6 +3846,13 @@ function startVirtualMatchFromRestore() {
   drawPlayers(currentPlayers);
   drawBall(ballX, ballY);
   updatePlayButton();
+
+  // 初始化文字轉播系統
+  renderTextEvents();
+  updateWidget();
+  updateEvtPlayerDropdown();
+  syncScoreControl();
+  document.getElementById('evt-team').onchange = updateEvtPlayerDropdown;
 }
 
 function exportSessionJSON() {
@@ -3555,6 +3927,8 @@ async function init() {
   resizePitch();
   drawPitch();
   drawBall(60, 40);
+  renderTextEvents();
+  updateWidget();
 
   document.getElementById('loading').classList.add('hidden');
 
