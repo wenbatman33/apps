@@ -700,7 +700,7 @@ func _connect_signals() -> void:
 func _refresh_ui() -> void:
 	balance_label.text = "%.2f" % GameState.balance
 	bet_label.text = "%.2f" % GameState.total_bet
-	win_label.text = ""
+	# win_label 不在這裡清空，由 _on_spin 開始時清
 	GameState.save_settings()
 
 # ===== 每幀更新 =====
