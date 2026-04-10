@@ -179,6 +179,7 @@ func _build_scene() -> void:
 	game_container.name = "GameContainer"
 	game_container.size = Vector2(GAME_W, GAME_H)
 	game_container.clip_contents = false
+	game_container.mouse_filter = MOUSE_FILTER_IGNORE
 
 	# 2) 滾輪區域（含裁切）
 	_build_reels()
