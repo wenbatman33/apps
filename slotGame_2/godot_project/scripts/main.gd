@@ -429,8 +429,8 @@ func _build_gamble_button() -> void:
 	if ResourceLoader.exists(base_path + "gamble_button_clicked.png"):
 		gamble_button.texture_pressed = load(base_path + "gamble_button_clicked.png")
 	# 置中 x，y=835，使用原始素材尺寸 610x109
-	gamble_button.position = Vector2((GAME_W - 610.0) / 2.0, 835)
-	gamble_button.size = Vector2(610, 60)
+	gamble_button.position = Vector2((GAME_W - 500.0) / 2.0, 810)
+	gamble_button.size = Vector2(500, 80)
 	gamble_button.stretch_mode = TextureButton.STRETCH_KEEP_ASPECT_CENTERED
 	gamble_button.ignore_texture_size = true
 	gamble_button.visible = false
@@ -457,7 +457,8 @@ func _build_paylines() -> void:
 func _build_popups() -> void:
 	overlay = ColorRect.new()
 	overlay.name = "Overlay"
-	overlay.set_anchors_preset(PRESET_FULL_RECT)
+	overlay.position = Vector2.ZERO
+	overlay.size = Vector2(GAME_W, GAME_H)
 	overlay.color = Color(0, 0, 0, 0.75)
 	overlay.visible = false
 	overlay.mouse_filter = MOUSE_FILTER_STOP
@@ -489,7 +490,8 @@ func _build_popups() -> void:
 	gamble_scene_node = Control.new()
 	gamble_scene_node.set_script(GambleScene)
 	gamble_scene_node.name = "GambleScene"
-	gamble_scene_node.set_anchors_preset(PRESET_FULL_RECT)
+	gamble_scene_node.position = Vector2.ZERO
+	gamble_scene_node.size = Vector2(GAME_W, GAME_H)
 	gamble_scene_node.mouse_filter = MOUSE_FILTER_IGNORE
 	gamble_scene_node.visible = false
 	add_child(gamble_scene_node)
