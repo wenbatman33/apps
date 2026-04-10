@@ -42,8 +42,27 @@ var target_win_frequency: float = 0.30  # 30% 中獎率
 # 是否啟用強制控制
 var force_rtp_control: bool = true
 
+const SAVE_PATH: String = "user://game_settings.cfg"
+
 func _ready() -> void:
 	balance = GameConfig.INITIAL_BALANCE
+	_load_settings()
+
+func _load_settings() -> void:
+	var config := ConfigFile.new()
+	if config.load(SAVE_PATH) == OK:
+		target_win_frequency = config.get_value("rtp", "win_frequency", 0.30)
+		force_rtp_control = config.get_value("rtp", "enabled", true)
+		balance = config.get_value("game", "balance", GameConfig.INITIAL_BALANCE)
+		current_bet_index = config.get_value("game", "bet_index", 2)
+
+func save_settings() -> void:
+	var config := ConfigFile.new()
+	config.set_value("rtp", "win_frequency", target_win_frequency)
+	config.set_value("rtp", "enabled", force_rtp_control)
+	config.set_value("game", "balance", balance)
+	config.set_value("game", "bet_index", current_bet_index)
+	config.save(SAVE_PATH)
 
 func increase_bet() -> void:
 	if current_bet_index < GameConfig.BET_LEVELS.size() - 1:

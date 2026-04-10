@@ -323,11 +323,13 @@ func _update_tab_styles() -> void:
 
 func _on_rtp_toggle(pressed: bool) -> void:
 	GameState.force_rtp_control = pressed
+	GameState.save_settings()
 
 func _on_freq_changed(value: float) -> void:
 	GameState.target_win_frequency = value / 100.0
 	if freq_label:
 		freq_label.text = "%.0f%%" % value
+	GameState.save_settings()
 
 func _on_close() -> void:
 	visible = false

@@ -701,6 +701,7 @@ func _refresh_ui() -> void:
 	balance_label.text = "%.2f" % GameState.balance
 	bet_label.text = "%.2f" % GameState.total_bet
 	win_label.text = ""
+	GameState.save_settings()
 
 # ===== 每幀更新 =====
 
@@ -725,16 +726,20 @@ func _process(delta: float) -> void:
 		reel_spin_elapsed += delta
 		spin_anim_timer += delta
 
-		# 每 ~55ms 切換一次旋轉中的符號圖
+		# 每 ~55ms 切換一次旋轉中的符號圖 + 播放齒輪音
 		if spin_anim_timer >= 0.055:
 			spin_anim_timer -= 0.055
+			var any_spinning: bool = false
 			for col in range(REEL_COLS):
 				if not reel_landed[col]:
+					any_spinning = true
 					for row in range(REEL_ROWS):
 						var rid: int = GameConfig.pick_symbol(col)
 						if sym_tex.has(rid):
 							symbol_nodes[col][row].texture = sym_tex[rid]
 						symbol_nodes[col][row].modulate = Color(0.6, 0.6, 0.6, 0.7)
+			if any_spinning and int(reel_spin_elapsed * 18) % 4 == 0:
+				SoundManager.play("reel_tick", -14.0)
 
 		# 按時間停止每軸
 		for col in range(REEL_COLS):
@@ -937,27 +942,29 @@ func _evaluate_result() -> void:
 func _on_gamble() -> void:
 	gamble_button.visible = false
 	SoundManager.play("button_click", -6.0)
-	# 取得目前中獎金額（從 win_label 解析）
-	var win_text: String = win_label.text.strip_edges()
-	var win_val: float = 0.0
-	if win_text != "":
-		win_val = win_text.to_float()
-	if win_val <= 0:
+	if last_win_amount <= 0:
 		return
-	# 先從餘額扣除中獎金額（進入賭博池）
-	last_win_amount = win_val
-	GameState.balance -= win_val
+	# 從餘額扣除中獎金額（進入賭博池）
+	GameState.balance -= last_win_amount
 	_refresh_ui()
-	gamble_scene_node.show_gamble(win_val)
+	# 顯示遮罩 + gamble 場景
+	overlay.visible = true
+	gamble_scene_node.visible = true
+	gamble_scene_node.mouse_filter = MOUSE_FILTER_STOP
+	gamble_scene_node.show_gamble(last_win_amount)
 
 func _on_gamble_finished(final_amount: float) -> void:
+	# 隱藏 gamble 場景
+	overlay.visible = false
+	gamble_scene_node.visible = false
+	gamble_scene_node.mouse_filter = MOUSE_FILTER_IGNORE
 	# 賭博結束：把最終金額加回餘額
 	if final_amount > 0:
 		GameState.balance += final_amount
+		SoundManager.play("coin")
 	last_win_amount = 0.0
 	win_label.text = ""
 	_refresh_ui()
-	# 隱藏中獎連線
 	_hide_lines()
 	showing_win_lines = false
 
