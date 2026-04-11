@@ -497,77 +497,93 @@ function renderBoard3D(){
   needsRender=true;
 }
 
+// Canvas 上自動換行繪製文字
+function wrapText(ctx,text,cx,y,maxW,lineH){
+  // 先試整行
+  if(ctx.measureText(text).width<=maxW){ctx.fillText(text,cx,y);return y+lineH;}
+  // 逐字元切
+  const chars=[...text];
+  let line='';const lines=[];
+  for(const ch of chars){
+    if(ctx.measureText(line+ch).width>maxW&&line){lines.push(line);line=ch;}
+    else line+=ch;
+  }
+  if(line)lines.push(line);
+  const startY=y-(lines.length-1)*lineH/2;
+  lines.forEach((l,i)=>ctx.fillText(l,cx,startY+i*lineH));
+  return startY+lines.length*lineH;
+}
+
 function addCellLabel(s,x,z,w,h,r,c){
   const canvas=document.createElement('canvas');
   const isCorner=(r===0||r===10)&&(c===0||c===10);
-  // 高解析度 canvas
-  const S=4;
-  const cw=256, ch=isCorner?200:140;
+  const cw=200, ch=isCorner?200:120;
   canvas.width=cw;canvas.height=ch;
   const ctx=canvas.getContext('2d');
+  const maxW=cw-16; // 留邊距
 
-  // 黑體字
   ctx.fillStyle='#1a1206';
   ctx.textAlign='center';
   ctx.textBaseline='middle';
   const name=s.name.replace('\n',' ');
 
   if(isCorner){
-    ctx.font='48px serif';
-    ctx.fillText(s.icon||'',cw/2,ch*0.3);
-    ctx.font='bold 28px "Noto Sans TC","Microsoft JhengHei",sans-serif';
-    ctx.fillText(name,cw/2,ch*0.6);
-    if(s.type==='go'){ctx.fillStyle='#1a8a3e';ctx.font='bold 22px "Noto Sans TC",sans-serif';ctx.fillText('領取$200',cw/2,ch*0.82);}
-    if(s.type==='gotojail'){ctx.fillStyle='#c0392b';ctx.font='bold 22px "Noto Sans TC",sans-serif';ctx.fillText('⚠',cw/2,ch*0.82);}
+    ctx.font='40px serif';
+    ctx.fillText(s.icon||'',cw/2,ch*0.28);
+    ctx.font='bold 22px "Noto Sans TC","Microsoft JhengHei",sans-serif';
+    wrapText(ctx,name,cw/2,ch*0.58,maxW,26);
+    if(s.type==='go'){ctx.fillStyle='#1a8a3e';ctx.font='bold 18px "Noto Sans TC",sans-serif';ctx.fillText('領取$200',cw/2,ch*0.82);}
+    if(s.type==='gotojail'){ctx.fillStyle='#c0392b';}
   } else {
-    ctx.font='bold 30px "Noto Sans TC","Microsoft JhengHei","PingFang TC",sans-serif';
-    ctx.fillText(name,cw/2,ch*0.32);
-    if(s.price){ctx.font='24px "Noto Sans TC",sans-serif';ctx.fillStyle='#5a4a30';ctx.fillText('$'+s.price,cw/2,ch*0.68);}
-    else if(s.type==='chance'){ctx.font='40px serif';ctx.fillText('❓',cw/2,ch*0.68);}
-    else if(s.type==='comm'){ctx.font='36px serif';ctx.fillText('📦',cw/2,ch*0.68);}
-    else if(s.type==='tax'){ctx.font='bold 26px "Noto Sans TC",sans-serif';ctx.fillStyle='#c0392b';ctx.fillText(s.id===4?'$200':'$75',cw/2,ch*0.68);}
+    ctx.font='bold 22px "Noto Sans TC","Microsoft JhengHei","PingFang TC",sans-serif';
+    const bottomY=wrapText(ctx,name,cw/2,ch*0.34,maxW,26);
+    if(s.price){ctx.font='18px "Noto Sans TC",sans-serif';ctx.fillStyle='#5a4a30';ctx.fillText('$'+s.price,cw/2,Math.max(bottomY+6,ch*0.72));}
+    else if(s.type==='chance'){ctx.font='30px serif';ctx.fillText('❓',cw/2,ch*0.72);}
+    else if(s.type==='comm'){ctx.font='28px serif';ctx.fillText('📦',cw/2,ch*0.72);}
+    else if(s.type==='tax'){ctx.font='bold 20px "Noto Sans TC",sans-serif';ctx.fillStyle='#c0392b';ctx.fillText(s.id===4?'$200':'$75',cw/2,ch*0.72);}
   }
 
   const tex=new THREE.CanvasTexture(canvas);
   tex.minFilter=THREE.LinearFilter;
   tex.magFilter=THREE.LinearFilter;
 
-  // 使用 Sprite（永遠面向攝影機，任何角度都可讀）
+  // Sprite 大小配合格子寬度（不超出）
+  const cellW=isCorner?CORNER_3D:EDGE_3D;
+  const spriteW=cellW*0.95;
+  const spriteH=spriteW*(ch/cw);
   const spriteMat=new THREE.SpriteMaterial({map:tex,transparent:true,depthWrite:false,depthTest:true,sizeAttenuation:true});
   const sprite=new THREE.Sprite(spriteMat);
-  const spriteW=isCorner?2.2:1.5;
-  const spriteH=spriteW*(ch/cw);
   sprite.scale.set(spriteW,spriteH,1);
-  sprite.position.set(x,CELL_H+0.5+spriteH/2,z);
+  sprite.position.set(x,CELL_H+0.3+spriteH/2,z);
   sprite.userData.spaceId=s.id;
   boardGroup.add(sprite);
 }
 
 function buildCityCenter(meta){
-  // low-poly 城市建築群
-  const accentColor=parseInt(meta.accent.replace('#',''),16);
-  const count=15+Math.floor(Math.random()*10);
-  const range=B-CORNER_3D-1;
-  for(let i=0;i<count;i++){
-    const bw=0.3+Math.random()*0.6;
-    const bh=0.5+Math.random()*2.5;
-    const bd=0.3+Math.random()*0.6;
-    const geo=new THREE.BoxGeometry(bw,bh,bd);
-    const hue=Math.random();
-    const color=new THREE.Color().setHSL(hue,0.15,0.6+Math.random()*0.2);
-    // 一部分建築用主題色
-    if(Math.random()<0.3) color.set(accentColor);
-    const mat=new THREE.MeshStandardMaterial({color,roughness:0.7,metalness:0.1});
-    const mesh=new THREE.Mesh(geo,mat);
-    mesh.position.set(
-      (Math.random()-0.5)*range*1.2,
-      CELL_H+bh/2,
-      (Math.random()-0.5)*range*1.2
-    );
-    mesh.castShadow=true;
-    mesh.receiveShadow=true;
-    boardGroup.add(mesh);
-  }
+  // 中心只顯示國家名稱 Sprite
+  const c=document.createElement('canvas');
+  c.width=512;c.height=256;
+  const ctx=c.getContext('2d');
+  ctx.textAlign='center';ctx.textBaseline='middle';
+  // 國旗 emoji
+  ctx.font='80px serif';
+  ctx.fillText(meta.center||'',256,70);
+  // 國家名
+  ctx.font='bold 60px "Noto Sans TC","Microsoft JhengHei",sans-serif';
+  ctx.fillStyle=meta.accent;
+  ctx.fillText(meta.name,256,155);
+  // 英文副標
+  ctx.font='italic 28px serif';
+  ctx.fillStyle='#666';
+  ctx.fillText(meta.en+' Monopoly',256,210);
+
+  const tex=new THREE.CanvasTexture(c);
+  tex.minFilter=THREE.LinearFilter;
+  const mat=new THREE.SpriteMaterial({map:tex,transparent:true,depthWrite:false});
+  const sprite=new THREE.Sprite(mat);
+  sprite.scale.set(8,4,1);
+  sprite.position.set(0,CELL_H+2.5,0);
+  boardGroup.add(sprite);
 }
 
 // ╔══════════════════════════════════════════════════╗
