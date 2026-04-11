@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>亞洲大富翁 3D · Asia Monopoly 3D</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@300;400;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&family=Noto+Serif+TC:wght@300;400;600;700&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/three@0.150.0/build/three.min.js"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
@@ -221,10 +221,15 @@ function createOrbitControls(cam,el){
     cam.lookAt(curTarget.x,curTarget.y,curTarget.z);
     needsRender=true;
   }
-  // 持續更新插值
+  // 持續更新插值（使用較大閾值避免微抖動）
   setInterval(()=>{
     const dx=Math.abs(target.x-curTarget.x)+Math.abs(target.z-curTarget.z);
-    if(dx>0.01) updateCam();
+    if(dx>0.05) updateCam();
+    else if(dx>0.001){
+      // 接近目標時直接 snap，避免無限微小移動
+      curTarget.x=target.x;curTarget.y=target.y;curTarget.z=target.z;
+      updateCam();
+    }
   },16);
 
   el.addEventListener('pointerdown',e=>{if(e.target.closest('#side-panel,#modal-overlay'))return;dragging=true;lastX=e.clientX;lastY=e.clientY;});
@@ -359,7 +364,7 @@ function gridToWorld(r,c){
 function cellCenter3D(idx){
   const[r,c]=spaceToGrid(idx);
   const{x,z}=gridToWorld(r,c);
-  return{x,y:CELL_H+0.01,z};
+  return{x,y:CELL_H+0.1,z};
 }
 
 function cellSize(r,c){
@@ -376,28 +381,26 @@ function renderBoard3D(){
   cellMeshes=[];
   const meta=COUNTRY_META[G.country];
 
-  // 棋盤底板
-  const baseGeo=new THREE.BoxGeometry(B*2+0.2,CELL_H,B*2+0.2);
+  // 棋盤邊框（最底層）
+  const frameGeo=new THREE.BoxGeometry(B*2+0.5,CELL_H+0.1,B*2+0.5);
+  const frameMat=new THREE.MeshStandardMaterial({color:0x6B5335,roughness:0.7});
+  const frame=new THREE.Mesh(frameGeo,frameMat);
+  frame.position.y=(CELL_H+0.1)/2;frame.receiveShadow=true;
+  boardGroup.add(frame);
+
+  // 棋盤底板（在邊框上，明確分層）
+  const baseGeo=new THREE.BoxGeometry(B*2+0.15,0.08,B*2+0.15);
   const baseMat=new THREE.MeshStandardMaterial({color:0xf5eed8,roughness:0.9});
   const base=new THREE.Mesh(baseGeo,baseMat);
-  base.position.y=CELL_H/2;base.receiveShadow=true;
+  base.position.y=CELL_H+0.04;base.receiveShadow=true;
   boardGroup.add(base);
 
-  // 棋盤邊框
-  const frameGeo=new THREE.BoxGeometry(B*2+0.5,CELL_H+0.05,B*2+0.5);
-  const frameMat=new THREE.MeshStandardMaterial({color:0x8B7355,roughness:0.7});
-  const frame=new THREE.Mesh(frameGeo,frameMat);
-  frame.position.y=(CELL_H+0.05)/2-0.03;
-  boardGroup.add(frame);
-  // 棋盤底板要在邊框上面
-  base.position.y=CELL_H/2+0.02;
-
-  // 中心區域
+  // 中心區域（明顯高於底板）
   const innerW=B*2-CORNER_3D*2;
-  const centerGeo=new THREE.BoxGeometry(innerW,0.02,innerW);
+  const centerGeo=new THREE.BoxGeometry(innerW-0.1,0.06,innerW-0.1);
   const centerMat=new THREE.MeshStandardMaterial({color:meta.cc,roughness:0.8});
   const centerMesh=new THREE.Mesh(centerGeo,centerMat);
-  centerMesh.position.y=CELL_H+0.03;
+  centerMesh.position.y=CELL_H+0.08;
   boardGroup.add(centerMesh);
 
   // 中心裝飾建築群
@@ -409,29 +412,32 @@ function renderBoard3D(){
     const{x,z}=gridToWorld(r,c);
     const{w,h}=cellSize(r,c);
 
-    // 格子表面
-    const cellGeo=new THREE.BoxGeometry(w-0.04,0.02,h-0.04);
+    // 格子表面（用 PlaneGeometry 避免與底板 Z-fighting）
+    const cellGeo=new THREE.PlaneGeometry(w-0.06,h-0.06);
+    cellGeo.rotateX(-Math.PI/2);
     let color=0xf5eed8;
-    if(s.type==='chance')color=0xfff9e6;
-    else if(s.type==='comm')color=0xebf5fb;
-    else if(s.type==='tax')color=0xfef0f0;
-    else if(s.type==='go')color=0xe8f5e9;
-    else if(s.type==='jail')color=0xfce4ec;
-    else if(s.type==='free')color=0xe8eaf6;
-    else if(s.type==='gotojail')color=0xffebee;
-    const cellMat=new THREE.MeshStandardMaterial({color,roughness:0.85});
+    if(s.type==='chance')color=0xfff3cc;
+    else if(s.type==='comm')color=0xd6ecf5;
+    else if(s.type==='tax')color=0xfce4e4;
+    else if(s.type==='go')color=0xd4edda;
+    else if(s.type==='jail')color=0xf8d7da;
+    else if(s.type==='free')color=0xd6d8f6;
+    else if(s.type==='gotojail')color=0xf8d7da;
+    const cellMat=new THREE.MeshStandardMaterial({color,roughness:0.85,polygonOffset:true,polygonOffsetFactor:1,polygonOffsetUnits:1});
     const cellMesh=new THREE.Mesh(cellGeo,cellMat);
-    cellMesh.position.set(x,CELL_H+0.02,z);
+    cellMesh.position.set(x,CELL_H+0.09,z);
     cellMesh.receiveShadow=true;
     cellMesh.userData.spaceId=s.id;
     boardGroup.add(cellMesh);
     cellMeshes[s.id]=cellMesh;
 
-    // 格子邊線
-    const edges=new THREE.EdgesGeometry(cellGeo);
-    const line=new THREE.LineSegments(edges,new THREE.LineBasicMaterial({color:0xc8bfa0,transparent:true,opacity:0.3}));
-    line.position.copy(cellMesh.position);
-    boardGroup.add(line);
+    // 格子邊線（用細邊框代替 EdgesGeometry 避免抖動）
+    const borderGeo=new THREE.PlaneGeometry(w,h);
+    borderGeo.rotateX(-Math.PI/2);
+    const borderMat=new THREE.MeshStandardMaterial({color:0xb8a880,roughness:0.9,polygonOffset:true,polygonOffsetFactor:2,polygonOffsetUnits:2});
+    const border=new THREE.Mesh(borderGeo,borderMat);
+    border.position.set(x,CELL_H+0.085,z);
+    boardGroup.add(border);
 
     // 色帶
     if(s.group&&(s.type==='prop'||s.type==='rr'||s.type==='util')){
@@ -445,7 +451,7 @@ function renderBoard3D(){
       if(bGeo){
         const bMat=new THREE.MeshStandardMaterial({color:bandColor,roughness:0.6});
         const band=new THREE.Mesh(bGeo,bMat);
-        band.position.set(bx,CELL_H+0.04+bandH/2,bz);
+        band.position.set(bx,CELL_H+0.1+bandH/2,bz);
         band.castShadow=true;
         boardGroup.add(band);
       }
@@ -462,40 +468,53 @@ function addCellLabel(s,x,z,w,h,r,c){
   const canvas=document.createElement('canvas');
   const isCorner=(r===0||r===10)&&(c===0||c===10);
   const isVert=(c===0||c===10)&&!isCorner;
-  canvas.width=128;canvas.height=isCorner?128:64;
+  // 高解析度 canvas（4x 提升清晰度）
+  const scale=4;
+  const cw=isCorner?128*scale:64*scale;
+  const ch=isCorner?128*scale:64*scale;
+  canvas.width=cw;canvas.height=ch;
   const ctx=canvas.getContext('2d');
 
-  ctx.font='bold 13px "Noto Serif TC"';
-  ctx.fillStyle='#2a2218';
+  // 使用黑體字（sans-serif），加粗加大
+  const fontBase='bold sans-serif';
+  const fontName=`bold ${20*scale}px "Noto Sans TC","Microsoft JhengHei","PingFang TC",sans-serif`;
+  const fontPrice=`${16*scale}px "Noto Sans TC","Microsoft JhengHei",sans-serif`;
+  const fontSmall=`${14*scale}px "Noto Sans TC","Microsoft JhengHei",sans-serif`;
+
+  ctx.fillStyle='#1a1206';
   ctx.textAlign='center';
   ctx.textBaseline='middle';
 
   const name=s.name.replace('\n',' ');
   if(isCorner){
-    ctx.font='22px serif';
-    ctx.fillText(s.icon||'',64,40);
-    ctx.font='bold 12px "Noto Serif TC"';
-    ctx.fillText(name,64,75);
-    if(s.type==='go'){ctx.fillStyle='#2ecc71';ctx.font='10px "Noto Serif TC"';ctx.fillText('領取$200',64,95);}
+    ctx.font=`${32*scale}px serif`;
+    ctx.fillText(s.icon||'',cw/2,ch*0.32);
+    ctx.font=`bold ${16*scale}px "Noto Sans TC","Microsoft JhengHei",sans-serif`;
+    ctx.fillText(name,cw/2,ch*0.58);
+    if(s.type==='go'){ctx.fillStyle='#1a8a3e';ctx.font=`bold ${13*scale}px "Noto Sans TC",sans-serif`;ctx.fillText('領取$200',cw/2,ch*0.76);}
+    if(s.type==='gotojail'){ctx.fillStyle='#c0392b';ctx.font=`bold ${13*scale}px "Noto Sans TC",sans-serif`;ctx.fillText('⚠',cw/2,ch*0.76);}
   } else {
-    ctx.fillText(name,64,22);
-    if(s.price){ctx.font='11px "Noto Serif TC"';ctx.fillStyle='#7a6a50';ctx.fillText('$'+s.price,64,44);}
-    else if(s.type==='chance'){ctx.font='18px serif';ctx.fillText('?',64,48);}
-    else if(s.type==='comm'){ctx.font='14px serif';ctx.fillText('📦',64,46);}
-    else if(s.type==='tax'){ctx.font='10px "Noto Serif TC"';ctx.fillStyle='#c0392b';ctx.fillText(s.id===4?'$200':'$75',64,44);}
+    ctx.font=fontName;
+    ctx.fillText(name,cw/2,ch*0.34);
+    if(s.price){ctx.font=fontPrice;ctx.fillStyle='#5a4a30';ctx.fillText('$'+s.price,cw/2,ch*0.68);}
+    else if(s.type==='chance'){ctx.font=`${28*scale}px serif`;ctx.fillText('❓',cw/2,ch*0.68);}
+    else if(s.type==='comm'){ctx.font=`${24*scale}px serif`;ctx.fillText('📦',cw/2,ch*0.68);}
+    else if(s.type==='tax'){ctx.font=`bold ${16*scale}px "Noto Sans TC",sans-serif`;ctx.fillStyle='#c0392b';ctx.fillText(s.id===4?'$200':'$75',cw/2,ch*0.68);}
   }
 
   const tex=new THREE.CanvasTexture(canvas);
   tex.minFilter=THREE.LinearFilter;
-  const labelGeo=new THREE.PlaneGeometry(isCorner?CORNER_3D*0.8:EDGE_3D*0.85,isCorner?CORNER_3D*0.8:(isVert?EDGE_3D*0.85:EDGE_3D*0.7));
-  const labelMat=new THREE.MeshBasicMaterial({map:tex,transparent:true,depthWrite:false});
+  tex.magFilter=THREE.LinearFilter;
+  tex.anisotropy=renderer.capabilities.getMaxAnisotropy();
+  const labelGeo=new THREE.PlaneGeometry(isCorner?CORNER_3D*0.85:EDGE_3D*0.9,isCorner?CORNER_3D*0.85:(isVert?EDGE_3D*0.9:EDGE_3D*0.85));
+  const labelMat=new THREE.MeshBasicMaterial({map:tex,transparent:true,depthWrite:false,polygonOffset:true,polygonOffsetFactor:-1,polygonOffsetUnits:-1});
   const label=new THREE.Mesh(labelGeo,labelMat);
   label.rotation.x=-Math.PI/2;
   if(isVert){
     if(c===0) label.rotation.z=Math.PI/2;
     else label.rotation.z=-Math.PI/2;
   }
-  label.position.set(x,CELL_H+0.05,z);
+  label.position.set(x,CELL_H+0.12,z);
   boardGroup.add(label);
 }
 
@@ -1198,7 +1217,10 @@ setInterval(()=>{
 
 setPlayerCount(2);
 // Three.js UMD 已同步載入，直接初始化
-document.fonts.load('16px "Noto Serif TC"').then(()=>initThree()).catch(()=>initThree());
+Promise.all([
+  document.fonts.load('16px "Noto Sans TC"'),
+  document.fonts.load('16px "Noto Serif TC"')
+]).then(()=>initThree()).catch(()=>initThree());
 </script>
 </body>
 </html>
