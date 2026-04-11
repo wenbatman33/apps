@@ -198,14 +198,35 @@ const B=10; // 棋盤半徑（-10 到 +10）
 const CORNER_3D=2.68, EDGE_3D=1.607;
 const CELL_H=0.15; // 格子厚度
 
-// 簡易軌道控制器
+// 簡易軌道控制器（支援焦點追蹤）
 function createOrbitControls(cam,el){
   let phi=Math.PI/3.5,theta=0,dist=28;
   let dragging=false,lastX=0,lastY=0;
+  // 攝影機焦點（可動態改變）
+  const target={x:0,y:0,z:0};
+  // 當前插值用的實際焦點
+  const curTarget={x:0,y:0,z:0};
+  let followSpeed=0.04; // 追蹤平滑度
+
   function updateCam(){
-    cam.position.set(dist*Math.sin(phi)*Math.sin(theta),dist*Math.cos(phi),dist*Math.sin(phi)*Math.cos(theta));
-    cam.lookAt(0,0,0);needsRender=true;
+    // 平滑插值到目標焦點
+    curTarget.x+=(target.x-curTarget.x)*followSpeed;
+    curTarget.y+=(target.y-curTarget.y)*followSpeed;
+    curTarget.z+=(target.z-curTarget.z)*followSpeed;
+    cam.position.set(
+      curTarget.x+dist*Math.sin(phi)*Math.sin(theta),
+      curTarget.y+dist*Math.cos(phi),
+      curTarget.z+dist*Math.sin(phi)*Math.cos(theta)
+    );
+    cam.lookAt(curTarget.x,curTarget.y,curTarget.z);
+    needsRender=true;
   }
+  // 持續更新插值
+  setInterval(()=>{
+    const dx=Math.abs(target.x-curTarget.x)+Math.abs(target.z-curTarget.z);
+    if(dx>0.01) updateCam();
+  },16);
+
   el.addEventListener('pointerdown',e=>{if(e.target.closest('#side-panel,#modal-overlay'))return;dragging=true;lastX=e.clientX;lastY=e.clientY;});
   window.addEventListener('pointermove',e=>{if(!dragging)return;
     theta+=(e.clientX-lastX)*0.008;phi=Math.max(0.3,Math.min(1.4,phi-(e.clientY-lastY)*0.008));
@@ -218,7 +239,25 @@ function createOrbitControls(cam,el){
   el.addEventListener('touchstart',e=>{if(e.touches.length===2){touchDist=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY);}});
   el.addEventListener('touchmove',e=>{if(e.touches.length===2){const d=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY);dist=Math.max(14,Math.min(45,dist-(d-touchDist)*0.05));touchDist=d;updateCam();}});
   updateCam();
-  return{update:()=>{},dispose:()=>{}};
+  return{
+    update:updateCam,
+    // 設定攝影機追蹤焦點（平滑移動過去）
+    lookAt(x,y,z){target.x=x;target.y=y||0;target.z=z;},
+    // 拉近到某格（近距離觀看）
+    zoomTo(x,z,d){target.x=x;target.z=z;dist=d||18;},
+    // 重置到全景
+    resetView(){target.x=0;target.y=0;target.z=0;dist=28;},
+    dispose:()=>{}
+  };
+}
+// 攝影機追蹤玩家位置
+function cameraFollowPlayer(playerIdx){
+  if(!G||!controls)return;
+  const p=G.players[playerIdx];
+  if(!p||p.bankrupt)return;
+  const{x,z}=cellCenter3D(p.position);
+  // 焦點偏向玩家，但不完全移到玩家（保留一些棋盤可見度）
+  controls.lookAt(x*0.5,0,z*0.5);
 }
 
 function initThree(){
@@ -758,6 +797,8 @@ function startGame(){
   updateBuildings3D();
   renderUI();
   addLog('🎮 遊戲開始！地區：'+COUNTRY_META[selectedCountry].name);
+  // 攝影機聚焦到第一位玩家（出發點）
+  cameraFollowPlayer(0);
   maybeAI();
 }
 
@@ -965,7 +1006,7 @@ async function movePlayer(player,steps){
   player.position=newPos;
   updateTokens3D();
 
-  // 動畫移動代幣
+  // 動畫移動代幣 + 攝影機跟隨
   const tok=tokenMeshes[player.id];
   if(tok){
     const startP=cellCenter3D(oldPos);
@@ -974,11 +1015,15 @@ async function movePlayer(player,steps){
     for(let i=1;i<=numSteps;i++){
       const p=(oldPos+i)%40;
       const{x,y,z}=cellCenter3D(p);
-      await tw(tok.position,{x,y:y+0.25+0.3,z},60);
+      // 攝影機追蹤代幣
+      controls.lookAt(x*0.5,0,z*0.5);
+      await tw(tok.position,{x,y:y+0.25+0.4,z},60);
       await tw(tok.position,{y:y+0.25},40);
     }
   }
   updateTokens3D();
+  // 到達後攝影機聚焦
+  cameraFollowPlayer(player.id);
   landOn(player);
 }
 
@@ -1072,7 +1117,7 @@ function drawCard(type,player){
 
 function gainMoney(p,amt){p.money+=amt;addLog(`${p.name} 獲得 $${amt}。`,'good');G.phase='post';renderUI();autoAIEndTurn();}
 function loseMoney(p,amt){p.money-=amt;addLog(`${p.name} 支付 $${amt}。`,'warn');checkBankrupt(p);G.phase='post';renderUI();autoAIEndTurn();}
-function advanceTo(p,pos,go){if(go&&pos<p.position){p.money+=200;addLog(`${p.name} 領取出發點 $200。`,'good');}p.position=pos;updateTokens3D();setTimeout(()=>landOn(p),300);}
+function advanceTo(p,pos,go){if(go&&pos<p.position){p.money+=200;addLog(`${p.name} 領取出發點 $200。`,'good');}p.position=pos;updateTokens3D();cameraFollowPlayer(p.id);setTimeout(()=>landOn(p),300);}
 function repairTax(p,h,ho){const houses=G.spaces.filter(s=>s.owner===p.id&&s.buildings>0&&s.buildings<5).reduce((a,s)=>a+s.buildings,0);const hotels=G.spaces.filter(s=>s.owner===p.id&&s.buildings===5).length;const t=houses*h+hotels*ho;p.money-=t;addLog(`${p.name} 維修費 $${t}`,'warn');checkBankrupt(p);G.phase='post';renderUI();autoAIEndTurn();}
 function advanceNearestRR(p){const rr=[5,15,25,35];const n=rr.find(x=>x>p.position)||rr[0];advanceTo(p,n,n<p.position);}
 function advanceNearestUtil(p){const u=[12,28];const n=u.find(x=>x>p.position)||u[0];advanceTo(p,n,n<p.position);}
@@ -1082,7 +1127,8 @@ function goToJail(p){goToJailDirect();}
 function goToJailDirect(){
   const cur=G.players[G.current];
   cur.position=10;cur.inJail=true;cur.jailTurns=0;cur.doublesCount=0;
-  updateTokens3D();addLog(`${cur.name} 進入監獄！`,'warn');
+  updateTokens3D();cameraFollowPlayer(G.current);
+  addLog(`${cur.name} 進入監獄！`,'warn');
   G.phase='post';renderUI();autoAIEndTurn();
 }
 
@@ -1115,6 +1161,8 @@ function doEndTurn(){
   if(tries>=G.players.length){checkWinner();return;}
   G.current=next;G.phase='roll';renderUI();
   addLog(`─── ${G.players[G.current].name} 的回合 ───`);
+  // 攝影機追蹤到下一位玩家
+  cameraFollowPlayer(G.current);
   maybeAI();
 }
 
