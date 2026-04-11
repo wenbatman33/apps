@@ -2,130 +2,56 @@
 <html lang="zh-TW">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>亞洲大富翁 · Asia Monopoly</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@400;700;900&family=Noto+Serif+TC:wght@300;400;600;700&family=Playfair+Display:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/pixi.js@8/dist/pixi.min.js"></script>
 <style>
-:root {
-  --bg: #06060f;
-  --gold: #c9a84c;
-  --gold-light: #f0d060;
-  --gold-dim: rgba(201,168,76,0.3);
-  --text: #f0e8d8;
-  --text-dim: rgba(240,232,216,0.55);
-  --border: rgba(201,168,76,0.25);
-  --board-bg: #f5f0e0;
-  --accent: #c9a84c;
-}
 *{box-sizing:border-box;margin:0;padding:0}
-html{font-size:16px}
-body{background:var(--bg);color:var(--text);font-family:'Noto Serif TC',serif;min-height:100vh;overflow-x:hidden}
-.screen{display:none;min-height:100vh}
-.screen.active{display:flex}
-
-/* ── WELCOME ─────────────────────────────────── */
-#screen-welcome{
-  flex-direction:column;align-items:center;justify-content:center;
-  padding:40px 20px;
-  background:radial-gradient(ellipse 80% 60% at 50% -10%,rgba(201,168,76,.12) 0%,transparent 70%);
+html,body{width:100%;height:100%;overflow:hidden;background:#06060f;font-family:'Noto Serif TC',serif}
+#game-canvas{display:block;width:100%;height:100%}
+/* Setup overlay */
+#setup-overlay{
+  display:none;position:fixed;inset:0;z-index:100;
+  background:rgba(6,6,15,.95);
+  flex-direction:column;align-items:center;justify-content:center;padding:20px;
 }
-.welcome-kicker{
-  font-family:'Playfair Display',serif;font-style:italic;
-  font-size:.95rem;letter-spacing:.35em;color:var(--text-dim);
-  margin-bottom:10px;text-transform:uppercase;
-}
-.welcome-title{
-  font-family:'Cinzel Decorative',serif;
-  font-size:clamp(2.2rem,5vw,4rem);
-  background:linear-gradient(135deg,#c9a84c 0%,#f0d060 40%,#c9a84c 70%,#a07028 100%);
-  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
-  text-align:center;letter-spacing:.08em;
-  filter:drop-shadow(0 0 30px rgba(201,168,76,.4));
-  margin-bottom:4px;
-}
-.welcome-sub{
-  font-size:.85rem;letter-spacing:.5em;color:var(--text-dim);text-align:center;
-  margin-bottom:56px;text-transform:uppercase;
-}
-.welcome-divider{
-  width:120px;height:1px;background:linear-gradient(90deg,transparent,var(--gold),transparent);
-  margin:0 auto 56px;
-}
-.country-grid{
-  display:grid;grid-template-columns:repeat(2,1fr);gap:20px;
-  max-width:820px;width:100%;
-}
-@media(min-width:640px){.country-grid{grid-template-columns:repeat(4,1fr)}}
-.country-card{
-  position:relative;height:300px;border-radius:20px;cursor:pointer;
-  overflow:hidden;border:1px solid rgba(255,255,255,.08);
-  transition:transform .35s cubic-bezier(.23,1,.32,1),box-shadow .35s;
-}
-.country-card:hover{transform:translateY(-10px) scale(1.025);box-shadow:0 24px 60px rgba(0,0,0,.6)}
-.cc-bg{position:absolute;inset:0;transition:transform .6s cubic-bezier(.23,1,.32,1)}
-.country-card:hover .cc-bg{transform:scale(1.08)}
-.country-card[data-c="japan"] .cc-bg{background:linear-gradient(155deg,#1c0010 0%,#5a0025 45%,#c0392b 100%)}
-.country-card[data-c="taiwan"] .cc-bg{background:linear-gradient(155deg,#001811 0%,#004535 45%,#16a085 100%)}
-.country-card[data-c="bangkok"] .cc-bg{background:linear-gradient(155deg,#1a0f00 0%,#5a3400 45%,#e67e22 100%)}
-.country-card[data-c="korea"] .cc-bg{background:linear-gradient(155deg,#00081a 0%,#001848 45%,#2980b9 100%)}
-.cc-noise{
-  position:absolute;inset:0;opacity:.04;
-  background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
-  background-size:200px;
-}
-.cc-shine{
-  position:absolute;inset:0;
-  background:linear-gradient(135deg,transparent 40%,rgba(255,255,255,.06) 50%,transparent 60%);
-  transform:translateX(-100%);transition:transform .7s;
-}
-.country-card:hover .cc-shine{transform:translateX(100%)}
-.cc-content{
-  position:absolute;inset:0;display:flex;flex-direction:column;
-  align-items:center;justify-content:center;padding:28px;
-}
-.cc-flag{font-size:52px;margin-bottom:14px;filter:drop-shadow(0 4px 12px rgba(0,0,0,.5))}
-.cc-name{font-size:2rem;font-weight:700;color:#fff;text-shadow:0 2px 8px rgba(0,0,0,.5)}
-.cc-en{font-family:'Playfair Display',serif;font-style:italic;font-size:.85rem;color:rgba(255,255,255,.6);letter-spacing:.25em;margin-top:4px}
-.cc-spots{margin-top:14px;font-size:.7rem;color:rgba(255,255,255,.4);text-align:center;letter-spacing:.05em;line-height:1.6}
-
-/* ── SETUP ───────────────────────────────────── */
-#screen-setup{flex-direction:column;align-items:center;justify-content:center;padding:40px 20px;
-  background:radial-gradient(ellipse 60% 50% at 50% 100%,rgba(201,168,76,.06) 0%,transparent 70%)}
+#setup-overlay.active{display:flex}
 .setup-card{
-  background:rgba(255,255,255,.03);border:1px solid var(--border);border-radius:20px;
+  background:rgba(255,255,255,.03);border:1px solid rgba(201,168,76,.25);border-radius:20px;
   padding:40px;max-width:540px;width:100%;
 }
 .setup-title{
   font-family:'Cinzel Decorative',serif;font-size:1.4rem;
-  color:var(--gold);text-align:center;margin-bottom:6px;
+  color:#c9a84c;text-align:center;margin-bottom:6px;
 }
-.setup-subtitle{font-size:.8rem;color:var(--text-dim);text-align:center;letter-spacing:.2em;margin-bottom:32px}
+.setup-subtitle{font-size:.8rem;color:rgba(240,232,216,.55);text-align:center;letter-spacing:.2em;margin-bottom:32px}
 .setup-flag{font-size:40px;text-align:center;margin-bottom:8px}
 .player-count-row{display:flex;gap:10px;justify-content:center;margin-bottom:28px}
 .count-btn{
-  width:52px;height:52px;border-radius:50%;border:2px solid var(--border);
-  background:transparent;color:var(--text-dim);font-size:1.2rem;
+  width:52px;height:52px;border-radius:50%;border:2px solid rgba(201,168,76,.25);
+  background:transparent;color:rgba(240,232,216,.55);font-size:1.2rem;
   cursor:pointer;transition:all .2s;font-family:'Noto Serif TC',serif;
 }
-.count-btn:hover{border-color:var(--gold);color:var(--gold)}
-.count-btn.selected{background:var(--gold);border-color:var(--gold);color:#1a1000;font-weight:700}
+.count-btn:hover{border-color:#c9a84c;color:#c9a84c}
+.count-btn.selected{background:#c9a84c;border-color:#c9a84c;color:#1a1000;font-weight:700}
 .player-inputs{display:flex;flex-direction:column;gap:10px;margin-bottom:28px}
 .player-input-row{display:flex;align-items:center;gap:10px}
 .player-dot{width:14px;height:14px;border-radius:50%;flex-shrink:0}
 .player-input-row input{
-  flex:1;background:rgba(255,255,255,.05);border:1px solid var(--border);
-  border-radius:8px;padding:10px 14px;color:var(--text);
+  flex:1;background:rgba(255,255,255,.05);border:1px solid rgba(201,168,76,.25);
+  border-radius:8px;padding:10px 14px;color:#f0e8d8;
   font-family:'Noto Serif TC',serif;font-size:.9rem;
   transition:border-color .2s;outline:none;
 }
-.player-input-row input:focus{border-color:var(--gold)}
+.player-input-row input:focus{border-color:#c9a84c}
 .ai-badge{
   font-size:.7rem;padding:4px 8px;border-radius:20px;
-  background:rgba(255,255,255,.08);color:var(--text-dim);
-  border:1px solid var(--border);cursor:pointer;white-space:nowrap;transition:all .2s;
+  background:rgba(255,255,255,.08);color:rgba(240,232,216,.55);
+  border:1px solid rgba(201,168,76,.25);cursor:pointer;white-space:nowrap;transition:all .2s;
 }
-.ai-badge.ai-on{background:rgba(201,168,76,.2);color:var(--gold);border-color:var(--gold-dim)}
+.ai-badge.ai-on{background:rgba(201,168,76,.2);color:#c9a84c;border-color:rgba(201,168,76,.3)}
 .btn{
   padding:12px 24px;border:none;border-radius:10px;cursor:pointer;
   font-family:'Noto Serif TC',serif;font-size:.95rem;font-weight:700;
@@ -136,428 +62,55 @@ body{background:var(--bg);color:var(--text);font-family:'Noto Serif TC',serif;mi
   color:#1a1000;width:100%;
 }
 .btn-gold:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(201,168,76,.35)}
-.btn-gold:disabled{opacity:.4;cursor:not-allowed;transform:none}
-.btn-outline{background:transparent;border:1px solid var(--border);color:var(--text-dim)}
-.btn-outline:hover{border-color:var(--gold);color:var(--gold)}
-.btn-sm{padding:6px 14px;font-size:.8rem}
-.btn-red{background:#c0392b;color:#fff}
-.btn-red:hover{background:#e74c3c}
+.btn-outline{background:transparent;border:1px solid rgba(201,168,76,.25);color:rgba(240,232,216,.55)}
+.btn-outline:hover{border-color:#c9a84c;color:#c9a84c}
 .back-link{
   display:inline-flex;align-items:center;gap:6px;
-  background:none;border:none;color:var(--text-dim);cursor:pointer;
+  background:none;border:none;color:rgba(240,232,216,.55);cursor:pointer;
   font-family:'Noto Serif TC',serif;font-size:.85rem;
   transition:color .2s;margin-top:16px;text-align:center;width:100%;justify-content:center;
 }
-.back-link:hover{color:var(--gold)}
-
-/* ── GAME ────────────────────────────────────── */
-#screen-game{
-  flex-direction:row;align-items:flex-start;justify-content:center;
-  padding:20px;gap:18px;flex-wrap:wrap;
-}
-/* Board wrapper */
-#board-wrap{position:relative;flex-shrink:0}
-#board{
-  display:grid;
-  grid-template-columns:90px repeat(9,54px) 90px;
-  grid-template-rows:90px repeat(9,54px) 90px;
-  width:672px;height:672px;
-  border:3px solid var(--gold);
-  box-shadow:0 0 0 1px rgba(201,168,76,.15),0 0 80px rgba(0,0,0,.7),inset 0 0 80px rgba(0,0,0,.1);
-}
-.cell{
-  position:relative;background:var(--board-bg);
-  border:1px solid #c8bfa0;overflow:hidden;
-  display:flex;flex-direction:column;align-items:center;
-  justify-content:flex-end;padding:2px;cursor:default;
-}
-.cell.prop-cell{cursor:pointer}
-.cell.prop-cell:hover{background:#ece5d0;z-index:5}
-/* color band */
-.cband{position:absolute;background:#000}
-/* top band (bottom-row cells) */
-.band-t{top:0;left:0;right:0;height:22px}
-/* bottom band (top-row cells) */
-.band-b{bottom:0;left:0;right:0;height:22px}
-/* right band (left-col cells) */
-.band-r{top:0;right:0;bottom:0;width:22px}
-/* left band (right-col cells) */
-.band-l{top:0;left:0;bottom:0;width:22px}
-
-.cell-inner{
-  display:flex;flex-direction:column;align-items:center;justify-content:flex-end;
-  width:100%;height:100%;padding:2px;
-}
-.cell-name{
-  font-size:7.5px;text-align:center;color:#2a2218;
-  line-height:1.25;font-weight:600;
-  word-break:break-all;margin-top:24px;z-index:1;
-}
-.cell-price{font-size:6.5px;color:#7a6a50;margin-top:1px;z-index:1}
-/* rotated cells */
-.rot-cw .cell-inner{transform:rotate(90deg);width:100%;height:100%;transform-origin:center center}
-.rot-ccw .cell-inner{transform:rotate(-90deg);width:100%;height:100%;transform-origin:center center}
-/* corner cells */
-.cell.corner{justify-content:center;cursor:default}
-.corner-inner{
-  display:flex;flex-direction:column;align-items:center;
-  justify-content:center;text-align:center;gap:4px;
-  padding:6px;width:100%;height:100%;
-}
-.corner-icon{font-size:22px}
-.corner-label{font-size:8px;color:#4a3a28;font-weight:700;line-height:1.3;text-align:center}
-/* special cells */
-.cell.tax-cell .cell-inner{justify-content:center}
-.cell.card-cell .cell-inner{justify-content:center}
-.cell-icon{font-size:16px;margin-bottom:2px}
-.cell.prop-cell .buildings{
-  position:absolute;bottom:2px;left:0;right:0;
-  display:flex;gap:1px;justify-content:center;flex-wrap:wrap;z-index:2;
-}
-.bld-house{width:7px;height:6px;background:#1a7a1a;border-radius:1px 1px 0 0}
-.bld-hotel{width:10px;height:7px;background:#c0392b;border-radius:2px 2px 0 0}
-/* board center */
-.board-center{
-  grid-column:2/11;grid-row:2/11;
-  display:flex;flex-direction:column;align-items:center;
-  justify-content:center;overflow:hidden;position:relative;
-}
-.bc-country{
-  font-family:'Cinzel Decorative',serif;
-  font-size:clamp(1rem,2vw,1.6rem);
-  text-align:center;line-height:1.5;
-}
-.bc-sub{
-  font-family:'Playfair Display',serif;font-style:italic;
-  font-size:.75rem;letter-spacing:.25em;margin-top:4px;text-align:center;opacity:.7;
-}
-.bc-deco{font-size:40px;margin-bottom:8px}
-/* owned indicator */
-.owner-dot{
-  position:absolute;bottom:3px;right:3px;
-  width:8px;height:8px;border-radius:50%;
-  border:1px solid rgba(255,255,255,.5);z-index:3;
-}
-
-/* Tokens */
-#token-layer{position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:20}
-.token{
-  position:absolute;width:20px;height:20px;border-radius:50%;
-  display:flex;align-items:center;justify-content:center;
-  font-size:10px;font-weight:700;color:#fff;
-  border:2px solid rgba(255,255,255,.6);
-  box-shadow:0 2px 6px rgba(0,0,0,.4);
-  transition:top .5s cubic-bezier(.23,1,.32,1),left .5s cubic-bezier(.23,1,.32,1);
-  z-index:20;pointer-events:none;
-}
-
-/* ── SIDEBAR ─────────────────────────────────── */
-#sidebar{
-  width:270px;flex-shrink:0;
-  display:flex;flex-direction:column;gap:12px;
-}
-.sidebar-section{
-  background:rgba(255,255,255,.03);border:1px solid var(--border);
-  border-radius:12px;padding:14px;
-}
-.ss-title{
-  font-size:.7rem;letter-spacing:.2em;color:var(--gold);
-  text-transform:uppercase;margin-bottom:10px;
-}
-/* player cards */
-.pcard{
-  display:flex;align-items:center;gap:10px;
-  padding:10px;border-radius:8px;border:1px solid transparent;
-  transition:all .25s;margin-bottom:6px;cursor:default;
-}
-.pcard:last-child{margin-bottom:0}
-.pcard.active{background:rgba(201,168,76,.1);border-color:var(--gold-dim)}
-.pcard.bankrupt{opacity:.35;filter:grayscale(1)}
-.p-avatar{
-  width:32px;height:32px;border-radius:50%;flex-shrink:0;
-  display:flex;align-items:center;justify-content:center;
-  font-size:13px;font-weight:700;color:#fff;
-  border:2px solid rgba(255,255,255,.3);
-}
-.p-info{flex:1;min-width:0}
-.p-name{font-size:.8rem;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.p-money{font-size:.75rem;color:var(--gold);font-weight:700}
-.p-badges{display:flex;gap:4px;flex-wrap:wrap;margin-top:2px}
-.p-badge{
-  font-size:.6rem;padding:1px 5px;border-radius:10px;
-  background:rgba(255,255,255,.07);color:var(--text-dim);
-}
-.active-indicator{
-  width:6px;height:6px;border-radius:50%;background:var(--gold);
-  box-shadow:0 0 6px var(--gold);flex-shrink:0;
-}
-/* Dice */
-.dice-row{display:flex;gap:14px;justify-content:center;margin:6px 0}
-.die{
-  width:52px;height:52px;background:#fff;border-radius:10px;
-  display:flex;align-items:center;justify-content:center;
-  font-size:30px;
-  box-shadow:2px 2px 0 #bbb,0 4px 10px rgba(0,0,0,.3);
-  transition:transform .15s;user-select:none;
-}
-.die.rolling{animation:dieroll .12s infinite}
-@keyframes dieroll{0%{transform:rotate(-8deg) scale(.92)}50%{transform:rotate(8deg) scale(1.08)}100%{transform:rotate(-8deg) scale(.92)}}
-.dice-total{text-align:center;font-size:1.1rem;color:var(--gold);font-weight:700;min-height:1.4em}
-.btn-full{width:100%;margin-bottom:6px}
-/* Log */
-#game-log{
-  height:130px;overflow-y:auto;font-size:.75rem;
-  background:rgba(0,0,0,.25);border-radius:8px;padding:8px;
-  color:var(--text-dim);scrollbar-width:thin;
-}
-#game-log::-webkit-scrollbar{width:4px}
-#game-log::-webkit-scrollbar-thumb{background:var(--gold-dim)}
-.log-line{padding:2px 0;border-bottom:1px solid rgba(255,255,255,.04);line-height:1.4}
-.log-line:last-child{border-bottom:none}
-.log-highlight{color:var(--gold)}
-.log-warn{color:#e74c3c}
-.log-good{color:#2ecc71}
-
-/* ── MODALS ──────────────────────────────────── */
-.modal-bg{
-  position:fixed;inset:0;background:rgba(0,0,0,.8);backdrop-filter:blur(6px);
-  display:flex;align-items:center;justify-content:center;
-  z-index:1000;padding:20px;
-}
-.modal-bg.hidden{display:none}
-.modal-box{
-  background:linear-gradient(160deg,#141428 0%,#0e0e20 100%);
-  border:1px solid var(--gold);border-radius:20px;
-  padding:32px;max-width:380px;width:100%;
-  text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.6);
-  animation:modalpop .25s cubic-bezier(.23,1,.32,1);
-}
-@keyframes modalpop{0%{transform:scale(.85);opacity:0}100%{transform:scale(1);opacity:1}}
-.modal-icon{font-size:44px;margin-bottom:12px}
-.modal-title{font-family:'Cinzel Decorative',serif;font-size:1.1rem;color:var(--gold);margin-bottom:6px}
-.modal-sub{font-size:.8rem;color:var(--text-dim);margin-bottom:20px;line-height:1.5}
-.modal-prop-band{height:8px;border-radius:4px;margin-bottom:16px}
-.modal-prop-details{background:rgba(0,0,0,.2);border-radius:8px;padding:12px;margin-bottom:16px;text-align:left}
-.prop-detail-row{display:flex;justify-content:space-between;font-size:.8rem;padding:3px 0;border-bottom:1px solid rgba(255,255,255,.05)}
-.prop-detail-row:last-child{border-bottom:none}
-.prop-detail-label{color:var(--text-dim)}
-.prop-detail-val{color:var(--text);font-weight:600}
-.modal-btns{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
-.card-modal-body{
-  background:rgba(0,0,0,.2);border-radius:8px;padding:16px;
-  margin:16px 0;font-size:.95rem;line-height:1.6;color:var(--text);
-}
-
-/* ── CHANCE/COMMUNITY COLORS ─────────────────── */
-.chance-header{background:linear-gradient(135deg,#e67e22,#f39c12);border-radius:8px;padding:8px;margin-bottom:12px}
-.comm-header{background:linear-gradient(135deg,#2980b9,#3498db);border-radius:8px;padding:8px;margin-bottom:12px}
-
-/* ── WINNER ──────────────────────────────────── */
-#modal-winner .modal-box{border-color:var(--gold-light);background:linear-gradient(160deg,#1a1500 0%,#0a0a00 100%)}
-.winner-glow{animation:winnerglow 2s infinite alternate}
-@keyframes winnerglow{0%{filter:drop-shadow(0 0 10px var(--gold))}100%{filter:drop-shadow(0 0 30px var(--gold))}}
-
-/* ── PROPERTY DEED ───────────────────────────── */
-#modal-prop-info .modal-box{max-width:320px}
-
-/* ── RESPONSIVE ──────────────────────────────── */
-@media(max-width:1100px){
-  #board{
-    grid-template-columns:70px repeat(9,42px) 70px;
-    grid-template-rows:70px repeat(9,42px) 70px;
-    width:518px;height:518px;
-  }
-  .cell-name{font-size:6.5px}
-  .band-t,.band-b{height:18px}
-  .band-l,.band-r{width:18px}
-  .cband{--bsz:18px}
-  #sidebar{width:240px}
-}
-@media(max-width:820px){
-  #screen-game{flex-direction:column;align-items:center}
-  #sidebar{width:100%;max-width:672px}
-}
+.back-link:hover{color:#c9a84c}
 </style>
 </head>
 <body>
+<canvas id="game-canvas"></canvas>
 
-<!-- ════ WELCOME SCREEN ════ -->
-<div id="screen-welcome" class="screen active">
-  <div class="welcome-kicker">亞洲 · 大富翁</div>
-  <div class="welcome-title">ASIA MONOPOLY</div>
-  <div class="welcome-sub">選擇你的旅程 · Choose Your Journey</div>
-  <div class="welcome-divider"></div>
-  <div class="country-grid">
-    <div class="country-card" data-c="japan" onclick="selectCountry('japan')">
-      <div class="cc-bg"></div><div class="cc-noise"></div><div class="cc-shine"></div>
-      <div class="cc-content">
-        <div class="cc-flag">🇯🇵</div>
-        <div class="cc-name">日本</div>
-        <div class="cc-en">Japan</div>
-        <div class="cc-spots">東京 · 京都 · 大阪 · 富士山</div>
-      </div>
-    </div>
-    <div class="country-card" data-c="taiwan" onclick="selectCountry('taiwan')">
-      <div class="cc-bg"></div><div class="cc-noise"></div><div class="cc-shine"></div>
-      <div class="cc-content">
-        <div class="cc-flag">🇹🇼</div>
-        <div class="cc-name">台灣</div>
-        <div class="cc-en">Taiwan</div>
-        <div class="cc-spots">台北101 · 九份 · 日月潭 · 阿里山</div>
-      </div>
-    </div>
-    <div class="country-card" data-c="bangkok" onclick="selectCountry('bangkok')">
-      <div class="cc-bg"></div><div class="cc-noise"></div><div class="cc-shine"></div>
-      <div class="cc-content">
-        <div class="cc-flag">🇹🇭</div>
-        <div class="cc-name">曼谷</div>
-        <div class="cc-en">Bangkok</div>
-        <div class="cc-spots">大皇宮 · 暹羅 · 普吉島 · 清邁</div>
-      </div>
-    </div>
-    <div class="country-card" data-c="korea" onclick="selectCountry('korea')">
-      <div class="cc-bg"></div><div class="cc-noise"></div><div class="cc-shine"></div>
-      <div class="cc-content">
-        <div class="cc-flag">🇰🇷</div>
-        <div class="cc-name">韓國</div>
-        <div class="cc-en">Korea</div>
-        <div class="cc-spots">景福宮 · 明洞 · 江南 · 濟州島</div>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- ════ SETUP SCREEN ════ -->
-<div id="screen-setup" class="screen">
+<!-- Setup overlay (HTML for text input IME support) -->
+<div id="setup-overlay">
   <div class="setup-card">
     <div id="setup-flag" class="setup-flag"></div>
     <div class="setup-title" id="setup-title">選擇玩家</div>
     <div class="setup-subtitle">選擇人數 · 輸入名稱</div>
-
     <div class="player-count-row">
       <button class="count-btn" onclick="setPlayerCount(1)">1</button>
       <button class="count-btn selected" onclick="setPlayerCount(2)">2</button>
       <button class="count-btn" onclick="setPlayerCount(3)">3</button>
       <button class="count-btn" onclick="setPlayerCount(4)">4</button>
     </div>
-
     <div class="player-inputs" id="player-inputs"></div>
-
-    <button class="btn btn-gold btn-full" onclick="startGame()">開始遊戲 ▶</button>
-    <button class="back-link" onclick="showScreen('welcome')">← 返回選擇地區</button>
-  </div>
-</div>
-
-<!-- ════ GAME SCREEN ════ -->
-<div id="screen-game" class="screen">
-  <div id="board-wrap">
-    <div id="board"></div>
-    <div id="token-layer"></div>
-  </div>
-  <div id="sidebar">
-    <div class="sidebar-section">
-      <div class="ss-title">玩家狀況</div>
-      <div id="player-list"></div>
-    </div>
-    <div class="sidebar-section">
-      <div class="ss-title" id="turn-label">輪到你了</div>
-      <div class="dice-row">
-        <div class="die" id="die1">⚀</div>
-        <div class="die" id="die2">⚁</div>
-      </div>
-      <div class="dice-total" id="dice-total"></div>
-      <button class="btn btn-gold btn-full" id="btn-roll" onclick="doRoll()">🎲 擲骰子</button>
-      <button class="btn btn-outline btn-full hidden" id="btn-endturn" onclick="doEndTurn()">結束回合 →</button>
-      <button class="btn btn-sm btn-outline btn-full hidden" id="btn-bail" onclick="doBailJail()">繳保釋金 $50</button>
-    </div>
-    <div class="sidebar-section">
-      <div class="ss-title">遊戲紀錄</div>
-      <div id="game-log"></div>
-    </div>
-    <div class="sidebar-section" style="padding:10px">
-      <button class="btn btn-outline btn-sm" style="width:100%" onclick="showScreen('welcome')">↩ 回主選單</button>
-    </div>
-  </div>
-</div>
-
-<!-- ════ PROPERTY MODAL ════ -->
-<div id="modal-buy" class="modal-bg hidden">
-  <div class="modal-box">
-    <div class="modal-prop-band" id="buy-band"></div>
-    <div class="modal-icon" id="buy-icon">🏠</div>
-    <div class="modal-title" id="buy-name"></div>
-    <div class="modal-sub" id="buy-sub"></div>
-    <div class="modal-prop-details" id="buy-details"></div>
-    <div class="modal-btns">
-      <button class="btn btn-gold" onclick="doBuy()">購買</button>
-      <button class="btn btn-outline" onclick="closeModal('modal-buy')">不購買</button>
-    </div>
-  </div>
-</div>
-
-<!-- ════ CARD MODAL ════ -->
-<div id="modal-card" class="modal-bg hidden">
-  <div class="modal-box">
-    <div id="card-header"></div>
-    <div class="modal-icon" id="card-icon">🎴</div>
-    <div class="modal-title" id="card-title"></div>
-    <div class="card-modal-body" id="card-body"></div>
-    <button class="btn btn-gold" onclick="closeModal('modal-card')">確認</button>
-  </div>
-</div>
-
-<!-- ════ INFO MODAL ════ -->
-<div id="modal-info" class="modal-bg hidden">
-  <div class="modal-box">
-    <div class="modal-prop-band" id="info-band"></div>
-    <div class="modal-icon" id="info-icon">🏠</div>
-    <div class="modal-title" id="info-name"></div>
-    <div class="modal-sub" id="info-owner"></div>
-    <div class="modal-prop-details" id="info-details"></div>
-    <div class="modal-btns" id="info-btns">
-      <button class="btn btn-outline" onclick="closeModal('modal-info')">關閉</button>
-    </div>
-  </div>
-</div>
-
-<!-- ════ WINNER MODAL ════ -->
-<div id="modal-winner" class="modal-bg hidden">
-  <div class="modal-box">
-    <div class="modal-icon winner-glow" id="winner-icon">🏆</div>
-    <div class="modal-title" id="winner-title">遊戲結束</div>
-    <div class="modal-sub" id="winner-sub"></div>
-    <button class="btn btn-gold" onclick="showScreen('welcome')">再玩一局</button>
-  </div>
-</div>
-
-<!-- ════ RENT MODAL ════ -->
-<div id="modal-rent" class="modal-bg hidden">
-  <div class="modal-box">
-    <div class="modal-icon">💸</div>
-    <div class="modal-title" id="rent-title">支付租金</div>
-    <div class="modal-sub" id="rent-sub"></div>
-    <button class="btn btn-gold" onclick="closeModal('modal-rent')">確認</button>
+    <button class="btn btn-gold" onclick="startGame()">開始遊戲 ▶</button>
+    <button class="back-link" onclick="goBackToWelcome()">← 返回選擇地區</button>
   </div>
 </div>
 
 <script>
-// ╔══════════════════════════════════════════╗
-// ║              GAME DATA                   ║
-// ╚══════════════════════════════════════════╝
+// ╔══════════════════════════════════════════════════╗
+// ║              GAME DATA                           ║
+// ╚══════════════════════════════════════════════════╝
 const GROUPS = {
-  brown:    { hex:'#8B4513', name:'棕色', buildCost:50  },
-  lb:       { hex:'#4fc3f7', name:'淺藍', buildCost:50  },
-  pink:     { hex:'#f06292', name:'粉紅', buildCost:100 },
-  orange:   { hex:'#ff9800', name:'橘色', buildCost:100 },
-  red:      { hex:'#e53935', name:'紅色', buildCost:150 },
-  yellow:   { hex:'#fdd835', name:'黃色', buildCost:150 },
-  green:    { hex:'#43a047', name:'綠色', buildCost:200 },
-  blue:     { hex:'#1565c0', name:'深藍', buildCost:200 },
-  rr:       { hex:'#212121', name:'交通',  buildCost:0  },
-  util:     { hex:'#78909c', name:'公共',  buildCost:0  },
+  brown:  {hex:'#8B4513', name:'棕色', buildCost:50},
+  lb:     {hex:'#4fc3f7', name:'淺藍', buildCost:50},
+  pink:   {hex:'#f06292', name:'粉紅', buildCost:100},
+  orange: {hex:'#ff9800', name:'橘色', buildCost:100},
+  red:    {hex:'#e53935', name:'紅色', buildCost:150},
+  yellow: {hex:'#fdd835', name:'黃色', buildCost:150},
+  green:  {hex:'#43a047', name:'綠色', buildCost:200},
+  blue:   {hex:'#1565c0', name:'深藍', buildCost:200},
+  rr:     {hex:'#212121', name:'交通', buildCost:0},
+  util:   {hex:'#78909c', name:'公共', buildCost:0},
 };
 
-// Space types: go, prop, rr, util, tax, chance, comm, jail, free, gotojail
 function sp(id,type,name,group,price,rent,icon){
   return {id,type,name,group,price,rent:rent||[0,0,0,0,0,0],icon:icon||'',
           owner:null,buildings:0,mortgaged:false};
@@ -565,178 +118,97 @@ function sp(id,type,name,group,price,rent,icon){
 const RR_RENT=[25,50,100,200];
 const makeBoard=(country)=>({
   japan:[
-    sp(0,'go','出發點',null,0,[],  '▶'),
-    sp(1,'prop','浅草','brown',60, [2,10,30,90,160,250]),
-    sp(2,'chance','機會',null,0,[], '?'),
-    sp(3,'prop','上野','brown',60,  [4,20,60,180,320,450]),
-    sp(4,'tax','所得稅',null,0,[],  '📋'),
-    sp(5,'rr','東海道\n新幹線','rr',200,[],  '🚄'),
-    sp(6,'prop','秋葉原','lb',100, [6,30,90,270,400,550]),
-    sp(7,'comm','命運',null,0,[],   '📦'),
-    sp(8,'prop','池袋','lb',100,   [6,30,90,270,400,550]),
-    sp(9,'prop','新宿','lb',120,   [8,40,100,300,450,600]),
-    sp(10,'jail','監獄',null,0,[],  '⛓'),
-    sp(11,'prop','原宿','pink',140, [10,50,150,450,625,750]),
-    sp(12,'util','溫泉','util',150, []),
-    sp(13,'prop','表参道','pink',140,[10,50,150,450,625,750]),
-    sp(14,'prop','青山','pink',160, [12,60,180,500,700,900]),
-    sp(15,'rr','山陽\n新幹線','rr',200,[],   '🚄'),
-    sp(16,'prop','六本木','orange',180,[14,70,200,550,750,950]),
-    sp(17,'chance','機會',null,0,[],  '?'),
-    sp(18,'prop','銀座','orange',180, [14,70,200,550,750,950]),
-    sp(19,'prop','恵比寿','orange',200,[16,80,220,600,800,1000]),
-    sp(20,'free','免費停車',null,0,[], '🅿'),
-    sp(21,'prop','横浜','red',220,  [18,90,250,700,875,1050]),
-    sp(22,'comm','命運',null,0,[],   '📦'),
-    sp(23,'prop','鎌倉','red',220,   [18,90,250,700,875,1050]),
-    sp(24,'prop','熱海','red',240,   [20,100,300,750,925,1100]),
-    sp(25,'rr','東北\n新幹線','rr',200,[], '🚄'),
-    sp(26,'prop','京都','yellow',260,[22,110,330,800,975,1150]),
-    sp(27,'prop','奈良','yellow',260,[22,110,330,800,975,1150]),
-    sp(28,'util','神社','util',150,  []),
-    sp(29,'prop','大阪','yellow',280,[24,120,360,850,1025,1200]),
-    sp(30,'gotojail','前往監獄',null,0,[],  '🚔'),
-    sp(31,'prop','札幌','green',300, [26,130,390,900,1100,1275]),
-    sp(32,'prop','函館','green',300, [26,130,390,900,1100,1275]),
-    sp(33,'chance','機會',null,0,[],  '?'),
-    sp(34,'prop','富良野','green',320,[28,150,450,1000,1200,1400]),
-    sp(35,'rr','北海道\n新幹線','rr',200,[],'🚄'),
-    sp(36,'comm','命運',null,0,[],   '📦'),
-    sp(37,'prop','富士山','blue',350, [35,175,500,1100,1300,1500]),
-    sp(38,'tax','奢侈稅',null,0,[],   '💎'),
-    sp(39,'prop','北海道','blue',400, [50,200,600,1400,1700,2000]),
+    sp(0,'go','出發點',null,0,[],'▶'),sp(1,'prop','浅草','brown',60,[2,10,30,90,160,250]),
+    sp(2,'chance','機會',null,0,[],'?'),sp(3,'prop','上野','brown',60,[4,20,60,180,320,450]),
+    sp(4,'tax','所得稅',null,0,[],'📋'),sp(5,'rr','東海道新幹線','rr',200,[],'🚄'),
+    sp(6,'prop','秋葉原','lb',100,[6,30,90,270,400,550]),sp(7,'comm','命運',null,0,[],'📦'),
+    sp(8,'prop','池袋','lb',100,[6,30,90,270,400,550]),sp(9,'prop','新宿','lb',120,[8,40,100,300,450,600]),
+    sp(10,'jail','監獄',null,0,[],'⛓'),sp(11,'prop','原宿','pink',140,[10,50,150,450,625,750]),
+    sp(12,'util','溫泉','util',150,[]),sp(13,'prop','表参道','pink',140,[10,50,150,450,625,750]),
+    sp(14,'prop','青山','pink',160,[12,60,180,500,700,900]),sp(15,'rr','山陽新幹線','rr',200,[],'🚄'),
+    sp(16,'prop','六本木','orange',180,[14,70,200,550,750,950]),sp(17,'chance','機會',null,0,[],'?'),
+    sp(18,'prop','銀座','orange',180,[14,70,200,550,750,950]),sp(19,'prop','恵比寿','orange',200,[16,80,220,600,800,1000]),
+    sp(20,'free','免費停車',null,0,[],'🅿'),sp(21,'prop','横浜','red',220,[18,90,250,700,875,1050]),
+    sp(22,'comm','命運',null,0,[],'📦'),sp(23,'prop','鎌倉','red',220,[18,90,250,700,875,1050]),
+    sp(24,'prop','熱海','red',240,[20,100,300,750,925,1100]),sp(25,'rr','東北新幹線','rr',200,[],'🚄'),
+    sp(26,'prop','京都','yellow',260,[22,110,330,800,975,1150]),sp(27,'prop','奈良','yellow',260,[22,110,330,800,975,1150]),
+    sp(28,'util','神社','util',150,[]),sp(29,'prop','大阪','yellow',280,[24,120,360,850,1025,1200]),
+    sp(30,'gotojail','前往監獄',null,0,[],'🚔'),sp(31,'prop','札幌','green',300,[26,130,390,900,1100,1275]),
+    sp(32,'prop','函館','green',300,[26,130,390,900,1100,1275]),sp(33,'chance','機會',null,0,[],'?'),
+    sp(34,'prop','富良野','green',320,[28,150,450,1000,1200,1400]),sp(35,'rr','北海道新幹線','rr',200,[],'🚄'),
+    sp(36,'comm','命運',null,0,[],'📦'),sp(37,'prop','富士山','blue',350,[35,175,500,1100,1300,1500]),
+    sp(38,'tax','奢侈稅',null,0,[],'💎'),sp(39,'prop','北海道','blue',400,[50,200,600,1400,1700,2000]),
   ],
   taiwan:[
-    sp(0,'go','出發點',null,0,[],  '▶'),
-    sp(1,'prop','基隆','brown',60, [2,10,30,90,160,250]),
-    sp(2,'chance','機會',null,0,[], '?'),
-    sp(3,'prop','淡水','brown',60,  [4,20,60,180,320,450]),
-    sp(4,'tax','所得稅',null,0,[],  '📋'),
-    sp(5,'rr','高鐵\n北段','rr',200,[],    '🚅'),
-    sp(6,'prop','西門町','lb',100, [6,30,90,270,400,550]),
-    sp(7,'comm','命運',null,0,[],   '📦'),
-    sp(8,'prop','台中','lb',100,   [6,30,90,270,400,550]),
-    sp(9,'prop','彰化','lb',120,   [8,40,100,300,450,600]),
-    sp(10,'jail','監獄',null,0,[],  '⛓'),
-    sp(11,'prop','嘉義','pink',140, [10,50,150,450,625,750]),
-    sp(12,'util','夜市','util',150, []),
-    sp(13,'prop','台南','pink',140, [10,50,150,450,625,750]),
-    sp(14,'prop','安平','pink',160, [12,60,180,500,700,900]),
-    sp(15,'rr','高鐵\n南段','rr',200,[],    '🚅'),
-    sp(16,'prop','高雄','orange',180,[14,70,200,550,750,950]),
-    sp(17,'chance','機會',null,0,[],  '?'),
-    sp(18,'prop','墾丁','orange',180, [14,70,200,550,750,950]),
-    sp(19,'prop','屏東','orange',200, [16,80,220,600,800,1000]),
-    sp(20,'free','免費停車',null,0,[],  '🅿'),
-    sp(21,'prop','花蓮','red',220,  [18,90,250,700,875,1050]),
-    sp(22,'comm','命運',null,0,[],   '📦'),
-    sp(23,'prop','太魯閣','red',220, [18,90,250,700,875,1050]),
-    sp(24,'prop','台東','red',240,   [20,100,300,750,925,1100]),
-    sp(25,'rr','高鐵\n東段','rr',200,[],    '🚅'),
-    sp(26,'prop','日月潭','yellow',260,[22,110,330,800,975,1150]),
-    sp(27,'prop','阿里山','yellow',260,[22,110,330,800,975,1150]),
-    sp(28,'util','便利商店','util',150,[]),
-    sp(29,'prop','清境','yellow',280, [24,120,360,850,1025,1200]),
-    sp(30,'gotojail','前往監獄',null,0,[],  '🚔'),
-    sp(31,'prop','九份','green',300,  [26,130,390,900,1100,1275]),
-    sp(32,'prop','平溪','green',300,  [26,130,390,900,1100,1275]),
-    sp(33,'chance','機會',null,0,[],   '?'),
-    sp(34,'prop','北投','green',320,   [28,150,450,1000,1200,1400]),
-    sp(35,'rr','高鐵\n環島','rr',200,[],    '🚅'),
-    sp(36,'comm','命運',null,0,[],   '📦'),
-    sp(37,'prop','台北101','blue',350, [35,175,500,1100,1300,1500]),
-    sp(38,'tax','奢侈稅',null,0,[],   '💎'),
-    sp(39,'prop','故宮博物院','blue',400,[50,200,600,1400,1700,2000]),
+    sp(0,'go','出發點',null,0,[],'▶'),sp(1,'prop','基隆','brown',60,[2,10,30,90,160,250]),
+    sp(2,'chance','機會',null,0,[],'?'),sp(3,'prop','淡水','brown',60,[4,20,60,180,320,450]),
+    sp(4,'tax','所得稅',null,0,[],'📋'),sp(5,'rr','高鐵北段','rr',200,[],'🚅'),
+    sp(6,'prop','西門町','lb',100,[6,30,90,270,400,550]),sp(7,'comm','命運',null,0,[],'📦'),
+    sp(8,'prop','台中','lb',100,[6,30,90,270,400,550]),sp(9,'prop','彰化','lb',120,[8,40,100,300,450,600]),
+    sp(10,'jail','監獄',null,0,[],'⛓'),sp(11,'prop','嘉義','pink',140,[10,50,150,450,625,750]),
+    sp(12,'util','夜市','util',150,[]),sp(13,'prop','台南','pink',140,[10,50,150,450,625,750]),
+    sp(14,'prop','安平','pink',160,[12,60,180,500,700,900]),sp(15,'rr','高鐵南段','rr',200,[],'🚅'),
+    sp(16,'prop','高雄','orange',180,[14,70,200,550,750,950]),sp(17,'chance','機會',null,0,[],'?'),
+    sp(18,'prop','墾丁','orange',180,[14,70,200,550,750,950]),sp(19,'prop','屏東','orange',200,[16,80,220,600,800,1000]),
+    sp(20,'free','免費停車',null,0,[],'🅿'),sp(21,'prop','花蓮','red',220,[18,90,250,700,875,1050]),
+    sp(22,'comm','命運',null,0,[],'📦'),sp(23,'prop','太魯閣','red',220,[18,90,250,700,875,1050]),
+    sp(24,'prop','台東','red',240,[20,100,300,750,925,1100]),sp(25,'rr','高鐵東段','rr',200,[],'🚅'),
+    sp(26,'prop','日月潭','yellow',260,[22,110,330,800,975,1150]),sp(27,'prop','阿里山','yellow',260,[22,110,330,800,975,1150]),
+    sp(28,'util','便利商店','util',150,[]),sp(29,'prop','清境','yellow',280,[24,120,360,850,1025,1200]),
+    sp(30,'gotojail','前往監獄',null,0,[],'🚔'),sp(31,'prop','九份','green',300,[26,130,390,900,1100,1275]),
+    sp(32,'prop','平溪','green',300,[26,130,390,900,1100,1275]),sp(33,'chance','機會',null,0,[],'?'),
+    sp(34,'prop','北投','green',320,[28,150,450,1000,1200,1400]),sp(35,'rr','高鐵環島','rr',200,[],'🚅'),
+    sp(36,'comm','命運',null,0,[],'📦'),sp(37,'prop','台北101','blue',350,[35,175,500,1100,1300,1500]),
+    sp(38,'tax','奢侈稅',null,0,[],'💎'),sp(39,'prop','故宮博物院','blue',400,[50,200,600,1400,1700,2000]),
   ],
   bangkok:[
-    sp(0,'go','出發點',null,0,[],  '▶'),
-    sp(1,'prop','帕空','brown',60, [2,10,30,90,160,250]),
-    sp(2,'chance','機會',null,0,[], '?'),
-    sp(3,'prop','考山路','brown',60, [4,20,60,180,320,450]),
-    sp(4,'tax','所得稅',null,0,[],  '📋'),
-    sp(5,'rr','泰航\n北線','rr',200,[],    '✈️'),
-    sp(6,'prop','素坤逸','lb',100,  [6,30,90,270,400,550]),
-    sp(7,'comm','命運',null,0,[],   '📦'),
-    sp(8,'prop','暹羅','lb',100,    [6,30,90,270,400,550]),
-    sp(9,'prop','阿索克','lb',120,  [8,40,100,300,450,600]),
-    sp(10,'jail','監獄',null,0,[],  '⛓'),
-    sp(11,'prop','芭提雅','pink',140,[10,50,150,450,625,750]),
-    sp(12,'util','泰式按摩','util',150,[]),
-    sp(13,'prop','羅勇','pink',140,  [10,50,150,450,625,750]),
-    sp(14,'prop','春武里','pink',160,[12,60,180,500,700,900]),
-    sp(15,'rr','泰航\n南線','rr',200,[],    '✈️'),
-    sp(16,'prop','清邁','orange',180,[14,70,200,550,750,950]),
-    sp(17,'chance','機會',null,0,[],  '?'),
-    sp(18,'prop','清萊','orange',180, [14,70,200,550,750,950]),
-    sp(19,'prop','南邦','orange',200, [16,80,220,600,800,1000]),
-    sp(20,'free','免費停車',null,0,[],  '🅿'),
-    sp(21,'prop','蘇梅島','red',220,  [18,90,250,700,875,1050]),
-    sp(22,'comm','命運',null,0,[],   '📦'),
-    sp(23,'prop','帕岸島','red',220,  [18,90,250,700,875,1050]),
-    sp(24,'prop','濤島','red',240,    [20,100,300,750,925,1100]),
-    sp(25,'rr','泰航\n東線','rr',200,[],    '✈️'),
-    sp(26,'prop','安達曼','yellow',260,[22,110,330,800,975,1150]),
-    sp(27,'prop','甲米','yellow',260, [22,110,330,800,975,1150]),
-    sp(28,'util','夜市','util',150,   []),
-    sp(29,'prop','皮皮島','yellow',280,[24,120,360,850,1025,1200]),
-    sp(30,'gotojail','前往監獄',null,0,[],  '🚔'),
-    sp(31,'prop','普吉島','green',300, [26,130,390,900,1100,1275]),
-    sp(32,'prop','拉威','green',300,   [26,130,390,900,1100,1275]),
-    sp(33,'chance','機會',null,0,[],   '?'),
-    sp(34,'prop','芭東','green',320,   [28,150,450,1000,1200,1400]),
-    sp(35,'rr','泰航\n西線','rr',200,[],    '✈️'),
-    sp(36,'comm','命運',null,0,[],   '📦'),
-    sp(37,'prop','大皇宮','blue',350,  [35,175,500,1100,1300,1500]),
-    sp(38,'tax','奢侈稅',null,0,[],   '💎'),
-    sp(39,'prop','臥佛寺','blue',400,  [50,200,600,1400,1700,2000]),
+    sp(0,'go','出發點',null,0,[],'▶'),sp(1,'prop','帕空','brown',60,[2,10,30,90,160,250]),
+    sp(2,'chance','機會',null,0,[],'?'),sp(3,'prop','考山路','brown',60,[4,20,60,180,320,450]),
+    sp(4,'tax','所得稅',null,0,[],'📋'),sp(5,'rr','泰航北線','rr',200,[],'✈️'),
+    sp(6,'prop','素坤逸','lb',100,[6,30,90,270,400,550]),sp(7,'comm','命運',null,0,[],'📦'),
+    sp(8,'prop','暹羅','lb',100,[6,30,90,270,400,550]),sp(9,'prop','阿索克','lb',120,[8,40,100,300,450,600]),
+    sp(10,'jail','監獄',null,0,[],'⛓'),sp(11,'prop','芭提雅','pink',140,[10,50,150,450,625,750]),
+    sp(12,'util','泰式按摩','util',150,[]),sp(13,'prop','羅勇','pink',140,[10,50,150,450,625,750]),
+    sp(14,'prop','春武里','pink',160,[12,60,180,500,700,900]),sp(15,'rr','泰航南線','rr',200,[],'✈️'),
+    sp(16,'prop','清邁','orange',180,[14,70,200,550,750,950]),sp(17,'chance','機會',null,0,[],'?'),
+    sp(18,'prop','清萊','orange',180,[14,70,200,550,750,950]),sp(19,'prop','南邦','orange',200,[16,80,220,600,800,1000]),
+    sp(20,'free','免費停車',null,0,[],'🅿'),sp(21,'prop','蘇梅島','red',220,[18,90,250,700,875,1050]),
+    sp(22,'comm','命運',null,0,[],'📦'),sp(23,'prop','帕岸島','red',220,[18,90,250,700,875,1050]),
+    sp(24,'prop','濤島','red',240,[20,100,300,750,925,1100]),sp(25,'rr','泰航東線','rr',200,[],'✈️'),
+    sp(26,'prop','安達曼','yellow',260,[22,110,330,800,975,1150]),sp(27,'prop','甲米','yellow',260,[22,110,330,800,975,1150]),
+    sp(28,'util','夜市','util',150,[]),sp(29,'prop','皮皮島','yellow',280,[24,120,360,850,1025,1200]),
+    sp(30,'gotojail','前往監獄',null,0,[],'🚔'),sp(31,'prop','普吉島','green',300,[26,130,390,900,1100,1275]),
+    sp(32,'prop','拉威','green',300,[26,130,390,900,1100,1275]),sp(33,'chance','機會',null,0,[],'?'),
+    sp(34,'prop','芭東','green',320,[28,150,450,1000,1200,1400]),sp(35,'rr','泰航西線','rr',200,[],'✈️'),
+    sp(36,'comm','命運',null,0,[],'📦'),sp(37,'prop','大皇宮','blue',350,[35,175,500,1100,1300,1500]),
+    sp(38,'tax','奢侈稅',null,0,[],'💎'),sp(39,'prop','臥佛寺','blue',400,[50,200,600,1400,1700,2000]),
   ],
   korea:[
-    sp(0,'go','出發點',null,0,[],  '▶'),
-    sp(1,'prop','鐘路','brown',60, [2,10,30,90,160,250]),
-    sp(2,'chance','機會',null,0,[], '?'),
-    sp(3,'prop','仁寺洞','brown',60, [4,20,60,180,320,450]),
-    sp(4,'tax','所得稅',null,0,[],  '📋'),
-    sp(5,'rr','KTX\n北線','rr',200,[],     '🚆'),
-    sp(6,'prop','弘大','lb',100,    [6,30,90,270,400,550]),
-    sp(7,'comm','命運',null,0,[],   '📦'),
-    sp(8,'prop','梨大','lb',100,    [6,30,90,270,400,550]),
-    sp(9,'prop','新촌','lb',120,    [8,40,100,300,450,600]),
-    sp(10,'jail','監獄',null,0,[],  '⛓'),
-    sp(11,'prop','明洞','pink',140, [10,50,150,450,625,750]),
-    sp(12,'util','漢江公園','util',150,[]),
-    sp(13,'prop','南大門','pink',140,[10,50,150,450,625,750]),
-    sp(14,'prop','東大門','pink',160,[12,60,180,500,700,900]),
-    sp(15,'rr','KTX\n南線','rr',200,[],     '🚆'),
-    sp(16,'prop','江南','orange',180,[14,70,200,550,750,950]),
-    sp(17,'chance','機會',null,0,[],  '?'),
-    sp(18,'prop','狎鷗亭','orange',180,[14,70,200,550,750,950]),
-    sp(19,'prop','清潭洞','orange',200,[16,80,220,600,800,1000]),
-    sp(20,'free','免費停車',null,0,[],  '🅿'),
-    sp(21,'prop','仁川','red',220,  [18,90,250,700,875,1050]),
-    sp(22,'comm','命運',null,0,[],   '📦'),
-    sp(23,'prop','水原','red',220,   [18,90,250,700,875,1050]),
-    sp(24,'prop','城南','red',240,   [20,100,300,750,925,1100]),
-    sp(25,'rr','KTX\n東線','rr',200,[],     '🚆'),
-    sp(26,'prop','大邱','yellow',260, [22,110,330,800,975,1150]),
-    sp(27,'prop','大田','yellow',260, [22,110,330,800,975,1150]),
-    sp(28,'util','便利商店','util',150,[]),
-    sp(29,'prop','光州','yellow',280, [24,120,360,850,1025,1200]),
-    sp(30,'gotojail','前往監獄',null,0,[],  '🚔'),
-    sp(31,'prop','慶州','green',300,  [26,130,390,900,1100,1275]),
-    sp(32,'prop','統營','green',300,  [26,130,390,900,1100,1275]),
-    sp(33,'chance','機會',null,0,[],   '?'),
-    sp(34,'prop','順天','green',320,   [28,150,450,1000,1200,1400]),
-    sp(35,'rr','KTX\n西線','rr',200,[],     '🚆'),
-    sp(36,'comm','命運',null,0,[],   '📦'),
-    sp(37,'prop','景福宮','blue',350,  [35,175,500,1100,1300,1500]),
-    sp(38,'tax','奢侈稅',null,0,[],   '💎'),
-    sp(39,'prop','濟州島','blue',400,  [50,200,600,1400,1700,2000]),
+    sp(0,'go','出發點',null,0,[],'▶'),sp(1,'prop','鐘路','brown',60,[2,10,30,90,160,250]),
+    sp(2,'chance','機會',null,0,[],'?'),sp(3,'prop','仁寺洞','brown',60,[4,20,60,180,320,450]),
+    sp(4,'tax','所得稅',null,0,[],'📋'),sp(5,'rr','KTX北線','rr',200,[],'🚆'),
+    sp(6,'prop','弘大','lb',100,[6,30,90,270,400,550]),sp(7,'comm','命運',null,0,[],'📦'),
+    sp(8,'prop','梨大','lb',100,[6,30,90,270,400,550]),sp(9,'prop','新촌','lb',120,[8,40,100,300,450,600]),
+    sp(10,'jail','監獄',null,0,[],'⛓'),sp(11,'prop','明洞','pink',140,[10,50,150,450,625,750]),
+    sp(12,'util','漢江公園','util',150,[]),sp(13,'prop','南大門','pink',140,[10,50,150,450,625,750]),
+    sp(14,'prop','東大門','pink',160,[12,60,180,500,700,900]),sp(15,'rr','KTX南線','rr',200,[],'🚆'),
+    sp(16,'prop','江南','orange',180,[14,70,200,550,750,950]),sp(17,'chance','機會',null,0,[],'?'),
+    sp(18,'prop','狎鷗亭','orange',180,[14,70,200,550,750,950]),sp(19,'prop','清潭洞','orange',200,[16,80,220,600,800,1000]),
+    sp(20,'free','免費停車',null,0,[],'🅿'),sp(21,'prop','仁川','red',220,[18,90,250,700,875,1050]),
+    sp(22,'comm','命運',null,0,[],'📦'),sp(23,'prop','水原','red',220,[18,90,250,700,875,1050]),
+    sp(24,'prop','城南','red',240,[20,100,300,750,925,1100]),sp(25,'rr','KTX東線','rr',200,[],'🚆'),
+    sp(26,'prop','大邱','yellow',260,[22,110,330,800,975,1150]),sp(27,'prop','大田','yellow',260,[22,110,330,800,975,1150]),
+    sp(28,'util','便利商店','util',150,[]),sp(29,'prop','光州','yellow',280,[24,120,360,850,1025,1200]),
+    sp(30,'gotojail','前往監獄',null,0,[],'🚔'),sp(31,'prop','慶州','green',300,[26,130,390,900,1100,1275]),
+    sp(32,'prop','統營','green',300,[26,130,390,900,1100,1275]),sp(33,'chance','機會',null,0,[],'?'),
+    sp(34,'prop','順天','green',320,[28,150,450,1000,1200,1400]),sp(35,'rr','KTX西線','rr',200,[],'🚆'),
+    sp(36,'comm','命運',null,0,[],'📦'),sp(37,'prop','景福宮','blue',350,[35,175,500,1100,1300,1500]),
+    sp(38,'tax','奢侈稅',null,0,[],'💎'),sp(39,'prop','濟州島','blue',400,[50,200,600,1400,1700,2000]),
   ],
 });
 
-// Chance cards
 const CHANCE_CARDS=[
-  {text:'前進到出發點，領取 $200！', fn:g=>advanceTo(g,0,true)},
+  {text:'前進到出發點，領取 $200！',fn:g=>advanceTo(g,0,true)},
   {text:'你獲得了退稅！領取 $150。',fn:g=>gainMoney(g,150)},
   {text:'銀行錯誤對你有利！領取 $200。',fn:g=>gainMoney(g,200)},
   {text:'繳納路況維修費，每棟房屋 $25、每間旅館 $100。',fn:g=>repairTax(g,25,100)},
@@ -765,33 +237,259 @@ const COMM_CARDS=[
 ];
 function shuffleArr(a){for(let i=a.length-1;i>0;i--){const j=0|Math.random()*(i+1);[a[i],a[j]]=[a[j],a[i]];}return a}
 
-// Player colors & emojis
 const PLAYER_COLORS=['#e74c3c','#3498db','#2ecc71','#9b59b6'];
-const PLAYER_EMOJIS=['🔴','🔵','🟢','🟣'];
+const PLAYER_AVATARS=['🦊','🐲','🐸','🦄'];
 const COUNTRY_META={
-  japan:  {flag:'🇯🇵',name:'日本',en:'Japan',bc:'#1c0a06',cc:'#d4eddb',accent:'#c0392b',center:'🗻\n日本'},
-  taiwan: {flag:'🇹🇼',name:'台灣',en:'Taiwan',bc:'#06180c',cc:'#d8f5f0',accent:'#16a085',center:'🌿\n台灣'},
-  bangkok:{flag:'🇹🇭',name:'曼谷',en:'Bangkok',bc:'#1a1006',cc:'#fff3e0',accent:'#e67e22',center:'🛕\n曼谷'},
-  korea:  {flag:'🇰🇷',name:'韓國',en:'Korea',bc:'#060a18',cc:'#e3f2fd',accent:'#2980b9',center:'🌸\n韓國'},
+  japan:  {flag:'🇯🇵',name:'日本',en:'Japan',bc:'#1c0a06',cc:0xd4eddb,accent:'#c0392b',accentHex:0xc0392b,center:'🗻',deco:'🌸'},
+  taiwan: {flag:'🇹🇼',name:'台灣',en:'Taiwan',bc:'#06180c',cc:0xd8f5f0,accent:'#16a085',accentHex:0x16a085,center:'🌿',deco:'🏮'},
+  bangkok:{flag:'🇹🇭',name:'曼谷',en:'Bangkok',bc:'#1a1006',cc:0xfff3e0,accent:'#e67e22',accentHex:0xe67e22,center:'🛕',deco:'🐘'},
+  korea:  {flag:'🇰🇷',name:'韓國',en:'Korea',bc:'#060a18',cc:0xe3f2fd,accent:'#2980b9',accentHex:0x2980b9,center:'🌸',deco:'🎎'},
 };
-const DIE_FACES=['⚀','⚁','⚂','⚃','⚄','⚅'];
 
-// ╔══════════════════════════════════════════╗
-// ║              GAME STATE                  ║
-// ╚══════════════════════════════════════════╝
-let G=null;
-let selectedCountry=null;
-let playerCount=2;
-let pendingBuy=null;
-let pendingCard=null;
-let chanceCards=[];
-let commCards=[];
+// ╔══════════════════════════════════════════════════╗
+// ║              GAME STATE                          ║
+// ╚══════════════════════════════════════════════════╝
+let G=null, selectedCountry=null, playerCount=2;
+let pendingBuy=null, pendingCard=null;
+let chanceCards=[], commCards=[];
 
-function showScreen(name){
-  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
-  const map={welcome:'screen-welcome',setup:'screen-setup',game:'screen-game'};
-  document.getElementById(map[name]).classList.add('active');
+// ╔══════════════════════════════════════════════════╗
+// ║              TWEEN ENGINE                        ║
+// ╚══════════════════════════════════════════════════╝
+const tweens=[];
+function tween(obj,props,dur,ease){
+  return new Promise(resolve=>{
+    const start={};
+    for(const k in props){
+      // 支援巢狀屬性如 scale.x
+      if(k.includes('.')){
+        const [p,c]=k.split('.');
+        start[k]=obj[p][c];
+      } else {
+        start[k]=obj[k]!=null?obj[k]:0;
+      }
+    }
+    const t={obj,props,start,dur,elapsed:0,ease:ease||easeOutCubic,resolve};
+    tweens.push(t);
+  });
 }
+function easeOutCubic(t){return 1-Math.pow(1-t,3)}
+function easeOutBack(t){const c=1.70158;return 1+(c+1)*Math.pow(t-1,3)+c*Math.pow(t-1,2)}
+function easeInOutQuad(t){return t<.5?2*t*t:1-Math.pow(-2*t+2,2)/2}
+function updateTweens(dt){
+  for(let i=tweens.length-1;i>=0;i--){
+    const t=tweens[i];
+    t.elapsed+=dt;
+    const p=Math.min(t.elapsed/t.dur,1);
+    const ep=t.ease(p);
+    for(const k in t.props){
+      const val=t.start[k]+(t.props[k]-t.start[k])*ep;
+      if(k.includes('.')){
+        const [pk,ck]=k.split('.');
+        t.obj[pk][ck]=val;
+      } else {
+        t.obj[k]=val;
+      }
+    }
+    if(p>=1){tweens.splice(i,1);t.resolve();}
+  }
+}
+
+// ╔══════════════════════════════════════════════════╗
+// ║              PIXI SETUP                          ║
+// ╚══════════════════════════════════════════════════╝
+let app, rootContainer;
+let welcomeScene, gameScene;
+let boardContainer, sidebarContainer, modalLayer, tokenLayer;
+let boardSize=672;
+const CORNER=90, EDGE=54;
+const COL_W=[CORNER,...Array(9).fill(EDGE),CORNER];
+const ROW_H=[CORNER,...Array(9).fill(EDGE),CORNER];
+
+// 繪圖用常數
+const BOARD_BG=0xf5eed8;
+const GOLD=0xc9a84c;
+const GOLD_LIGHT=0xf0d060;
+const DARK_BG=0x06060f;
+const TEXT_COLOR=0xf0e8d8;
+
+async function initPixi(){
+  // 等待字體
+  await document.fonts.load('16px "Noto Serif TC"');
+  await document.fonts.load('16px "Cinzel Decorative"');
+
+  app = new PIXI.Application();
+  await app.init({
+    canvas: document.getElementById('game-canvas'),
+    resizeTo: window,
+    antialias: true,
+    resolution: Math.min(window.devicePixelRatio, 2),
+    autoDensity: true,
+    backgroundColor: DARK_BG,
+  });
+
+  rootContainer = new PIXI.Container();
+  app.stage.addChild(rootContainer);
+
+  // 使用 setInterval 驅動 tween 引擎（確保在所有環境中運作）
+  let lastTweenTime=performance.now();
+  setInterval(()=>{
+    const now=performance.now();
+    const dt=now-lastTweenTime;
+    lastTweenTime=now;
+    if(tweens.length>0) updateTweens(dt);
+  },16);
+
+  showWelcomeScreen();
+  window.addEventListener('resize', onResize);
+  onResize();
+}
+
+function onResize(){
+  if(welcomeScene && welcomeScene.parent) layoutWelcome();
+  if(gameScene && gameScene.parent) layoutGame();
+}
+
+// ╔══════════════════════════════════════════════════╗
+// ║              WELCOME SCREEN                      ║
+// ╚══════════════════════════════════════════════════╝
+function showWelcomeScreen(){
+  clearScenes();
+  welcomeScene = new PIXI.Container();
+  rootContainer.addChild(welcomeScene);
+
+  // 標題文字
+  const kicker = new PIXI.Text({text:'亞洲 · 大富翁', style:{
+    fontFamily:'Playfair Display', fontStyle:'italic',fontSize:16,
+    fill:0xaaa090, letterSpacing:6,
+  }});
+  kicker.anchor.set(0.5,0);
+  welcomeScene.addChild(kicker);
+
+  const title = new PIXI.Text({text:'ASIA MONOPOLY', style:{
+    fontFamily:'Cinzel Decorative', fontSize:52, fontWeight:'bold',
+    fill:[0xc9a84c,0xf0d060,0xc9a84c],
+    letterSpacing:4,
+  }});
+  title.anchor.set(0.5,0);
+  welcomeScene.addChild(title);
+
+  const sub = new PIXI.Text({text:'選擇你的旅程 · Choose Your Journey', style:{
+    fontFamily:'Noto Serif TC', fontSize:14,
+    fill:0x888070, letterSpacing:8,
+  }});
+  sub.anchor.set(0.5,0);
+  welcomeScene.addChild(sub);
+
+  // 分隔線
+  const divider = new PIXI.Graphics();
+  divider.rect(-60,0,120,1).fill(GOLD);
+  divider.alpha=0.5;
+  welcomeScene.addChild(divider);
+
+  // 國家卡片
+  const countries=['japan','taiwan','bangkok','korea'];
+  const cardColors={japan:[0x5a0025,0xc0392b],taiwan:[0x004535,0x16a085],bangkok:[0x5a3400,0xe67e22],korea:[0x001848,0x2980b9]};
+  const cardW=180, cardH=260;
+
+  welcomeScene._cards=[];
+  welcomeScene._kicker=kicker;
+  welcomeScene._title=title;
+  welcomeScene._sub=sub;
+  welcomeScene._divider=divider;
+
+  countries.forEach((c,i)=>{
+    const meta=COUNTRY_META[c];
+    const card=new PIXI.Container();
+    card.eventMode='static';card.cursor='pointer';
+
+    const bg=new PIXI.Graphics();
+    bg.roundRect(0,0,cardW,cardH,16);
+    bg.fill({color:cardColors[c][0]});
+    // 漸層疊加
+    const overlay=new PIXI.Graphics();
+    overlay.roundRect(0,cardH*0.4,cardW,cardH*0.6,16);
+    overlay.fill({color:cardColors[c][1],alpha:0.5});
+    card.addChild(bg,overlay);
+
+    // 國旗
+    const flag=new PIXI.Text({text:meta.flag,style:{fontSize:48}});
+    flag.anchor.set(0.5);flag.x=cardW/2;flag.y=cardH*0.32;
+    card.addChild(flag);
+
+    // 國名
+    const name=new PIXI.Text({text:meta.name,style:{
+      fontFamily:'Noto Serif TC',fontSize:28,fontWeight:'bold',fill:0xffffff,
+    }});
+    name.anchor.set(0.5);name.x=cardW/2;name.y=cardH*0.55;
+    card.addChild(name);
+
+    const en=new PIXI.Text({text:meta.en,style:{
+      fontFamily:'Playfair Display',fontStyle:'italic',fontSize:13,fill:0xcccccc,letterSpacing:4,
+    }});
+    en.anchor.set(0.5);en.x=cardW/2;en.y=cardH*0.67;
+    card.addChild(en);
+
+    // hover 效果
+    card.on('pointerover',()=>tween(card,{'scale.x':1.05,'scale.y':1.05},200));
+    card.on('pointerout',()=>tween(card,{'scale.x':1,'scale.y':1},200));
+    card.on('pointertap',()=>selectCountry(c));
+
+    welcomeScene.addChild(card);
+    welcomeScene._cards.push(card);
+  });
+
+  layoutWelcome();
+}
+
+function layoutWelcome(){
+  if(!welcomeScene) return;
+  const w=app.screen.width, h=app.screen.height;
+  const sc=welcomeScene;
+  const isPortrait=w<h;
+  const cardW=isPortrait?Math.min(160,(w-60)/2):180;
+  const cardH=cardW*1.44;
+  const cols=isPortrait?2:4;
+  const gap=isPortrait?16:20;
+  const totalW=cols*cardW+(cols-1)*gap;
+  const startX=(w-totalW)/2;
+
+  // 標題位置
+  const topY = isPortrait ? h*0.06 : h*0.08;
+  sc._kicker.x=w/2; sc._kicker.y=topY;
+  sc._title.x=w/2; sc._title.y=topY+30;
+  sc._title.style.fontSize=isPortrait?36:52;
+  sc._sub.x=w/2; sc._sub.y=topY+(isPortrait?76:100);
+  sc._divider.x=w/2; sc._divider.y=topY+(isPortrait?100:130);
+
+  const cardsY=topY+(isPortrait?130:170);
+  sc._cards.forEach((card,i)=>{
+    const col=i%cols, row=Math.floor(i/cols);
+    // 重繪卡片大小
+    const bg=card.getChildAt(0);
+    const ov=card.getChildAt(1);
+    bg.clear();bg.roundRect(0,0,cardW,cardH,16);
+    const countries=['japan','taiwan','bangkok','korea'];
+    const cc={japan:[0x5a0025,0xc0392b],taiwan:[0x004535,0x16a085],bangkok:[0x5a3400,0xe67e22],korea:[0x001848,0x2980b9]};
+    bg.fill({color:cc[countries[i]][0]});
+    ov.clear();ov.roundRect(0,cardH*0.4,cardW,cardH*0.6,16);
+    ov.fill({color:cc[countries[i]][1],alpha:0.5});
+
+    // 文字位置
+    card.getChildAt(2).x=cardW/2;card.getChildAt(2).y=cardH*0.32;card.getChildAt(2).style.fontSize=isPortrait?36:48;
+    card.getChildAt(3).x=cardW/2;card.getChildAt(3).y=cardH*0.55;card.getChildAt(3).style.fontSize=isPortrait?22:28;
+    card.getChildAt(4).x=cardW/2;card.getChildAt(4).y=cardH*0.67;
+
+    card.x=startX+col*(cardW+gap);
+    card.y=cardsY+row*(cardH+gap);
+    card.scale.set(1);
+  });
+}
+
+// ╔══════════════════════════════════════════════════╗
+// ║              SETUP SCREEN                        ║
+// ╚══════════════════════════════════════════════════╝
+const DEFAULT_NAMES=['玩家一','玩家二','玩家三','玩家四'];
 
 function selectCountry(c){
   selectedCountry=c;
@@ -799,7 +497,11 @@ function selectCountry(c){
   document.getElementById('setup-flag').textContent=meta.flag;
   document.getElementById('setup-title').textContent=meta.name+' · 玩家設定';
   setPlayerCount(playerCount);
-  showScreen('setup');
+  document.getElementById('setup-overlay').classList.add('active');
+}
+
+function goBackToWelcome(){
+  document.getElementById('setup-overlay').classList.remove('active');
 }
 
 function setPlayerCount(n){
@@ -810,7 +512,6 @@ function setPlayerCount(n){
   renderPlayerInputs();
 }
 
-const DEFAULT_NAMES=['玩家一','玩家二','玩家三','玩家四'];
 function renderPlayerInputs(){
   const el=document.getElementById('player-inputs');
   el.innerHTML='';
@@ -837,10 +538,12 @@ function renderPlayerInputs(){
   }
 }
 
+// ╔══════════════════════════════════════════════════╗
+// ║              START GAME                          ║
+// ╚══════════════════════════════════════════════════╝
 function startGame(){
   const boards=makeBoard(selectedCountry);
   const spaces=boards[selectedCountry].map(s=>({...s,rent:[...s.rent]}));
-
   const players=[];
   for(let i=0;i<playerCount;i++){
     const nameEl=document.getElementById('pname-'+i);
@@ -849,43 +552,26 @@ function startGame(){
       id:i,
       name:nameEl.value||DEFAULT_NAMES[i],
       color:PLAYER_COLORS[i],
-      emoji:PLAYER_EMOJIS[i],
+      avatar:PLAYER_AVATARS[i],
       isAI:aiEl.classList.contains('ai-on'),
-      money:1500,
-      position:0,
-      inJail:false,
-      jailTurns:0,
-      bankrupt:false,
-      doublesCount:0,
+      money:1500, position:0,
+      inJail:false, jailTurns:0,
+      bankrupt:false, doublesCount:0,
     });
   }
-
   chanceCards=shuffleArr([...CHANCE_CARDS]);
   commCards=shuffleArr([...COMM_CARDS]);
+  G={country:selectedCountry,spaces,players,current:0,phase:'roll',dice:[1,1],doublesRolled:false,log:[]};
 
-  G={
-    country:selectedCountry,
-    spaces,
-    players,
-    current:0,
-    phase:'roll',
-    dice:[1,1],
-    doublesRolled:false,
-    log:[],
-  };
-
-  renderBoard();
-  renderSidebar();
-  updateTokens();
-  showScreen('game');
+  document.getElementById('setup-overlay').classList.remove('active');
+  showGameScreen();
   addLog(`🎮 遊戲開始！地區：${COUNTRY_META[selectedCountry].name}`);
   maybeAI();
 }
 
-// ╔══════════════════════════════════════════╗
-// ║              BOARD RENDER                ║
-// ╚══════════════════════════════════════════╝
-// Space index → grid position [row, col] (0-indexed)
+// ╔══════════════════════════════════════════════════╗
+// ║              BOARD HELPERS                       ║
+// ╚══════════════════════════════════════════════════╝
 function spaceToGrid(idx){
   if(idx===0) return [10,10];
   if(idx<=9)  return [10,10-idx];
@@ -897,205 +583,359 @@ function spaceToGrid(idx){
   if(idx<=39) return [idx-30,10];
   return [0,0];
 }
-// Get pixel center of a cell
-function cellCenter(idx){
+
+function cellPixelPos(idx){
   const [r,c]=spaceToGrid(idx);
-  const board=document.getElementById('board');
-  const rect=board.getBoundingClientRect();
-  // grid cols: 90 + 9×54 + 90 = 672
-  const colWidths=[90,...Array(9).fill(54),90];
-  const rowHeights=[90,...Array(9).fill(54),90];
   let x=0,y=0;
-  for(let i=0;i<c;i++) x+=colWidths[i];
-  for(let i=0;i<r;i++) y+=rowHeights[i];
-  x+=colWidths[c]/2;
-  y+=rowHeights[r]/2;
-  return {x,y};
+  for(let i=0;i<c;i++) x+=COL_W[i];
+  for(let i=0;i<r;i++) y+=ROW_H[i];
+  return {x,y,w:COL_W[c],h:ROW_H[r]};
 }
 
-function renderBoard(){
-  const board=document.getElementById('board');
-  board.innerHTML='';
-  const meta=COUNTRY_META[G.country];
-  board.style.background='#f5f0e0';
+function cellCenter(idx){
+  const p=cellPixelPos(idx);
+  return {x:p.x+p.w/2, y:p.y+p.h/2};
+}
 
-  // Build a 11×11 grid mapping
-  const grid=Array.from({length:11},()=>Array(11).fill(null));
+function hexToNum(hex){
+  if(typeof hex==='number') return hex;
+  return parseInt(hex.replace('#',''),16);
+}
+
+// ╔══════════════════════════════════════════════════╗
+// ║              GAME SCREEN                         ║
+// ╚══════════════════════════════════════════════════╝
+let cellContainers=[];
+let tokenSprites=[];
+let diceSprites=[];
+let sidebarElements={};
+let logTexts=[];
+
+function clearScenes(){
+  if(welcomeScene){welcomeScene.destroy({children:true});welcomeScene=null;}
+  if(gameScene){gameScene.destroy({children:true});gameScene=null;}
+  rootContainer.removeChildren();
+}
+
+function showGameScreen(){
+  clearScenes();
+  gameScene=new PIXI.Container();
+  rootContainer.addChild(gameScene);
+
+  boardContainer=new PIXI.Container();
+  tokenLayer=new PIXI.Container();
+  sidebarContainer=new PIXI.Container();
+  modalLayer=new PIXI.Container();
+  modalLayer.visible=false;
+
+  gameScene.addChild(boardContainer);
+  gameScene.addChild(tokenLayer);
+  gameScene.addChild(sidebarContainer);
+  gameScene.addChild(modalLayer);
+
+  renderBoard();
+  renderSidebar();
+  updateTokens();
+  layoutGame();
+}
+
+function layoutGame(){
+  if(!gameScene) return;
+  const w=app.screen.width, h=app.screen.height;
+  const isPortrait=w<h;
+
+  if(isPortrait){
+    // 直向：棋盤上方，控制面板下方
+    const scale=Math.min((w-20)/boardSize,(h*0.55)/boardSize);
+    boardContainer.scale.set(scale);
+    boardContainer.x=(w-boardSize*scale)/2;
+    boardContainer.y=10;
+    tokenLayer.scale.set(scale);
+    tokenLayer.x=boardContainer.x;
+    tokenLayer.y=boardContainer.y;
+    // 側邊欄在棋盤下方
+    const sideY=boardSize*scale+20;
+    sidebarContainer.x=10;
+    sidebarContainer.y=sideY;
+    renderSidebar(w-20,h-sideY-10,true);
+  } else {
+    // 橫向：棋盤左側，側邊欄右側
+    const sideW=Math.min(300,w*0.3);
+    const boardAvail=w-sideW-30;
+    const scale=Math.min(boardAvail/boardSize,(h-20)/boardSize);
+    boardContainer.scale.set(scale);
+    boardContainer.x=10;
+    boardContainer.y=(h-boardSize*scale)/2;
+    tokenLayer.scale.set(scale);
+    tokenLayer.x=boardContainer.x;
+    tokenLayer.y=boardContainer.y;
+    sidebarContainer.x=boardSize*scale+20;
+    sidebarContainer.y=10;
+    renderSidebar(sideW,h-20,false);
+  }
+}
+
+// ╔══════════════════════════════════════════════════╗
+// ║              BOARD RENDER                        ║
+// ╚══════════════════════════════════════════════════╝
+function renderBoard(){
+  boardContainer.removeChildren();
+  cellContainers=[];
+  const meta=COUNTRY_META[G.country];
+
+  // 棋盤底色
+  const boardBg=new PIXI.Graphics();
+  boardBg.rect(0,0,boardSize,boardSize).fill(BOARD_BG);
+  boardContainer.addChild(boardBg);
+
+  // 中心區域
+  const centerX=COL_W[0], centerY=ROW_H[0];
+  const centerW=boardSize-COL_W[0]-COL_W[10];
+  const centerH=boardSize-ROW_H[0]-ROW_H[10];
+  const center=new PIXI.Container();
+  const centerBg=new PIXI.Graphics();
+  centerBg.rect(0,0,centerW,centerH).fill({color:meta.cc});
+  center.addChild(centerBg);
+
+  // 中心裝飾
+  const decoText=new PIXI.Text({text:meta.center,style:{fontSize:50}});
+  decoText.anchor.set(0.5);decoText.x=centerW/2;decoText.y=centerH*0.35;
+  center.addChild(decoText);
+
+  const countryName=new PIXI.Text({text:meta.name,style:{
+    fontFamily:'Cinzel Decorative',fontSize:32,fontWeight:'bold',
+    fill:hexToNum(meta.accent),
+  }});
+  countryName.anchor.set(0.5);countryName.x=centerW/2;countryName.y=centerH*0.55;
+  center.addChild(countryName);
+
+  const subtitle=new PIXI.Text({text:meta.en+' Monopoly',style:{
+    fontFamily:'Playfair Display',fontStyle:'italic',fontSize:14,
+    fill:0x888888, letterSpacing:4,
+  }});
+  subtitle.anchor.set(0.5);subtitle.x=centerW/2;subtitle.y=centerH*0.68;
+  center.addChild(subtitle);
+
+  center.x=centerX;center.y=centerY;
+  boardContainer.addChild(center);
+
+  // 繪製每個格子
   G.spaces.forEach(s=>{
     const [r,c]=spaceToGrid(s.id);
-    grid[r][c]=s;
+    const pos=cellPixelPos(s.id);
+    const cell=new PIXI.Container();
+    cell.x=pos.x;cell.y=pos.y;
+    cell._spaceId=s.id;
+
+    // 格子底色
+    const bg=new PIXI.Graphics();
+    let bgColor=BOARD_BG;
+    if(s.type==='chance') bgColor=0xfff9e6;
+    else if(s.type==='comm') bgColor=0xebf5fb;
+    else if(s.type==='tax') bgColor=0xfef9f9;
+    bg.rect(0,0,pos.w,pos.h).fill(bgColor);
+    bg.rect(0,0,pos.w,pos.h).stroke({color:0xc8bfa0,width:0.5});
+    cell.addChild(bg);
+
+    // 色帶
+    if(s.group && (s.type==='prop'||s.type==='rr'||s.type==='util')){
+      const band=new PIXI.Graphics();
+      const bColor=hexToNum(GROUPS[s.group].hex);
+      const bSize=22;
+      if(r===10&&c>0&&c<10){band.rect(0,0,pos.w,bSize).fill(bColor);}
+      else if(c===0&&r>0&&r<10){band.rect(pos.w-bSize,0,bSize,pos.h).fill(bColor);}
+      else if(r===0&&c>0&&c<10){band.rect(0,pos.h-bSize,pos.w,bSize).fill(bColor);}
+      else if(c===10&&r>0&&r<10){band.rect(0,0,bSize,pos.h).fill(bColor);}
+      cell.addChild(band);
+    }
+
+    // 文字內容
+    if(s.type==='go'){
+      drawCornerCell(cell,pos,'▶','出發點','領取$200','#2ecc71');
+    } else if(s.type==='jail'){
+      drawCornerCell(cell,pos,'⛓','監獄','僅經過','#95a5a6');
+    } else if(s.type==='free'){
+      drawCornerCell(cell,pos,'🅿','免費停車','','#3498db');
+    } else if(s.type==='gotojail'){
+      drawCornerCell(cell,pos,'🚔','前往監獄','','#c0392b');
+    } else if(s.type==='prop'||s.type==='rr'||s.type==='util'){
+      drawPropertyCell(cell,s,r,c,pos);
+      cell.eventMode='static';cell.cursor='pointer';
+      cell.on('pointertap',()=>showPropInfo(s.id));
+    } else if(s.type==='chance'){
+      drawSpecialCell(cell,s,r,c,pos,'?',0xe67e22);
+    } else if(s.type==='comm'){
+      drawSpecialCell(cell,s,r,c,pos,'📦',0x2980b9);
+    } else if(s.type==='tax'){
+      drawSpecialCell(cell,s,r,c,pos,s.id===4?'📋':'💎',0xc0392b);
+    }
+
+    boardContainer.addChild(cell);
+    cellContainers[s.id]=cell;
   });
-  // Center
-  grid[5][5]={id:-1,type:'center'};
 
-  for(let r=0;r<11;r++){
-    for(let c=0;c<11;c++){
-      const s=grid[r][c];
-      const cell=document.createElement('div');
-      cell.className='cell';
-      if(r===0&&c===0||r===0&&c===10||r===10&&c===0||r===10&&c===10){
-        cell.classList.add('corner');
-      }
-      // inner area
-      if(r>=1&&r<=9&&c>=1&&c<=9){
-        if(r===1&&c===1&&r===c){/* not center */ }
-        if(s&&s.id===-1){
-          // Center cell spanning 9×9
-          cell.style.gridColumn='2/11';cell.style.gridRow='2/11';
-          cell.className='cell board-center';
-          const meta2=COUNTRY_META[G.country];
-          cell.innerHTML=`<div class="bc-deco">${meta2.center.split('\n')[0]}</div>
-            <div class="bc-country" style="color:${meta2.accent}">${meta2.name}</div>
-            <div class="bc-sub">${meta2.en} Monopoly</div>`;
-          cell.style.background=meta2.cc;
-          board.appendChild(cell);
-          r=9;c=9;// skip rest of inner
-          continue;
-        }
-        if(!s||s.id===-1) continue;
-      }
-      if(!s) {board.appendChild(cell);continue;}
+  // 金色邊框
+  const border=new PIXI.Graphics();
+  border.rect(0,0,boardSize,boardSize).stroke({color:GOLD,width:3});
+  boardContainer.addChild(border);
+}
 
-      if(s.id===-1){board.appendChild(cell);continue;}
+function drawCornerCell(cell,pos,icon,label,sub,color){
+  const iconText=new PIXI.Text({text:icon,style:{fontSize:24}});
+  iconText.anchor.set(0.5);iconText.x=pos.w/2;iconText.y=pos.h*0.35;
+  cell.addChild(iconText);
 
-      // Determine band direction based on position
-      // bottom row (r=10): band at top of cell
-      // left col (c=0): band at right
-      // top row (r=0): band at bottom
-      // right col (c=10): band at left
-      let bandPos='none';
-      if(r===10&&c>0&&c<10) bandPos='top';
-      else if(c===0&&r>0&&r<10) bandPos='right';
-      else if(r===0&&c>0&&c<10) bandPos='bottom';
-      else if(c===10&&r>0&&r<10) bandPos='left';
+  const labelText=new PIXI.Text({text:label,style:{
+    fontFamily:'Noto Serif TC',fontSize:10,fontWeight:'bold',
+    fill:0x2a2218,align:'center',
+  }});
+  labelText.anchor.set(0.5);labelText.x=pos.w/2;labelText.y=pos.h*0.6;
+  cell.addChild(labelText);
 
-      // Rotation for column cells
-      if(c===0&&r>0&&r<10) cell.classList.add('rot-cw');
-      if(c===10&&r>0&&r<10) cell.classList.add('rot-ccw');
+  if(sub){
+    const subText=new PIXI.Text({text:sub,style:{
+      fontFamily:'Noto Serif TC',fontSize:7,fill:hexToNum(color),
+    }});
+    subText.anchor.set(0.5);subText.x=pos.w/2;subText.y=pos.h*0.78;
+    cell.addChild(subText);
+  }
+}
 
-      if(s.type==='prop'||s.type==='rr'||s.type==='util'){
-        if(s.type==='prop') cell.classList.add('prop-cell');
-        cell.setAttribute('data-id',s.id);
-        if(s.type==='prop') cell.addEventListener('click',()=>showPropInfo(s.id));
+function drawPropertyCell(cell,s,r,c,pos){
+  const isVert=(c===0||c===10)&&r>0&&r<10;
+  const inner=new PIXI.Container();
 
-        if(s.group&&bandPos!=='none'){
-          const band=document.createElement('div');
-          band.className=`cband band-${bandPos.charAt(0)}`;
-          band.style.background=GROUPS[s.group].hex;
-          cell.appendChild(band);
-        }
+  const nameText=new PIXI.Text({text:s.name.replace('\n',' '),style:{
+    fontFamily:'Noto Serif TC',fontSize:isVert?7:8,fontWeight:'bold',
+    fill:0x2a2218,align:'center',wordWrap:true,wordWrapWidth:isVert?pos.h-28:pos.w-6,
+  }});
+  nameText.anchor.set(0.5);
 
-        const inner=document.createElement('div');
-        inner.className='cell-inner';
-        inner.id=`ci-${s.id}`;
+  const priceText=new PIXI.Text({text:s.price?`$${s.price}`:'',style:{
+    fontFamily:'Noto Serif TC',fontSize:6.5,fill:0x7a6a50,
+  }});
+  priceText.anchor.set(0.5);
 
-        const nameEl=document.createElement('div');
-        nameEl.className='cell-name';
-        nameEl.textContent=s.name;
-
-        const priceEl=document.createElement('div');
-        priceEl.className='cell-price';
-        priceEl.textContent=s.price?`$${s.price}`:'';
-
-        const blds=document.createElement('div');
-        blds.className='buildings';blds.id=`bld-${s.id}`;
-
-        inner.append(nameEl,priceEl);
-        cell.append(inner,blds);
-
-      } else if(s.type==='go'){
-        cell.classList.add('corner');
-        cell.innerHTML=`<div class="corner-inner">
-          <div class="corner-icon">▶</div>
-          <div class="corner-label">出發點<br><span style="color:#c0392b;font-size:7px">領取$200</span></div>
-        </div>`;
-      } else if(s.type==='jail'){
-        cell.classList.add('corner');
-        cell.innerHTML=`<div class="corner-inner">
-          <div class="corner-icon">⛓</div>
-          <div class="corner-label">監獄<br><span style="font-size:7px;color:#666">僅經過</span></div>
-        </div>`;
-      } else if(s.type==='free'){
-        cell.classList.add('corner');
-        cell.innerHTML=`<div class="corner-inner">
-          <div class="corner-icon">🅿</div>
-          <div class="corner-label">免費停車</div>
-        </div>`;
-      } else if(s.type==='gotojail'){
-        cell.classList.add('corner');
-        cell.innerHTML=`<div class="corner-inner">
-          <div class="corner-icon">🚔</div>
-          <div class="corner-label" style="color:#c0392b">前往<br>監獄</div>
-        </div>`;
-      } else if(s.type==='chance'){
-        let rot='';
-        if(c===0) rot='rot-cw';if(c===10) rot='rot-ccw';
-        cell.innerHTML=`<div class="cell-inner ${rot}">
-          <div class="cell-icon">?</div>
-          <div class="cell-name" style="color:#e67e22;font-weight:700">機會</div>
-        </div>`;
-        cell.style.background='#fff9e6';
-      } else if(s.type==='comm'){
-        let rot='';
-        if(c===0) rot='rot-cw';if(c===10) rot='rot-ccw';
-        cell.innerHTML=`<div class="cell-inner ${rot}">
-          <div class="cell-icon">📦</div>
-          <div class="cell-name" style="color:#2980b9;font-weight:700">命運</div>
-        </div>`;
-        cell.style.background='#ebf5fb';
-      } else if(s.type==='tax'){
-        let rot='';
-        if(c===0) rot='rot-cw';if(c===10) rot='rot-ccw';
-        const isIncome=s.id===4;
-        cell.innerHTML=`<div class="cell-inner ${rot}">
-          <div class="cell-icon">${isIncome?'📋':'💎'}</div>
-          <div class="cell-name" style="color:#c0392b">${s.name}</div>
-          <div class="cell-price">${isIncome?'$200':'$75'}</div>
-        </div>`;
-        cell.style.background='#fef9f9';
-      }
-
-      board.appendChild(cell);
+  if(isVert){
+    // 旋轉文字
+    const rot=c===0?Math.PI/2:-Math.PI/2;
+    inner.rotation=rot;
+    inner.x=pos.w/2;inner.y=pos.h/2;
+    nameText.x=0;nameText.y=-6;
+    priceText.x=0;priceText.y=6;
+  } else {
+    inner.x=pos.w/2;inner.y=pos.h/2;
+    // 底部行：文字在色帶下面
+    if(r===10){
+      nameText.x=0;nameText.y=4;
+      priceText.x=0;priceText.y=16;
+    } else {
+      nameText.x=0;nameText.y=-8;
+      priceText.x=0;priceText.y=4;
     }
   }
-  updateBuildings();
+
+  inner.addChild(nameText,priceText);
+  cell.addChild(inner);
+
+  // 建築容器
+  const bldContainer=new PIXI.Container();
+  bldContainer.label='buildings';
+  cell.addChild(bldContainer);
+
+  // 擁有者圓點容器
+  const ownerDot=new PIXI.Graphics();
+  ownerDot.label='ownerDot';
+  ownerDot.visible=false;
+  cell.addChild(ownerDot);
+}
+
+function drawSpecialCell(cell,s,r,c,pos,icon,color){
+  const isVert=(c===0||c===10)&&r>0&&r<10;
+  const inner=new PIXI.Container();
+
+  const iconText=new PIXI.Text({text:icon,style:{fontSize:14}});
+  iconText.anchor.set(0.5);
+
+  const nameText=new PIXI.Text({text:s.name,style:{
+    fontFamily:'Noto Serif TC',fontSize:7.5,fontWeight:'bold',fill:color,
+  }});
+  nameText.anchor.set(0.5);
+
+  if(s.type==='tax'){
+    const priceText=new PIXI.Text({text:s.id===4?'$200':'$75',style:{
+      fontFamily:'Noto Serif TC',fontSize:6.5,fill:0x7a6a50,
+    }});
+    priceText.anchor.set(0.5);
+    priceText.y=12;
+    inner.addChild(priceText);
+  }
+
+  if(isVert){
+    const rot=c===0?Math.PI/2:-Math.PI/2;
+    inner.rotation=rot;
+    inner.x=pos.w/2;inner.y=pos.h/2;
+    iconText.y=-8;nameText.y=6;
+  } else {
+    inner.x=pos.w/2;inner.y=pos.h/2;
+    iconText.y=-8;nameText.y=6;
+  }
+
+  inner.addChild(iconText,nameText);
+  cell.addChild(inner);
 }
 
 function updateBuildings(){
   if(!G) return;
   G.spaces.forEach(s=>{
-    if(s.type!=='prop') return;
-    const el=document.getElementById(`bld-${s.id}`);
-    if(!el) return;
-    el.innerHTML='';
-    for(let i=0;i<s.buildings;i++){
-      const b=document.createElement('div');
-      b.className=s.buildings===5?'bld-hotel':'bld-house';
-      el.appendChild(b);
-      if(s.buildings===5) break;
+    const cell=cellContainers[s.id];
+    if(!cell) return;
+
+    // 更新建築
+    const bld=cell.children.find(c=>c.label==='buildings');
+    if(bld){
+      bld.removeChildren();
+      if(s.type==='prop'&&s.buildings>0){
+        const [r,c]=spaceToGrid(s.id);
+        const pos=cellPixelPos(s.id);
+        for(let i=0;i<(s.buildings===5?1:s.buildings);i++){
+          const b=new PIXI.Graphics();
+          if(s.buildings===5){
+            b.rect(0,0,12,8).fill(0xc0392b);
+          } else {
+            b.rect(0,0,7,6).fill(0x1a7a1a);
+          }
+          b.x=pos.w/2-((s.buildings===5?1:s.buildings)*9)/2+i*9;
+          b.y=r===10?pos.h-10:r===0?2:(c===0?pos.w-10:2);
+          bld.addChild(b);
+        }
+      }
     }
-    // owner dot
-    const ci=document.getElementById(`ci-${s.id}`);
-    if(ci){
-      const old=ci.querySelector('.owner-dot');
-      if(old)old.remove();
+
+    // 更新擁有者圓點
+    const dot=cell.children.find(c=>c.label==='ownerDot');
+    if(dot){
+      dot.clear();
       if(s.owner!==null){
-        const dot=document.createElement('div');
-        dot.className='owner-dot';
-        dot.style.background=G.players[s.owner].color;
-        ci.appendChild(dot);
+        const pos=cellPixelPos(s.id);
+        dot.circle(pos.w-6,pos.h-6,4).fill(hexToNum(G.players[s.owner].color));
+        dot.circle(pos.w-6,pos.h-6,4).stroke({color:0xffffff,width:0.5});
+        dot.visible=true;
+      } else {
+        dot.visible=false;
       }
     }
   });
 }
 
-// ╔══════════════════════════════════════════╗
-// ║              TOKENS                      ║
-// ╚══════════════════════════════════════════╝
-function updateTokens(){
+// ╔══════════════════════════════════════════════════╗
+// ║              TOKENS                              ║
+// ╚══════════════════════════════════════════════════╝
+function updateTokens(animate=false){
   if(!G) return;
-  const layer=document.getElementById('token-layer');
-  layer.innerHTML='';
+  tokenLayer.removeChildren();
+  tokenSprites=[];
+
   const byPos={};
   G.players.forEach(p=>{
     if(!p.bankrupt){
@@ -1103,105 +943,354 @@ function updateTokens(){
       byPos[p.position].push(p);
     }
   });
+
   G.players.forEach(p=>{
     if(p.bankrupt) return;
     const {x,y}=cellCenter(p.position);
     const slot=byPos[p.position].indexOf(p);
-    const offsets=[[-4,-4],[4,-4],[-4,4],[4,4]];
+    const offsets=[[-6,-6],[6,-6],[-6,6],[6,6]];
     const [ox,oy]=offsets[slot]||[0,0];
-    const tok=document.createElement('div');
-    tok.className='token';
-    tok.style.background=p.color;
-    tok.style.left=(x+ox-10)+'px';
-    tok.style.top=(y+oy-10)+'px';
-    tok.textContent=p.name.charAt(0);
-    tok.title=p.name;
-    layer.appendChild(tok);
+
+    const tok=new PIXI.Container();
+    const circle=new PIXI.Graphics();
+    circle.circle(0,0,12).fill(hexToNum(p.color));
+    circle.circle(0,0,12).stroke({color:0xffffff,width:2});
+    tok.addChild(circle);
+
+    const avatar=new PIXI.Text({text:p.avatar,style:{fontSize:12}});
+    avatar.anchor.set(0.5);avatar.y=-1;
+    tok.addChild(avatar);
+
+    tok.x=x+ox;tok.y=y+oy;
+    tok._playerId=p.id;
+    tokenLayer.addChild(tok);
+    tokenSprites[p.id]=tok;
   });
 }
 
-// ╔══════════════════════════════════════════╗
-// ║              SIDEBAR                     ║
-// ╚══════════════════════════════════════════╝
-function renderSidebar(){
+async function animateTokenMove(player,oldPos,newPos){
+  const tok=tokenSprites[player.id];
+  if(!tok) return;
+
+  // 先把代幣放回舊位置
+  const startPos=cellCenter(oldPos);
+  tok.x=startPos.x;tok.y=startPos.y;
+
+  // 計算路徑，逐格移動
+  const numSteps=((newPos-oldPos)+40)%40;
+  for(let i=1;i<=numSteps;i++){
+    const p=(oldPos+i)%40;
+    const {x,y}=cellCenter(p);
+    await tween(tok,{x,y},80,easeOutCubic);
+    // 每步檢查 tok 是否仍在顯示列表中
+    if(!tok.parent) return;
+  }
+}
+
+// ╔══════════════════════════════════════════════════╗
+// ║              SIDEBAR                             ║
+// ╚══════════════════════════════════════════════════╝
+function renderSidebar(availW,availH,isPortrait){
   if(!G) return;
-  const pl=document.getElementById('player-list');
-  pl.innerHTML='';
+  sidebarContainer.removeChildren();
+  const w=availW||280, h=availH||600;
+
+  // 背景
+  const bg=new PIXI.Graphics();
+  bg.roundRect(0,0,w,h,12).fill({color:0x111122,alpha:0.9});
+  bg.roundRect(0,0,w,h,12).stroke({color:GOLD,width:1,alpha:0.3});
+  sidebarContainer.addChild(bg);
+
+  let yOff=12;
+
+  // 玩家狀況標題
+  const pTitle=new PIXI.Text({text:'玩家狀況',style:{
+    fontFamily:'Noto Serif TC',fontSize:11,fill:GOLD,letterSpacing:3,
+  }});
+  pTitle.x=14;pTitle.y=yOff;
+  sidebarContainer.addChild(pTitle);
+  yOff+=24;
+
+  // 玩家卡片
   G.players.forEach((p,i)=>{
-    const card=document.createElement('div');
-    card.className='pcard'+(i===G.current?' active':'')+(p.bankrupt?' bankrupt':'');
+    const card=new PIXI.Container();
+    card.y=yOff;card.x=8;
+
+    const cardBg=new PIXI.Graphics();
+    const isActive=i===G.current;
+    cardBg.roundRect(0,0,w-16,42,8);
+    if(isActive) cardBg.fill({color:GOLD,alpha:0.1});
+    else cardBg.fill({color:0xffffff,alpha:0.02});
+    if(isActive) cardBg.roundRect(0,0,w-16,42,8).stroke({color:GOLD,width:1,alpha:0.3});
+    card.addChild(cardBg);
+
+    // 頭像
+    const avatarBg=new PIXI.Graphics();
+    avatarBg.circle(20,21,14).fill(hexToNum(p.color));
+    if(p.bankrupt) avatarBg.alpha=0.3;
+    card.addChild(avatarBg);
+
+    const avatarText=new PIXI.Text({text:p.avatar,style:{fontSize:14}});
+    avatarText.anchor.set(0.5);avatarText.x=20;avatarText.y=20;
+    if(p.bankrupt) avatarText.alpha=0.3;
+    card.addChild(avatarText);
+
+    // 名字
+    const name=new PIXI.Text({text:p.name+(p.isAI?' 🤖':''),style:{
+      fontFamily:'Noto Serif TC',fontSize:12,fontWeight:'bold',
+      fill:p.bankrupt?0x666666:TEXT_COLOR,
+    }});
+    name.x=40;name.y=6;
+    card.addChild(name);
+
+    // 金錢
+    const money=new PIXI.Text({text:`$${p.money}`,style:{
+      fontFamily:'Noto Serif TC',fontSize:11,fontWeight:'bold',
+      fill:p.bankrupt?0x666666:GOLD,
+    }});
+    money.x=40;money.y=22;
+    card.addChild(money);
+
+    // 地產數量
     const props=G.spaces.filter(s=>s.owner===i);
-    card.innerHTML=`
-      <div class="p-avatar" style="background:${p.color}">${p.name.charAt(0)}</div>
-      <div class="p-info">
-        <div class="p-name">${p.name}${p.isAI?' 🤖':''}</div>
-        <div class="p-money">$${p.money}</div>
-        <div class="p-badges">
-          ${props.length?`<span class="p-badge">🏠×${props.length}</span>`:''}
-          ${p.inJail?'<span class="p-badge" style="color:#e74c3c">⛓ 監獄</span>':''}
-          ${p.bankrupt?'<span class="p-badge" style="color:#e74c3c">💸 破產</span>':''}
-        </div>
-      </div>
-      ${i===G.current&&!p.bankrupt?'<div class="active-indicator"></div>':''}
-    `;
-    pl.appendChild(card);
+    if(props.length>0){
+      const badge=new PIXI.Text({text:`🏠×${props.length}`,style:{
+        fontFamily:'Noto Serif TC',fontSize:9,fill:0x888888,
+      }});
+      badge.x=100;badge.y=24;
+      card.addChild(badge);
+    }
+
+    if(p.inJail){
+      const jail=new PIXI.Text({text:'⛓監獄',style:{
+        fontFamily:'Noto Serif TC',fontSize:9,fill:0xe74c3c,
+      }});
+      jail.x=140;jail.y=24;
+      card.addChild(jail);
+    }
+
+    if(p.bankrupt){
+      const bankrupt=new PIXI.Text({text:'💸破產',style:{
+        fontFamily:'Noto Serif TC',fontSize:9,fill:0xe74c3c,
+      }});
+      bankrupt.x=100;bankrupt.y=8;
+      card.addChild(bankrupt);
+    }
+
+    // 活躍指示器
+    if(isActive&&!p.bankrupt){
+      const dot=new PIXI.Graphics();
+      dot.circle(w-28,21,4).fill(GOLD);
+      card.addChild(dot);
+    }
+
+    sidebarContainer.addChild(card);
+    yOff+=48;
   });
 
-  const cur=G.players[G.current];
-  const label=document.getElementById('turn-label');
-  label.textContent=`${cur.name} 的回合`;
+  yOff+=8;
 
-  document.getElementById('btn-roll').classList.toggle('hidden',G.phase!=='roll');
-  document.getElementById('btn-endturn').classList.toggle('hidden',G.phase!=='post');
-  document.getElementById('btn-bail').classList.toggle('hidden',!(G.phase==='roll'&&cur.inJail));
-  document.getElementById('btn-roll').disabled=false;
+  // 回合標題
+  const cur=G.players[G.current];
+  const turnLabel=new PIXI.Text({text:`${cur.name} 的回合`,style:{
+    fontFamily:'Noto Serif TC',fontSize:12,fill:GOLD,letterSpacing:3,
+  }});
+  turnLabel.x=14;turnLabel.y=yOff;
+  sidebarContainer.addChild(turnLabel);
+  yOff+=24;
+
+  // 骰子
+  const diceContainer=new PIXI.Container();
+  diceContainer.x=w/2;diceContainer.y=yOff+30;
+  drawDice(diceContainer,G.dice[0],G.dice[1]);
+  sidebarContainer.addChild(diceContainer);
+  sidebarElements.diceContainer=diceContainer;
+  yOff+=70;
+
+  // 骰子合計
+  if(G.dice[0]+G.dice[1]>0){
+    const total=new PIXI.Text({text:`合計：${G.dice[0]+G.dice[1]}${G.doublesRolled?' 🎉 雙胞胎！':''}`,style:{
+      fontFamily:'Noto Serif TC',fontSize:13,fontWeight:'bold',fill:GOLD,align:'center',
+    }});
+    total.anchor.set(0.5);total.x=w/2;total.y=yOff;
+    sidebarContainer.addChild(total);
+  }
+  yOff+=20;
+
+  // 按鈕
+  if(G.phase==='roll'){
+    const rollBtn=createButton('🎲 擲骰子',w-28,44,GOLD,0x1a1000,()=>doRoll());
+    rollBtn.x=14;rollBtn.y=yOff;
+    sidebarContainer.addChild(rollBtn);
+    yOff+=52;
+
+    if(cur.inJail){
+      const bailBtn=createButton('繳保釋金 $50',w-28,36,0x333333,TEXT_COLOR,()=>doBailJail());
+      bailBtn.x=14;bailBtn.y=yOff;
+      sidebarContainer.addChild(bailBtn);
+      yOff+=44;
+    }
+  }
+
+  if(G.phase==='post'){
+    const endBtn=createButton('結束回合 →',w-28,44,0x333355,TEXT_COLOR,()=>doEndTurn());
+    endBtn.x=14;endBtn.y=yOff;
+    sidebarContainer.addChild(endBtn);
+    yOff+=52;
+  }
+
+  // 遊戲日誌
+  yOff+=4;
+  const logTitle=new PIXI.Text({text:'遊戲紀錄',style:{
+    fontFamily:'Noto Serif TC',fontSize:11,fill:GOLD,letterSpacing:3,
+  }});
+  logTitle.x=14;logTitle.y=yOff;
+  sidebarContainer.addChild(logTitle);
+  yOff+=20;
+
+  const logBg=new PIXI.Graphics();
+  const logH=Math.max(80,h-yOff-10);
+  logBg.roundRect(8,yOff,w-16,logH,8).fill({color:0x000000,alpha:0.3});
+  sidebarContainer.addChild(logBg);
+
+  // 日誌文字
+  const logContainer=new PIXI.Container();
+  const mask=new PIXI.Graphics();
+  mask.rect(8,yOff,w-16,logH).fill(0xffffff);
+  logContainer.mask=mask;
+  sidebarContainer.addChild(mask);
+
+  let ly=yOff+4;
+  G.log.slice(0,15).forEach(e=>{
+    let color=0x888888;
+    if(e.type==='good') color=0x2ecc71;
+    if(e.type==='warn') color=0xe74c3c;
+    if(e.type==='gold') color=GOLD;
+    const line=new PIXI.Text({text:e.msg,style:{
+      fontFamily:'Noto Serif TC',fontSize:9,fill:color,wordWrap:true,wordWrapWidth:w-36,
+    }});
+    line.x=14;line.y=ly;
+    logContainer.addChild(line);
+    ly+=line.height+2;
+  });
+  sidebarContainer.addChild(logContainer);
+
+  // 回主選單
+  const menuBtn=createButton('↩ 回主選單',w-28,32,0x222233,0x888888,()=>{
+    G=null;showWelcomeScreen();
+  });
+  menuBtn.x=14;menuBtn.y=h-40;
+  sidebarContainer.addChild(menuBtn);
 }
 
+function drawDice(container,d1,d2){
+  container.removeChildren();
+  const dieSize=46;
+  [-30,30].forEach((ox,i)=>{
+    const val=i===0?d1:d2;
+    const die=new PIXI.Container();
+    const bg=new PIXI.Graphics();
+    bg.roundRect(-dieSize/2,-dieSize/2,dieSize,dieSize,8).fill(0xffffff);
+    bg.roundRect(-dieSize/2,-dieSize/2,dieSize,dieSize,8).stroke({color:0xcccccc,width:1});
+    die.addChild(bg);
+
+    // 畫點
+    const dotR=4;
+    const dotPositions={
+      1:[[0,0]],
+      2:[[-10,-10],[10,10]],
+      3:[[-10,-10],[0,0],[10,10]],
+      4:[[-10,-10],[10,-10],[-10,10],[10,10]],
+      5:[[-10,-10],[10,-10],[0,0],[-10,10],[10,10]],
+      6:[[-10,-10],[10,-10],[-10,0],[10,0],[-10,10],[10,10]],
+    };
+    const dots=new PIXI.Graphics();
+    (dotPositions[val]||dotPositions[1]).forEach(([dx,dy])=>{
+      dots.circle(dx,dy,dotR).fill(0x222222);
+    });
+    die.addChild(dots);
+    die.x=ox;
+    container.addChild(die);
+  });
+}
+
+function createButton(text,w,h,bgColor,textColor,onClick){
+  const btn=new PIXI.Container();
+  btn.eventMode='static';btn.cursor='pointer';
+
+  const bg=new PIXI.Graphics();
+  bg.roundRect(0,0,w,h,8).fill(bgColor);
+  btn.addChild(bg);
+
+  const label=new PIXI.Text({text,style:{
+    fontFamily:'Noto Serif TC',fontSize:14,fontWeight:'bold',fill:textColor,
+  }});
+  label.anchor.set(0.5);label.x=w/2;label.y=h/2;
+  btn.addChild(label);
+
+  btn.on('pointerover',()=>{bg.alpha=0.8;});
+  btn.on('pointerout',()=>{bg.alpha=1;});
+  btn.on('pointertap',onClick);
+
+  return btn;
+}
+
+// ╔══════════════════════════════════════════════════╗
+// ║              LOG                                 ║
+// ╚══════════════════════════════════════════════════╝
+let sidebarDirty=false;
 function addLog(msg,type=''){
+  if(!G) return;
   G.log.unshift({msg,type});
   if(G.log.length>50)G.log.pop();
-  const el=document.getElementById('game-log');
-  el.innerHTML=G.log.slice(0,30).map(e=>{
-    let cls='log-line';
-    if(e.type==='good')cls+=' log-good';
-    if(e.type==='warn')cls+=' log-warn';
-    if(e.type==='gold')cls+=' log-highlight';
-    return `<div class="${cls}">${e.msg}</div>`;
-  }).join('');
+  // 標記需要更新，而非立即重建（避免動畫中斷）
+  sidebarDirty=true;
+  scheduleSidebarUpdate();
+}
+let sidebarUpdateTimer=null;
+function scheduleSidebarUpdate(){
+  if(sidebarUpdateTimer) return;
+  sidebarUpdateTimer=setTimeout(()=>{
+    sidebarUpdateTimer=null;
+    if(sidebarDirty){sidebarDirty=false;renderSidebar();}
+  },50);
+}
+function refreshSidebar(){
+  // 立即更新
+  sidebarDirty=false;
+  if(sidebarUpdateTimer){clearTimeout(sidebarUpdateTimer);sidebarUpdateTimer=null;}
+  renderSidebar();
 }
 
-// ╔══════════════════════════════════════════╗
-// ║              DICE                        ║
-// ╚══════════════════════════════════════════╝
-function doRoll(){
-  if(G.phase!=='roll')return;
+// ╔══════════════════════════════════════════════════╗
+// ║              DICE                                ║
+// ╚══════════════════════════════════════════════════╝
+let isRolling=false, isMoving=false;
+async function doRoll(){
+  if(G.phase!=='roll'||isRolling||isMoving) return;
   const cur=G.players[G.current];
   if(cur.bankrupt){doEndTurn();return;}
+  isRolling=true;
 
-  document.getElementById('btn-roll').disabled=true;
-  document.getElementById('die1').classList.add('rolling');
-  document.getElementById('die2').classList.add('rolling');
+  const d1=1+Math.floor(Math.random()*6);
+  const d2=1+Math.floor(Math.random()*6);
 
-  // Animate dice
-  let frames=0;
-  const anim=setInterval(()=>{
-    document.getElementById('die1').textContent=DIE_FACES[0|Math.random()*6];
-    document.getElementById('die2').textContent=DIE_FACES[0|Math.random()*6];
-    frames++;
-    if(frames>10){
-      clearInterval(anim);
-      document.getElementById('die1').classList.remove('rolling');
-      document.getElementById('die2').classList.remove('rolling');
-      const d1=(1+0|Math.random()*6);
-      const d2=(1+0|Math.random()*6);
-      document.getElementById('die1').textContent=DIE_FACES[d1-1];
-      document.getElementById('die2').textContent=DIE_FACES[d2-1];
-      G.dice=[d1,d2];
-      G.doublesRolled=(d1===d2);
-      document.getElementById('dice-total').textContent=`合計：${d1+d2}${G.doublesRolled?' 🎉 雙胞胎！':''}`;
-      afterRoll(d1,d2);
+  // 骰子動畫：用 tween 做震動效果
+  const dc=sidebarElements.diceContainer;
+  if(dc){
+    for(let i=0;i<8;i++){
+      drawDice(dc,1+Math.floor(Math.random()*6),1+Math.floor(Math.random()*6));
+      await tween(dc,{'scale.x':0.95+Math.random()*0.1,'scale.y':0.95+Math.random()*0.1},60);
     }
-  },80);
+    dc.scale.set(1);
+    drawDice(dc,d1,d2);
+  }
+
+  G.dice=[d1,d2];
+  G.doublesRolled=(d1===d2);
+  isRolling=false;
+  refreshSidebar();
+  afterRoll(d1,d2);
 }
 
 function afterRoll(d1,d2){
@@ -1220,12 +1309,11 @@ function afterRoll(d1,d2){
         cur.money-=50;
       } else {
         addLog(`${cur.name} 在監獄裡（第${cur.jailTurns}回合）。`);
-        G.phase='post';renderSidebar();return;
+        G.phase='post';renderSidebar();autoAIEndTurn();return;
       }
     }
   }
 
-  // Doubles → extra turn
   if(G.doublesRolled){
     cur.doublesCount=(cur.doublesCount||0)+1;
     if(cur.doublesCount>=3){
@@ -1237,17 +1325,24 @@ function afterRoll(d1,d2){
   movePlayer(cur,total);
 }
 
-function movePlayer(player,steps){
-  const old=player.position;
+async function movePlayer(player,steps){
+  isMoving=true;
+  const oldPos=player.position;
   let newPos=(player.position+steps)%40;
-  // Pass GO
-  if(newPos<old&&!player.inJail||(old+steps>=40)){
+  if(newPos<oldPos||(oldPos+steps>=40)){
     player.money+=200;
     addLog(`${player.name} 經過出發點，領取 $200！`,'good');
   }
   player.position=newPos;
   updateTokens();
-  setTimeout(()=>landOn(player),300);
+
+  // 代幣移動動畫
+  try{
+    await animateTokenMove(player,oldPos,newPos);
+  }catch(e){}
+  updateTokens();
+  isMoving=false;
+  landOn(player);
 }
 
 function landOn(player){
@@ -1255,54 +1350,50 @@ function landOn(player){
   addLog(`${player.name} 停在 【${space.name}】`);
 
   switch(space.type){
-    case 'go': G.phase='post';renderSidebar();break;
-    case 'jail': G.phase='post';renderSidebar();break;
-    case 'free': G.phase='post';renderSidebar();break;
+    case 'go': G.phase='post';renderSidebar();autoAIEndTurn();break;
+    case 'jail': G.phase='post';renderSidebar();autoAIEndTurn();break;
+    case 'free': G.phase='post';renderSidebar();autoAIEndTurn();break;
     case 'gotojail': goToJailDirect();break;
     case 'tax':
       const amt=space.id===4?200:75;
       player.money-=amt;
       addLog(`${player.name} 繳稅 $${amt}。`,'warn');
       checkBankrupt(player);
-      G.phase='post';renderSidebar();
-      break;
-    case 'chance':
-      drawCard('chance',player);break;
-    case 'comm':
-      drawCard('comm',player);break;
-    case 'prop':
-    case 'rr':
-    case 'util':
+      G.phase='post';renderSidebar();autoAIEndTurn();break;
+    case 'chance': drawCard('chance',player);break;
+    case 'comm': drawCard('comm',player);break;
+    case 'prop':case 'rr':case 'util':
       handlePropertyLand(player,space);break;
-    default:
-      G.phase='post';renderSidebar();
+    default: G.phase='post';renderSidebar();autoAIEndTurn();
   }
 }
 
-// ╔══════════════════════════════════════════╗
-// ║              PROPERTY LOGIC              ║
-// ╚══════════════════════════════════════════╝
+// AI 自動結束回合（在設定 phase='post' 後呼叫）
+function autoAIEndTurn(){
+  if(G.phase==='post'&&G.players[G.current].isAI){
+    setTimeout(()=>doEndTurn(),600);
+  }
+}
+
+// ╔══════════════════════════════════════════════════╗
+// ║              PROPERTY LOGIC                      ║
+// ╚══════════════════════════════════════════════════╝
 function handlePropertyLand(player,space){
-  if(space.mortgaged){addLog(`${space.name} 已抵押，免收租金。`);G.phase='post';renderSidebar();return;}
+  if(space.mortgaged){addLog(`${space.name} 已抵押，免收租金。`);G.phase='post';renderSidebar();autoAIEndTurn();return;}
   if(space.owner===null){
-    if(player.money>=space.price){
-      promptBuy(player,space);
-    } else {
-      addLog(`${player.name} 資金不足，無法購買 ${space.name}。`,'warn');
-      G.phase='post';renderSidebar();
-    }
+    if(player.money>=space.price) promptBuy(player,space);
+    else {addLog(`${player.name} 資金不足，無法購買 ${space.name}。`,'warn');G.phase='post';renderSidebar();autoAIEndTurn();}
   } else if(space.owner===player.id){
-    addLog(`${player.name} 停在自己的地產上。`);
-    G.phase='post';renderSidebar();
+    addLog(`${player.name} 停在自己的地產上。`);G.phase='post';renderSidebar();autoAIEndTurn();
   } else {
     const owner=G.players[space.owner];
     const rent=calcRent(space,G.dice[0]+G.dice[1]);
     addLog(`${player.name} 向 ${owner.name} 支付租金 $${rent}！`,'warn');
-    player.money-=rent;
-    owner.money+=rent;
+    player.money-=rent;owner.money+=rent;
     showRentModal(player,owner,space,rent);
     checkBankrupt(player);
     G.phase='post';renderSidebar();
+    // showRentModal 有 AI 自動關閉功能，會呼叫 doEndTurn
   }
 }
 
@@ -1317,7 +1408,6 @@ function calcRent(space,diceTotal){
   }
   if(space.type==='prop'){
     if(space.buildings>0) return space.rent[space.buildings];
-    // Color monopoly: double base rent
     const grpSpaces=G.spaces.filter(s=>s.group===space.group);
     const hasMonopoly=grpSpaces.every(s=>s.owner===space.owner);
     return hasMonopoly?space.rent[0]*2:space.rent[0];
@@ -1327,39 +1417,12 @@ function calcRent(space,diceTotal){
 
 function promptBuy(player,space){
   if(player.isAI){
-    if(player.money>=space.price+200){
-      doBuySpace(player,space);
-    } else {
-      addLog(`${player.name}（電腦）決定不購買 ${space.name}。`);
-      G.phase='post';renderSidebar();
-    }
+    if(player.money>=space.price+200){doBuySpace(player,space);}
+    else {addLog(`${player.name}（電腦）決定不購買 ${space.name}。`);G.phase='post';renderSidebar();autoAIEndTurn();}
     return;
   }
   pendingBuy={player,space};
-  const g=GROUPS[space.group];
-  document.getElementById('buy-band').style.background=g?g.hex:'#888';
-  document.getElementById('buy-icon').textContent=space.type==='rr'?'🚄':space.type==='util'?'⚡':'🏠';
-  document.getElementById('buy-name').textContent=space.name;
-  document.getElementById('buy-sub').textContent=`${player.name}，是否要購買這塊地產？`;
-  const rents=space.rent;
-  document.getElementById('buy-details').innerHTML=`
-    <div class="prop-detail-row"><span class="prop-detail-label">售價</span><span class="prop-detail-val">$${space.price}</span></div>
-    ${space.type==='prop'?`
-    <div class="prop-detail-row"><span class="prop-detail-label">基本租金</span><span class="prop-detail-val">$${rents[0]}</span></div>
-    <div class="prop-detail-row"><span class="prop-detail-label">1棟租金</span><span class="prop-detail-val">$${rents[1]}</span></div>
-    <div class="prop-detail-row"><span class="prop-detail-label">旅館租金</span><span class="prop-detail-val">$${rents[5]}</span></div>
-    <div class="prop-detail-row"><span class="prop-detail-label">建造費用</span><span class="prop-detail-val">$${g?g.buildCost:0}/棟</span></div>
-    `:''}
-    <div class="prop-detail-row"><span class="prop-detail-label">你的資金</span><span class="prop-detail-val" style="color:#2ecc71">$${player.money}</span></div>
-  `;
-  document.getElementById('modal-buy').classList.remove('hidden');
-}
-
-function doBuy(){
-  if(!pendingBuy) return;
-  closeModal('modal-buy');
-  doBuySpace(pendingBuy.player,pendingBuy.space);
-  pendingBuy=null;
+  showBuyModal(player,space);
 }
 
 function doBuySpace(player,space){
@@ -1368,22 +1431,21 @@ function doBuySpace(player,space){
   addLog(`${player.name} 購買了 ${space.name}（$${space.price}）！`,'gold');
   updateBuildings();
   G.phase='post';renderSidebar();
-  // AI: try to build
-  if(player.isAI) setTimeout(()=>aiBuild(player),400);
+  if(player.isAI){
+    setTimeout(()=>{aiBuild(player);setTimeout(()=>doEndTurn(),500);},400);
+  }
 }
 
-// ╔══════════════════════════════════════════╗
-// ║              BUILDING                    ║
-// ╚══════════════════════════════════════════╝
+// ╔══════════════════════════════════════════════════╗
+// ║              BUILDING                            ║
+// ╚══════════════════════════════════════════════════╝
 function canBuild(player,space){
   if(space.type!=='prop'||space.owner!==player.id||space.mortgaged) return false;
   if(space.buildings>=5) return false;
   const grp=GROUPS[space.group];
   if(!grp||grp.buildCost===0) return false;
-  // Must own all of group
   const grpSpaces=G.spaces.filter(s=>s.group===space.group);
   if(!grpSpaces.every(s=>s.owner===player.id)) return false;
-  // Even build rule (simplified: allow if not lagging by >1)
   const minBld=Math.min(...grpSpaces.map(s=>s.buildings));
   if(space.buildings>minBld) return false;
   if(player.money<grp.buildCost) return false;
@@ -1394,73 +1456,29 @@ function aiBuild(player){
   G.spaces.forEach(s=>{
     if(canBuild(player,s)&&player.money>s.price+300){
       const grp=GROUPS[s.group];
-      player.money-=grp.buildCost;
-      s.buildings++;
+      player.money-=grp.buildCost;s.buildings++;
       addLog(`${player.name}（電腦）在 ${s.name} 建造了${s.buildings===5?'旅館':'房屋'}！`,'gold');
       updateBuildings();renderSidebar();
     }
   });
 }
 
-function showPropInfo(id){
-  const s=G.spaces[id];
-  if(!s) return;
-  const g=s.group?GROUPS[s.group]:null;
-  document.getElementById('info-band').style.background=g?g.hex:'#888';
-  document.getElementById('info-icon').textContent=s.type==='rr'?'🚄':s.type==='util'?'⚡':'🏠';
-  document.getElementById('info-name').textContent=s.name;
-  const owner=s.owner!==null?G.players[s.owner]:null;
-  document.getElementById('info-owner').textContent=owner?`擁有者：${owner.name}`:'尚未購買';
-  const rents=s.rent;
-  document.getElementById('info-details').innerHTML=`
-    <div class="prop-detail-row"><span class="prop-detail-label">售價</span><span class="prop-detail-val">$${s.price}</span></div>
-    ${s.type==='prop'?`
-    <div class="prop-detail-row"><span class="prop-detail-label">基本租金</span><span class="prop-detail-val">$${rents[0]}</span></div>
-    <div class="prop-detail-row"><span class="prop-detail-label">壟斷租金</span><span class="prop-detail-val">$${rents[0]*2}</span></div>
-    <div class="prop-detail-row"><span class="prop-detail-label">1棟</span><span class="prop-detail-val">$${rents[1]}</span></div>
-    <div class="prop-detail-row"><span class="prop-detail-label">2棟</span><span class="prop-detail-val">$${rents[2]}</span></div>
-    <div class="prop-detail-row"><span class="prop-detail-label">3棟</span><span class="prop-detail-val">$${rents[3]}</span></div>
-    <div class="prop-detail-row"><span class="prop-detail-label">4棟</span><span class="prop-detail-val">$${rents[4]}</span></div>
-    <div class="prop-detail-row"><span class="prop-detail-label">旅館</span><span class="prop-detail-val">$${rents[5]}</span></div>
-    <div class="prop-detail-row"><span class="prop-detail-label">現有建設</span><span class="prop-detail-val">${s.buildings===0?'無':s.buildings===5?'旅館 🏨':s.buildings+'棟房屋 🏠'}</span></div>
-    `:''}
-    ${s.mortgaged?'<div class="prop-detail-row"><span style="color:#e74c3c">已抵押</span></div>':''}
-  `;
-
-  // Build buttons for current player
-  const btns=document.getElementById('info-btns');
-  btns.innerHTML='';
-  const cur=G.players[G.current];
-  if(G.phase==='post'&&s.owner===G.current&&!cur.isAI){
-    if(canBuild(cur,s)){
-      const b=document.createElement('button');
-      b.className='btn btn-gold btn-sm';
+function aiBuildCheck(player){
+  G.spaces.forEach(s=>{
+    if(canBuild(player,s)&&player.money>s.price+400){
       const grp=GROUPS[s.group];
-      b.textContent=`建造 ($${grp.buildCost})`;
-      b.onclick=()=>{doBuildOn(s);closeModal('modal-info');};
-      btns.appendChild(b);
+      player.money-=grp.buildCost;s.buildings++;
+      addLog(`${player.name} 在 ${s.name} 建造了${s.buildings===5?'旅館':'房屋'}！`,'gold');
+      updateBuildings();renderSidebar();
     }
-    if(s.buildings>0){
-      const b=document.createElement('button');
-      b.className='btn btn-red btn-sm';
-      b.textContent='拆除出售';
-      b.onclick=()=>{doSellBuilding(s);closeModal('modal-info');};
-      btns.appendChild(b);
-    }
-  }
-  const close=document.createElement('button');
-  close.className='btn btn-outline btn-sm';close.textContent='關閉';
-  close.onclick=()=>closeModal('modal-info');
-  btns.appendChild(close);
-  document.getElementById('modal-info').classList.remove('hidden');
+  });
 }
 
 function doBuildOn(space){
   const cur=G.players[G.current];
   if(!canBuild(cur,space)) return;
   const grp=GROUPS[space.group];
-  cur.money-=grp.buildCost;
-  space.buildings++;
+  cur.money-=grp.buildCost;space.buildings++;
   addLog(`${cur.name} 在 ${space.name} 建造了${space.buildings===5?'旅館':'房屋'}！`,'gold');
   updateBuildings();renderSidebar();
 }
@@ -1469,53 +1487,372 @@ function doSellBuilding(space){
   const cur=G.players[G.current];
   if(space.buildings===0) return;
   const grp=GROUPS[space.group];
-  cur.money+=Math.floor(grp.buildCost/2);
-  space.buildings--;
+  cur.money+=Math.floor(grp.buildCost/2);space.buildings--;
   addLog(`${cur.name} 從 ${space.name} 拆除了建築。`);
   updateBuildings();renderSidebar();
 }
 
-// ╔══════════════════════════════════════════╗
-// ║              CARDS                       ║
-// ╚══════════════════════════════════════════╝
+// ╔══════════════════════════════════════════════════╗
+// ║              CARDS                               ║
+// ╚══════════════════════════════════════════════════╝
 function drawCard(type,player){
   const deck=type==='chance'?chanceCards:commCards;
   const card=deck[0];
-  deck.push(deck.shift()); // rotate
-
-  document.getElementById('card-header').innerHTML=
-    type==='chance'
-    ?'<div class="chance-header" style="color:#fff;font-weight:700;font-size:.9rem">🃏 機會卡</div>'
-    :'<div class="comm-header" style="color:#fff;font-weight:700;font-size:.9rem">📦 命運卡</div>';
-  document.getElementById('card-icon').textContent=type==='chance'?'🃏':'📦';
-  document.getElementById('card-title').textContent='';
-  document.getElementById('card-body').textContent=card.text;
-
-  addLog(`${player.name} 抽到${type==='chance'?'機會':'命運'}卡：${card.text}`)
-
-  document.getElementById('modal-card').classList.remove('hidden');
-  // Execute card effect when player closes modal
+  deck.push(deck.shift());
+  addLog(`${player.name} 抽到${type==='chance'?'機會':'命運'}卡：${card.text}`);
   pendingCard={card,player};
+  showCardModal(type,card);
 }
 
-document.getElementById('modal-card').addEventListener('click',(e)=>{
-  if(e.target===document.getElementById('modal-card'))return;
-});
+// ╔══════════════════════════════════════════════════╗
+// ║              MODAL SYSTEM                        ║
+// ╚══════════════════════════════════════════════════╝
+function showModal(content){
+  modalLayer.removeChildren();
+  modalLayer.visible=true;
 
-// Override close for card modal to apply effect
-const origClose=closeModal;
-function closeModal(id){
-  document.getElementById(id).classList.add('hidden');
-  if(id==='modal-card'&&pendingCard){
-    const {card,player}=pendingCard;
-    pendingCard=null;
-    card.fn(player);
+  // 背景遮罩
+  const overlay=new PIXI.Graphics();
+  overlay.rect(0,0,app.screen.width*2,app.screen.height*2).fill({color:0x000000,alpha:0.8});
+  overlay.eventMode='static'; // 阻擋穿透點擊
+  modalLayer.addChild(overlay);
+
+  // 彈窗容器
+  const box=new PIXI.Container();
+  const boxW=340, boxH=content._boxH||380;
+  const boxBg=new PIXI.Graphics();
+  boxBg.roundRect(0,0,boxW,boxH,16).fill({color:0x141428});
+  boxBg.roundRect(0,0,boxW,boxH,16).stroke({color:GOLD,width:1.5});
+  box.addChild(boxBg);
+
+  // 添加內容
+  content.x=0;content.y=0;
+  box.addChild(content);
+
+  // 置中
+  box.x=(app.screen.width-boxW)/2;
+  box.y=(app.screen.height-boxH)/2;
+
+  // 彈出動畫
+  box.scale.set(0.85);box.alpha=0;
+  tween(box,{'scale.x':1,'scale.y':1,alpha:1},250,easeOutBack);
+
+  modalLayer.addChild(box);
+  modalLayer._box=box;
+}
+
+function hideModal(callback){
+  if(!modalLayer.visible) {if(callback)callback();return;}
+  const box=modalLayer._box;
+  if(box){
+    tween(box,{'scale.x':0.85,'scale.y':0.85,alpha:0},150,easeInOutQuad).then(()=>{
+      modalLayer.visible=false;
+      modalLayer.removeChildren();
+      if(callback) callback();
+    });
+  } else {
+    modalLayer.visible=false;
+    modalLayer.removeChildren();
+    if(callback) callback();
   }
 }
 
-// Card effects
-function gainMoney(player,amt){player.money+=amt;addLog(`${player.name} 獲得 $${amt}。`,'good');G.phase='post';renderSidebar();}
-function loseMoney(player,amt){player.money-=amt;addLog(`${player.name} 支付 $${amt}。`,'warn');checkBankrupt(player);G.phase='post';renderSidebar();}
+function showBuyModal(player,space){
+  const content=new PIXI.Container();
+  const boxW=340;
+  let y=16;
+
+  // 色帶
+  const g=GROUPS[space.group];
+  if(g){
+    const band=new PIXI.Graphics();
+    band.roundRect(16,y,boxW-32,8,4).fill(hexToNum(g.hex));
+    content.addChild(band);
+  }
+  y+=20;
+
+  // 圖示
+  const icon=new PIXI.Text({text:space.type==='rr'?'🚄':space.type==='util'?'⚡':'🏠',style:{fontSize:40}});
+  icon.anchor.set(0.5);icon.x=boxW/2;icon.y=y+20;
+  content.addChild(icon);
+  y+=50;
+
+  // 地產名
+  const name=new PIXI.Text({text:space.name,style:{
+    fontFamily:'Cinzel Decorative',fontSize:18,fill:GOLD,
+  }});
+  name.anchor.set(0.5);name.x=boxW/2;name.y=y;
+  content.addChild(name);
+  y+=24;
+
+  // 提示文字
+  const sub=new PIXI.Text({text:`${player.name}，是否要購買這塊地產？`,style:{
+    fontFamily:'Noto Serif TC',fontSize:12,fill:0x888888,
+  }});
+  sub.anchor.set(0.5);sub.x=boxW/2;sub.y=y;
+  content.addChild(sub);
+  y+=24;
+
+  // 詳細資料
+  const details=[
+    ['售價',`$${space.price}`],
+    ...(space.type==='prop'?[
+      ['基本租金',`$${space.rent[0]}`],
+      ['1棟租金',`$${space.rent[1]}`],
+      ['旅館租金',`$${space.rent[5]}`],
+      ['建造費用',`$${g?g.buildCost:0}/棟`],
+    ]:[]),
+    ['你的資金',`$${player.money}`],
+  ];
+
+  const detBg=new PIXI.Graphics();
+  detBg.roundRect(20,y,boxW-40,details.length*22+8,8).fill({color:0x000000,alpha:0.3});
+  content.addChild(detBg);
+  y+=8;
+
+  details.forEach(([label,val],i)=>{
+    const lt=new PIXI.Text({text:label,style:{fontFamily:'Noto Serif TC',fontSize:11,fill:0x888888}});
+    lt.x=28;lt.y=y;
+    const vt=new PIXI.Text({text:val,style:{fontFamily:'Noto Serif TC',fontSize:11,fontWeight:'bold',fill:label==='你的資金'?0x2ecc71:TEXT_COLOR}});
+    vt.anchor.set(1,0);vt.x=boxW-28;vt.y=y;
+    content.addChild(lt,vt);
+    y+=22;
+  });
+  y+=16;
+
+  // 按鈕
+  const buyBtn=createButton('購買',130,40,GOLD,0x1a1000,()=>{
+    hideModal(()=>{doBuySpace(pendingBuy.player,pendingBuy.space);pendingBuy=null;});
+  });
+  buyBtn.x=boxW/2-140;buyBtn.y=y;
+  content.addChild(buyBtn);
+
+  const skipBtn=createButton('不購買',130,40,0x333355,TEXT_COLOR,()=>{
+    hideModal(()=>{pendingBuy=null;G.phase='post';renderSidebar();});
+  });
+  skipBtn.x=boxW/2+10;skipBtn.y=y;
+  content.addChild(skipBtn);
+
+  content._boxH=y+60;
+  showModal(content);
+}
+
+function showCardModal(type,card){
+  const content=new PIXI.Container();
+  const boxW=340;
+  let y=20;
+
+  // 標題背景
+  const headerBg=new PIXI.Graphics();
+  const hColor=type==='chance'?0xe67e22:0x2980b9;
+  headerBg.roundRect(16,y,boxW-32,36,8).fill(hColor);
+  content.addChild(headerBg);
+
+  const headerText=new PIXI.Text({text:type==='chance'?'🃏 機會卡':'📦 命運卡',style:{
+    fontFamily:'Noto Serif TC',fontSize:14,fontWeight:'bold',fill:0xffffff,
+  }});
+  headerText.anchor.set(0.5);headerText.x=boxW/2;headerText.y=y+18;
+  content.addChild(headerText);
+  y+=52;
+
+  // 圖示
+  const icon=new PIXI.Text({text:type==='chance'?'🃏':'📦',style:{fontSize:40}});
+  icon.anchor.set(0.5);icon.x=boxW/2;icon.y=y+20;
+  content.addChild(icon);
+  y+=50;
+
+  // 卡片內容
+  const bodyBg=new PIXI.Graphics();
+  bodyBg.roundRect(20,y,boxW-40,60,8).fill({color:0x000000,alpha:0.3});
+  content.addChild(bodyBg);
+
+  const bodyText=new PIXI.Text({text:card.text,style:{
+    fontFamily:'Noto Serif TC',fontSize:14,fill:TEXT_COLOR,
+    wordWrap:true,wordWrapWidth:boxW-60,align:'center',lineHeight:22,
+  }});
+  bodyText.anchor.set(0.5);bodyText.x=boxW/2;bodyText.y=y+30;
+  content.addChild(bodyText);
+  y+=76;
+
+  // 確認按鈕
+  const okBtn=createButton('確認',boxW-40,40,GOLD,0x1a1000,()=>{
+    hideModal(()=>{
+      if(pendingCard){
+        const {card:c,player}=pendingCard;
+        pendingCard=null;
+        c.fn(player);
+      }
+    });
+  });
+  okBtn.x=20;okBtn.y=y;
+  content.addChild(okBtn);
+
+  content._boxH=y+60;
+  showModal(content);
+
+  // AI 自動關閉
+  if(G.players[G.current].isAI){
+    setTimeout(()=>{
+      hideModal(()=>{
+        if(pendingCard){
+          const {card:c,player}=pendingCard;
+          pendingCard=null;
+          c.fn(player);
+        }
+      });
+    },1200);
+  }
+}
+
+function showRentModal(payer,owner,space,rent){
+  const content=new PIXI.Container();
+  const boxW=340;
+  let y=20;
+
+  const icon=new PIXI.Text({text:'💸',style:{fontSize:40}});
+  icon.anchor.set(0.5);icon.x=boxW/2;icon.y=y+20;
+  content.addChild(icon);
+  y+=50;
+
+  const title=new PIXI.Text({text:'支付租金',style:{
+    fontFamily:'Cinzel Decorative',fontSize:18,fill:GOLD,
+  }});
+  title.anchor.set(0.5);title.x=boxW/2;title.y=y;
+  content.addChild(title);
+  y+=28;
+
+  const subText=`${payer.name} 支付 $${rent} 給 ${owner.name}（${space.name}）。${payer.money<0?'\n⚠️ 資金不足，宣告破產！':''}`;
+  const sub=new PIXI.Text({text:subText,style:{
+    fontFamily:'Noto Serif TC',fontSize:12,fill:0x888888,
+    wordWrap:true,wordWrapWidth:boxW-40,align:'center',lineHeight:18,
+  }});
+  sub.anchor.set(0.5);sub.x=boxW/2;sub.y=y+10;
+  content.addChild(sub);
+  y+=50;
+
+  const okBtn=createButton('確認',boxW-40,40,GOLD,0x1a1000,()=>{
+    hideModal(()=>{
+      renderSidebar();
+      if(G.phase==='post'&&G.players[G.current].isAI){
+        setTimeout(()=>doEndTurn(),600);
+      }
+    });
+  });
+  okBtn.x=20;okBtn.y=y;
+  content.addChild(okBtn);
+
+  content._boxH=y+60;
+  showModal(content);
+
+  if(G.players[G.current].isAI){
+    setTimeout(()=>{
+      hideModal(()=>{
+        renderSidebar();
+        if(G.phase==='post'&&G.players[G.current].isAI){
+          setTimeout(()=>doEndTurn(),600);
+        }
+      });
+    },1200);
+  }
+}
+
+function showPropInfo(id){
+  const s=G.spaces[id];
+  if(!s||!G) return;
+  const content=new PIXI.Container();
+  const boxW=340;
+  let y=16;
+
+  const g=s.group?GROUPS[s.group]:null;
+  if(g){
+    const band=new PIXI.Graphics();
+    band.roundRect(16,y,boxW-32,8,4).fill(hexToNum(g.hex));
+    content.addChild(band);
+  }
+  y+=20;
+
+  const icon=new PIXI.Text({text:s.type==='rr'?'🚄':s.type==='util'?'⚡':'🏠',style:{fontSize:40}});
+  icon.anchor.set(0.5);icon.x=boxW/2;icon.y=y+20;
+  content.addChild(icon);
+  y+=50;
+
+  const name=new PIXI.Text({text:s.name,style:{
+    fontFamily:'Cinzel Decorative',fontSize:18,fill:GOLD,
+  }});
+  name.anchor.set(0.5);name.x=boxW/2;name.y=y;
+  content.addChild(name);
+  y+=20;
+
+  const owner=s.owner!==null?G.players[s.owner]:null;
+  const ownerText=new PIXI.Text({text:owner?`擁有者：${owner.name}`:'尚未購買',style:{
+    fontFamily:'Noto Serif TC',fontSize:12,fill:0x888888,
+  }});
+  ownerText.anchor.set(0.5);ownerText.x=boxW/2;ownerText.y=y;
+  content.addChild(ownerText);
+  y+=24;
+
+  const details=[
+    ['售價',`$${s.price}`],
+    ...(s.type==='prop'?[
+      ['基本租金',`$${s.rent[0]}`],['壟斷租金',`$${s.rent[0]*2}`],
+      ['1棟',`$${s.rent[1]}`],['2棟',`$${s.rent[2]}`],
+      ['3棟',`$${s.rent[3]}`],['4棟',`$${s.rent[4]}`],
+      ['旅館',`$${s.rent[5]}`],
+      ['現有建設',s.buildings===0?'無':s.buildings===5?'旅館 🏨':s.buildings+'棟房屋 🏠'],
+    ]:[]),
+  ];
+
+  const detBg=new PIXI.Graphics();
+  detBg.roundRect(20,y,boxW-40,details.length*20+8,8).fill({color:0x000000,alpha:0.3});
+  content.addChild(detBg);
+  y+=6;
+
+  details.forEach(([label,val])=>{
+    const lt=new PIXI.Text({text:label,style:{fontFamily:'Noto Serif TC',fontSize:10,fill:0x888888}});
+    lt.x=28;lt.y=y;
+    const vt=new PIXI.Text({text:val,style:{fontFamily:'Noto Serif TC',fontSize:10,fontWeight:'bold',fill:TEXT_COLOR}});
+    vt.anchor.set(1,0);vt.x=boxW-28;vt.y=y;
+    content.addChild(lt,vt);
+    y+=20;
+  });
+  y+=12;
+
+  // 功能按鈕
+  const cur=G.players[G.current];
+  let btnX=20;
+
+  if(G.phase==='post'&&s.owner===G.current&&!cur.isAI){
+    if(canBuild(cur,s)){
+      const buildBtn=createButton(`建造($${g.buildCost})`,100,36,GOLD,0x1a1000,()=>{
+        hideModal(()=>{doBuildOn(s);});
+      });
+      buildBtn.x=btnX;buildBtn.y=y;
+      content.addChild(buildBtn);
+      btnX+=110;
+    }
+    if(s.buildings>0){
+      const sellBtn=createButton('拆除出售',90,36,0xc0392b,0xffffff,()=>{
+        hideModal(()=>{doSellBuilding(s);});
+      });
+      sellBtn.x=btnX;sellBtn.y=y;
+      content.addChild(sellBtn);
+      btnX+=100;
+    }
+  }
+
+  const closeBtn=createButton('關閉',btnX>20?80:boxW-40,36,0x333355,TEXT_COLOR,()=>hideModal());
+  closeBtn.x=btnX>20?btnX:20;closeBtn.y=y;
+  content.addChild(closeBtn);
+
+  content._boxH=y+56;
+  showModal(content);
+}
+
+// ╔══════════════════════════════════════════════════╗
+// ║              CARD EFFECTS                        ║
+// ╚══════════════════════════════════════════════════╝
+function gainMoney(player,amt){player.money+=amt;addLog(`${player.name} 獲得 $${amt}。`,'good');G.phase='post';renderSidebar();autoAIEndTurn();}
+function loseMoney(player,amt){player.money-=amt;addLog(`${player.name} 支付 $${amt}。`,'warn');checkBankrupt(player);G.phase='post';renderSidebar();autoAIEndTurn();}
 function advanceTo(player,pos,collectGO){
   if(collectGO&&pos<player.position){player.money+=200;addLog(`${player.name} 領取出發點 $200。`,'good');}
   player.position=pos;updateTokens();
@@ -1527,7 +1864,7 @@ function repairTax(player,houseAmt,hotelAmt){
   const total=houses*houseAmt+hotels*hotelAmt;
   player.money-=total;
   addLog(`${player.name} 維修費 $${total}（${houses}棟×$${houseAmt} + ${hotels}旅館×$${hotelAmt}）`,'warn');
-  checkBankrupt(player);G.phase='post';renderSidebar();
+  checkBankrupt(player);G.phase='post';renderSidebar();autoAIEndTurn();
 }
 function advanceNearestRR(player){
   const rrPos=[5,15,25,35];
@@ -1544,7 +1881,7 @@ function collectFromAll(player,amt){
     if(p.id!==player.id&&!p.bankrupt){p.money-=amt;player.money+=amt;}
   });
   addLog(`${player.name} 向每位玩家收取 $${amt}。`,'gold');
-  G.phase='post';renderSidebar();
+  G.phase='post';renderSidebar();autoAIEndTurn();
 }
 function goToJail(player){goToJailDirect();}
 
@@ -1554,6 +1891,7 @@ function goToJailDirect(){
   updateTokens();
   addLog(`${cur.name} 進入監獄！`,'warn');
   G.phase='post';renderSidebar();
+  autoAIEndTurn();
 }
 
 function doBailJail(){
@@ -1564,14 +1902,12 @@ function doBailJail(){
   renderSidebar();
 }
 
-// ╔══════════════════════════════════════════╗
-// ║              BANKRUPTCY                  ║
-// ╚══════════════════════════════════════════╝
+// ╔══════════════════════════════════════════════════╗
+// ║              BANKRUPTCY                          ║
+// ╚══════════════════════════════════════════════════╝
 function checkBankrupt(player){
   if(player.money<0){
-    // Simple: auction/sell - just mark bankrupt
     player.bankrupt=true;
-    // Release all properties
     G.spaces.forEach(s=>{if(s.owner===player.id){s.owner=null;s.buildings=0;}});
     addLog(`💸 ${player.name} 破產出局！`,'warn');
     updateBuildings();
@@ -1583,24 +1919,52 @@ function checkWinner(){
   const active=G.players.filter(p=>!p.bankrupt);
   if(active.length===1){
     const w=active[0];
-    document.getElementById('winner-icon').textContent='🏆';
-    document.getElementById('winner-title').textContent=`${w.name} 獲勝！`;
-    document.getElementById('winner-sub').textContent=`恭喜 ${w.name} 成為亞洲大富翁！資產：$${w.money}`;
-    document.getElementById('modal-winner').classList.remove('hidden');
+    showWinnerModal(w);
   }
 }
 
-// ╔══════════════════════════════════════════╗
-// ║              TURN FLOW                   ║
-// ╚══════════════════════════════════════════╝
+function showWinnerModal(winner){
+  const content=new PIXI.Container();
+  const boxW=340;
+  let y=30;
+
+  const icon=new PIXI.Text({text:'🏆',style:{fontSize:50}});
+  icon.anchor.set(0.5);icon.x=boxW/2;icon.y=y+25;
+  content.addChild(icon);
+  y+=70;
+
+  const title=new PIXI.Text({text:`${winner.name} 獲勝！`,style:{
+    fontFamily:'Cinzel Decorative',fontSize:22,fill:GOLD,
+  }});
+  title.anchor.set(0.5);title.x=boxW/2;title.y=y;
+  content.addChild(title);
+  y+=30;
+
+  const sub=new PIXI.Text({text:`恭喜 ${winner.name} 成為亞洲大富翁！\n資產：$${winner.money}`,style:{
+    fontFamily:'Noto Serif TC',fontSize:14,fill:0x888888,align:'center',lineHeight:20,
+  }});
+  sub.anchor.set(0.5);sub.x=boxW/2;sub.y=y+10;
+  content.addChild(sub);
+  y+=60;
+
+  const btn=createButton('再玩一局',boxW-40,44,GOLD,0x1a1000,()=>{
+    hideModal(()=>{G=null;showWelcomeScreen();});
+  });
+  btn.x=20;btn.y=y;
+  content.addChild(btn);
+
+  content._boxH=y+64;
+  showModal(content);
+}
+
+// ╔══════════════════════════════════════════════════╗
+// ║              TURN FLOW                           ║
+// ╚══════════════════════════════════════════════════╝
 function doEndTurn(){
   if(G.phase!=='post') return;
   const cur=G.players[G.current];
-
-  // AI builds before ending if possible
   if(!cur.isAI) aiBuildCheck(cur);
 
-  // If doubles and not in jail: roll again
   if(G.doublesRolled&&!cur.inJail&&cur.doublesCount>0&&cur.doublesCount<3){
     addLog(`${cur.name} 擲出雙胞胎，再擲一次！`);
     G.phase='roll';renderSidebar();
@@ -1608,7 +1972,6 @@ function doEndTurn(){
     return;
   }
 
-  // Next player
   G.doublesRolled=false;
   let next=(G.current+1)%G.players.length;
   let tries=0;
@@ -1621,18 +1984,6 @@ function doEndTurn(){
   maybeAI();
 }
 
-function aiBuildCheck(player){
-  // Already handled in aiBuild after buy; here for end-of-turn builds
-  G.spaces.forEach(s=>{
-    if(canBuild(player,s)&&player.money>s.price+400){
-      const grp=GROUPS[s.group];
-      player.money-=grp.buildCost;s.buildings++;
-      addLog(`${player.name} 在 ${s.name} 建造了${s.buildings===5?'旅館':'房屋'}！`,'gold');
-      updateBuildings();renderSidebar();
-    }
-  });
-}
-
 function maybeAI(){
   const cur=G.players[G.current];
   if(cur.isAI&&!cur.bankrupt){
@@ -1640,51 +1991,18 @@ function maybeAI(){
   }
 }
 
-function showRentModal(payer,owner,space,rent){
-  document.getElementById('rent-title').textContent=`支付租金`;
-  document.getElementById('rent-sub').textContent=`${payer.name} 支付 $${rent} 給 ${owner.name}（${space.name}）。${payer.money<0?'\n⚠️ 資金不足，宣告破產！':''}`;
-  document.getElementById('modal-rent').classList.remove('hidden');
-  if(G.players[G.current].isAI){
-    setTimeout(()=>closeModal('modal-rent'),1200);
-  }
-}
-
-function closeModal(id){
-  document.getElementById(id).classList.add('hidden');
-  if(id==='modal-card'&&pendingCard){
-    const {card,player}=pendingCard;
-    pendingCard=null;
-    card.fn(player);
-  }
-  // After rent modal close, check if AI needs to continue
-  if(id==='modal-rent'){
-    renderSidebar();
-    if(G.phase==='post'&&G.players[G.current].isAI){
-      setTimeout(()=>doEndTurn(),600);
-    }
-  }
-  if(id==='modal-buy'&&pendingBuy){
-    // Player chose not to buy
-    pendingBuy=null;
-    G.phase='post';renderSidebar();
-    if(G.players[G.current].isAI){setTimeout(()=>doEndTurn(),500);}
-  }
-}
-
-// Wire up end turn for human post-roll
-document.getElementById('btn-endturn').addEventListener('click',()=>{
-  doEndTurn();
-});
-
-// init player inputs on page load
-setPlayerCount(2);
-
-// Quick start for testing: can press Enter to roll
+// 鍵盤快捷鍵：空白鍵擲骰
 document.addEventListener('keydown',(e)=>{
-  if(e.key===' '&&G&&G.phase==='roll'&&!G.players[G.current].isAI){
+  if(e.key===' '&&G&&G.phase==='roll'&&!G.players[G.current].isAI&&!isRolling){
     e.preventDefault();doRoll();
   }
 });
+
+// ╔══════════════════════════════════════════════════╗
+// ║              INIT                                ║
+// ╚══════════════════════════════════════════════════╝
+setPlayerCount(2);
+initPixi();
 </script>
 </body>
 </html>
