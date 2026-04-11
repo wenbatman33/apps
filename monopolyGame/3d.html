@@ -227,7 +227,7 @@ let die1State,die2State;
 let needsRender=true;
 
 const B=10; // 棋盤半徑（-10 到 +10）
-const CORNER_3D=2.68, EDGE_3D=1.607;
+const CORNER_3D=2.68, EDGE_3D=(B*2-CORNER_3D*2)/9; // 精確計算讓棋盤完美置中
 const CELL_H=0.15; // 格子厚度
 
 // 簡易軌道控制器（支援焦點追蹤）
@@ -396,7 +396,7 @@ function gridToWorld(r,c){
 function cellCenter3D(idx){
   const[r,c]=spaceToGrid(idx);
   const{x,z}=gridToWorld(r,c);
-  return{x,y:CELL_H+0.1,z};
+  return{x,y:CELL_H+0.17,z};
 }
 
 function cellSize(r,c){
@@ -435,75 +435,61 @@ function renderBoard3D(){
   centerMesh.position.y=CELL_H+0.08;
   boardGroup.add(centerMesh);
 
-  // 中心裝飾建築群
+  // 中心國家名稱（Sprite，不要建築群）
   buildCityCenter(meta);
 
-  // 繪製每個格子
+  // 格子的 Y 高度：明確高於底板避免 Z-fighting
+  const CELL_Y=CELL_H+0.16;
+
+  // 繪製每個格子（全部合併成一張 Canvas 貼圖，避免 Z-fighting）
   G.spaces.forEach(s=>{
     const[r,c]=spaceToGrid(s.id);
     const{x,z}=gridToWorld(r,c);
     const{w,h}=cellSize(r,c);
+    const isCorner=(r===0||r===10)&&(c===0||c===10);
+    const isVert=(c===0||c===10)&&!isCorner;
 
-    // 格子表面（用 PlaneGeometry 避免與底板 Z-fighting）
-    const cellGeo=new THREE.PlaneGeometry(w-0.06,h-0.06);
-    cellGeo.rotateX(-Math.PI/2);
-    let color=0xf5eed8;
-    if(s.type==='chance')color=0xfff3cc;
-    else if(s.type==='comm')color=0xd6ecf5;
-    else if(s.type==='tax')color=0xfce4e4;
-    else if(s.type==='go')color=0xd4edda;
-    else if(s.type==='jail')color=0xf8d7da;
-    else if(s.type==='free')color=0xd6d8f6;
-    else if(s.type==='gotojail')color=0xf8d7da;
-    const cellMat=new THREE.MeshStandardMaterial({color,roughness:0.85,polygonOffset:true,polygonOffsetFactor:1,polygonOffsetUnits:1});
-    const cellMesh=new THREE.Mesh(cellGeo,cellMat);
-    cellMesh.position.set(x,CELL_H+0.09,z);
+    // 用 Canvas 畫出：底色+邊框+色帶+文字，全部在一張貼圖上
+    const tex=createCellTexture(s,r,c,isCorner,isVert);
+    // 非角落格統一用 (EDGE_3D, CORNER_3D) 搭配旋轉，確保 canvas 比例正確
+    const gw=isCorner?CORNER_3D:EDGE_3D;
+    const gh=isCorner?CORNER_3D:CORNER_3D;
+    const geo=new THREE.PlaneGeometry(gw,gh);
+    geo.rotateX(-Math.PI/2);
+    const mat=new THREE.MeshStandardMaterial({
+      map:tex,roughness:0.85,
+      polygonOffset:true,polygonOffsetFactor:-1,polygonOffsetUnits:-1
+    });
+    const cellMesh=new THREE.Mesh(geo,mat);
+
+    // 旋轉貼圖方向：讓 canvas 的「上方」朝棋盤外側
+    if(isCorner){
+      // 角落格旋轉：GO(r=10,c=10)、監獄(r=10,c=0)、免費停車(r=0,c=0)、去監獄(r=0,c=10)
+      if(r===10&&c===10) cellMesh.rotation.y=0;           // GO：右下角
+      else if(r===10&&c===0) cellMesh.rotation.y=Math.PI/2;  // 監獄：左下角
+      else if(r===0&&c===0) cellMesh.rotation.y=Math.PI;     // 免費停車：左上角
+      else if(r===0&&c===10) cellMesh.rotation.y=-Math.PI/2;  // 去監獄：右上角
+    } else {
+      if(r===10) cellMesh.rotation.y=0;           // 底邊：不轉
+      else if(c===0) cellMesh.rotation.y=Math.PI/2;  // 左邊
+      else if(r===0) cellMesh.rotation.y=Math.PI;    // 上邊
+      else if(c===10) cellMesh.rotation.y=-Math.PI/2; // 右邊
+    }
+
+    cellMesh.position.set(x,CELL_Y,z);
     cellMesh.receiveShadow=true;
     cellMesh.userData.spaceId=s.id;
     boardGroup.add(cellMesh);
     cellMeshes[s.id]=cellMesh;
-
-    // 格子邊線（用細邊框代替 EdgesGeometry 避免抖動）
-    const borderGeo=new THREE.PlaneGeometry(w,h);
-    borderGeo.rotateX(-Math.PI/2);
-    const borderMat=new THREE.MeshStandardMaterial({color:0xb8a880,roughness:0.9,polygonOffset:true,polygonOffsetFactor:2,polygonOffsetUnits:2});
-    const border=new THREE.Mesh(borderGeo,borderMat);
-    border.position.set(x,CELL_H+0.085,z);
-    boardGroup.add(border);
-
-    // 色帶（平面貼在格子上，不用 Box 避免浮起）
-    if(s.group&&(s.type==='prop'||s.type==='rr'||s.type==='util')){
-      const bandColor=parseInt(GROUPS[s.group].hex.replace('#',''),16);
-      const bandRatio=0.35;
-      let bw,bh,bx=x,bz=z;
-      if(r===10&&c>0&&c<10){bw=w-0.08;bh=h*bandRatio;bz=z-h/2+bh/2+0.03;}
-      else if(c===0&&r>0&&r<10){bw=w*bandRatio;bh=h-0.08;bx=x+w/2-bw/2-0.03;}
-      else if(r===0&&c>0&&c<10){bw=w-0.08;bh=h*bandRatio;bz=z+h/2-bh/2-0.03;}
-      else if(c===10&&r>0&&r<10){bw=w*bandRatio;bh=h-0.08;bx=x-w/2+bw/2+0.03;}
-      if(bw){
-        const bGeo=new THREE.PlaneGeometry(bw,bh);
-        bGeo.rotateX(-Math.PI/2);
-        const bMat=new THREE.MeshStandardMaterial({color:bandColor,roughness:0.5,polygonOffset:true,polygonOffsetFactor:-2,polygonOffsetUnits:-2});
-        const band=new THREE.Mesh(bGeo,bMat);
-        band.position.set(bx,CELL_H+0.095,bz);
-        boardGroup.add(band);
-      }
-    }
-
-    // 格子標籤（用 canvas 貼圖）
-    addCellLabel(s,x,z,w,h,r,c);
   });
 
   needsRender=true;
 }
 
-// Canvas 上自動換行繪製文字
+// 把底色、色帶、邊框、文字全部畫在同一張 Canvas 上
 function wrapText(ctx,text,cx,y,maxW,lineH){
-  // 先試整行
   if(ctx.measureText(text).width<=maxW){ctx.fillText(text,cx,y);return y+lineH;}
-  // 逐字元切
-  const chars=[...text];
-  let line='';const lines=[];
+  const chars=[...text];let line='';const lines=[];
   for(const ch of chars){
     if(ctx.measureText(line+ch).width>maxW&&line){lines.push(line);line=ch;}
     else line+=ch;
@@ -514,76 +500,108 @@ function wrapText(ctx,text,cx,y,maxW,lineH){
   return startY+lines.length*lineH;
 }
 
-function addCellLabel(s,x,z,w,h,r,c){
+function createCellTexture(s,r,c,isCorner,isVert){
+  const P=4; // 像素倍率
+  // Canvas 尺寸：角落正方形 90×90，邊緣格長方形 54×90
+  // canvas 的 width = 格子「寬」方向（平行邊緣），height = 格子「深」方向（朝棋盤中心）
+  // 旋轉後 canvas 上方 = 棋盤外側，下方 = 棋盤內側
+  let cw, ch;
+  if(isCorner){ cw=90*P; ch=90*P; }
+  else {
+    // 邊緣格：短邊 54，長邊 90（= CORNER_3D 對應方向）
+    // 統一畫成 54寬×90高，色帶在上方（外側）
+    cw=54*P; ch=90*P;
+  }
   const canvas=document.createElement('canvas');
-  const isCorner=(r===0||r===10)&&(c===0||c===10);
-  const cw=200, ch=isCorner?200:120;
   canvas.width=cw;canvas.height=ch;
   const ctx=canvas.getContext('2d');
-  const maxW=cw-16; // 留邊距
 
+  // 1) 底色
+  let bg='#f0ebd5';
+  if(s.type==='chance')bg='#fff3cc';else if(s.type==='comm')bg='#d6ecf5';
+  else if(s.type==='tax')bg='#fce4e4';else if(s.type==='go')bg='#d4edda';
+  else if(s.type==='jail')bg='#f0dde0';else if(s.type==='free')bg='#d6d8f6';
+  else if(s.type==='gotojail')bg='#f8d7da';
+  ctx.fillStyle=bg;
+  ctx.fillRect(0,0,cw,ch);
+
+  // 2) 邊框
+  ctx.strokeStyle='#b8a880';ctx.lineWidth=2*P;
+  ctx.strokeRect(0,0,cw,ch);
+
+  // 3) 色帶（畫在 Canvas 上端 = 棋盤外側）
+  if(s.group&&(s.type==='prop'||s.type==='rr'||s.type==='util')){
+    ctx.fillStyle=GROUPS[s.group].hex;
+    const bandH=isCorner?ch*0.2:ch*0.22;
+    ctx.fillRect(P,P,cw-2*P,bandH);
+  }
+
+  // 4) 文字
   ctx.fillStyle='#1a1206';
   ctx.textAlign='center';
   ctx.textBaseline='middle';
   const name=s.name.replace('\n',' ');
+  const maxW=cw-8*P;
 
   if(isCorner){
-    ctx.font='40px serif';
-    ctx.fillText(s.icon||'',cw/2,ch*0.28);
-    ctx.font='bold 22px "Noto Sans TC","Microsoft JhengHei",sans-serif';
-    wrapText(ctx,name,cw/2,ch*0.58,maxW,26);
-    if(s.type==='go'){ctx.fillStyle='#1a8a3e';ctx.font='bold 18px "Noto Sans TC",sans-serif';ctx.fillText('領取$200',cw/2,ch*0.82);}
-    if(s.type==='gotojail'){ctx.fillStyle='#c0392b';}
+    ctx.font=`${12*P}px serif`;
+    ctx.fillText(s.icon||'',cw/2,ch*0.3);
+    ctx.font=`bold ${7*P}px "Noto Sans TC","Microsoft JhengHei",sans-serif`;
+    wrapText(ctx,name,cw/2,ch*0.55,maxW,8*P);
+    if(s.type==='go'){
+      // GO 三角箭頭
+      ctx.fillStyle='#1a8a3e';
+      ctx.font=`bold ${5.5*P}px "Noto Sans TC",sans-serif`;
+      ctx.fillText('← 領取$200',cw/2,ch*0.78);
+    }
   } else {
-    ctx.font='bold 22px "Noto Sans TC","Microsoft JhengHei","PingFang TC",sans-serif';
-    const bottomY=wrapText(ctx,name,cw/2,ch*0.34,maxW,26);
-    if(s.price){ctx.font='18px "Noto Sans TC",sans-serif';ctx.fillStyle='#5a4a30';ctx.fillText('$'+s.price,cw/2,Math.max(bottomY+6,ch*0.72));}
-    else if(s.type==='chance'){ctx.font='30px serif';ctx.fillText('❓',cw/2,ch*0.72);}
-    else if(s.type==='comm'){ctx.font='28px serif';ctx.fillText('📦',cw/2,ch*0.72);}
-    else if(s.type==='tax'){ctx.font='bold 20px "Noto Sans TC",sans-serif';ctx.fillStyle='#c0392b';ctx.fillText(s.id===4?'$200':'$75',cw/2,ch*0.72);}
+    const hasColorBand=s.group&&(s.type==='prop'||s.type==='rr'||s.type==='util');
+    const textTop=hasColorBand?ch*0.38:ch*0.3;
+    ctx.font=`bold ${6.5*P}px "Noto Sans TC","Microsoft JhengHei",sans-serif`;
+    const botY=wrapText(ctx,name,cw/2,textTop,maxW,7*P);
+    if(s.price){ctx.font=`${5*P}px "Noto Sans TC",sans-serif`;ctx.fillStyle='#5a4a30';ctx.fillText('💰$'+s.price,cw/2,Math.min(botY+4*P,ch*0.82));}
+    else if(s.type==='chance'){ctx.font=`${8*P}px serif`;ctx.fillText('❓',cw/2,ch*0.72);}
+    else if(s.type==='comm'){ctx.font=`${7*P}px serif`;ctx.fillText('📦',cw/2,ch*0.72);}
+    else if(s.type==='tax'){ctx.font=`bold ${5.5*P}px "Noto Sans TC",sans-serif`;ctx.fillStyle='#c0392b';ctx.fillText(s.id===4?'$200':'$75',cw/2,ch*0.72);}
   }
 
   const tex=new THREE.CanvasTexture(canvas);
   tex.minFilter=THREE.LinearFilter;
   tex.magFilter=THREE.LinearFilter;
-
-  // Sprite 大小配合格子寬度（不超出）
-  const cellW=isCorner?CORNER_3D:EDGE_3D;
-  const spriteW=cellW*0.95;
-  const spriteH=spriteW*(ch/cw);
-  const spriteMat=new THREE.SpriteMaterial({map:tex,transparent:true,depthWrite:false,depthTest:true,sizeAttenuation:true});
-  const sprite=new THREE.Sprite(spriteMat);
-  sprite.scale.set(spriteW,spriteH,1);
-  sprite.position.set(x,CELL_H+0.3+spriteH/2,z);
-  sprite.userData.spaceId=s.id;
-  boardGroup.add(sprite);
+  if(renderer)tex.anisotropy=renderer.capabilities.getMaxAnisotropy();
+  return tex;
 }
 
 function buildCityCenter(meta){
-  // 中心只顯示國家名稱 Sprite
+  // 中心國家名稱——貼在棋盤面上（PlaneGeometry），不浮在空中
   const c=document.createElement('canvas');
-  c.width=512;c.height=256;
+  c.width=512;c.height=512;
   const ctx=c.getContext('2d');
   ctx.textAlign='center';ctx.textBaseline='middle';
   // 國旗 emoji
-  ctx.font='80px serif';
-  ctx.fillText(meta.center||'',256,70);
+  ctx.font='100px serif';
+  ctx.fillText(meta.center||'',256,130);
   // 國家名
-  ctx.font='bold 60px "Noto Sans TC","Microsoft JhengHei",sans-serif';
+  ctx.font='bold 72px "Noto Sans TC","Microsoft JhengHei",sans-serif';
   ctx.fillStyle=meta.accent;
-  ctx.fillText(meta.name,256,155);
+  ctx.fillText(meta.name,256,260);
   // 英文副標
-  ctx.font='italic 28px serif';
-  ctx.fillStyle='#666';
-  ctx.fillText(meta.en+' Monopoly',256,210);
+  ctx.font='italic 32px serif';
+  ctx.fillStyle='rgba(255,255,255,0.6)';
+  ctx.fillText(meta.en+' Monopoly',256,340);
 
   const tex=new THREE.CanvasTexture(c);
   tex.minFilter=THREE.LinearFilter;
-  const mat=new THREE.SpriteMaterial({map:tex,transparent:true,depthWrite:false});
-  const sprite=new THREE.Sprite(mat);
-  sprite.scale.set(8,4,1);
-  sprite.position.set(0,CELL_H+2.5,0);
-  boardGroup.add(sprite);
+  const innerW=B*2-CORNER_3D*2;
+  const geo=new THREE.PlaneGeometry(innerW*0.7,innerW*0.7);
+  geo.rotateX(-Math.PI/2);
+  const mat=new THREE.MeshStandardMaterial({
+    map:tex,transparent:true,depthWrite:false,
+    polygonOffset:true,polygonOffsetFactor:-2,polygonOffsetUnits:-2
+  });
+  const mesh=new THREE.Mesh(geo,mat);
+  mesh.position.set(0,CELL_H+0.12,0);
+  boardGroup.add(mesh);
 }
 
 // ╔══════════════════════════════════════════════════╗
@@ -771,7 +789,7 @@ function updateBuildings3D(){
       const oMat=new THREE.MeshStandardMaterial({color:parseInt(G.players[s.owner].color.replace('#',''),16),emissive:parseInt(G.players[s.owner].color.replace('#',''),16),emissiveIntensity:0.5});
       const oMesh=new THREE.Mesh(oGeo,oMat);
       const{w,h}=cellSize(r,c);
-      oMesh.position.set(x+w/2-0.2,CELL_H+0.15,z+h/2-0.2);
+      oMesh.position.set(x+w/2-0.2,CELL_H+0.25,z+h/2-0.2);
       buildingGroup.add(oMesh);
     }
   });
