@@ -186,6 +186,38 @@ let chanceCards=[],commCards=[];
 const DEFAULT_NAMES=['玩家一','玩家二','玩家三','玩家四'];
 
 // ╔══════════════════════════════════════════════════╗
+// ║              SOUND SYSTEM                        ║
+// ╚══════════════════════════════════════════════════╝
+let audioCtx=null;
+function getAudio(){if(!audioCtx)audioCtx=new(window.AudioContext||window.webkitAudioContext)();return audioCtx;}
+function playTone(freq,dur,type,vol){
+  try{const a=getAudio();const o=a.createOscillator();const g=a.createGain();
+  o.type=type||'sine';o.frequency.setValueAtTime(freq,a.currentTime);
+  g.gain.setValueAtTime(vol||0.15,a.currentTime);g.gain.exponentialRampToValueAtTime(0.001,a.currentTime+dur);
+  o.connect(g);g.connect(a.destination);o.start();o.stop(a.currentTime+dur);}catch(e){}
+}
+function playNoise(dur,vol){
+  try{const a=getAudio();const buf=a.createBuffer(1,a.sampleRate*dur,a.sampleRate);
+  const d=buf.getChannelData(0);for(let i=0;i<d.length;i++)d[i]=(Math.random()*2-1);
+  const s=a.createBufferSource();s.buffer=buf;
+  const g=a.createGain();g.gain.setValueAtTime(vol||0.08,a.currentTime);g.gain.exponentialRampToValueAtTime(0.001,a.currentTime+dur);
+  const f=a.createBiquadFilter();f.type='highpass';f.frequency.value=2000;
+  s.connect(f);f.connect(g);g.connect(a.destination);s.start();}catch(e){}
+}
+const SFX={
+  diceRoll(){for(let i=0;i<6;i++)setTimeout(()=>playNoise(0.05,0.06+Math.random()*0.04),i*50);},
+  diceHit(){playTone(200,0.1,'triangle',0.2);playNoise(0.08,0.1);},
+  tokenHop(){playTone(800+Math.random()*200,0.08,'sine',0.08);},
+  buy(){playTone(523,0.1,'square',0.1);setTimeout(()=>playTone(659,0.1,'square',0.1),100);setTimeout(()=>playTone(784,0.15,'square',0.12),200);},
+  rent(){playTone(400,0.15,'sawtooth',0.08);setTimeout(()=>playTone(300,0.2,'sawtooth',0.06),150);},
+  card(){playTone(600,0.08,'sine',0.1);setTimeout(()=>playTone(800,0.12,'sine',0.1),80);},
+  jail(){playTone(300,0.3,'sawtooth',0.1);setTimeout(()=>playTone(200,0.4,'sawtooth',0.08),200);},
+  win(){[523,659,784,1047].forEach((f,i)=>setTimeout(()=>playTone(f,0.3,'sine',0.12),i*150));},
+  click(){playTone(1000,0.03,'sine',0.05);},
+  endTurn(){playTone(500,0.06,'triangle',0.06);},
+};
+
+// ╔══════════════════════════════════════════════════╗
 // ║              THREE.JS SETUP                      ║
 // ╚══════════════════════════════════════════════════╝
 let scene,camera,renderer,controls;
@@ -439,20 +471,21 @@ function renderBoard3D(){
     border.position.set(x,CELL_H+0.085,z);
     boardGroup.add(border);
 
-    // 色帶
+    // 色帶（平面貼在格子上，不用 Box 避免浮起）
     if(s.group&&(s.type==='prop'||s.type==='rr'||s.type==='util')){
       const bandColor=parseInt(GROUPS[s.group].hex.replace('#',''),16);
-      const bandH=0.08;
-      let bGeo,bx=x,bz=z;
-      if(r===10&&c>0&&c<10){bGeo=new THREE.BoxGeometry(w-0.04,bandH,h*0.35);bz=z-h/2+h*0.175;}
-      else if(c===0&&r>0&&r<10){bGeo=new THREE.BoxGeometry(w*0.35,bandH,h-0.04);bx=x+w/2-w*0.175;}
-      else if(r===0&&c>0&&c<10){bGeo=new THREE.BoxGeometry(w-0.04,bandH,h*0.35);bz=z+h/2-h*0.175;}
-      else if(c===10&&r>0&&r<10){bGeo=new THREE.BoxGeometry(w*0.35,bandH,h-0.04);bx=x-w/2+w*0.175;}
-      if(bGeo){
-        const bMat=new THREE.MeshStandardMaterial({color:bandColor,roughness:0.6});
+      const bandRatio=0.35;
+      let bw,bh,bx=x,bz=z;
+      if(r===10&&c>0&&c<10){bw=w-0.08;bh=h*bandRatio;bz=z-h/2+bh/2+0.03;}
+      else if(c===0&&r>0&&r<10){bw=w*bandRatio;bh=h-0.08;bx=x+w/2-bw/2-0.03;}
+      else if(r===0&&c>0&&c<10){bw=w-0.08;bh=h*bandRatio;bz=z+h/2-bh/2-0.03;}
+      else if(c===10&&r>0&&r<10){bw=w*bandRatio;bh=h-0.08;bx=x-w/2+bw/2+0.03;}
+      if(bw){
+        const bGeo=new THREE.PlaneGeometry(bw,bh);
+        bGeo.rotateX(-Math.PI/2);
+        const bMat=new THREE.MeshStandardMaterial({color:bandColor,roughness:0.5,polygonOffset:true,polygonOffsetFactor:-2,polygonOffsetUnits:-2});
         const band=new THREE.Mesh(bGeo,bMat);
-        band.position.set(bx,CELL_H+0.1+bandH/2,bz);
-        band.castShadow=true;
+        band.position.set(bx,CELL_H+0.095,bz);
         boardGroup.add(band);
       }
     }
@@ -467,55 +500,47 @@ function renderBoard3D(){
 function addCellLabel(s,x,z,w,h,r,c){
   const canvas=document.createElement('canvas');
   const isCorner=(r===0||r===10)&&(c===0||c===10);
-  const isVert=(c===0||c===10)&&!isCorner;
-  // 高解析度 canvas（4x 提升清晰度）
-  const scale=4;
-  const cw=isCorner?128*scale:64*scale;
-  const ch=isCorner?128*scale:64*scale;
+  // 高解析度 canvas
+  const S=4;
+  const cw=256, ch=isCorner?200:140;
   canvas.width=cw;canvas.height=ch;
   const ctx=canvas.getContext('2d');
 
-  // 使用黑體字（sans-serif），加粗加大
-  const fontBase='bold sans-serif';
-  const fontName=`bold ${20*scale}px "Noto Sans TC","Microsoft JhengHei","PingFang TC",sans-serif`;
-  const fontPrice=`${16*scale}px "Noto Sans TC","Microsoft JhengHei",sans-serif`;
-  const fontSmall=`${14*scale}px "Noto Sans TC","Microsoft JhengHei",sans-serif`;
-
+  // 黑體字
   ctx.fillStyle='#1a1206';
   ctx.textAlign='center';
   ctx.textBaseline='middle';
-
   const name=s.name.replace('\n',' ');
+
   if(isCorner){
-    ctx.font=`${32*scale}px serif`;
-    ctx.fillText(s.icon||'',cw/2,ch*0.32);
-    ctx.font=`bold ${16*scale}px "Noto Sans TC","Microsoft JhengHei",sans-serif`;
-    ctx.fillText(name,cw/2,ch*0.58);
-    if(s.type==='go'){ctx.fillStyle='#1a8a3e';ctx.font=`bold ${13*scale}px "Noto Sans TC",sans-serif`;ctx.fillText('領取$200',cw/2,ch*0.76);}
-    if(s.type==='gotojail'){ctx.fillStyle='#c0392b';ctx.font=`bold ${13*scale}px "Noto Sans TC",sans-serif`;ctx.fillText('⚠',cw/2,ch*0.76);}
+    ctx.font='48px serif';
+    ctx.fillText(s.icon||'',cw/2,ch*0.3);
+    ctx.font='bold 28px "Noto Sans TC","Microsoft JhengHei",sans-serif';
+    ctx.fillText(name,cw/2,ch*0.6);
+    if(s.type==='go'){ctx.fillStyle='#1a8a3e';ctx.font='bold 22px "Noto Sans TC",sans-serif';ctx.fillText('領取$200',cw/2,ch*0.82);}
+    if(s.type==='gotojail'){ctx.fillStyle='#c0392b';ctx.font='bold 22px "Noto Sans TC",sans-serif';ctx.fillText('⚠',cw/2,ch*0.82);}
   } else {
-    ctx.font=fontName;
-    ctx.fillText(name,cw/2,ch*0.34);
-    if(s.price){ctx.font=fontPrice;ctx.fillStyle='#5a4a30';ctx.fillText('$'+s.price,cw/2,ch*0.68);}
-    else if(s.type==='chance'){ctx.font=`${28*scale}px serif`;ctx.fillText('❓',cw/2,ch*0.68);}
-    else if(s.type==='comm'){ctx.font=`${24*scale}px serif`;ctx.fillText('📦',cw/2,ch*0.68);}
-    else if(s.type==='tax'){ctx.font=`bold ${16*scale}px "Noto Sans TC",sans-serif`;ctx.fillStyle='#c0392b';ctx.fillText(s.id===4?'$200':'$75',cw/2,ch*0.68);}
+    ctx.font='bold 30px "Noto Sans TC","Microsoft JhengHei","PingFang TC",sans-serif';
+    ctx.fillText(name,cw/2,ch*0.32);
+    if(s.price){ctx.font='24px "Noto Sans TC",sans-serif';ctx.fillStyle='#5a4a30';ctx.fillText('$'+s.price,cw/2,ch*0.68);}
+    else if(s.type==='chance'){ctx.font='40px serif';ctx.fillText('❓',cw/2,ch*0.68);}
+    else if(s.type==='comm'){ctx.font='36px serif';ctx.fillText('📦',cw/2,ch*0.68);}
+    else if(s.type==='tax'){ctx.font='bold 26px "Noto Sans TC",sans-serif';ctx.fillStyle='#c0392b';ctx.fillText(s.id===4?'$200':'$75',cw/2,ch*0.68);}
   }
 
   const tex=new THREE.CanvasTexture(canvas);
   tex.minFilter=THREE.LinearFilter;
   tex.magFilter=THREE.LinearFilter;
-  tex.anisotropy=renderer.capabilities.getMaxAnisotropy();
-  const labelGeo=new THREE.PlaneGeometry(isCorner?CORNER_3D*0.85:EDGE_3D*0.9,isCorner?CORNER_3D*0.85:(isVert?EDGE_3D*0.9:EDGE_3D*0.85));
-  const labelMat=new THREE.MeshBasicMaterial({map:tex,transparent:true,depthWrite:false,polygonOffset:true,polygonOffsetFactor:-1,polygonOffsetUnits:-1});
-  const label=new THREE.Mesh(labelGeo,labelMat);
-  label.rotation.x=-Math.PI/2;
-  if(isVert){
-    if(c===0) label.rotation.z=Math.PI/2;
-    else label.rotation.z=-Math.PI/2;
-  }
-  label.position.set(x,CELL_H+0.12,z);
-  boardGroup.add(label);
+
+  // 使用 Sprite（永遠面向攝影機，任何角度都可讀）
+  const spriteMat=new THREE.SpriteMaterial({map:tex,transparent:true,depthWrite:false,depthTest:true,sizeAttenuation:true});
+  const sprite=new THREE.Sprite(spriteMat);
+  const spriteW=isCorner?2.2:1.5;
+  const spriteH=spriteW*(ch/cw);
+  sprite.scale.set(spriteW,spriteH,1);
+  sprite.position.set(x,CELL_H+0.5+spriteH/2,z);
+  sprite.userData.spaceId=s.id;
+  boardGroup.add(sprite);
 }
 
 function buildCityCenter(meta){
@@ -940,6 +965,7 @@ function showCardModal(type,card){
 function closeCardModal(){hideModal(()=>{if(pendingCard){const{card,player}=pendingCard;pendingCard=null;card.fn(player);}});}
 
 function showRentModal(payer,owner,space,rent){
+  SFX.rent();
   showModal(`
     <div class="modal-icon">💸</div>
     <div class="modal-title">支付租金</div>
@@ -978,6 +1004,7 @@ function showPropInfo(id){
 }
 
 function showWinnerModal(w){
+  SFX.win();
   showModal(`
     <div class="modal-icon" style="font-size:60px">🏆</div>
     <div class="modal-title" style="font-size:1.3rem">${w.name} 獲勝！</div>
@@ -994,6 +1021,7 @@ function doRoll(){
   const cur=G.players[G.current];
   if(cur.bankrupt){doEndTurn();return;}
 
+  SFX.diceRoll();
   const d1=1+Math.floor(Math.random()*6);
   const d2=1+Math.floor(Math.random()*6);
   G.dice=[d1,d2];G.doublesRolled=(d1===d2);
@@ -1001,6 +1029,7 @@ function doRoll(){
   // 啟動 3D 骰子
   launchDice(d1,d2);
   diceCallback=()=>{
+    SFX.diceHit();
     renderUI();
     afterRoll(d1,d2);
   };
@@ -1034,8 +1063,9 @@ async function movePlayer(player,steps){
     for(let i=1;i<=numSteps;i++){
       const p=(oldPos+i)%40;
       const{x,y,z}=cellCenter3D(p);
-      // 攝影機追蹤代幣
+      // 攝影機追蹤代幣 + 跳躍音效
       controls.lookAt(x*0.5,0,z*0.5);
+      SFX.tokenHop();
       await tw(tok.position,{x,y:y+0.25+0.4,z},60);
       await tw(tok.position,{y:y+0.25},40);
     }
@@ -1092,6 +1122,7 @@ function promptBuy(player,space){
 
 function doBuySpace(player,space){
   player.money-=space.price;space.owner=player.id;
+  SFX.buy();
   addLog(`${player.name} 購買了 ${space.name}（$${space.price}）！`,'gold');
   updateBuildings3D();G.phase='post';renderUI();
   if(player.isAI)setTimeout(()=>{aiBuild(player);setTimeout(()=>doEndTurn(),500);},400);
@@ -1129,6 +1160,7 @@ function doSellBuilding(space){
 }
 
 function drawCard(type,player){
+  SFX.card();
   const deck=type==='chance'?chanceCards:commCards;const card=deck[0];deck.push(deck.shift());
   addLog(`${player.name} 抽到${type==='chance'?'機會':'命運'}卡：${card.text}`);
   pendingCard={card,player};showCardModal(type,card);
@@ -1144,6 +1176,7 @@ function collectFromAll(p,amt){G.players.forEach(o=>{if(o.id!==p.id&&!o.bankrupt
 function goToJail(p){goToJailDirect();}
 
 function goToJailDirect(){
+  SFX.jail();
   const cur=G.players[G.current];
   cur.position=10;cur.inJail=true;cur.jailTurns=0;cur.doublesCount=0;
   updateTokens3D();cameraFollowPlayer(G.current);
@@ -1168,7 +1201,7 @@ function checkWinner(){
 }
 
 function doEndTurn(){
-  if(G.phase!=='post')return;const cur=G.players[G.current];
+  if(G.phase!=='post')return;SFX.endTurn();const cur=G.players[G.current];
   if(!cur.isAI){G.spaces.forEach(s=>{if(canBuild(cur,s)&&cur.money>s.price+400){const grp=GROUPS[s.group];cur.money-=grp.buildCost;s.buildings++;addLog(`${cur.name} 在 ${s.name} 建造！`,'gold');updateBuildings3D();renderUI();}});}
   if(G.doublesRolled&&!cur.inJail&&cur.doublesCount>0&&cur.doublesCount<3){
     addLog(`${cur.name} 擲出雙胞胎，再擲一次！`);G.phase='roll';renderUI();
