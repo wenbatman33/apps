@@ -64,8 +64,34 @@ canvas{display:block}
   display:flex;flex-direction:column;gap:10px;
 }
 @media(max-width:768px){
-  #side-panel{right:auto;left:0;right:0;top:auto;bottom:0;width:100%;height:auto;max-height:45vh;
-    border-left:none;border-top:1px solid rgba(201,168,76,.2);flex-direction:column}
+  #setup-overlay{padding:10px;overflow-y:auto;-webkit-overflow-scrolling:touch}
+  .setup-card{padding:20px 16px}
+  .setup-title{font-size:1.1rem}
+  .setup-subtitle{margin-bottom:16px}
+  .player-count-row{margin-bottom:16px}
+  .player-inputs{margin-bottom:16px;gap:8px}
+  .count-btn{width:44px;height:44px;font-size:1rem}
+  .player-input-row input{padding:8px 10px;font-size:.85rem}
+
+  #side-panel{right:auto;left:0;right:0;top:auto;bottom:0;width:100%;height:auto;max-height:42vh;
+    border-left:none;border-top:1px solid rgba(201,168,76,.2);flex-direction:column;
+    padding:8px 10px;gap:4px}
+  .sp-title{margin-bottom:2px;font-size:.6rem;letter-spacing:2px}
+  .pcard{padding:4px 6px;margin-bottom:1px}
+  .p-avatar{width:24px;height:24px;font-size:10px}
+  .p-name{font-size:.7rem}
+  .p-money{font-size:.65rem}
+  .p-badges{margin-top:0}
+  .p-badge{font-size:.5rem;padding:0 4px}
+  .active-dot{width:5px;height:5px}
+  .dice-area{padding:4px 0;gap:4px}
+  .dice-row{gap:8px}
+  .die-display{width:36px;height:36px;font-size:20px;border-radius:6px}
+  .dice-total{font-size:.75rem}
+  .btn-action{padding:7px;font-size:.8rem;margin-top:2px}
+  #game-log{max-height:50px;font-size:.6rem;padding:4px 6px}
+  .log-line{padding:1px 0}
+  .btn-menu{padding:4px;font-size:.65rem}
 }
 .sp-title{font-size:.7rem;letter-spacing:3px;color:#c9a84c;text-transform:uppercase;margin-bottom:6px}
 .pcard{display:flex;align-items:center;gap:8px;padding:8px;border-radius:8px;border:1px solid transparent;margin-bottom:4px}
@@ -232,7 +258,8 @@ const CELL_H=0.15; // 格子厚度
 
 // 簡易軌道控制器（支援焦點追蹤）
 function createOrbitControls(cam,el){
-  let phi=Math.PI/3.5,theta=0,dist=28;
+  const mob=window.innerWidth<=768;
+  let phi=mob?Math.PI/5:Math.PI/3.5,theta=0,dist=mob?22:28;
   let dragging=false,lastX=0,lastY=0;
   // 攝影機焦點（可動態改變）
   const target={x:0,y:0,z:0};
@@ -293,8 +320,9 @@ function cameraFollowPlayer(playerIdx){
   const p=G.players[playerIdx];
   if(!p||p.bankrupt)return;
   const{x,z}=cellCenter3D(p.position);
-  // 焦點偏向玩家，但不完全移到玩家（保留一些棋盤可見度）
-  controls.lookAt(x*0.5,0,z*0.5);
+  // 手機上焦點更靠近玩家，讓棋子更容易看到
+  const f=isMobile()?0.6:0.5;
+  controls.lookAt(x*f,0,z*f);
 }
 
 function initThree(){
@@ -353,10 +381,20 @@ function initThree(){
   animate();
 }
 
+function isMobile(){return window.innerWidth<=768;}
 function onResize(){
-  camera.aspect=window.innerWidth/window.innerHeight;
-  camera.updateProjectionMatrix();
-  renderer.setSize(window.innerWidth,window.innerHeight);
+  const w=window.innerWidth,h=window.innerHeight;
+  if(isMobile()){
+    // 手機：畫布只佔上方 58%，下方留給側邊欄
+    const renderH=Math.floor(h*0.58);
+    camera.aspect=w/renderH;
+    camera.updateProjectionMatrix();
+    renderer.setSize(w,renderH);
+  } else {
+    camera.aspect=w/h;
+    camera.updateProjectionMatrix();
+    renderer.setSize(w,h);
+  }
   needsRender=true;
 }
 
@@ -737,15 +775,16 @@ function updateTokens3D(){
     const offsets=[[-0.3,-0.3],[0.3,-0.3],[-0.3,0.3],[0.3,0.3]];
     const[ox,oz]=offsets[slot]||[0,0];
 
-    // 棋子：圓錐底座
+    // 棋子：圓錐底座（手機上稍大以便看清）
+    const mob=isMobile();
     const color=parseInt(p.color.replace('#',''),16);
-    const bodyGeo=new THREE.CylinderGeometry(0.15,0.25,0.5,8);
-    const bodyMat=new THREE.MeshStandardMaterial({color,roughness:0.4,metalness:0.3});
+    const bodyGeo=new THREE.CylinderGeometry(mob?0.22:0.15,mob?0.35:0.25,mob?0.65:0.5,8);
+    const bodyMat=new THREE.MeshStandardMaterial({color,roughness:0.4,metalness:0.3,emissive:color,emissiveIntensity:mob?0.3:0});
     const body=new THREE.Mesh(bodyGeo,bodyMat);
     body.castShadow=true;
 
     // 頭部球體
-    const headGeo=new THREE.SphereGeometry(0.18,8,6);
+    const headGeo=new THREE.SphereGeometry(mob?0.24:0.18,8,6);
     const head=new THREE.Mesh(headGeo,bodyMat);
     head.position.y=0.4;
     head.castShadow=true;
@@ -1098,7 +1137,8 @@ async function movePlayer(player,steps){
       const p=(oldPos+i)%40;
       const{x,y,z}=cellCenter3D(p);
       // 攝影機追蹤代幣 + 跳躍音效
-      controls.lookAt(x*0.5,0,z*0.5);
+      const cf=isMobile()?0.6:0.5;
+      controls.lookAt(x*cf,0,z*cf);
       SFX.tokenHop();
       await tw(tok.position,{x,y:y+0.25+0.4,z},60);
       await tw(tok.position,{y:y+0.25},40);
@@ -1258,9 +1298,11 @@ function maybeAI(){const cur=G.players[G.current];if(cur.isAI&&!cur.bankrupt)set
 const raycaster=new THREE.Raycaster();
 const mouse=new THREE.Vector2();
 document.addEventListener('click',(e)=>{
-  if(!G||e.target.closest('#side-panel,#modal-overlay,#setup-overlay,#welcome-overlay'))return;
-  mouse.x=(e.clientX/window.innerWidth)*2-1;
-  mouse.y=-(e.clientY/window.innerHeight)*2+1;
+  if(!G||!renderer||e.target.closest('#side-panel,#modal-overlay,#setup-overlay,#welcome-overlay'))return;
+  const rect=renderer.domElement.getBoundingClientRect();
+  if(e.clientY>rect.bottom)return; // 點擊在畫布外（側邊欄區域）
+  mouse.x=((e.clientX-rect.left)/rect.width)*2-1;
+  mouse.y=-((e.clientY-rect.top)/rect.height)*2+1;
   raycaster.setFromCamera(mouse,camera);
   const hits=raycaster.intersectObjects(cellMeshes.filter(Boolean));
   if(hits.length>0){const id=hits[0].object.userData.spaceId;if(id!=null)showPropInfo(id);}
