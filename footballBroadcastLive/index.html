@@ -3184,6 +3184,10 @@ function startBurstEffect(teamColor) {
 
     ctx.clearRect(0, 0, w, h);
 
+    // Fade out in last 1 second
+    const fadeAlpha = elapsed > 2 ? Math.max(0, 1 - (elapsed - 2)) : 1;
+    ctx.globalAlpha = fadeAlpha;
+
     // Dark center
     const bgGrad = ctx.createRadialGradient(cx, cy, 0, cx, cy, maxR * 0.4);
     bgGrad.addColorStop(0, 'rgba(10,20,60,0.95)');
@@ -3262,7 +3266,12 @@ function startBurstEffect(teamColor) {
     }
     ctx.globalAlpha = 1;
 
-    burstTimer = requestAnimationFrame(drawBurst);
+    // Auto-stop after 3 seconds
+    if (elapsed < 3) {
+      burstTimer = requestAnimationFrame(drawBurst);
+    } else {
+      stopBurstEffect();
+    }
   }
   drawBurst();
 }
