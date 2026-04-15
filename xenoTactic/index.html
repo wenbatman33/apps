@@ -94,7 +94,7 @@ canvas { display: block; position: absolute; top: 0; left: 0; touch-action: none
 // ==================== CONSTANTS ====================
 const CANVAS_W = 672, CANVAS_H = 504;
 const TOP_BAR_H = 64;
-const GRID_COLS = 29, GRID_ROWS = 24, CELL_SIZE = 16;
+const GRID_COLS = 27, GRID_ROWS = 22, CELL_SIZE = 16;
 const GRID_X = 0, GRID_Y = TOP_BAR_H;
 const PANEL_X = GRID_COLS * CELL_SIZE; // 464
 const PANEL_W = CANVAS_W - PANEL_X;   // 208
@@ -1081,8 +1081,8 @@ class Game {
       }
     }
 
-    // LR path: 開口在 row 8-15（原版 openingStartRow=8, openingEndRow=15）
-    const lrOpenStart = 8, lrOpenEnd = 15;
+    // LR path: 開口在左右邊界（依格數等比調整）
+    const lrOpenStart = 7, lrOpenEnd = 14;
     this.startCellsLR = [];
     this.endCellsLR = [];
     for (let r = lrOpenStart; r <= lrOpenEnd; r++) {
@@ -1092,12 +1092,12 @@ class Game {
       this.endCellsLR.push(this.grid[r][GRID_COLS - 1]);
     }
 
-    // UD path: 開口在 col 10-18（原版 openingStartCol=10, openingEndCol=18）
+    // UD path: 開口在上下邊界（依格數等比調整）
     this.dualPath = difficulty > 1;
     this.startCellsUD = [];
     this.endCellsUD = [];
     if (this.dualPath) {
-      const udOpenStart = 10, udOpenEnd = 18;
+      const udOpenStart = 9, udOpenEnd = 17;
       for (let c = udOpenStart; c <= udOpenEnd; c++) {
         this.grid[0][c].cost = 1;                  // 上邊界開口
         this.grid[GRID_ROWS - 1][c].cost = 1;      // 下邊界開口
@@ -1157,10 +1157,10 @@ class Game {
     const m = this.mission;
     // Mission 3: 中間十字形障礙物 — 窄十字擋在地圖中央
     if (m === 3) {
-      // 水平臂: rows 11-12 (2格高), cols 4-24 (橫跨大部分寬度)
-      // 垂直臂: cols 13-15 (3格寬), rows 3-20 (縱跨大部分高度)
-      const hTop = 11, hBot = 13, hLeft = 4, hRight = 24;
-      const vTop = 3, vBot = 20, vLeft = 13, vRight = 15;
+      // 水平臂: rows 10-12 (3格高), cols 4-22 (橫跨大部分寬度)
+      // 垂直臂: cols 12-14 (3格寬), rows 3-18 (縱跨大部分高度)
+      const hTop = 10, hBot = 12, hLeft = 4, hRight = 22;
+      const vTop = 3, vBot = 18, vLeft = 12, vRight = 14;
       for (let r = 1; r < GRID_ROWS - 1; r++) {
         for (let c = 1; c < GRID_COLS - 1; c++) {
           const inH = (r >= hTop && r <= hBot && c >= hLeft && c <= hRight);
@@ -1173,13 +1173,13 @@ class Game {
       }
     }
 
-    // Mission 4: 圓形障礙物 — 四個大型圓盤
+    // Mission 4: 圓形障礙物 — 四個 5x5 圓盤，四周留 3 格空隙
     if (m === 4) {
       const circles = [
-        { cx: 7,  cy: 5,  r: 3 },  // 左上
-        { cx: 21, cy: 5,  r: 3 },  // 右上
-        { cx: 7,  cy: 18, r: 3 },  // 左下
-        { cx: 21, cy: 18, r: 3 },  // 右下
+        { cx: 6,  cy: 6,  r: 2.5 },  // 左上
+        { cx: 20, cy: 6,  r: 2.5 },  // 右上
+        { cx: 6,  cy: 15, r: 2.5 },  // 左下
+        { cx: 20, cy: 15, r: 2.5 },  // 右下
       ];
       for (const circ of circles) {
         for (let r = 1; r < GRID_ROWS - 1; r++) {
@@ -1555,8 +1555,8 @@ function render() {
   // Mission 4 圓形障礙物裝飾 — 金屬圓盤效果
   if (g.mission === 4) {
     const circles = [
-      { cx: 7, cy: 5, r: 3 }, { cx: 21, cy: 5, r: 3 },
-      { cx: 7, cy: 18, r: 3 }, { cx: 21, cy: 18, r: 3 },
+      { cx: 6, cy: 6, r: 2.5 }, { cx: 20, cy: 6, r: 2.5 },
+      { cx: 6, cy: 15, r: 2.5 }, { cx: 20, cy: 15, r: 2.5 },
     ];
     for (const circ of circles) {
       const px = circ.cx * CELL_SIZE + GRID_X + CELL_SIZE / 2;
