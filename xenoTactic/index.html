@@ -1026,9 +1026,10 @@ function generateWaves(totalWaves, difficulty) {
 
 // ==================== GAME ====================
 class Game {
-  constructor(difficulty, totalWaves) {
+  constructor(difficulty, totalWaves, mission) {
     this.difficulty = difficulty;
     this.totalWaves = totalWaves;
+    this.mission = mission || 1;
     this.gold = 80;
     this.lives = 20;
     this.score = 0;
@@ -1078,6 +1079,9 @@ class Game {
       }
     }
 
+    // 根據 mission 放置預設障礙物
+    this.applyMissionObstacles();
+
     this.floodPathLR = new FloodPath(this.grid, this.startCellsLR, this.endCellsLR, 'LR');
     this.floodPathLR.compute();
 
@@ -1115,6 +1119,48 @@ class Game {
     this.messageTimer = 0;
     this.mouseX = 0;
     this.mouseY = 0;
+  }
+
+  applyMissionObstacles() {
+    const m = this.mission;
+    // Mission 3: 中間十字形障礙物 — 窄十字擋在地圖中央
+    if (m === 3) {
+      // 水平臂: rows 11-12 (2格高), cols 4-24 (橫跨大部分寬度)
+      // 垂直臂: cols 13-15 (3格寬), rows 3-20 (縱跨大部分高度)
+      const hTop = 11, hBot = 13, hLeft = 4, hRight = 24;
+      const vTop = 3, vBot = 20, vLeft = 13, vRight = 15;
+      for (let r = 1; r < GRID_ROWS - 1; r++) {
+        for (let c = 1; c < GRID_COLS - 1; c++) {
+          const inH = (r >= hTop && r <= hBot && c >= hLeft && c <= hRight);
+          const inV = (c >= vLeft && c <= vRight && r >= vTop && r <= vBot);
+          if (inH || inV) {
+            this.grid[r][c].cost = 0;
+            this.grid[r][c].isObstacle = true;
+          }
+        }
+      }
+    }
+
+    // Mission 4: 圓形障礙物 — 四個大型圓盤
+    if (m === 4) {
+      const circles = [
+        { cx: 7,  cy: 5,  r: 3 },  // 左上
+        { cx: 21, cy: 5,  r: 3 },  // 右上
+        { cx: 7,  cy: 18, r: 3 },  // 左下
+        { cx: 21, cy: 18, r: 3 },  // 右下
+      ];
+      for (const circ of circles) {
+        for (let r = 1; r < GRID_ROWS - 1; r++) {
+          for (let c = 1; c < GRID_COLS - 1; c++) {
+            const dx = c - circ.cx, dy = r - circ.cy;
+            if (dx * dx + dy * dy <= circ.r * circ.r) {
+              this.grid[r][c].cost = 0;
+              this.grid[r][c].isObstacle = true;
+            }
+          }
+        }
+      }
+    }
   }
 
   rebuildPaths() {
@@ -1415,14 +1461,31 @@ function render() {
       const cx = cell.x, cy = cell.y;
 
       if (cell.cost === 0) {
-        // 牆壁/邊界 — 深色金屬質感
-        const shade = ((r + c) % 2 === 0) ? '#1a1a28' : '#181826';
-        ctx.fillStyle = shade;
-        ctx.fillRect(cx, cy, CELL_SIZE, CELL_SIZE);
-        // 金屬邊框
-        ctx.strokeStyle = '#252535';
-        ctx.lineWidth = 0.5;
-        ctx.strokeRect(cx + 0.5, cy + 0.5, CELL_SIZE - 1, CELL_SIZE - 1);
+        if (cell.isObstacle) {
+          // 預設障礙物 — 深色金屬質感，比地板明顯更暗
+          const shade = ((r + c) % 2 === 0) ? '#10101e' : '#0e0e1a';
+          ctx.fillStyle = shade;
+          ctx.fillRect(cx, cy, CELL_SIZE, CELL_SIZE);
+          // 金屬邊框
+          ctx.strokeStyle = '#1a1a30';
+          ctx.lineWidth = 0.5;
+          ctx.strokeRect(cx + 0.5, cy + 0.5, CELL_SIZE - 1, CELL_SIZE - 1);
+          // 每隔幾格加一個鉚釘點
+          if (r % 3 === 0 && c % 3 === 0) {
+            ctx.beginPath();
+            ctx.arc(cx + CELL_SIZE / 2, cy + CELL_SIZE / 2, 2, 0, Math.PI * 2);
+            ctx.fillStyle = '#2a2a44';
+            ctx.fill();
+          }
+        } else {
+          // 牆壁/邊界 — 深色金屬質感
+          const shade = ((r + c) % 2 === 0) ? '#1a1a28' : '#181826';
+          ctx.fillStyle = shade;
+          ctx.fillRect(cx, cy, CELL_SIZE, CELL_SIZE);
+          ctx.strokeStyle = '#252535';
+          ctx.lineWidth = 0.5;
+          ctx.strokeRect(cx + 0.5, cy + 0.5, CELL_SIZE - 1, CELL_SIZE - 1);
+        }
       } else {
         // 可通行地板 — 淺色交錯棋盤格
         const shade = ((r + c) % 2 === 0) ? '#2a2a3e' : '#262638';
@@ -1447,6 +1510,40 @@ function render() {
       ctx.moveTo(GRID_X, GRID_Y + r * CELL_SIZE);
       ctx.lineTo(GRID_X + GRID_COLS * CELL_SIZE, GRID_Y + r * CELL_SIZE);
       ctx.stroke();
+    }
+  }
+
+  // Mission 4 圓形障礙物裝飾 — 金屬圓盤效果
+  if (g.mission === 4) {
+    const circles = [
+      { cx: 7, cy: 5, r: 3 }, { cx: 21, cy: 5, r: 3 },
+      { cx: 7, cy: 18, r: 3 }, { cx: 21, cy: 18, r: 3 },
+    ];
+    for (const circ of circles) {
+      const px = circ.cx * CELL_SIZE + GRID_X + CELL_SIZE / 2;
+      const py = circ.cy * CELL_SIZE + GRID_Y + CELL_SIZE / 2;
+      const pr = circ.r * CELL_SIZE;
+      // 外圈金屬環
+      ctx.beginPath();
+      ctx.arc(px, py, pr + 2, 0, Math.PI * 2);
+      ctx.fillStyle = '#3a3a50';
+      ctx.fill();
+      // 內圈暗色
+      ctx.beginPath();
+      ctx.arc(px, py, pr - 2, 0, Math.PI * 2);
+      ctx.fillStyle = '#14142a';
+      ctx.fill();
+      // 高光環
+      ctx.beginPath();
+      ctx.arc(px, py, pr, 0, Math.PI * 2);
+      ctx.strokeStyle = '#555580';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+      // 中心點
+      ctx.beginPath();
+      ctx.arc(px, py, 3, 0, Math.PI * 2);
+      ctx.fillStyle = '#444468';
+      ctx.fill();
     }
   }
 
@@ -2356,7 +2453,7 @@ function getEnemySprites() {
 function startGame(diff, totalWaves) {
   startScreen.style.display = 'none';
   gameOverScreen.style.display = 'none';
-  game = new Game(diff, totalWaves);
+  game = new Game(diff, totalWaves, currentMission);
 }
 
 function showGameOver(won) {
