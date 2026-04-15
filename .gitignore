@@ -7,3 +7,9 @@ slotGame_2/.DS_Store
 
 # pokerGame 設計原始檔（不需推上 repo）
 pokerGame/assets/**/*.psd
+
+# node_modules
+**/node_modules/
+
+# DS_Store
+**/.DS_Store

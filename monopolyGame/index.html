@@ -524,6 +524,21 @@ function renderBoard3D(){
   needsRender=true;
 }
 
+// 重繪單一格子的貼圖（購買/建設後更新顏色）
+function refreshCellTexture(spaceId){
+  const s=G.spaces[spaceId];
+  const[r,c]=spaceToGrid(spaceId);
+  const isCorner=(r===0||r===10)&&(c===0||c===10);
+  const isVert=(c===0||c===10)&&!isCorner;
+  const mesh=cellMeshes[spaceId];
+  if(!mesh)return;
+  // 釋放舊貼圖
+  if(mesh.material.map)mesh.material.map.dispose();
+  mesh.material.map=createCellTexture(s,r,c,isCorner,isVert);
+  mesh.material.needsUpdate=true;
+  needsRender=true;
+}
+
 // 把底色、色帶、邊框、文字全部畫在同一張 Canvas 上
 function wrapText(ctx,text,cx,y,maxW,lineH){
   if(ctx.measureText(text).width<=maxW){ctx.fillText(text,cx,y);return y+lineH;}
@@ -554,7 +569,7 @@ function createCellTexture(s,r,c,isCorner,isVert){
   canvas.width=cw;canvas.height=ch;
   const ctx=canvas.getContext('2d');
 
-  // 1) 底色
+  // 1) 底色（購買後顯示玩家顏色）
   let bg='#f0ebd5';
   if(s.type==='chance')bg='#fff3cc';else if(s.type==='comm')bg='#d6ecf5';
   else if(s.type==='tax')bg='#fce4e4';else if(s.type==='go')bg='#d4edda';
@@ -562,6 +577,16 @@ function createCellTexture(s,r,c,isCorner,isVert){
   else if(s.type==='gotojail')bg='#f8d7da';
   ctx.fillStyle=bg;
   ctx.fillRect(0,0,cw,ch);
+  // 擁有者底色疊加（半透明玩家顏色）
+  if(s.owner!==null&&G&&G.players[s.owner]){
+    const pc=G.players[s.owner].color;
+    ctx.fillStyle=pc+'40'; // 25% 透明度
+    ctx.fillRect(0,0,cw,ch);
+    // 底部擁有者色條
+    ctx.fillStyle=pc+'80'; // 50% 透明度
+    const barH=isCorner?ch*0.08:ch*0.06;
+    ctx.fillRect(P,ch-barH-P,cw-2*P,barH);
+  }
 
   // 2) 邊框
   ctx.strokeStyle='#b8a880';ctx.lineWidth=2*P;
@@ -804,32 +829,53 @@ function updateBuildings3D(){
   if(!G)return;
   buildingGroup.clear();
   G.spaces.forEach(s=>{
-    if(s.type!=='prop'||s.buildings===0)return;
-    const{x,y,z}=cellCenter3D(s.id);
     const[r,c]=spaceToGrid(s.id);
-    for(let i=0;i<(s.buildings===5?1:s.buildings);i++){
-      const isHotel=s.buildings===5;
-      const bw=isHotel?0.4:0.2;
-      const bh=isHotel?0.5:0.3;
-      const geo=new THREE.BoxGeometry(bw,bh,bw);
-      const mat=new THREE.MeshStandardMaterial({color:isHotel?0xc0392b:0x1a7a1a,roughness:0.6});
-      const mesh=new THREE.Mesh(geo,mat);
-      const offset=(i-(isHotel?0:s.buildings/2-0.5))*0.3;
-      let bx=x,bz=z;
-      if(r===10)bz-=0.5;else if(r===0)bz+=0.5;else if(c===0)bx+=0.5;else if(c===10)bx-=0.5;
-      if(r===10||r===0)bx+=offset;else bz+=offset;
-      mesh.position.set(bx,y+bh/2,bz);
-      mesh.castShadow=true;
-      buildingGroup.add(mesh);
+    const{x,y,z}=cellCenter3D(s.id);
+
+    // 建築物（1-2棟=綠色房屋，3棟=紅色旅館）
+    if(s.type==='prop'&&s.buildings>0){
+      const isHotel=s.buildings===3;
+      const count=isHotel?1:s.buildings;
+      for(let i=0;i<count;i++){
+        const bw=isHotel?0.5:0.2;
+        const bh=isHotel?0.6:0.3;
+        const bd=isHotel?0.5:0.2;
+        const geo=new THREE.BoxGeometry(bw,bh,bd);
+        const mat=new THREE.MeshStandardMaterial({
+          color:isHotel?0xc0392b:0x1a7a1a,
+          roughness:0.5,
+          metalness:isHotel?0.2:0
+        });
+        const mesh=new THREE.Mesh(geo,mat);
+        const offset=(i-(count/2-0.5))*0.3;
+        let bx=x,bz=z;
+        // 建築偏向棋盤外側
+        if(r===10)bz-=0.5;else if(r===0)bz+=0.5;else if(c===0)bx+=0.5;else if(c===10)bx-=0.5;
+        if(r===10||r===0)bx+=offset;else bz+=offset;
+        mesh.position.set(bx,y+bh/2,bz);
+        mesh.castShadow=true;
+        buildingGroup.add(mesh);
+      }
     }
-    // 擁有者標記
-    if(s.owner!==null){
-      const oGeo=new THREE.SphereGeometry(0.08,6,4);
-      const oMat=new THREE.MeshStandardMaterial({color:parseInt(G.players[s.owner].color.replace('#',''),16),emissive:parseInt(G.players[s.owner].color.replace('#',''),16),emissiveIntensity:0.5});
-      const oMesh=new THREE.Mesh(oGeo,oMat);
+
+    // 擁有者旗幟標記（更明顯的圓柱+球）
+    if(s.owner!==null&&(s.type==='prop'||s.type==='rr'||s.type==='util')){
+      const pColor=parseInt(G.players[s.owner].color.replace('#',''),16);
+      // 小旗桿
+      const poleGeo=new THREE.CylinderGeometry(0.03,0.03,0.5,4);
+      const poleMat=new THREE.MeshStandardMaterial({color:0xffffff,roughness:0.3});
+      const pole=new THREE.Mesh(poleGeo,poleMat);
       const{w,h}=cellSize(r,c);
-      oMesh.position.set(x+w/2-0.2,CELL_H+0.25,z+h/2-0.2);
-      buildingGroup.add(oMesh);
+      const fx=x+w/2-0.15,fz=z+h/2-0.15;
+      pole.position.set(fx,CELL_H+0.42,fz);
+      buildingGroup.add(pole);
+      // 旗幟球
+      const flagGeo=new THREE.SphereGeometry(0.12,8,6);
+      const flagMat=new THREE.MeshStandardMaterial({color:pColor,emissive:pColor,emissiveIntensity:0.6,roughness:0.3});
+      const flag=new THREE.Mesh(flagGeo,flagMat);
+      flag.position.set(fx,CELL_H+0.72,fz);
+      flag.castShadow=true;
+      buildingGroup.add(flag);
     }
   });
   needsRender=true;
@@ -1054,23 +1100,55 @@ function showPropInfo(id){
   const g=s.group?GROUPS[s.group]:null;
   const owner=s.owner!==null?G.players[s.owner]:null;
   const cur=G.players[G.current];
+  const grpS=G.spaces.filter(ss=>ss.group===s.group);
+  const ownsAll=s.owner!==null&&grpS.every(ss=>ss.owner===s.owner);
   let btns='';
   if(G.phase==='post'&&s.owner===G.current&&!cur.isAI){
-    if(canBuild(cur,s)) btns+=`<button class="btn btn-gold" style="width:auto" onclick="hideModal(()=>doBuildOn(G.spaces[${id}]))">建造($${g.buildCost})</button>`;
-    if(s.buildings>0) btns+=`<button class="btn btn-red" style="width:auto" onclick="hideModal(()=>doSellBuilding(G.spaces[${id}]))">拆除出售</button>`;
+    if(canBuild(cur,s)) btns+=`<button class="btn btn-gold" style="width:auto" onclick="hideModal(()=>doBuildOn(G.spaces[${id}]))">🏗 建造 ($${g.buildCost})</button>`;
+    if(s.buildings>0) btns+=`<button class="btn" style="width:auto;background:#c0392b;color:#fff" onclick="hideModal(()=>doSellBuilding(G.spaces[${id}]))">拆除出售</button>`;
   }
   btns+=`<button class="btn btn-outline" onclick="hideModal()">關閉</button>`;
+
+  // 建設狀態文字
+  let buildStatus='無建築';
+  if(s.buildings===1)buildStatus='🏠 1 棟房屋';
+  else if(s.buildings===2)buildStatus='🏠🏠 2 棟房屋';
+  else if(s.buildings===3)buildStatus='🏨 高級旅館';
+
+  // 租金資訊
+  let rentInfo='';
+  if(s.type==='prop'){
+    rentInfo=`
+      <div class="detail-row"><span class="detail-label">基本租金</span><span class="detail-val">$${s.rent[0]}</span></div>
+      <div class="detail-row"><span class="detail-label">同色系全收集</span><span class="detail-val" style="color:#c9a84c">$${s.rent[0]*2} (×2)</span></div>
+      <div class="detail-row"><span class="detail-label">1 棟房屋 🏠</span><span class="detail-val">$${s.rent[1]}</span></div>
+      <div class="detail-row"><span class="detail-label">2 棟房屋 🏠🏠</span><span class="detail-val">$${s.rent[2]}</span></div>
+      <div class="detail-row"><span class="detail-label">高級旅館 🏨</span><span class="detail-val" style="color:#e74c3c;font-weight:bold">$${s.rent[3]}</span></div>
+      <div class="detail-row"><span class="detail-label">建設費用</span><span class="detail-val">$${g.buildCost}/棟</span></div>
+      <div class="detail-row"><span class="detail-label">目前建設</span><span class="detail-val">${buildStatus}</span></div>
+      ${ownsAll?'<div class="detail-row" style="color:#c9a84c;font-weight:bold"><span>✅ 已收集全套同色系！</span></div>':''}`;
+  } else if(s.type==='rr'){
+    const ownedRR=s.owner!==null?G.spaces.filter(ss=>ss.type==='rr'&&ss.owner===s.owner).length:0;
+    rentInfo=`
+      <div class="detail-row"><span class="detail-label">擁有 1 條</span><span class="detail-val">$25</span></div>
+      <div class="detail-row"><span class="detail-label">擁有 2 條</span><span class="detail-val">$50</span></div>
+      <div class="detail-row"><span class="detail-label">擁有 3 條</span><span class="detail-val">$100</span></div>
+      <div class="detail-row"><span class="detail-label">擁有 4 條</span><span class="detail-val" style="color:#e74c3c;font-weight:bold">$200</span></div>
+      <div class="detail-row"><span class="detail-label">目前擁有</span><span class="detail-val">${ownedRR} 條</span></div>`;
+  } else if(s.type==='util'){
+    rentInfo=`
+      <div class="detail-row"><span class="detail-label">擁有 1 個</span><span class="detail-val">骰子×4</span></div>
+      <div class="detail-row"><span class="detail-label">擁有 2 個</span><span class="detail-val" style="color:#e74c3c;font-weight:bold">骰子×10</span></div>`;
+  }
+
   showModal(`
     <div class="modal-band" style="background:${g?g.hex:'#888'}"></div>
-    <div class="modal-icon">${s.type==='rr'?'🚄':s.type==='util'?'⚡':'🏠'}</div>
+    <div class="modal-icon">${s.type==='rr'?'🚄':s.type==='util'?'⚡':s.buildings===3?'🏨':'🏠'}</div>
     <div class="modal-title">${s.name}</div>
-    <div class="modal-sub">${owner?'擁有者：'+owner.name:'尚未購買'}</div>
+    <div class="modal-sub">${owner?'擁有者：<span style="color:'+owner.color+'">'+owner.name+'</span>':'尚未購買'}</div>
     <div class="modal-details">
       <div class="detail-row"><span class="detail-label">售價</span><span class="detail-val">$${s.price}</span></div>
-      ${s.type==='prop'?`
-      <div class="detail-row"><span class="detail-label">基本租金</span><span class="detail-val">$${s.rent[0]}</span></div>
-      <div class="detail-row"><span class="detail-label">旅館</span><span class="detail-val">$${s.rent[5]}</span></div>
-      <div class="detail-row"><span class="detail-label">建設</span><span class="detail-val">${s.buildings===0?'無':s.buildings===5?'旅館🏨':s.buildings+'棟🏠'}</span></div>`:''}
+      ${rentInfo}
     </div>
     <div class="modal-btns">${btns}</div>
   `);
@@ -1172,7 +1250,11 @@ function handlePropertyLand(player,space){
     if(player.money>=space.price)promptBuy(player,space);
     else{addLog(`${player.name} 資金不足，無法購買 ${space.name}。`,'warn');G.phase='post';renderUI();autoAIEndTurn();}
   }else if(space.owner===player.id){
-    addLog(`${player.name} 停在自己的地產上。`);G.phase='post';renderUI();autoAIEndTurn();
+    addLog(`${player.name} 停在自己的地產上。`);G.phase='post';renderUI();
+    // 到自己地皮時自動彈出地產資訊（可建設房屋）
+    if(!player.isAI&&canBuild(player,space)){
+      showPropInfo(space.id);
+    } else { autoAIEndTurn(); }
   }else{
     const owner=G.players[space.owner];const rent=calcRent(space,G.dice[0]+G.dice[1]);
     addLog(`${player.name} 向 ${owner.name} 支付租金 $${rent}！`,'warn');
@@ -1185,7 +1267,13 @@ function handlePropertyLand(player,space){
 function calcRent(space,diceTotal){
   if(space.type==='rr'){const n=G.spaces.filter(s=>s.type==='rr'&&s.owner===space.owner).length;return RR_RENT[n-1]||25;}
   if(space.type==='util'){const n=G.spaces.filter(s=>s.type==='util'&&s.owner===space.owner).length;return diceTotal*(n===2?10:4);}
-  if(space.type==='prop'){if(space.buildings>0)return space.rent[space.buildings];const grp=G.spaces.filter(s=>s.group===space.group);return grp.every(s=>s.owner===space.owner)?space.rent[0]*2:space.rent[0];}
+  if(space.type==='prop'){
+    // 有建築：1棟=rent[1], 2棟=rent[2], 3棟(旅館)=rent[3]
+    if(space.buildings>0)return space.rent[space.buildings];
+    // 同色系全收集無建築：租金×2（正規大富翁規則）
+    const grp=G.spaces.filter(s=>s.group===space.group);
+    return grp.every(s=>s.owner===space.owner)?space.rent[0]*2:space.rent[0];
+  }
   return 0;
 }
 
@@ -1198,31 +1286,43 @@ function doBuySpace(player,space){
   player.money-=space.price;space.owner=player.id;
   SFX.buy();
   addLog(`${player.name} 購買了 ${space.name}（$${space.price}）！`,'gold');
+  // 重繪格子顯示玩家顏色
+  refreshCellTexture(space.id);
   updateBuildings3D();G.phase='post';renderUI();
   if(player.isAI)setTimeout(()=>{aiBuild(player);setTimeout(()=>doEndTurn(),500);},400);
 }
 
 function canBuild(player,space){
-  if(space.type!=='prop'||space.owner!==player.id||space.mortgaged||space.buildings>=5)return false;
+  // 最多 3 棟（第 3 棟自動升級為旅館，對應 rent[3]）
+  if(space.type!=='prop'||space.owner!==player.id||space.mortgaged||space.buildings>=3)return false;
   const grp=GROUPS[space.group];if(!grp||grp.buildCost===0)return false;
+  // 需擁有同色系全部地產才能建設（正規大富翁規則）
   const grpS=G.spaces.filter(s=>s.group===space.group);
   if(!grpS.every(s=>s.owner===player.id))return false;
+  // 均勻建設規則：不能比同組最少的多超過 1 棟
   if(space.buildings>Math.min(...grpS.map(s=>s.buildings)))return false;
   return player.money>=grp.buildCost;
 }
 
 function aiBuild(player){
-  G.spaces.forEach(s=>{if(canBuild(player,s)&&player.money>s.price+300){
-    const grp=GROUPS[s.group];player.money-=grp.buildCost;s.buildings++;
-    addLog(`${player.name}（電腦）在 ${s.name} 建造了${s.buildings===5?'旅館':'房屋'}！`,'gold');
-    updateBuildings3D();renderUI();
-  }});
+  // AI 嘗試在所有可建設的地產上蓋房（最多 3 棟 = 旅館）
+  for(let pass=0;pass<3;pass++){
+    G.spaces.forEach(s=>{if(canBuild(player,s)&&player.money>s.price+300){
+      const grp=GROUPS[s.group];player.money-=grp.buildCost;s.buildings++;
+      const label=s.buildings===3?'🏨 高級旅館':s.buildings+'棟房屋';
+      addLog(`${player.name}（電腦）在 ${s.name} 建造了${label}！`,'gold');
+      refreshCellTexture(s.id);
+    }});
+  }
+  updateBuildings3D();renderUI();
 }
 
 function doBuildOn(space){
   const cur=G.players[G.current];if(!canBuild(cur,space))return;
   const grp=GROUPS[space.group];cur.money-=grp.buildCost;space.buildings++;
-  addLog(`${cur.name} 在 ${space.name} 建造了${space.buildings===5?'旅館':'房屋'}！`,'gold');
+  const label=space.buildings===3?'🏨 高級旅館':space.buildings+'棟 🏠 房屋';
+  addLog(`${cur.name} 在 ${space.name} 建造了${label}！`,'gold');
+  refreshCellTexture(space.id);
   updateBuildings3D();renderUI();
 }
 
@@ -1230,6 +1330,7 @@ function doSellBuilding(space){
   const cur=G.players[G.current];if(space.buildings===0)return;
   const grp=GROUPS[space.group];cur.money+=Math.floor(grp.buildCost/2);space.buildings--;
   addLog(`${cur.name} 從 ${space.name} 拆除了建築。`);
+  refreshCellTexture(space.id);
   updateBuildings3D();renderUI();
 }
 

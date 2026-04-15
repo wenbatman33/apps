@@ -1,0 +1,545 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>北海道五日遊</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    :root {
+      --bg: #fafaf9;
+      --text: #1c1917;
+      --muted: #78716c;
+      --border: #e7e5e4;
+      --accent: #475569;
+      --card: #ffffff;
+      --tag-bg: #f1f5f9;
+    }
+
+    body {
+      font-family: "Helvetica Neue", "Noto Sans TC", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.7;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* 頂部區域 */
+    .hero {
+      text-align: center;
+      padding: 64px 24px 48px;
+      border-bottom: 1px solid var(--border);
+    }
+    .hero h1 {
+      font-size: 2rem;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+      margin-bottom: 8px;
+    }
+    .hero p {
+      color: var(--muted);
+      font-size: 0.95rem;
+    }
+
+    /* 日期導航 */
+    .day-nav {
+      display: flex;
+      justify-content: center;
+      gap: 4px;
+      padding: 20px 24px;
+      position: sticky;
+      top: 0;
+      background: var(--bg);
+      z-index: 10;
+      border-bottom: 1px solid var(--border);
+    }
+    .day-btn {
+      padding: 8px 20px;
+      border: 1px solid var(--border);
+      background: var(--card);
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.85rem;
+      color: var(--muted);
+      transition: all 0.2s;
+    }
+    .day-btn:hover { border-color: var(--accent); color: var(--text); }
+    .day-btn.active {
+      background: var(--accent);
+      color: #fff;
+      border-color: var(--accent);
+    }
+
+    /* 內容區 */
+    .content {
+      max-width: 640px;
+      margin: 0 auto;
+      padding: 32px 24px 80px;
+    }
+
+    /* 每日區塊 */
+    .day-section {
+      display: none;
+    }
+    .day-section.active {
+      display: block;
+    }
+    .day-header {
+      margin-bottom: 28px;
+    }
+    .day-header h2 {
+      font-size: 1.25rem;
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+    .day-header .region {
+      font-size: 0.85rem;
+      color: var(--muted);
+    }
+
+    /* 時間軸 */
+    .timeline {
+      position: relative;
+      padding-left: 28px;
+    }
+    .timeline::before {
+      content: '';
+      position: absolute;
+      left: 5px;
+      top: 8px;
+      bottom: 8px;
+      width: 1px;
+      background: var(--border);
+    }
+
+    .spot {
+      position: relative;
+      margin-bottom: 36px;
+    }
+    .spot::before {
+      content: '';
+      position: absolute;
+      left: -28px;
+      top: 8px;
+      width: 11px;
+      height: 11px;
+      border-radius: 50%;
+      border: 2px solid var(--accent);
+      background: var(--bg);
+    }
+    .spot-time {
+      font-size: 0.8rem;
+      color: var(--muted);
+      margin-bottom: 4px;
+      font-variant-numeric: tabular-nums;
+    }
+    .spot-name {
+      font-weight: 600;
+      font-size: 1rem;
+      margin-bottom: 8px;
+    }
+
+    /* 景點圖片 */
+    .spot-img {
+      width: 100%;
+      height: 200px;
+      object-fit: cover;
+      border-radius: 8px;
+      margin-bottom: 10px;
+      background: var(--border);
+      display: block;
+    }
+
+    .spot-desc {
+      font-size: 0.9rem;
+      color: var(--muted);
+      line-height: 1.6;
+    }
+    .spot-tags {
+      display: flex;
+      gap: 6px;
+      margin-top: 8px;
+      flex-wrap: wrap;
+    }
+    .tag {
+      font-size: 0.75rem;
+      padding: 2px 10px;
+      background: var(--tag-bg);
+      border-radius: 4px;
+      color: var(--accent);
+    }
+
+    /* 小提示 */
+    .tip {
+      margin-top: 36px;
+      padding: 16px;
+      background: var(--tag-bg);
+      border-radius: 8px;
+      font-size: 0.85rem;
+      color: var(--accent);
+      line-height: 1.6;
+    }
+    .tip strong {
+      display: block;
+      margin-bottom: 4px;
+    }
+
+    /* 底部 */
+    .footer {
+      text-align: center;
+      padding: 32px 24px;
+      color: var(--muted);
+      font-size: 0.8rem;
+      border-top: 1px solid var(--border);
+    }
+
+    @media (max-width: 480px) {
+      .hero h1 { font-size: 1.5rem; }
+      .day-nav { gap: 2px; padding: 12px 8px; }
+      .day-btn { padding: 6px 12px; font-size: 0.8rem; }
+      .content { padding: 24px 16px 60px; }
+      .spot-img { height: 160px; }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="hero">
+    <h1>北海道五日遊</h1>
+    <p>春季經典路線 — 札幌・小樽・富良野・美瑛・旭川</p>
+  </div>
+
+  <nav class="day-nav">
+    <button class="day-btn active" data-day="1">Day 1</button>
+    <button class="day-btn" data-day="2">Day 2</button>
+    <button class="day-btn" data-day="3">Day 3</button>
+    <button class="day-btn" data-day="4">Day 4</button>
+    <button class="day-btn" data-day="5">Day 5</button>
+  </nav>
+
+  <div class="content">
+
+    <!-- Day 1：札幌市區 -->
+    <div class="day-section active" data-day="1">
+      <div class="day-header">
+        <h2>Day 1 — 札幌市區</h2>
+        <span class="region">新千歲空港 → 札幌</span>
+      </div>
+      <div class="timeline">
+        <div class="spot">
+          <div class="spot-time">10:00</div>
+          <div class="spot-name">抵達新千歲空港</div>
+          <img class="spot-img" src="https://images.unsplash.com/photo-1599173704879-2e407aa34cde?w=600&h=340&fit=crop&q=80" alt="日本車站" loading="lazy">
+          <div class="spot-desc">搭乘 JR 快速 Airport 至札幌站，車程約 37 分鐘。建議在機場購買交通票券。</div>
+          <div class="spot-tags"><span class="tag">交通</span></div>
+        </div>
+        <div class="spot">
+          <div class="spot-time">12:00</div>
+          <div class="spot-name">札幌車站周邊午餐</div>
+          <img class="spot-img" src="https://images.unsplash.com/photo-1569718212165-3a8278d5f624?w=600&h=340&fit=crop&q=80" alt="札幌拉麵" loading="lazy">
+          <div class="spot-desc">推薦嘗試味噌拉麵或湯咖哩，這兩樣是札幌最具代表性的美食。</div>
+          <div class="spot-tags"><span class="tag">美食</span></div>
+        </div>
+        <div class="spot">
+          <div class="spot-time">14:00</div>
+          <div class="spot-name">北海道廳舊本廳舍</div>
+          <img class="spot-img" src="https://images.unsplash.com/photo-1601702598611-174d5f7c68ac?w=600&h=340&fit=crop&q=80" alt="北海道廳舊本廳舍" loading="lazy">
+          <div class="spot-desc">紅磚建築是札幌地標，2025 年重新開放後增設展示空間，值得一看。</div>
+          <div class="spot-tags"><span class="tag">景點</span><span class="tag">免費</span></div>
+        </div>
+        <div class="spot">
+          <div class="spot-time">15:30</div>
+          <div class="spot-name">大通公園散步</div>
+          <img class="spot-img" src="https://images.unsplash.com/photo-1522383225653-ed111181a951?w=600&h=340&fit=crop&q=80" alt="大通公園櫻花" loading="lazy">
+          <div class="spot-desc">從舊廳舍步行至大通公園，沿途感受札幌的城市氛圍。春天可賞櫻花。</div>
+          <div class="spot-tags"><span class="tag">散步</span></div>
+        </div>
+        <div class="spot">
+          <div class="spot-time">17:00</div>
+          <div class="spot-name">狸小路商店街</div>
+          <img class="spot-img" src="https://images.unsplash.com/photo-1708352011253-0308408e2c58?w=600&h=340&fit=crop&q=80" alt="狸小路商店街" loading="lazy">
+          <div class="spot-desc">北海道最大的商店街，藥妝、伴手禮、甜點一次買齊。</div>
+          <div class="spot-tags"><span class="tag">購物</span></div>
+        </div>
+        <div class="spot">
+          <div class="spot-time">19:00</div>
+          <div class="spot-name">薄野晚餐 + 夜景</div>
+          <img class="spot-img" src="https://images.unsplash.com/photo-1573455494060-c5595004fb6c?w=600&h=340&fit=crop&q=80" alt="薄野夜景" loading="lazy">
+          <div class="spot-desc">在薄野享用成吉思汗烤肉或海鮮居酒屋，飯後可上藻岩山看夜景。</div>
+          <div class="spot-tags"><span class="tag">美食</span><span class="tag">夜景</span></div>
+        </div>
+      </div>
+      <div class="tip">
+        <strong>住宿建議</strong>
+        札幌車站或大通公園周邊，交通方便，步行即可到各景點。
+      </div>
+    </div>
+
+    <!-- Day 2：小樽 -->
+    <div class="day-section" data-day="2">
+      <div class="day-header">
+        <h2>Day 2 — 小樽一日遊</h2>
+        <span class="region">札幌 → 小樽 → 札幌</span>
+      </div>
+      <div class="timeline">
+        <div class="spot">
+          <div class="spot-time">09:00</div>
+          <div class="spot-name">JR 前往小樽</div>
+          <img class="spot-img" src="https://images.unsplash.com/photo-1666945044221-d8c77947e721?w=600&h=340&fit=crop&q=80" alt="JR列車" loading="lazy">
+          <div class="spot-desc">從札幌站搭 JR 函館本線，約 32 分鐘抵達小樽站。沿途可見海岸風光。</div>
+          <div class="spot-tags"><span class="tag">交通</span></div>
+        </div>
+        <div class="spot">
+          <div class="spot-time">10:00</div>
+          <div class="spot-name">小樽運河</div>
+          <img class="spot-img" src="https://images.unsplash.com/photo-1563282870-e9e8d69c4271?w=600&h=340&fit=crop&q=80" alt="小樽運河" loading="lazy">
+          <div class="spot-desc">漫步運河沿岸，欣賞石造倉庫群。推薦從淺草橋取景，是經典拍照角度。</div>
+          <div class="spot-tags"><span class="tag">景點</span></div>
+        </div>
+        <div class="spot">
+          <div class="spot-time">11:00</div>
+          <div class="spot-name">堺町通商店街</div>
+          <img class="spot-img" src="https://images.unsplash.com/photo-1670737565773-0a40f68256f5?w=600&h=340&fit=crop&q=80" alt="堺町通商店街" loading="lazy">
+          <div class="spot-desc">北一硝子、小樽音樂盒堂、LeTAO 本店都在這條街上，適合慢逛。</div>
+          <div class="spot-tags"><span class="tag">購物</span><span class="tag">甜點</span></div>
+        </div>
+        <div class="spot">
+          <div class="spot-time">12:30</div>
+          <div class="spot-name">壽司通午餐</div>
+          <img class="spot-img" src="https://images.unsplash.com/photo-1502364271109-0a9a75a2a9df?w=600&h=340&fit=crop&q=80" alt="小樽壽司" loading="lazy">
+          <div class="spot-desc">小樽以壽司聞名，壽司通上有多家老字號，新鮮海鮮直送。</div>
+          <div class="spot-tags"><span class="tag">美食</span></div>
+        </div>
+        <div class="spot">
+          <div class="spot-time">14:00</div>
+          <div class="spot-name">天狗山纜車</div>
+          <img class="spot-img" src="https://images.unsplash.com/photo-1528257861216-ccdaeb4e3f52?w=600&h=340&fit=crop&q=80" alt="天狗山展望" loading="lazy">
+          <div class="spot-desc">搭纜車登上天狗山展望台，俯瞰小樽市區與港灣全景。</div>
+          <div class="spot-tags"><span class="tag">景點</span><span class="tag">纜車</span></div>
+        </div>
+        <div class="spot">
+          <div class="spot-time">16:00</div>
+          <div class="spot-name">南小樽散策</div>
+          <img class="spot-img" src="https://images.unsplash.com/photo-1598176314960-249219ed5409?w=600&h=340&fit=crop&q=80" alt="南小樽街道" loading="lazy">
+          <div class="spot-desc">沿著坡道小巷散步，感受懷舊港町的獨特氣氛。</div>
+          <div class="spot-tags"><span class="tag">散步</span></div>
+        </div>
+        <div class="spot">
+          <div class="spot-time">17:30</div>
+          <div class="spot-name">返回札幌</div>
+          <img class="spot-img" src="https://images.unsplash.com/photo-1629273512520-7498d34f1bf6?w=600&h=340&fit=crop&q=80" alt="JR列車" loading="lazy">
+          <div class="spot-desc">搭 JR 返回札幌，可在札幌車站吃晚餐或逛百貨。</div>
+          <div class="spot-tags"><span class="tag">交通</span></div>
+        </div>
+      </div>
+      <div class="tip">
+        <strong>交通提醒</strong>
+        建議購買「小樽 Welcome Pass」，包含 JR 來回與小樽市內巴士一日券。
+      </div>
+    </div>
+
+    <!-- Day 3：富良野・美瑛 -->
+    <div class="day-section" data-day="3">
+      <div class="day-header">
+        <h2>Day 3 — 富良野・美瑛</h2>
+        <span class="region">札幌 → 富良野 → 美瑛</span>
+      </div>
+      <div class="timeline">
+        <div class="spot">
+          <div class="spot-time">08:00</div>
+          <div class="spot-name">出發前往富良野</div>
+          <img class="spot-img" src="https://images.unsplash.com/photo-1645346828273-268036c2f561?w=600&h=340&fit=crop&q=80" alt="北海道公路" loading="lazy">
+          <div class="spot-desc">建議租車自駕，從札幌走道央自動車道約 2 小時。也可搭 JR 至旭川轉車。</div>
+          <div class="spot-tags"><span class="tag">交通</span><span class="tag">自駕推薦</span></div>
+        </div>
+        <div class="spot">
+          <div class="spot-time">10:30</div>
+          <div class="spot-name">富田農場</div>
+          <img class="spot-img" src="https://images.unsplash.com/photo-1626911635167-0b3006fbda39?w=600&h=340&fit=crop&q=80" alt="富田農場薰衣草" loading="lazy">
+          <div class="spot-desc">北海道最知名的花田，薰衣草季節為 7 月。春天也有鬱金香與罌粟花。免費入場。</div>
+          <div class="spot-tags"><span class="tag">景點</span><span class="tag">免費</span></div>
+        </div>
+        <div class="spot">
+          <div class="spot-time">12:00</div>
+          <div class="spot-name">富良野午餐</div>
+          <img class="spot-img" src="https://images.unsplash.com/photo-1614563637806-1d0e645e0940?w=600&h=340&fit=crop&q=80" alt="富良野午餐" loading="lazy">
+          <div class="spot-desc">推薦「唯我獨尊」咖哩飯或當地農場直營餐廳，使用在地食材。</div>
+          <div class="spot-tags"><span class="tag">美食</span></div>
+        </div>
+        <div class="spot">
+          <div class="spot-time">14:00</div>
+          <div class="spot-name">四季彩之丘</div>
+          <img class="spot-img" src="https://images.unsplash.com/photo-1598176433730-2aca0907a717?w=600&h=340&fit=crop&q=80" alt="四季彩之丘" loading="lazy">
+          <div class="spot-desc">位於美瑛的花田丘陵，可搭乘遊園車遊覽，壯闊的拼布花海是必看。</div>
+          <div class="spot-tags"><span class="tag">景點</span></div>
+        </div>
+        <div class="spot">
+          <div class="spot-time">15:30</div>
+          <div class="spot-name">美瑛拼布之路</div>
+          <img class="spot-img" src="https://images.unsplash.com/photo-1545105511-839f4a45a030?w=600&h=340&fit=crop&q=80" alt="美瑛拼布之路" loading="lazy">
+          <div class="spot-desc">Ken & Mary 之木、Seven Star 之木等知名景點，開車沿路拍照即可。</div>
+          <div class="spot-tags"><span class="tag">景點</span><span class="tag">拍照</span></div>
+        </div>
+        <div class="spot">
+          <div class="spot-time">17:00</div>
+          <div class="spot-name">白鬚瀑布</div>
+          <img class="spot-img" src="https://images.unsplash.com/photo-1587436925607-2525f54baaf4?w=600&h=340&fit=crop&q=80" alt="白鬚瀑布" loading="lazy">
+          <div class="spot-desc">從地下湧出的藍色瀑布，搭配白樺林背景非常夢幻。位於白金溫泉區附近。</div>
+          <div class="spot-tags"><span class="tag">景點</span></div>
+        </div>
+        <div class="spot">
+          <div class="spot-time">18:30</div>
+          <div class="spot-name">白金溫泉 或 前往旭川</div>
+          <img class="spot-img" src="https://images.unsplash.com/photo-1603435580027-f30889418372?w=600&h=340&fit=crop&q=80" alt="白金溫泉" loading="lazy">
+          <div class="spot-desc">可選擇在白金溫泉住一晚泡湯，或開車 40 分鐘到旭川市區住宿。</div>
+          <div class="spot-tags"><span class="tag">住宿</span><span class="tag">溫泉</span></div>
+        </div>
+      </div>
+      <div class="tip">
+        <strong>季節提醒</strong>
+        薰衣草盛開期為 7 月中旬至下旬。春季（4-5月）以鬱金香與油菜花為主。
+      </div>
+    </div>
+
+    <!-- Day 4：旭川 -->
+    <div class="day-section" data-day="4">
+      <div class="day-header">
+        <h2>Day 4 — 旭川</h2>
+        <span class="region">美瑛 / 旭川 → 札幌</span>
+      </div>
+      <div class="timeline">
+        <div class="spot">
+          <div class="spot-time">09:00</div>
+          <div class="spot-name">旭山動物園</div>
+          <img class="spot-img" src="https://images.unsplash.com/photo-1632044813087-88e5b7bec611?w=600&h=340&fit=crop&q=80" alt="旭山動物園企鵝" loading="lazy">
+          <div class="spot-desc">日本最北的動物園，以「行動展示」聞名。企鵝散步、北極熊游泳隧道是必看。</div>
+          <div class="spot-tags"><span class="tag">景點</span><span class="tag">親子</span></div>
+        </div>
+        <div class="spot">
+          <div class="spot-time">12:00</div>
+          <div class="spot-name">旭川拉麵</div>
+          <img class="spot-img" src="https://images.unsplash.com/photo-1591325418441-ff678baf78ef?w=600&h=340&fit=crop&q=80" alt="旭川拉麵" loading="lazy">
+          <div class="spot-desc">旭川是醬油拉麵的發源地，推薦「旭川拉麵村」一次品嘗多家名店。</div>
+          <div class="spot-tags"><span class="tag">美食</span></div>
+        </div>
+        <div class="spot">
+          <div class="spot-time">13:30</div>
+          <div class="spot-name">北鎮記念館</div>
+          <img class="spot-img" src="https://images.unsplash.com/photo-1656404113186-ee31a6ee8e65?w=600&h=340&fit=crop&q=80" alt="北鎮記念館" loading="lazy">
+          <div class="spot-desc">展示屯田兵歷史與北海道開拓史料，了解北海道發展脈絡。免費參觀。</div>
+          <div class="spot-tags"><span class="tag">景點</span><span class="tag">免費</span></div>
+        </div>
+        <div class="spot">
+          <div class="spot-time">15:00</div>
+          <div class="spot-name">常磐公園散步</div>
+          <img class="spot-img" src="https://images.unsplash.com/photo-1524413840807-0c3cb6fa808d?w=600&h=340&fit=crop&q=80" alt="常磐公園櫻花" loading="lazy">
+          <div class="spot-desc">旭川市民的休憩公園，春天櫻花盛開，可在湖畔悠閒散步。</div>
+          <div class="spot-tags"><span class="tag">散步</span></div>
+        </div>
+        <div class="spot">
+          <div class="spot-time">16:30</div>
+          <div class="spot-name">返回札幌</div>
+          <img class="spot-img" src="https://images.unsplash.com/photo-1728895128978-3f93ad4e695f?w=600&h=340&fit=crop&q=80" alt="JR特急列車" loading="lazy">
+          <div class="spot-desc">搭 JR 特急列車約 1 小時 25 分鐘回札幌。自駕約 2 小時。</div>
+          <div class="spot-tags"><span class="tag">交通</span></div>
+        </div>
+        <div class="spot">
+          <div class="spot-time">19:00</div>
+          <div class="spot-name">札幌晚餐</div>
+          <img class="spot-img" src="https://images.unsplash.com/photo-1551641506-ee5bf4cb45f1?w=600&h=340&fit=crop&q=80" alt="札幌晚餐" loading="lazy">
+          <div class="spot-desc">推薦二條市場或場外市場的海鮮丼，或到薄野吃螃蟹料理。</div>
+          <div class="spot-tags"><span class="tag">美食</span></div>
+        </div>
+      </div>
+      <div class="tip">
+        <strong>動物園提醒</strong>
+        旭山動物園建議一開園就到，上午動物最活躍。冬季有企鵝散步活動。
+      </div>
+    </div>
+
+    <!-- Day 5：札幌 + 回程 -->
+    <div class="day-section" data-day="5">
+      <div class="day-header">
+        <h2>Day 5 — 札幌市區 + 回程</h2>
+        <span class="region">札幌 → 新千歲空港</span>
+      </div>
+      <div class="timeline">
+        <div class="spot">
+          <div class="spot-time">08:00</div>
+          <div class="spot-name">二條市場早餐</div>
+          <img class="spot-img" src="https://images.unsplash.com/photo-1514190051997-0f6f39ca5cde?w=600&h=340&fit=crop&q=80" alt="二條市場海鮮" loading="lazy">
+          <div class="spot-desc">在地人的早市，推薦海鮮丼或烤花魚定食當早餐，新鮮實惠。</div>
+          <div class="spot-tags"><span class="tag">美食</span></div>
+        </div>
+        <div class="spot">
+          <div class="spot-time">09:30</div>
+          <div class="spot-name">白色戀人公園</div>
+          <img class="spot-img" src="https://images.unsplash.com/photo-1558776158-f28f586ddb19?w=600&h=340&fit=crop&q=80" alt="白色戀人公園" loading="lazy">
+          <div class="spot-desc">北海道最有名的伴手禮工廠，可參觀巧克力製作過程，還有歐式庭園。</div>
+          <div class="spot-tags"><span class="tag">景點</span></div>
+        </div>
+        <div class="spot">
+          <div class="spot-time">11:30</div>
+          <div class="spot-name">圓山公園 / 北海道神宮</div>
+          <img class="spot-img" src="https://images.unsplash.com/photo-1613487691352-7d9b4ee5045b?w=600&h=340&fit=crop&q=80" alt="北海道神宮" loading="lazy">
+          <div class="spot-desc">春天是賞櫻名所。北海道神宮莊嚴寧靜，適合旅途最後的靜心散步。</div>
+          <div class="spot-tags"><span class="tag">景點</span><span class="tag">神社</span></div>
+        </div>
+        <div class="spot">
+          <div class="spot-time">13:00</div>
+          <div class="spot-name">最後午餐</div>
+          <img class="spot-img" src="https://images.unsplash.com/photo-1526318896980-cf78c088247c?w=600&h=340&fit=crop&q=80" alt="最後的拉麵" loading="lazy">
+          <div class="spot-desc">札幌車站大丸百貨或 ESTA 美食街，吃一碗最後的拉麵或迴轉壽司。</div>
+          <div class="spot-tags"><span class="tag">美食</span></div>
+        </div>
+        <div class="spot">
+          <div class="spot-time">14:30</div>
+          <div class="spot-name">前往新千歲空港</div>
+          <img class="spot-img" src="https://images.unsplash.com/photo-1599173704879-2e407aa34cde?w=600&h=340&fit=crop&q=80" alt="JR快速列車" loading="lazy">
+          <div class="spot-desc">搭 JR 快速列車回機場。建議提前 2 小時到機場辦理登機。</div>
+          <div class="spot-tags"><span class="tag">交通</span></div>
+        </div>
+        <div class="spot">
+          <div class="spot-time">15:00</div>
+          <div class="spot-name">新千歲空港購物</div>
+          <img class="spot-img" src="https://images.unsplash.com/photo-1708352012088-9a59de0835a2?w=600&h=340&fit=crop&q=80" alt="新千歲空港購物" loading="lazy">
+          <div class="spot-desc">機場內有 Royce' 巧克力、六花亭、北菓樓等伴手禮專櫃，還有拉麵道場。</div>
+          <div class="spot-tags"><span class="tag">購物</span><span class="tag">伴手禮</span></div>
+        </div>
+      </div>
+      <div class="tip">
+        <strong>伴手禮推薦</strong>
+        白色戀人、Royce' 生巧克力、六花亭奶油夾心餅、薯條三兄弟，都是經典必買。
+      </div>
+    </div>
+
+  </div>
+
+  <div class="footer">
+    北海道五日遊行程 — 祝旅途愉快 ✈
+  </div>
+
+  <script>
+    // 日期切換
+    const btns = document.querySelectorAll('.day-btn');
+    const sections = document.querySelectorAll('.day-section');
+
+    btns.forEach(btn => {
+      btn.addEventListener('click', () => {
+        const day = btn.dataset.day;
+
+        btns.forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+
+        sections.forEach(s => {
+          s.classList.toggle('active', s.dataset.day === day);
+        });
+
+        // 滾動到頂部
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      });
+    });
+  </script>
+</body>
+</html>

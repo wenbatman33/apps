@@ -1,0 +1,1567 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>亞洲大富翁 v2 · Asia Monopoly (Pure Three.js)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/three@0.150.0/build/three.min.js"></script>
+</head>
+<body style="margin:0;overflow:hidden;background:#1a2a1a">
+<script>
+// ╔══════════════════════════════════════════════════╗
+// ║     亞洲大富翁 v2 — Pure Three.js 雙場景渲染       ║
+// ╚══════════════════════════════════════════════════╝
+
+// ── GAME DATA ──
+const GROUPS={brown:{hex:'#8B4513',name:'棕色',buildCost:50},lb:{hex:'#4fc3f7',name:'淺藍',buildCost:50},pink:{hex:'#f06292',name:'粉紅',buildCost:100},orange:{hex:'#ff9800',name:'橘色',buildCost:100},red:{hex:'#e53935',name:'紅色',buildCost:150},yellow:{hex:'#fdd835',name:'黃色',buildCost:150},green:{hex:'#43a047',name:'綠色',buildCost:200},blue:{hex:'#1565c0',name:'深藍',buildCost:200},rr:{hex:'#212121',name:'交通',buildCost:0},util:{hex:'#78909c',name:'公共',buildCost:0}};
+function sp(id,type,name,group,price,rent,icon){return{id,type,name,group,price,rent:rent||[0,0,0,0,0,0],icon:icon||'',owner:null,buildings:0,mortgaged:false}}
+const RR_RENT=[25,50,100,200];
+const makeBoard=(c)=>({japan:[sp(0,'go','出發點',null,0,[],'▶'),sp(1,'prop','浅草','brown',60,[2,10,30,90,160,250]),sp(2,'chance','機會',null,0,[],'?'),sp(3,'prop','上野','brown',60,[4,20,60,180,320,450]),sp(4,'tax','所得稅',null,0,[],'📋'),sp(5,'rr','東海道新幹線','rr',200,[],'🚄'),sp(6,'prop','秋葉原','lb',100,[6,30,90,270,400,550]),sp(7,'comm','命運',null,0,[],'📦'),sp(8,'prop','池袋','lb',100,[6,30,90,270,400,550]),sp(9,'prop','新宿','lb',120,[8,40,100,300,450,600]),sp(10,'jail','監獄',null,0,[],'⛓'),sp(11,'prop','原宿','pink',140,[10,50,150,450,625,750]),sp(12,'util','溫泉','util',150,[]),sp(13,'prop','表参道','pink',140,[10,50,150,450,625,750]),sp(14,'prop','青山','pink',160,[12,60,180,500,700,900]),sp(15,'rr','山陽新幹線','rr',200,[],'🚄'),sp(16,'prop','六本木','orange',180,[14,70,200,550,750,950]),sp(17,'chance','機會',null,0,[],'?'),sp(18,'prop','銀座','orange',180,[14,70,200,550,750,950]),sp(19,'prop','恵比寿','orange',200,[16,80,220,600,800,1000]),sp(20,'free','免費停車',null,0,[],'🅿'),sp(21,'prop','横浜','red',220,[18,90,250,700,875,1050]),sp(22,'comm','命運',null,0,[],'📦'),sp(23,'prop','鎌倉','red',220,[18,90,250,700,875,1050]),sp(24,'prop','熱海','red',240,[20,100,300,750,925,1100]),sp(25,'rr','東北新幹線','rr',200,[],'🚄'),sp(26,'prop','京都','yellow',260,[22,110,330,800,975,1150]),sp(27,'prop','奈良','yellow',260,[22,110,330,800,975,1150]),sp(28,'util','神社','util',150,[]),sp(29,'prop','大阪','yellow',280,[24,120,360,850,1025,1200]),sp(30,'gotojail','前往監獄',null,0,[],'🚔'),sp(31,'prop','札幌','green',300,[26,130,390,900,1100,1275]),sp(32,'prop','函館','green',300,[26,130,390,900,1100,1275]),sp(33,'chance','機會',null,0,[],'?'),sp(34,'prop','富良野','green',320,[28,150,450,1000,1200,1400]),sp(35,'rr','北海道新幹線','rr',200,[],'🚄'),sp(36,'comm','命運',null,0,[],'📦'),sp(37,'prop','富士山','blue',350,[35,175,500,1100,1300,1500]),sp(38,'tax','奢侈稅',null,0,[],'💎'),sp(39,'prop','北海道','blue',400,[50,200,600,1400,1700,2000])],taiwan:[sp(0,'go','出發點',null,0,[],'▶'),sp(1,'prop','基隆','brown',60,[2,10,30,90,160,250]),sp(2,'chance','機會',null,0,[],'?'),sp(3,'prop','淡水','brown',60,[4,20,60,180,320,450]),sp(4,'tax','所得稅',null,0,[],'📋'),sp(5,'rr','高鐵北段','rr',200,[],'🚅'),sp(6,'prop','西門町','lb',100,[6,30,90,270,400,550]),sp(7,'comm','命運',null,0,[],'📦'),sp(8,'prop','台中','lb',100,[6,30,90,270,400,550]),sp(9,'prop','彰化','lb',120,[8,40,100,300,450,600]),sp(10,'jail','監獄',null,0,[],'⛓'),sp(11,'prop','嘉義','pink',140,[10,50,150,450,625,750]),sp(12,'util','夜市','util',150,[]),sp(13,'prop','台南','pink',140,[10,50,150,450,625,750]),sp(14,'prop','安平','pink',160,[12,60,180,500,700,900]),sp(15,'rr','高鐵南段','rr',200,[],'🚅'),sp(16,'prop','高雄','orange',180,[14,70,200,550,750,950]),sp(17,'chance','機會',null,0,[],'?'),sp(18,'prop','墾丁','orange',180,[14,70,200,550,750,950]),sp(19,'prop','屏東','orange',200,[16,80,220,600,800,1000]),sp(20,'free','免費停車',null,0,[],'🅿'),sp(21,'prop','花蓮','red',220,[18,90,250,700,875,1050]),sp(22,'comm','命運',null,0,[],'📦'),sp(23,'prop','太魯閣','red',220,[18,90,250,700,875,1050]),sp(24,'prop','台東','red',240,[20,100,300,750,925,1100]),sp(25,'rr','高鐵東段','rr',200,[],'🚅'),sp(26,'prop','日月潭','yellow',260,[22,110,330,800,975,1150]),sp(27,'prop','阿里山','yellow',260,[22,110,330,800,975,1150]),sp(28,'util','便利商店','util',150,[]),sp(29,'prop','清境','yellow',280,[24,120,360,850,1025,1200]),sp(30,'gotojail','前往監獄',null,0,[],'🚔'),sp(31,'prop','九份','green',300,[26,130,390,900,1100,1275]),sp(32,'prop','平溪','green',300,[26,130,390,900,1100,1275]),sp(33,'chance','機會',null,0,[],'?'),sp(34,'prop','北投','green',320,[28,150,450,1000,1200,1400]),sp(35,'rr','高鐵環島','rr',200,[],'🚅'),sp(36,'comm','命運',null,0,[],'📦'),sp(37,'prop','台北101','blue',350,[35,175,500,1100,1300,1500]),sp(38,'tax','奢侈稅',null,0,[],'💎'),sp(39,'prop','故宮博物院','blue',400,[50,200,600,1400,1700,2000])],bangkok:[sp(0,'go','出發點',null,0,[],'▶'),sp(1,'prop','帕空','brown',60,[2,10,30,90,160,250]),sp(2,'chance','機會',null,0,[],'?'),sp(3,'prop','考山路','brown',60,[4,20,60,180,320,450]),sp(4,'tax','所得稅',null,0,[],'📋'),sp(5,'rr','泰航北線','rr',200,[],'✈️'),sp(6,'prop','素坤逸','lb',100,[6,30,90,270,400,550]),sp(7,'comm','命運',null,0,[],'📦'),sp(8,'prop','暹羅','lb',100,[6,30,90,270,400,550]),sp(9,'prop','阿索克','lb',120,[8,40,100,300,450,600]),sp(10,'jail','監獄',null,0,[],'⛓'),sp(11,'prop','芭提雅','pink',140,[10,50,150,450,625,750]),sp(12,'util','泰式按摩','util',150,[]),sp(13,'prop','羅勇','pink',140,[10,50,150,450,625,750]),sp(14,'prop','春武里','pink',160,[12,60,180,500,700,900]),sp(15,'rr','泰航南線','rr',200,[],'✈️'),sp(16,'prop','清邁','orange',180,[14,70,200,550,750,950]),sp(17,'chance','機會',null,0,[],'?'),sp(18,'prop','清萊','orange',180,[14,70,200,550,750,950]),sp(19,'prop','南邦','orange',200,[16,80,220,600,800,1000]),sp(20,'free','免費停車',null,0,[],'🅿'),sp(21,'prop','蘇梅島','red',220,[18,90,250,700,875,1050]),sp(22,'comm','命運',null,0,[],'📦'),sp(23,'prop','帕岸島','red',220,[18,90,250,700,875,1050]),sp(24,'prop','濤島','red',240,[20,100,300,750,925,1100]),sp(25,'rr','泰航東線','rr',200,[],'✈️'),sp(26,'prop','安達曼','yellow',260,[22,110,330,800,975,1150]),sp(27,'prop','甲米','yellow',260,[22,110,330,800,975,1150]),sp(28,'util','夜市','util',150,[]),sp(29,'prop','皮皮島','yellow',280,[24,120,360,850,1025,1200]),sp(30,'gotojail','前往監獄',null,0,[],'🚔'),sp(31,'prop','普吉島','green',300,[26,130,390,900,1100,1275]),sp(32,'prop','拉威','green',300,[26,130,390,900,1100,1275]),sp(33,'chance','機會',null,0,[],'?'),sp(34,'prop','芭東','green',320,[28,150,450,1000,1200,1400]),sp(35,'rr','泰航西線','rr',200,[],'✈️'),sp(36,'comm','命運',null,0,[],'📦'),sp(37,'prop','大皇宮','blue',350,[35,175,500,1100,1300,1500]),sp(38,'tax','奢侈稅',null,0,[],'💎'),sp(39,'prop','臥佛寺','blue',400,[50,200,600,1400,1700,2000])],korea:[sp(0,'go','出發點',null,0,[],'▶'),sp(1,'prop','鐘路','brown',60,[2,10,30,90,160,250]),sp(2,'chance','機會',null,0,[],'?'),sp(3,'prop','仁寺洞','brown',60,[4,20,60,180,320,450]),sp(4,'tax','所得稅',null,0,[],'📋'),sp(5,'rr','KTX北線','rr',200,[],'🚆'),sp(6,'prop','弘大','lb',100,[6,30,90,270,400,550]),sp(7,'comm','命運',null,0,[],'📦'),sp(8,'prop','梨大','lb',100,[6,30,90,270,400,550]),sp(9,'prop','新촌','lb',120,[8,40,100,300,450,600]),sp(10,'jail','監獄',null,0,[],'⛓'),sp(11,'prop','明洞','pink',140,[10,50,150,450,625,750]),sp(12,'util','漢江公園','util',150,[]),sp(13,'prop','南大門','pink',140,[10,50,150,450,625,750]),sp(14,'prop','東大門','pink',160,[12,60,180,500,700,900]),sp(15,'rr','KTX南線','rr',200,[],'🚆'),sp(16,'prop','江南','orange',180,[14,70,200,550,750,950]),sp(17,'chance','機會',null,0,[],'?'),sp(18,'prop','狎鷗亭','orange',180,[14,70,200,550,750,950]),sp(19,'prop','清潭洞','orange',200,[16,80,220,600,800,1000]),sp(20,'free','免費停車',null,0,[],'🅿'),sp(21,'prop','仁川','red',220,[18,90,250,700,875,1050]),sp(22,'comm','命運',null,0,[],'📦'),sp(23,'prop','水原','red',220,[18,90,250,700,875,1050]),sp(24,'prop','城南','red',240,[20,100,300,750,925,1100]),sp(25,'rr','KTX東線','rr',200,[],'🚆'),sp(26,'prop','大邱','yellow',260,[22,110,330,800,975,1150]),sp(27,'prop','大田','yellow',260,[22,110,330,800,975,1150]),sp(28,'util','便利商店','util',150,[]),sp(29,'prop','光州','yellow',280,[24,120,360,850,1025,1200]),sp(30,'gotojail','前往監獄',null,0,[],'🚔'),sp(31,'prop','慶州','green',300,[26,130,390,900,1100,1275]),sp(32,'prop','統營','green',300,[26,130,390,900,1100,1275]),sp(33,'chance','機會',null,0,[],'?'),sp(34,'prop','順天','green',320,[28,150,450,1000,1200,1400]),sp(35,'rr','KTX西線','rr',200,[],'🚆'),sp(36,'comm','命運',null,0,[],'📦'),sp(37,'prop','景福宮','blue',350,[35,175,500,1100,1300,1500]),sp(38,'tax','奢侈稅',null,0,[],'💎'),sp(39,'prop','濟州島','blue',400,[50,200,600,1400,1700,2000])]});
+
+const CHANCE_CARDS=[{text:'前進到出發點，領取 $200！',fn:g=>advanceTo(g,0,true)},{text:'你獲得了退稅！領取 $150。',fn:g=>gainMoney(g,150)},{text:'銀行錯誤對你有利！領取 $200。',fn:g=>gainMoney(g,200)},{text:'繳納路況維修費，每棟房屋 $25、每間旅館 $100。',fn:g=>repairTax(g,25,100)},{text:'繳納奢侈稅 $75。',fn:g=>loseMoney(g,75)},{text:'前進到最近的鐵路，支付租金（翻倍）。',fn:g=>advanceNearestRR(g)},{text:'前進到最近的公共設施，支付租金（10倍骰子）。',fn:g=>advanceNearestUtil(g)},{text:'每位玩家向你支付 $50。',fn:g=>collectFromAll(g,50)},{text:'你的股票票息！領取 $50。',fn:g=>gainMoney(g,50)},{text:'前往監獄！不經過出發點，不領取 $200。',fn:g=>goToJail(g)},{text:'一般維修費：每棟房屋 $40、每間旅館 $115。',fn:g=>repairTax(g,40,115)},{text:'繳交罰款 $15。',fn:g=>loseMoney(g,15)}];
+const COMM_CARDS=[{text:'銀行錯誤對你有利！領取 $200。',fn:g=>gainMoney(g,200)},{text:'醫療費用：支付 $100。',fn:g=>loseMoney(g,100)},{text:'你得到了退稅！領取 $20。',fn:g=>gainMoney(g,20)},{text:'你當選董事會成員！每位玩家向你支付 $50。',fn:g=>collectFromAll(g,50)},{text:'醫院費用：支付 $100。',fn:g=>loseMoney(g,100)},{text:'學校費用：支付 $150。',fn:g=>loseMoney(g,150)},{text:'繼承遺產：領取 $100。',fn:g=>gainMoney(g,100)},{text:'向每位玩家收取生日紅包 $10。',fn:g=>collectFromAll(g,10)},{text:'前往監獄！',fn:g=>goToJail(g)},{text:'保險賠付：領取 $25。',fn:g=>gainMoney(g,25)},{text:'銷售股票：領取 $45。',fn:g=>gainMoney(g,45)},{text:'意外收入：領取 $10。',fn:g=>gainMoney(g,10)}];
+function shuffleArr(a){for(let i=a.length-1;i>0;i--){const j=0|Math.random()*(i+1);[a[i],a[j]]=[a[j],a[i]];}return a}
+const PLAYER_COLORS=['#e74c3c','#3498db','#2ecc71','#9b59b6'];
+const PLAYER_AVATARS=['🦊','🐲','🐸','🦄'];
+const COUNTRY_META={japan:{flag:'🇯🇵',name:'日本',en:'Japan',accent:'#c0392b',cc:0x8bc68b,center:'🗻',grad:['#8b2323','#c0392b']},taiwan:{flag:'🇹🇼',name:'台灣',en:'Taiwan',accent:'#16a085',cc:0x7bc8a4,center:'🌿',grad:['#0e6655','#16a085']},bangkok:{flag:'🇹🇭',name:'曼谷',en:'Bangkok',accent:'#e67e22',cc:0xc8b87b,center:'🛕',grad:['#b5651d','#e67e22']},korea:{flag:'🇰🇷',name:'韓國',en:'Korea',accent:'#2980b9',cc:0x7bb5c8,center:'🌸',grad:['#1a5276','#2980b9']}};
+const DIE_FACES=['⚀','⚁','⚂','⚃','⚄','⚅'];
+const DEFAULT_NAMES=['玩家一','玩家二','玩家三','玩家四'];
+
+// ── GAME STATE ──
+let G=null,selectedCountry=null,playerCount=2;
+let pendingBuy=null,pendingCard=null;
+let chanceCards=[],commCards=[];
+// 設定面板的暫存狀態
+let setupNames=['','','',''];
+let setupAI=[false,true,true,true];
+
+// ── SOUND SYSTEM ──
+let audioCtx=null;
+function getAudio(){if(!audioCtx)audioCtx=new(window.AudioContext||window.webkitAudioContext)();return audioCtx;}
+function playTone(freq,dur,type,vol){try{const a=getAudio();const o=a.createOscillator();const g=a.createGain();o.type=type||'sine';o.frequency.setValueAtTime(freq,a.currentTime);g.gain.setValueAtTime(vol||0.15,a.currentTime);g.gain.exponentialRampToValueAtTime(0.001,a.currentTime+dur);o.connect(g);g.connect(a.destination);o.start();o.stop(a.currentTime+dur);}catch(e){}}
+function playNoise(dur,vol){try{const a=getAudio();const buf=a.createBuffer(1,a.sampleRate*dur,a.sampleRate);const d=buf.getChannelData(0);for(let i=0;i<d.length;i++)d[i]=(Math.random()*2-1);const s=a.createBufferSource();s.buffer=buf;const g=a.createGain();g.gain.setValueAtTime(vol||0.08,a.currentTime);g.gain.exponentialRampToValueAtTime(0.001,a.currentTime+dur);const f=a.createBiquadFilter();f.type='highpass';f.frequency.value=2000;s.connect(f);f.connect(g);g.connect(a.destination);s.start();}catch(e){}}
+const SFX={
+  diceRoll(){for(let i=0;i<6;i++)setTimeout(()=>playNoise(0.05,0.06+Math.random()*0.04),i*50);},
+  diceHit(){playTone(200,0.1,'triangle',0.2);playNoise(0.08,0.1);},
+  tokenHop(){playTone(800+Math.random()*200,0.08,'sine',0.08);},
+  buy(){playTone(523,0.1,'square',0.1);setTimeout(()=>playTone(659,0.1,'square',0.1),100);setTimeout(()=>playTone(784,0.15,'square',0.12),200);},
+  rent(){playTone(400,0.15,'sawtooth',0.08);setTimeout(()=>playTone(300,0.2,'sawtooth',0.06),150);},
+  card(){playTone(600,0.08,'sine',0.1);setTimeout(()=>playTone(800,0.12,'sine',0.1),80);},
+  jail(){playTone(300,0.3,'sawtooth',0.1);setTimeout(()=>playTone(200,0.4,'sawtooth',0.08),200);},
+  win(){[523,659,784,1047].forEach((f,i)=>setTimeout(()=>playTone(f,0.3,'sine',0.12),i*150));},
+  click(){playTone(1000,0.03,'sine',0.05);},
+  endTurn(){playTone(500,0.06,'triangle',0.06);}
+};
+
+// ── BOARD COORDINATES ──
+const B=10;
+const CORNER_3D=2.68,EDGE_3D=(B*2-CORNER_3D*2)/9;
+const CELL_H=0.15;
+
+function spaceToGrid(idx){
+  if(idx===0)return[10,10];if(idx<=9)return[10,10-idx];if(idx===10)return[10,0];
+  if(idx<=19)return[10-(idx-10),0];if(idx===20)return[0,0];if(idx<=29)return[0,idx-20];
+  if(idx===30)return[0,10];if(idx<=39)return[idx-30,10];return[0,0];
+}
+function gridToWorld(r,c){
+  const sizes=[];for(let i=0;i<11;i++)sizes.push(i===0||i===10?CORNER_3D:EDGE_3D);
+  let x=-B;for(let i=0;i<c;i++)x+=sizes[i];x+=sizes[c]/2;
+  let z=-B;for(let i=0;i<r;i++)z+=sizes[i];z+=sizes[r]/2;
+  return{x,z};
+}
+function cellCenter3D(idx){const[r,c]=spaceToGrid(idx);const{x,z}=gridToWorld(r,c);return{x,y:CELL_H+0.17,z};}
+function cellSize(r,c){return{w:(c===0||c===10)?CORNER_3D:EDGE_3D,h:(r===0||r===10)?CORNER_3D:EDGE_3D};}
+
+// ╔══════════════════════════════════════════════════╗
+// ║          THREE.JS DUAL-SCENE SETUP               ║
+// ╚══════════════════════════════════════════════════╝
+let gameScene,gameCamera,uiScene,uiCamera,renderer;
+let boardGroup,tokenGroup,buildingGroup,diceGroup;
+let cellMeshes=[],tokenMeshes=[];
+let needsRender=true;
+
+// 攝影機控制
+let camPhi=Math.PI/4;
+let camTheta=-Math.PI/6;
+let camDist=28;
+const camTarget={x:0,y:0,z:0};
+const curTarget={x:0,y:0,z:0};
+let camDragging=false,camLastX=0,camLastY=0;
+
+function updateCamera(){
+  curTarget.x+=(camTarget.x-curTarget.x)*0.04;
+  curTarget.z+=(camTarget.z-curTarget.z)*0.04;
+  gameCamera.position.set(
+    curTarget.x+camDist*Math.sin(camPhi)*Math.sin(camTheta),
+    curTarget.y+camDist*Math.cos(camPhi),
+    curTarget.z+camDist*Math.sin(camPhi)*Math.cos(camTheta)
+  );
+  gameCamera.lookAt(curTarget.x,curTarget.y,curTarget.z);
+  needsRender=true;
+}
+
+function cameraFollowPlayer(idx){
+  if(!G)return;
+  const p=G.players[idx];if(!p||p.bankrupt)return;
+  const{x,z}=cellCenter3D(p.position);
+  const f=isMobile()?0.6:0.5;
+  camTarget.x=x*f;camTarget.z=z*f;
+}
+
+function isMobile(){return window.innerWidth<=768;}
+
+// ╔══════════════════════════════════════════════════╗
+// ║              UIPanel CLASS                        ║
+// ╚══════════════════════════════════════════════════╝
+class UIPanel{
+  constructor(w,h,z){
+    this.w=w;this.h=h;this.zIndex=z||0;
+    this.canvas=document.createElement('canvas');
+    this.canvas.width=w;this.canvas.height=h;
+    this.ctx=this.canvas.getContext('2d');
+    this.texture=new THREE.CanvasTexture(this.canvas);
+    this.texture.minFilter=THREE.LinearFilter;
+    this.texture.magFilter=THREE.LinearFilter;
+    const geo=new THREE.PlaneGeometry(2,2);
+    this.material=new THREE.MeshBasicMaterial({map:this.texture,transparent:true,depthTest:false,depthWrite:false});
+    this.mesh=new THREE.Mesh(geo,this.material);
+    this.mesh.renderOrder=z||0;
+    this.mesh.visible=false;
+    this.hitAreas=[];
+    this.visible=false;
+    // 螢幕位置（像素）
+    this.screenX=0;this.screenY=0;this.screenW=w;this.screenH=h;
+  }
+  show(){this.visible=true;this.mesh.visible=true;needsRender=true;}
+  hide(){this.visible=false;this.mesh.visible=false;needsRender=true;}
+  redraw(){
+    this.texture.needsUpdate=true;
+    needsRender=true;
+  }
+  // 根據螢幕座標定位 mesh
+  updatePosition(sx,sy,sw,sh){
+    this.screenX=sx;this.screenY=sy;this.screenW=sw;this.screenH=sh;
+    const vw=window.innerWidth,vh=window.innerHeight;
+    // 轉換到 NDC 座標
+    const cx=sx+sw/2,cy=sy+sh/2;
+    const ndcX=(cx/vw)*2-1;
+    const ndcY=-(cy/vh)*2+1;
+    this.mesh.position.set(ndcX,ndcY,0);
+    this.mesh.scale.set(sw/vw,sh/vh,1);
+  }
+  hitTest(px,py){
+    // px,py 是螢幕座標
+    if(!this.visible)return null;
+    // 轉換為 panel 內部座標（0~w, 0~h）
+    const lx=(px-this.screenX)/this.screenW*this.w;
+    const ly=(py-this.screenY)/this.screenH*this.h;
+    if(lx<0||ly<0||lx>this.w||ly>this.h)return null;
+    for(let i=this.hitAreas.length-1;i>=0;i--){
+      const a=this.hitAreas[i];
+      if(lx>=a.x&&lx<=a.x+a.w&&ly>=a.y&&ly<=a.y+a.h)return a;
+    }
+    // 返回一個 "block" 結果來吸收點擊
+    return{id:'__panel__',cb:null};
+  }
+}
+
+// ── 所有面板 ──
+let welcomePanel,setupPanel,sidePanel,modalPanel,modalBackdrop;
+const allPanels=[];
+
+function createPanels(){
+  const vw=window.innerWidth,vh=window.innerHeight;
+  const dpr=Math.min(window.devicePixelRatio,2);
+
+  // 歡迎面板（全螢幕）
+  welcomePanel=new UIPanel(Math.floor(vw*dpr),Math.floor(vh*dpr),100);
+  welcomePanel.dpr=dpr;
+  uiScene.add(welcomePanel.mesh);allPanels.push(welcomePanel);
+
+  // 設定面板（全螢幕）
+  setupPanel=new UIPanel(Math.floor(vw*dpr),Math.floor(vh*dpr),100);
+  setupPanel.dpr=dpr;
+  uiScene.add(setupPanel.mesh);allPanels.push(setupPanel);
+
+  // 側邊欄
+  const spw=isMobile()?vw:280;
+  const sph=isMobile()?Math.floor(vh*0.42):vh;
+  sidePanel=new UIPanel(Math.floor(spw*dpr),Math.floor(sph*dpr),10);
+  sidePanel.dpr=dpr;
+  uiScene.add(sidePanel.mesh);allPanels.push(sidePanel);
+
+  // 彈窗背景
+  modalBackdrop=new UIPanel(Math.floor(vw*dpr),Math.floor(vh*dpr),199);
+  modalBackdrop.dpr=dpr;
+  uiScene.add(modalBackdrop.mesh);allPanels.push(modalBackdrop);
+
+  // 彈窗
+  modalPanel=new UIPanel(Math.floor(vw*dpr),Math.floor(vh*dpr),200);
+  modalPanel.dpr=dpr;
+  uiScene.add(modalPanel.mesh);allPanels.push(modalPanel);
+
+  layoutPanels();
+}
+
+function layoutPanels(){
+  const vw=window.innerWidth,vh=window.innerHeight;
+  welcomePanel.updatePosition(0,0,vw,vh);
+  setupPanel.updatePosition(0,0,vw,vh);
+  if(isMobile()){
+    const sh=Math.floor(vh*0.42);
+    sidePanel.updatePosition(0,vh-sh,vw,sh);
+  }else{
+    sidePanel.updatePosition(vw-280,0,280,vh);
+  }
+  modalBackdrop.updatePosition(0,0,vw,vh);
+  modalPanel.updatePosition(0,0,vw,vh);
+}
+
+// ╔══════════════════════════════════════════════════╗
+// ║              DRAWING HELPERS                      ║
+// ╚══════════════════════════════════════════════════╝
+function drawRoundRect(ctx,x,y,w,h,r){
+  ctx.beginPath();
+  ctx.moveTo(x+r,y);ctx.lineTo(x+w-r,y);ctx.quadraticCurveTo(x+w,y,x+w,y+r);
+  ctx.lineTo(x+w,y+h-r);ctx.quadraticCurveTo(x+w,y+h,x+w-r,y+h);
+  ctx.lineTo(x+r,y+h);ctx.quadraticCurveTo(x,y+h,x,y+h-r);
+  ctx.lineTo(x,y+r);ctx.quadraticCurveTo(x,y,x+r,y);ctx.closePath();
+}
+
+function fillRoundRect(ctx,x,y,w,h,r,fill){
+  drawRoundRect(ctx,x,y,w,h,r);ctx.fillStyle=fill;ctx.fill();
+}
+
+function strokeRoundRect(ctx,x,y,w,h,r,stroke,lw){
+  drawRoundRect(ctx,x,y,w,h,r);ctx.strokeStyle=stroke;ctx.lineWidth=lw||1;ctx.stroke();
+}
+
+function wrapTextCanvas(ctx,text,cx,y,maxW,lineH){
+  if(ctx.measureText(text).width<=maxW){ctx.fillText(text,cx,y);return y+lineH;}
+  const chars=[...text];let line='';const lines=[];
+  for(const ch of chars){if(ctx.measureText(line+ch).width>maxW&&line){lines.push(line);line=ch;}else line+=ch;}
+  if(line)lines.push(line);
+  const startY=y-(lines.length-1)*lineH/2;
+  lines.forEach((l,i)=>ctx.fillText(l,cx,startY+i*lineH));
+  return startY+lines.length*lineH;
+}
+
+// ╔══════════════════════════════════════════════════╗
+// ║              WELCOME PANEL DRAW                   ║
+// ╚══════════════════════════════════════════════════╝
+function drawWelcomePanel(){
+  const p=welcomePanel,ctx=p.ctx,dpr=p.dpr;
+  const cw=p.w,ch=p.h;
+  ctx.clearRect(0,0,cw,ch);
+
+  // 背景
+  ctx.fillStyle='rgba(6,6,15,0.97)';
+  ctx.fillRect(0,0,cw,ch);
+
+  // 標題
+  ctx.textAlign='center';ctx.textBaseline='middle';
+  ctx.font=`bold ${48*dpr}px "Noto Sans TC",sans-serif`;
+  ctx.fillStyle='#c9a84c';
+  ctx.fillText('ASIA MONOPOLY',cw/2,ch*0.18);
+
+  // 副標題
+  ctx.font=`${16*dpr}px "Noto Sans TC",sans-serif`;
+  ctx.fillStyle='#888';
+  ctx.fillText('選擇你的旅程 · Choose Your Journey',cw/2,ch*0.25);
+
+  // 4 張國家卡片 2x2
+  const countries=['japan','taiwan','bangkok','korea'];
+  const cardW=Math.min(200*dpr,cw*0.22);
+  const cardH=Math.min(180*dpr,ch*0.28);
+  const gap=16*dpr;
+  const totalW=cardW*2+gap;
+  const totalH=cardH*2+gap;
+  const startX=(cw-totalW)/2;
+  const startY=ch*0.33;
+
+  p.hitAreas=[];
+  countries.forEach((c,i)=>{
+    const col=i%2,row=Math.floor(i/2);
+    const x=startX+col*(cardW+gap);
+    const y=startY+row*(cardH+gap);
+    const meta=COUNTRY_META[c];
+
+    // 漸層背景
+    const grd=ctx.createLinearGradient(x,y,x+cardW,y+cardH);
+    grd.addColorStop(0,meta.grad[0]);grd.addColorStop(1,meta.grad[1]);
+    fillRoundRect(ctx,x,y,cardW,cardH,16*dpr,grd);
+
+    // 邊框
+    strokeRoundRect(ctx,x,y,cardW,cardH,16*dpr,'rgba(255,255,255,0.15)',2*dpr);
+
+    // 旗幟
+    ctx.font=`${40*dpr}px serif`;
+    ctx.fillStyle='#fff';ctx.textAlign='center';
+    ctx.fillText(meta.flag,x+cardW/2,y+cardH*0.32);
+
+    // 國名
+    ctx.font=`bold ${22*dpr}px "Noto Sans TC",sans-serif`;
+    ctx.fillStyle='#fff';
+    ctx.fillText(meta.name,x+cardW/2,y+cardH*0.58);
+
+    // 英文名
+    ctx.font=`${12*dpr}px "Noto Sans TC",sans-serif`;
+    ctx.fillStyle='rgba(255,255,255,0.5)';
+    ctx.fillText(meta.en,x+cardW/2,y+cardH*0.74);
+
+    p.hitAreas.push({x,y,w:cardW,h:cardH,id:'country_'+c,cb:()=>selectCountry(c)});
+  });
+
+  p.redraw();
+}
+
+// ╔══════════════════════════════════════════════════╗
+// ║              SETUP PANEL DRAW                     ║
+// ╚══════════════════════════════════════════════════╝
+function drawSetupPanel(){
+  const p=setupPanel,ctx=p.ctx,dpr=p.dpr;
+  const cw=p.w,ch=p.h;
+  ctx.clearRect(0,0,cw,ch);
+  if(!selectedCountry)return;
+  const meta=COUNTRY_META[selectedCountry];
+
+  // 背景
+  ctx.fillStyle='rgba(6,6,15,0.97)';
+  ctx.fillRect(0,0,cw,ch);
+
+  // 卡片
+  const cardW=Math.min(500*dpr,cw*0.85);
+  const cardH=Math.min(550*dpr,ch*0.82);
+  const cx=(cw-cardW)/2,cy=(ch-cardH)/2;
+  fillRoundRect(ctx,cx,cy,cardW,cardH,20*dpr,'rgba(255,255,255,0.03)');
+  strokeRoundRect(ctx,cx,cy,cardW,cardH,20*dpr,'rgba(201,168,76,0.25)',dpr);
+
+  ctx.textAlign='center';ctx.textBaseline='middle';
+
+  // 旗幟
+  ctx.font=`${40*dpr}px serif`;
+  ctx.fillText(meta.flag,cw/2,cy+50*dpr);
+
+  // 標題
+  ctx.font=`bold ${22*dpr}px "Noto Sans TC",sans-serif`;
+  ctx.fillStyle='#c9a84c';
+  ctx.fillText(meta.name+' · 玩家設定',cw/2,cy+90*dpr);
+
+  // 副標題
+  ctx.font=`${12*dpr}px "Noto Sans TC",sans-serif`;
+  ctx.fillStyle='rgba(240,232,216,0.55)';
+  ctx.fillText('選擇人數 · 輸入名稱',cw/2,cy+118*dpr);
+
+  // 人數按鈕
+  p.hitAreas=[];
+  const btnR=26*dpr;
+  const btnGap=14*dpr;
+  const btnStartX=cw/2-((3*btnR*2+2*btnGap)/2)+btnR;
+  const btnY=cy+160*dpr;
+  [2,3,4].forEach((n,i)=>{
+    const bx=btnStartX+i*(btnR*2+btnGap);
+    ctx.beginPath();ctx.arc(bx,btnY,btnR,0,Math.PI*2);
+    if(playerCount===n){
+      ctx.fillStyle='#c9a84c';ctx.fill();
+      ctx.fillStyle='#1a1000';
+    }else{
+      ctx.fillStyle='transparent';ctx.fill();
+      ctx.strokeStyle='rgba(201,168,76,0.25)';ctx.lineWidth=2*dpr;ctx.stroke();
+      ctx.fillStyle='rgba(240,232,216,0.55)';
+    }
+    ctx.font=`bold ${18*dpr}px "Noto Sans TC",sans-serif`;
+    ctx.textAlign='center';
+    ctx.fillText(String(n),bx,btnY+1);
+    p.hitAreas.push({x:bx-btnR,y:btnY-btnR,w:btnR*2,h:btnR*2,id:'count_'+n,cb:()=>{playerCount=n;drawSetupPanel();}});
+  });
+
+  // 玩家列
+  const rowH=48*dpr;
+  const rowStartY=btnY+50*dpr;
+  const rowX=cx+30*dpr;
+  const rowW=cardW-60*dpr;
+  for(let i=0;i<playerCount;i++){
+    const ry=rowStartY+i*(rowH+10*dpr);
+    // 色點
+    ctx.beginPath();ctx.arc(rowX+14*dpr,ry+rowH/2,7*dpr,0,Math.PI*2);
+    ctx.fillStyle=PLAYER_COLORS[i];ctx.fill();
+
+    // 名稱框
+    const nameX=rowX+36*dpr;
+    const nameW=rowW-140*dpr;
+    fillRoundRect(ctx,nameX,ry+6*dpr,nameW,rowH-12*dpr,8*dpr,'rgba(255,255,255,0.05)');
+    strokeRoundRect(ctx,nameX,ry+6*dpr,nameW,rowH-12*dpr,8*dpr,'rgba(201,168,76,0.25)',dpr);
+    ctx.font=`${14*dpr}px "Noto Sans TC",sans-serif`;
+    ctx.fillStyle='#f0e8d8';ctx.textAlign='left';
+    const displayName=setupNames[i]||DEFAULT_NAMES[i];
+    ctx.fillText(displayName,nameX+10*dpr,ry+rowH/2+1);
+    // 點擊名稱 → prompt
+    p.hitAreas.push({x:nameX,y:ry+6*dpr,w:nameW,h:rowH-12*dpr,id:'name_'+i,cb:()=>{
+      const v=window.prompt('輸入玩家名稱：',setupNames[i]||DEFAULT_NAMES[i]);
+      if(v!==null)setupNames[i]=v;drawSetupPanel();
+    }});
+
+    // AI 切換
+    const aiX=nameX+nameW+10*dpr;
+    const aiW=90*dpr;
+    const isAI=setupAI[i];
+    fillRoundRect(ctx,aiX,ry+10*dpr,aiW,rowH-20*dpr,20*dpr,isAI?'rgba(201,168,76,0.2)':'rgba(255,255,255,0.08)');
+    strokeRoundRect(ctx,aiX,ry+10*dpr,aiW,rowH-20*dpr,20*dpr,isAI?'rgba(201,168,76,0.3)':'rgba(201,168,76,0.25)',dpr);
+    ctx.font=`${11*dpr}px "Noto Sans TC",sans-serif`;
+    ctx.fillStyle=isAI?'#c9a84c':'rgba(240,232,216,0.55)';
+    ctx.textAlign='center';
+    ctx.fillText(isAI?'🤖 電腦':'👤 真人',aiX+aiW/2,ry+rowH/2+1);
+    p.hitAreas.push({x:aiX,y:ry+10*dpr,w:aiW,h:rowH-20*dpr,id:'ai_'+i,cb:()=>{setupAI[i]=!setupAI[i];drawSetupPanel();}});
+  }
+
+  // 開始遊戲按鈕
+  const startBtnW=cardW-60*dpr;
+  const startBtnH=48*dpr;
+  const startBtnX=cx+30*dpr;
+  const startBtnY=rowStartY+playerCount*(rowH+10*dpr)+20*dpr;
+  const startGrd=ctx.createLinearGradient(startBtnX,startBtnY,startBtnX+startBtnW,startBtnY);
+  startGrd.addColorStop(0,'#c9a84c');startGrd.addColorStop(0.5,'#f0d060');startGrd.addColorStop(1,'#c9a84c');
+  fillRoundRect(ctx,startBtnX,startBtnY,startBtnW,startBtnH,10*dpr,startGrd);
+  ctx.font=`bold ${16*dpr}px "Noto Sans TC",sans-serif`;
+  ctx.fillStyle='#1a1000';ctx.textAlign='center';
+  ctx.fillText('開始遊戲 ▶',cw/2,startBtnY+startBtnH/2+1);
+  p.hitAreas.push({x:startBtnX,y:startBtnY,w:startBtnW,h:startBtnH,id:'start',cb:()=>startGame()});
+
+  // 返回
+  const backY=startBtnY+startBtnH+16*dpr;
+  ctx.font=`${14*dpr}px "Noto Sans TC",sans-serif`;
+  ctx.fillStyle='rgba(240,232,216,0.55)';
+  ctx.fillText('← 返回選擇地區',cw/2,backY+10*dpr);
+  const backW=160*dpr;
+  p.hitAreas.push({x:(cw-backW)/2,y:backY,w:backW,h:24*dpr,id:'back',cb:()=>{setupPanel.hide();welcomePanel.show();drawWelcomePanel();}});
+
+  p.redraw();
+}
+
+// ╔══════════════════════════════════════════════════╗
+// ║              SIDE PANEL DRAW                      ║
+// ╚══════════════════════════════════════════════════╝
+function drawSidePanel(){
+  if(!G)return;
+  const p=sidePanel,ctx=p.ctx,dpr=p.dpr;
+  const cw=p.w,ch=p.h;
+  ctx.clearRect(0,0,cw,ch);
+  p.hitAreas=[];
+
+  // 背景
+  ctx.fillStyle='rgba(10,10,25,0.94)';
+  ctx.fillRect(0,0,cw,ch);
+  // 左邊框線
+  if(!isMobile()){
+    ctx.strokeStyle='rgba(201,168,76,0.2)';ctx.lineWidth=dpr;
+    ctx.beginPath();ctx.moveTo(0,0);ctx.lineTo(0,ch);ctx.stroke();
+  }else{
+    ctx.strokeStyle='rgba(201,168,76,0.2)';ctx.lineWidth=dpr;
+    ctx.beginPath();ctx.moveTo(0,0);ctx.lineTo(cw,0);ctx.stroke();
+  }
+
+  const cur=G.players[G.current];
+  let yy=14*dpr;
+  const pad=14*dpr;
+
+  // 標題
+  ctx.font=`${10*dpr}px "Noto Sans TC",sans-serif`;
+  ctx.fillStyle='#c9a84c';ctx.textAlign='left';
+  ctx.fillText('玩家狀況',pad,yy);
+  yy+=18*dpr;
+
+  // 玩家卡片
+  G.players.forEach((pl,i)=>{
+    const cardH=42*dpr;
+    const isActive=i===G.current;
+    if(isActive){
+      fillRoundRect(ctx,pad-4*dpr,yy-2*dpr,cw-pad*2+8*dpr,cardH+4*dpr,8*dpr,'rgba(201,168,76,0.1)');
+      strokeRoundRect(ctx,pad-4*dpr,yy-2*dpr,cw-pad*2+8*dpr,cardH+4*dpr,8*dpr,'rgba(201,168,76,0.2)',dpr);
+    }
+    if(pl.bankrupt)ctx.globalAlpha=0.3;
+
+    // 頭像
+    const avX=pad+14*dpr,avY=yy+cardH/2;
+    ctx.beginPath();ctx.arc(avX,avY,12*dpr,0,Math.PI*2);
+    ctx.fillStyle=pl.color;ctx.fill();
+    ctx.font=`${10*dpr}px serif`;ctx.textAlign='center';ctx.fillStyle='#fff';
+    ctx.fillText(pl.avatar,avX,avY+3*dpr);
+
+    // 名稱+金額
+    ctx.textAlign='left';
+    ctx.font=`bold ${12*dpr}px "Noto Sans TC",sans-serif`;
+    ctx.fillStyle='#f0e8d8';
+    ctx.fillText(pl.name+(pl.isAI?' 🤖':''),pad+32*dpr,yy+16*dpr);
+    ctx.font=`bold ${11*dpr}px "Noto Sans TC",sans-serif`;
+    ctx.fillStyle='#c9a84c';
+    ctx.fillText('$'+pl.money,pad+32*dpr,yy+32*dpr);
+
+    // 地產數
+    const props=G.spaces.filter(s=>s.owner===i);
+    if(props.length){
+      ctx.font=`${9*dpr}px "Noto Sans TC",sans-serif`;
+      ctx.fillStyle='rgba(240,232,216,0.55)';
+      ctx.fillText('🏠×'+props.length,cw-pad-50*dpr,yy+16*dpr);
+    }
+    if(pl.inJail){
+      ctx.font=`${9*dpr}px "Noto Sans TC",sans-serif`;ctx.fillStyle='#e74c3c';
+      ctx.fillText('⛓監獄',cw-pad-50*dpr,yy+32*dpr);
+    }
+
+    // 活躍指示
+    if(isActive&&!pl.bankrupt){
+      ctx.beginPath();ctx.arc(cw-pad-6*dpr,yy+cardH/2,3*dpr,0,Math.PI*2);
+      ctx.fillStyle='#c9a84c';ctx.fill();
+    }
+    if(pl.bankrupt)ctx.globalAlpha=1;
+    yy+=cardH+6*dpr;
+  });
+
+  // 當前回合
+  yy+=6*dpr;
+  ctx.font=`${10*dpr}px "Noto Sans TC",sans-serif`;
+  ctx.fillStyle='#c9a84c';ctx.textAlign='left';
+  ctx.fillText(cur.name+' 的回合',pad,yy);
+  yy+=20*dpr;
+
+  // 骰子
+  const diceSize=36*dpr;
+  const diceGap=12*dpr;
+  const diceStartX=(cw-diceSize*2-diceGap)/2;
+  [0,1].forEach(i=>{
+    const dx=diceStartX+i*(diceSize+diceGap);
+    fillRoundRect(ctx,dx,yy,diceSize,diceSize,6*dpr,'#fff');
+    ctx.strokeStyle='#bbb';ctx.lineWidth=2*dpr;
+    drawRoundRect(ctx,dx,yy,diceSize,diceSize,6*dpr);ctx.stroke();
+    ctx.font=`${22*dpr}px serif`;ctx.fillStyle='#222';ctx.textAlign='center';
+    ctx.fillText(DIE_FACES[G.dice[i]-1],dx+diceSize/2,yy+diceSize/2+2*dpr);
+  });
+  yy+=diceSize+8*dpr;
+  ctx.font=`${12*dpr}px "Noto Sans TC",sans-serif`;
+  ctx.fillStyle='#c9a84c';ctx.textAlign='center';
+  ctx.fillText('合計：'+(G.dice[0]+G.dice[1])+(G.doublesRolled?' 🎉 雙胞胎！':''),cw/2,yy);
+  yy+=22*dpr;
+
+  // 按鈕
+  const btnW=cw-pad*2;
+  const btnH=38*dpr;
+  if(G.phase==='roll'){
+    const grd=ctx.createLinearGradient(pad,yy,pad+btnW,yy);
+    grd.addColorStop(0,'#c9a84c');grd.addColorStop(0.5,'#f0d060');grd.addColorStop(1,'#c9a84c');
+    fillRoundRect(ctx,pad,yy,btnW,btnH,8*dpr,grd);
+    ctx.font=`bold ${14*dpr}px "Noto Sans TC",sans-serif`;
+    ctx.fillStyle='#1a1000';ctx.textAlign='center';
+    ctx.fillText('🎲 擲骰子',cw/2,yy+btnH/2+1);
+    p.hitAreas.push({x:pad,y:yy,w:btnW,h:btnH,id:'roll',cb:()=>doRoll()});
+    yy+=btnH+6*dpr;
+
+    if(cur.inJail){
+      fillRoundRect(ctx,pad,yy,btnW,btnH-6*dpr,8*dpr,'rgba(50,50,50,0.6)');
+      strokeRoundRect(ctx,pad,yy,btnW,btnH-6*dpr,8*dpr,'rgba(255,255,255,0.1)',dpr);
+      ctx.font=`${12*dpr}px "Noto Sans TC",sans-serif`;
+      ctx.fillStyle='#aaa';ctx.textAlign='center';
+      ctx.fillText('繳保釋金 $50',cw/2,yy+(btnH-6*dpr)/2+1);
+      p.hitAreas.push({x:pad,y:yy,w:btnW,h:btnH-6*dpr,id:'bail',cb:()=>doBailJail()});
+      yy+=btnH;
+    }
+  }
+  if(G.phase==='post'){
+    fillRoundRect(ctx,pad,yy,btnW,btnH,8*dpr,'rgba(50,50,80,0.8)');
+    strokeRoundRect(ctx,pad,yy,btnW,btnH,8*dpr,'rgba(201,168,76,0.2)',dpr);
+    ctx.font=`bold ${14*dpr}px "Noto Sans TC",sans-serif`;
+    ctx.fillStyle='#f0e8d8';ctx.textAlign='center';
+    ctx.fillText('結束回合 →',cw/2,yy+btnH/2+1);
+    p.hitAreas.push({x:pad,y:yy,w:btnW,h:btnH,id:'end',cb:()=>doEndTurn()});
+    yy+=btnH+6*dpr;
+  }
+
+  // 遊戲紀錄
+  yy+=6*dpr;
+  ctx.font=`${10*dpr}px "Noto Sans TC",sans-serif`;
+  ctx.fillStyle='#c9a84c';ctx.textAlign='left';
+  ctx.fillText('遊戲紀錄',pad,yy);
+  yy+=14*dpr;
+  fillRoundRect(ctx,pad,yy,btnW,Math.min(120*dpr,ch-yy-40*dpr),8*dpr,'rgba(0,0,0,0.3)');
+  const logH=Math.min(120*dpr,ch-yy-40*dpr);
+  ctx.save();ctx.beginPath();ctx.rect(pad,yy,btnW,logH);ctx.clip();
+  let logY=yy+12*dpr;
+  G.log.slice(0,10).forEach(e=>{
+    ctx.font=`${9*dpr}px "Noto Sans TC",sans-serif`;
+    ctx.fillStyle=e.type==='good'?'#2ecc71':e.type==='warn'?'#e74c3c':e.type==='gold'?'#c9a84c':'rgba(240,232,216,0.55)';
+    ctx.textAlign='left';
+    ctx.fillText(e.msg,pad+8*dpr,logY,btnW-16*dpr);
+    logY+=13*dpr;
+  });
+  ctx.restore();
+  yy+=logH+10*dpr;
+
+  // 回主選單
+  fillRoundRect(ctx,pad,yy,btnW,30*dpr,6*dpr,'rgba(30,30,50,0.6)');
+  strokeRoundRect(ctx,pad,yy,btnW,30*dpr,6*dpr,'rgba(255,255,255,0.1)',dpr);
+  ctx.font=`${11*dpr}px "Noto Sans TC",sans-serif`;
+  ctx.fillStyle='#888';ctx.textAlign='center';
+  ctx.fillText('↩ 回主選單',cw/2,yy+15*dpr+1);
+  p.hitAreas.push({x:pad,y:yy,w:btnW,h:30*dpr,id:'menu',cb:()=>backToMenu()});
+
+  p.redraw();
+}
+
+// ╔══════════════════════════════════════════════════╗
+// ║              MODAL DRAWING                        ║
+// ╚══════════════════════════════════════════════════╝
+let modalVisible=false;
+
+function showModalBackdrop(){
+  const ctx=modalBackdrop.ctx,cw=modalBackdrop.w,ch=modalBackdrop.h;
+  ctx.clearRect(0,0,cw,ch);
+  ctx.fillStyle='rgba(0,0,0,0.75)';
+  ctx.fillRect(0,0,cw,ch);
+  modalBackdrop.hitAreas=[{x:0,y:0,w:cw,h:ch,id:'backdrop',cb:null}];
+  modalBackdrop.show();modalBackdrop.redraw();
+}
+
+function hideModal(cb){
+  modalPanel.hide();modalBackdrop.hide();
+  modalVisible=false;
+  if(cb)setTimeout(cb,50);
+}
+
+function showBuyModal(player,space){
+  modalVisible=true;
+  showModalBackdrop();
+  const p=modalPanel,ctx=p.ctx,dpr=p.dpr;
+  const cw=p.w,ch=p.h;
+  ctx.clearRect(0,0,cw,ch);
+  p.hitAreas=[];
+
+  const g=GROUPS[space.group];
+  const mw=340*dpr,mh=380*dpr;
+  const mx=(cw-mw)/2,my=(ch-mh)/2;
+
+  // 彈窗框
+  const grd=ctx.createLinearGradient(mx,my,mx+mw,my+mh);
+  grd.addColorStop(0,'#141428');grd.addColorStop(1,'#0e0e20');
+  fillRoundRect(ctx,mx,my,mw,mh,20*dpr,grd);
+  strokeRoundRect(ctx,mx,my,mw,mh,20*dpr,'#c9a84c',dpr);
+
+  // 色帶
+  fillRoundRect(ctx,mx+10*dpr,my+10*dpr,mw-20*dpr,8*dpr,4*dpr,g?g.hex:'#888');
+
+  ctx.textAlign='center';ctx.textBaseline='middle';
+
+  // 圖標
+  ctx.font=`${40*dpr}px serif`;
+  ctx.fillText(space.type==='rr'?'🚄':space.type==='util'?'⚡':'🏠',cw/2,my+50*dpr);
+
+  // 名稱
+  ctx.font=`bold ${18*dpr}px "Noto Sans TC",sans-serif`;
+  ctx.fillStyle='#c9a84c';
+  ctx.fillText(space.name,cw/2,my+85*dpr);
+
+  // 副文字
+  ctx.font=`${12*dpr}px "Noto Sans TC",sans-serif`;
+  ctx.fillStyle='#888';
+  ctx.fillText(player.name+'，是否要購買這塊地產？',cw/2,my+110*dpr);
+
+  // 詳細資訊
+  const detY=my+130*dpr;
+  fillRoundRect(ctx,mx+20*dpr,detY,mw-40*dpr,120*dpr,8*dpr,'rgba(0,0,0,0.2)');
+  ctx.font=`${11*dpr}px "Noto Sans TC",sans-serif`;
+  ctx.textAlign='left';
+  const rows=[['售價','$'+space.price]];
+  if(space.type==='prop'){rows.push(['基本租金','$'+space.rent[0]],['旅館租金','$'+space.rent[5]],['建造費用','$'+(g?g.buildCost:0)+'/棟']);}
+  rows.push(['你的資金','$'+player.money]);
+  rows.forEach((r,i)=>{
+    const ry=detY+18*dpr+i*20*dpr;
+    ctx.fillStyle='#888';ctx.textAlign='left';
+    ctx.fillText(r[0],mx+32*dpr,ry);
+    ctx.fillStyle=r[0]==='你的資金'?'#2ecc71':'#f0e8d8';ctx.textAlign='right';
+    ctx.font=`bold ${11*dpr}px "Noto Sans TC",sans-serif`;
+    ctx.fillText(r[1],mx+mw-32*dpr,ry);
+    ctx.font=`${11*dpr}px "Noto Sans TC",sans-serif`;
+  });
+
+  // 按鈕
+  const btnY=my+mh-60*dpr;
+  const btn1W=(mw-60*dpr)/2;
+  // 購買
+  const buyGrd=ctx.createLinearGradient(mx+20*dpr,btnY,mx+20*dpr+btn1W,btnY);
+  buyGrd.addColorStop(0,'#c9a84c');buyGrd.addColorStop(1,'#f0d060');
+  fillRoundRect(ctx,mx+20*dpr,btnY,btn1W,36*dpr,8*dpr,buyGrd);
+  ctx.font=`bold ${13*dpr}px "Noto Sans TC",sans-serif`;
+  ctx.fillStyle='#1a1000';ctx.textAlign='center';
+  ctx.fillText('購買',mx+20*dpr+btn1W/2,btnY+18*dpr);
+  p.hitAreas.push({x:mx+20*dpr,y:btnY,w:btn1W,h:36*dpr,id:'buy',cb:()=>{hideModal(()=>{if(pendingBuy){doBuySpace(pendingBuy.player,pendingBuy.space);pendingBuy=null;}})}});
+
+  // 不購買
+  fillRoundRect(ctx,mx+30*dpr+btn1W,btnY,btn1W,36*dpr,8*dpr,'transparent');
+  strokeRoundRect(ctx,mx+30*dpr+btn1W,btnY,btn1W,36*dpr,8*dpr,'rgba(201,168,76,0.25)',dpr);
+  ctx.fillStyle='rgba(240,232,216,0.55)';
+  ctx.fillText('不購買',mx+30*dpr+btn1W+btn1W/2,btnY+18*dpr);
+  p.hitAreas.push({x:mx+30*dpr+btn1W,y:btnY,w:btn1W,h:36*dpr,id:'skip',cb:()=>{hideModal(()=>{pendingBuy=null;G.phase='post';drawSidePanel();autoAIEndTurn();})}});
+
+  p.show();p.redraw();
+}
+
+function showRentModal(payer,owner,space,rent){
+  SFX.rent();
+  modalVisible=true;showModalBackdrop();
+  const p=modalPanel,ctx=p.ctx,dpr=p.dpr;
+  const cw=p.w,ch=p.h;ctx.clearRect(0,0,cw,ch);p.hitAreas=[];
+
+  const mw=340*dpr,mh=220*dpr;
+  const mx=(cw-mw)/2,my=(ch-mh)/2;
+  const grd=ctx.createLinearGradient(mx,my,mx+mw,my+mh);
+  grd.addColorStop(0,'#141428');grd.addColorStop(1,'#0e0e20');
+  fillRoundRect(ctx,mx,my,mw,mh,20*dpr,grd);
+  strokeRoundRect(ctx,mx,my,mw,mh,20*dpr,'#c9a84c',dpr);
+
+  ctx.textAlign='center';ctx.textBaseline='middle';
+  ctx.font=`${40*dpr}px serif`;ctx.fillText('💸',cw/2,my+40*dpr);
+  ctx.font=`bold ${16*dpr}px "Noto Sans TC",sans-serif`;ctx.fillStyle='#c9a84c';
+  ctx.fillText('支付租金',cw/2,my+75*dpr);
+  ctx.font=`${12*dpr}px "Noto Sans TC",sans-serif`;ctx.fillStyle='#888';
+  wrapTextCanvas(ctx,payer.name+' 支付 $'+rent+' 給 '+owner.name+'（'+space.name+'）',cw/2,my+105*dpr,mw-40*dpr,16*dpr);
+
+  const btnY=my+mh-52*dpr;const btnW=mw-40*dpr;
+  const bg=ctx.createLinearGradient(mx+20*dpr,btnY,mx+20*dpr+btnW,btnY);
+  bg.addColorStop(0,'#c9a84c');bg.addColorStop(1,'#f0d060');
+  fillRoundRect(ctx,mx+20*dpr,btnY,btnW,36*dpr,8*dpr,bg);
+  ctx.font=`bold ${13*dpr}px "Noto Sans TC",sans-serif`;ctx.fillStyle='#1a1000';
+  ctx.fillText('確認',cw/2,btnY+18*dpr);
+  p.hitAreas.push({x:mx+20*dpr,y:btnY,w:btnW,h:36*dpr,id:'ok',cb:()=>hideModal(()=>{drawSidePanel();autoAIEndTurn();})});
+
+  p.show();p.redraw();
+  if(G.players[G.current].isAI)setTimeout(()=>{if(modalVisible)hideModal(()=>{drawSidePanel();autoAIEndTurn();});},1000);
+}
+
+function showCardModal(type,card){
+  modalVisible=true;showModalBackdrop();
+  const p=modalPanel,ctx=p.ctx,dpr=p.dpr;
+  const cw=p.w,ch=p.h;ctx.clearRect(0,0,cw,ch);p.hitAreas=[];
+
+  const mw=340*dpr,mh=260*dpr;
+  const mx=(cw-mw)/2,my=(ch-mh)/2;
+  const grd=ctx.createLinearGradient(mx,my,mx+mw,my+mh);
+  grd.addColorStop(0,'#141428');grd.addColorStop(1,'#0e0e20');
+  fillRoundRect(ctx,mx,my,mw,mh,20*dpr,grd);
+  strokeRoundRect(ctx,mx,my,mw,mh,20*dpr,'#c9a84c',dpr);
+
+  // 卡片頭
+  const headerColor=type==='chance'?'#e67e22':'#2980b9';
+  fillRoundRect(ctx,mx+12*dpr,my+12*dpr,mw-24*dpr,36*dpr,8*dpr,headerColor);
+  ctx.textAlign='center';ctx.textBaseline='middle';
+  ctx.font=`bold ${14*dpr}px "Noto Sans TC",sans-serif`;ctx.fillStyle='#fff';
+  ctx.fillText(type==='chance'?'🃏 機會卡':'📦 命運卡',cw/2,my+30*dpr);
+
+  ctx.font=`${36*dpr}px serif`;
+  ctx.fillText(type==='chance'?'🃏':'📦',cw/2,my+85*dpr);
+
+  // 卡片內容
+  fillRoundRect(ctx,mx+20*dpr,my+110*dpr,mw-40*dpr,70*dpr,8*dpr,'rgba(0,0,0,0.2)');
+  ctx.font=`${13*dpr}px "Noto Sans TC",sans-serif`;ctx.fillStyle='#f0e8d8';
+  wrapTextCanvas(ctx,card.text,cw/2,my+145*dpr,mw-60*dpr,18*dpr);
+
+  const btnY=my+mh-52*dpr;const btnW=mw-40*dpr;
+  const bg=ctx.createLinearGradient(mx+20*dpr,btnY,mx+20*dpr+btnW,btnY);
+  bg.addColorStop(0,'#c9a84c');bg.addColorStop(1,'#f0d060');
+  fillRoundRect(ctx,mx+20*dpr,btnY,btnW,36*dpr,8*dpr,bg);
+  ctx.font=`bold ${13*dpr}px "Noto Sans TC",sans-serif`;ctx.fillStyle='#1a1000';
+  ctx.fillText('確認',cw/2,btnY+18*dpr);
+  p.hitAreas.push({x:mx+20*dpr,y:btnY,w:btnW,h:36*dpr,id:'ok',cb:()=>hideModal(()=>{if(pendingCard){const{card,player}=pendingCard;pendingCard=null;card.fn(player);}})});
+
+  p.show();p.redraw();
+  if(G.players[G.current].isAI)setTimeout(()=>{if(modalVisible)hideModal(()=>{if(pendingCard){const{card,player}=pendingCard;pendingCard=null;card.fn(player);}});},1200);
+}
+
+function showPropInfo(id){
+  const s=G.spaces[id];if(!s||!G)return;
+  modalVisible=true;showModalBackdrop();
+  const p=modalPanel,ctx=p.ctx,dpr=p.dpr;
+  const cw=p.w,ch=p.h;ctx.clearRect(0,0,cw,ch);p.hitAreas=[];
+  const g=s.group?GROUPS[s.group]:null;
+  const owner=s.owner!==null?G.players[s.owner]:null;
+  const cur=G.players[G.current];
+
+  const mw=340*dpr,mh=360*dpr;
+  const mx=(cw-mw)/2,my=(ch-mh)/2;
+  const grd2=ctx.createLinearGradient(mx,my,mx+mw,my+mh);
+  grd2.addColorStop(0,'#141428');grd2.addColorStop(1,'#0e0e20');
+  fillRoundRect(ctx,mx,my,mw,mh,20*dpr,grd2);
+  strokeRoundRect(ctx,mx,my,mw,mh,20*dpr,'#c9a84c',dpr);
+
+  fillRoundRect(ctx,mx+10*dpr,my+10*dpr,mw-20*dpr,8*dpr,4*dpr,g?g.hex:'#888');
+
+  ctx.textAlign='center';ctx.textBaseline='middle';
+  ctx.font=`${36*dpr}px serif`;ctx.fillText(s.type==='rr'?'🚄':s.type==='util'?'⚡':'🏠',cw/2,my+45*dpr);
+  ctx.font=`bold ${16*dpr}px "Noto Sans TC",sans-serif`;ctx.fillStyle='#c9a84c';
+  ctx.fillText(s.name,cw/2,my+78*dpr);
+  ctx.font=`${12*dpr}px "Noto Sans TC",sans-serif`;ctx.fillStyle='#888';
+  ctx.fillText(owner?'擁有者：'+owner.name:'尚未購買',cw/2,my+100*dpr);
+
+  const detY=my+115*dpr;
+  fillRoundRect(ctx,mx+20*dpr,detY,mw-40*dpr,110*dpr,8*dpr,'rgba(0,0,0,0.2)');
+  const rows=[['售價','$'+s.price]];
+  if(s.type==='prop'){rows.push(['基本租金','$'+s.rent[0]],['旅館租金','$'+s.rent[5]],['建設',s.buildings===0?'無':s.buildings===5?'旅館🏨':s.buildings+'棟🏠']);}
+  ctx.font=`${11*dpr}px "Noto Sans TC",sans-serif`;
+  rows.forEach((r,i)=>{
+    const ry=detY+18*dpr+i*22*dpr;
+    ctx.fillStyle='#888';ctx.textAlign='left';ctx.fillText(r[0],mx+32*dpr,ry);
+    ctx.fillStyle='#f0e8d8';ctx.textAlign='right';
+    ctx.font=`bold ${11*dpr}px "Noto Sans TC",sans-serif`;
+    ctx.fillText(r[1],mx+mw-32*dpr,ry);
+    ctx.font=`${11*dpr}px "Noto Sans TC",sans-serif`;
+  });
+
+  // 按鈕區域
+  let btnY=my+mh-60*dpr;
+  const btnStartX=mx+20*dpr;
+  let btnIdx=0;
+
+  if(G.phase==='post'&&s.owner===G.current&&!cur.isAI){
+    if(canBuild(cur,s)){
+      const bw=90*dpr;
+      const bg2=ctx.createLinearGradient(btnStartX,btnY,btnStartX+bw,btnY);
+      bg2.addColorStop(0,'#c9a84c');bg2.addColorStop(1,'#f0d060');
+      fillRoundRect(ctx,btnStartX+btnIdx*(bw+8*dpr),btnY,bw,34*dpr,8*dpr,bg2);
+      ctx.font=`bold ${11*dpr}px "Noto Sans TC",sans-serif`;ctx.fillStyle='#1a1000';ctx.textAlign='center';
+      ctx.fillText('建造$'+(g?g.buildCost:0),btnStartX+btnIdx*(bw+8*dpr)+bw/2,btnY+17*dpr);
+      const bx=btnStartX+btnIdx*(bw+8*dpr);
+      p.hitAreas.push({x:bx,y:btnY,w:bw,h:34*dpr,id:'build',cb:()=>hideModal(()=>doBuildOn(G.spaces[id]))});
+      btnIdx++;
+    }
+    if(s.buildings>0){
+      const bw=90*dpr;
+      fillRoundRect(ctx,btnStartX+btnIdx*(bw+8*dpr),btnY,bw,34*dpr,8*dpr,'#c0392b');
+      ctx.font=`bold ${11*dpr}px "Noto Sans TC",sans-serif`;ctx.fillStyle='#fff';ctx.textAlign='center';
+      ctx.fillText('拆除出售',btnStartX+btnIdx*(bw+8*dpr)+bw/2,btnY+17*dpr);
+      const bx=btnStartX+btnIdx*(bw+8*dpr);
+      p.hitAreas.push({x:bx,y:btnY,w:bw,h:34*dpr,id:'sell',cb:()=>hideModal(()=>doSellBuilding(G.spaces[id]))});
+      btnIdx++;
+    }
+  }
+
+  // 關閉
+  const closeW=70*dpr;
+  const closeX=mx+mw-20*dpr-closeW;
+  fillRoundRect(ctx,closeX,btnY,closeW,34*dpr,8*dpr,'transparent');
+  strokeRoundRect(ctx,closeX,btnY,closeW,34*dpr,8*dpr,'rgba(201,168,76,0.25)',dpr);
+  ctx.font=`${12*dpr}px "Noto Sans TC",sans-serif`;ctx.fillStyle='rgba(240,232,216,0.55)';ctx.textAlign='center';
+  ctx.fillText('關閉',closeX+closeW/2,btnY+17*dpr);
+  p.hitAreas.push({x:closeX,y:btnY,w:closeW,h:34*dpr,id:'close',cb:()=>hideModal()});
+
+  p.show();p.redraw();
+}
+
+function showWinnerModal(w){
+  SFX.win();
+  modalVisible=true;showModalBackdrop();
+  const p=modalPanel,ctx=p.ctx,dpr=p.dpr;
+  const cw=p.w,ch=p.h;ctx.clearRect(0,0,cw,ch);p.hitAreas=[];
+
+  const mw=340*dpr,mh=260*dpr;
+  const mx=(cw-mw)/2,my=(ch-mh)/2;
+  const grd=ctx.createLinearGradient(mx,my,mx+mw,my+mh);
+  grd.addColorStop(0,'#141428');grd.addColorStop(1,'#0e0e20');
+  fillRoundRect(ctx,mx,my,mw,mh,20*dpr,grd);
+  strokeRoundRect(ctx,mx,my,mw,mh,20*dpr,'#c9a84c',2*dpr);
+
+  ctx.textAlign='center';ctx.textBaseline='middle';
+  ctx.font=`${60*dpr}px serif`;ctx.fillText('🏆',cw/2,my+55*dpr);
+  ctx.font=`bold ${22*dpr}px "Noto Sans TC",sans-serif`;ctx.fillStyle='#c9a84c';
+  ctx.fillText(w.name+' 獲勝！',cw/2,my+110*dpr);
+  ctx.font=`${13*dpr}px "Noto Sans TC",sans-serif`;ctx.fillStyle='#888';
+  ctx.fillText('🎉 恭喜成為亞洲大富翁！資產：$'+w.money,cw/2,my+145*dpr);
+
+  const btnY=my+mh-55*dpr;const btnW=mw-40*dpr;
+  const bg=ctx.createLinearGradient(mx+20*dpr,btnY,mx+20*dpr+btnW,btnY);
+  bg.addColorStop(0,'#c9a84c');bg.addColorStop(1,'#f0d060');
+  fillRoundRect(ctx,mx+20*dpr,btnY,btnW,38*dpr,8*dpr,bg);
+  ctx.font=`bold ${14*dpr}px "Noto Sans TC",sans-serif`;ctx.fillStyle='#1a1000';
+  ctx.fillText('🎉 再玩一局',cw/2,btnY+19*dpr);
+  p.hitAreas.push({x:mx+20*dpr,y:btnY,w:btnW,h:38*dpr,id:'replay',cb:()=>hideModal(()=>backToMenu())});
+
+  p.show();p.redraw();
+}
+
+// ╔══════════════════════════════════════════════════╗
+// ║              3D BOARD RENDER                      ║
+// ╚══════════════════════════════════════════════════╝
+function renderBoard3D(){
+  boardGroup.clear();cellMeshes=[];
+  const meta=COUNTRY_META[G.country];
+
+  // 邊框
+  const frameGeo=new THREE.BoxGeometry(B*2+0.5,CELL_H+0.1,B*2+0.5);
+  const frameMat=new THREE.MeshStandardMaterial({color:0x6B5335,roughness:0.7});
+  const frame=new THREE.Mesh(frameGeo,frameMat);
+  frame.position.y=(CELL_H+0.1)/2;frame.receiveShadow=true;
+  boardGroup.add(frame);
+
+  // 底板
+  const baseGeo=new THREE.BoxGeometry(B*2+0.15,0.08,B*2+0.15);
+  const baseMat=new THREE.MeshStandardMaterial({color:0xf5eed8,roughness:0.9});
+  const base=new THREE.Mesh(baseGeo,baseMat);
+  base.position.y=CELL_H+0.04;base.receiveShadow=true;
+  boardGroup.add(base);
+
+  // 中心
+  const innerW=B*2-CORNER_3D*2;
+  const centerGeo=new THREE.BoxGeometry(innerW-0.1,0.06,innerW-0.1);
+  const centerMat=new THREE.MeshStandardMaterial({color:meta.cc,roughness:0.8});
+  const centerMesh=new THREE.Mesh(centerGeo,centerMat);
+  centerMesh.position.y=CELL_H+0.08;boardGroup.add(centerMesh);
+
+  // 中心標籤
+  buildCityCenter(meta);
+
+  const CELL_Y=CELL_H+0.16;
+  G.spaces.forEach(s=>{
+    const[r,c]=spaceToGrid(s.id);
+    const{x,z}=gridToWorld(r,c);
+    const isCorner=(r===0||r===10)&&(c===0||c===10);
+    const tex=createCellTexture(s,r,c,isCorner);
+    const gw=isCorner?CORNER_3D:EDGE_3D;
+    const gh=CORNER_3D;
+    const geo=new THREE.PlaneGeometry(gw,gh);
+    geo.rotateX(-Math.PI/2);
+    const mat=new THREE.MeshStandardMaterial({map:tex,roughness:0.85,polygonOffset:true,polygonOffsetFactor:-1,polygonOffsetUnits:-1});
+    const cellMesh=new THREE.Mesh(geo,mat);
+
+    if(isCorner){
+      if(r===10&&c===10)cellMesh.rotation.y=0;
+      else if(r===10&&c===0)cellMesh.rotation.y=Math.PI/2;
+      else if(r===0&&c===0)cellMesh.rotation.y=Math.PI;
+      else if(r===0&&c===10)cellMesh.rotation.y=-Math.PI/2;
+    }else{
+      if(r===10)cellMesh.rotation.y=0;
+      else if(c===0)cellMesh.rotation.y=Math.PI/2;
+      else if(r===0)cellMesh.rotation.y=Math.PI;
+      else if(c===10)cellMesh.rotation.y=-Math.PI/2;
+    }
+    cellMesh.position.set(x,CELL_Y,z);cellMesh.receiveShadow=true;
+    cellMesh.userData.spaceId=s.id;
+    boardGroup.add(cellMesh);cellMeshes[s.id]=cellMesh;
+  });
+  needsRender=true;
+}
+
+function createCellTexture(s,r,c,isCorner){
+  const P=4;
+  let cw,ch;
+  if(isCorner){cw=90*P;ch=90*P;}else{cw=54*P;ch=90*P;}
+  const canvas=document.createElement('canvas');canvas.width=cw;canvas.height=ch;
+  const ctx=canvas.getContext('2d');
+
+  let bg='#f0ebd5';
+  if(s.type==='chance')bg='#fff3cc';else if(s.type==='comm')bg='#d6ecf5';
+  else if(s.type==='tax')bg='#fce4e4';else if(s.type==='go')bg='#d4edda';
+  else if(s.type==='jail')bg='#f0dde0';else if(s.type==='free')bg='#d6d8f6';
+  else if(s.type==='gotojail')bg='#f8d7da';
+  ctx.fillStyle=bg;ctx.fillRect(0,0,cw,ch);
+
+  ctx.strokeStyle='#b8a880';ctx.lineWidth=2*P;ctx.strokeRect(0,0,cw,ch);
+
+  if(s.group&&(s.type==='prop'||s.type==='rr'||s.type==='util')){
+    ctx.fillStyle=GROUPS[s.group].hex;
+    ctx.fillRect(P,P,cw-2*P,isCorner?ch*0.2:ch*0.22);
+  }
+
+  ctx.fillStyle='#1a1206';ctx.textAlign='center';ctx.textBaseline='middle';
+  const name=s.name.replace('\n',' ');const maxW=cw-8*P;
+
+  if(isCorner){
+    ctx.font=`${12*P}px serif`;ctx.fillText(s.icon||'',cw/2,ch*0.3);
+    ctx.font=`bold ${7*P}px "Noto Sans TC",sans-serif`;
+    wrapTextCanvas(ctx,name,cw/2,ch*0.55,maxW,8*P);
+    if(s.type==='go'){ctx.fillStyle='#1a8a3e';ctx.font=`bold ${5.5*P}px "Noto Sans TC",sans-serif`;ctx.fillText('← 領取$200',cw/2,ch*0.78);}
+  }else{
+    const hasColor=s.group&&(s.type==='prop'||s.type==='rr'||s.type==='util');
+    const textTop=hasColor?ch*0.38:ch*0.3;
+    ctx.font=`bold ${6.5*P}px "Noto Sans TC",sans-serif`;
+    const botY=wrapTextCanvas(ctx,name,cw/2,textTop,maxW,7*P);
+    if(s.price){ctx.font=`${5*P}px "Noto Sans TC",sans-serif`;ctx.fillStyle='#5a4a30';ctx.fillText('💰$'+s.price,cw/2,Math.min(botY+4*P,ch*0.82));}
+    else if(s.type==='chance'){ctx.font=`${8*P}px serif`;ctx.fillText('❓',cw/2,ch*0.72);}
+    else if(s.type==='comm'){ctx.font=`${7*P}px serif`;ctx.fillText('📦',cw/2,ch*0.72);}
+    else if(s.type==='tax'){ctx.font=`bold ${5.5*P}px "Noto Sans TC",sans-serif`;ctx.fillStyle='#c0392b';ctx.fillText(s.id===4?'$200':'$75',cw/2,ch*0.72);}
+  }
+
+  const tex=new THREE.CanvasTexture(canvas);
+  tex.minFilter=THREE.LinearFilter;tex.magFilter=THREE.LinearFilter;
+  if(renderer)tex.anisotropy=renderer.capabilities.getMaxAnisotropy();
+  return tex;
+}
+
+function buildCityCenter(meta){
+  const c=document.createElement('canvas');c.width=512;c.height=512;
+  const ctx=c.getContext('2d');ctx.textAlign='center';ctx.textBaseline='middle';
+  ctx.font='100px serif';ctx.fillText(meta.center||'',256,130);
+  ctx.font='bold 72px "Noto Sans TC",sans-serif';ctx.fillStyle=meta.accent;ctx.fillText(meta.name,256,260);
+  ctx.font='italic 32px serif';ctx.fillStyle='rgba(255,255,255,0.6)';ctx.fillText(meta.en+' Monopoly',256,340);
+  const tex=new THREE.CanvasTexture(c);tex.minFilter=THREE.LinearFilter;
+  const innerW=B*2-CORNER_3D*2;
+  const geo=new THREE.PlaneGeometry(innerW*0.7,innerW*0.7);geo.rotateX(-Math.PI/2);
+  const mat=new THREE.MeshStandardMaterial({map:tex,transparent:true,depthWrite:false,polygonOffset:true,polygonOffsetFactor:-2,polygonOffsetUnits:-2});
+  const mesh=new THREE.Mesh(geo,mat);mesh.position.set(0,CELL_H+0.12,0);
+  boardGroup.add(mesh);
+}
+
+// ╔══════════════════════════════════════════════════╗
+// ║              3D DICE                              ║
+// ╚══════════════════════════════════════════════════╝
+let diceRolling=false,die1State,die2State,diceCallback=null;
+
+function createDieFace(val){
+  const c=document.createElement('canvas');c.width=128;c.height=128;
+  const ctx=c.getContext('2d');
+  ctx.fillStyle='#fff';ctx.fillRect(0,0,128,128);
+  ctx.strokeStyle='#ddd';ctx.lineWidth=4;ctx.beginPath();ctx.roundRect(4,4,120,120,12);ctx.stroke();
+  ctx.fillStyle='#222';
+  const dots={1:[[64,64]],2:[[36,36],[92,92]],3:[[36,36],[64,64],[92,92]],4:[[36,36],[92,36],[36,92],[92,92]],5:[[36,36],[92,36],[64,64],[36,92],[92,92]],6:[[36,36],[92,36],[36,64],[92,64],[36,92],[92,92]]};
+  (dots[val]||[]).forEach(([dx,dy])=>{ctx.beginPath();ctx.arc(dx,dy,10,0,Math.PI*2);ctx.fill();});
+  return new THREE.CanvasTexture(c);
+}
+
+function createDice(){
+  const faceMap=[3,4,1,6,2,5];
+  const mats=faceMap.map(v=>new THREE.MeshStandardMaterial({map:createDieFace(v),roughness:0.4,metalness:0.05}));
+  const size=0.7,geo=new THREE.BoxGeometry(size,size,size);
+  const m1=new THREE.Mesh(geo,mats);m1.castShadow=true;
+  const m2=new THREE.Mesh(geo,mats.map(m=>m.clone()));m2.castShadow=true;
+  diceGroup.add(m1,m2);
+  die1State={mesh:m1,pos:new THREE.Vector3(-1.5,0.4,6),vel:new THREE.Vector3(),angVel:new THREE.Vector3(),quat:new THREE.Quaternion(),settled:true,targetVal:1};
+  die2State={mesh:m2,pos:new THREE.Vector3(1.5,0.4,6),vel:new THREE.Vector3(),angVel:new THREE.Vector3(),quat:new THREE.Quaternion(),settled:true,targetVal:1};
+  m1.position.copy(die1State.pos);m1.position.y=0.4;
+  m2.position.copy(die2State.pos);m2.position.y=0.4;
+}
+
+function launchDice(d1,d2){
+  diceRolling=true;
+  [die1State,die2State].forEach((d,i)=>{
+    d.pos.set(-1+i*2,5,7);
+    d.vel.set((Math.random()-0.5)*5,-2,-10-Math.random()*4);
+    d.angVel.set((Math.random()-0.5)*20,(Math.random()-0.5)*20,(Math.random()-0.5)*20);
+    d.quat.set(Math.random(),Math.random(),Math.random(),Math.random()).normalize();
+    d.settled=false;d.targetVal=i===0?d1:d2;
+  });
+}
+
+const GRAVITY=-30,FLOOR_Y=0.5,BOUNCE=0.3,FRICTION=0.94,ANG_FRIC=0.92;
+function updateDicePhysics(){
+  if(!diceRolling)return;
+  const dt=0.016;let allSettled=true;
+  [die1State,die2State].forEach(d=>{
+    if(d.settled)return;allSettled=false;
+    d.vel.y+=GRAVITY*dt;d.pos.addScaledVector(d.vel,dt);
+    if(d.pos.y<FLOOR_Y){d.pos.y=FLOOR_Y;d.vel.y=-d.vel.y*BOUNCE;d.vel.x*=FRICTION;d.vel.z*=FRICTION;d.angVel.x+=d.vel.z*3;d.angVel.z-=d.vel.x*3;}
+    ['x','z'].forEach(a=>{if(Math.abs(d.pos[a])>7){d.pos[a]=Math.sign(d.pos[a])*7;d.vel[a]*=-0.4;}});
+    const angMag=d.angVel.length();
+    if(angMag>0.001){const axis=d.angVel.clone().normalize();const dq=new THREE.Quaternion().setFromAxisAngle(axis,angMag*dt);d.quat.premultiply(dq).normalize();}
+    d.angVel.multiplyScalar(ANG_FRIC);d.vel.multiplyScalar(0.998);
+    if(d.pos.y<=FLOOR_Y+0.02&&d.vel.length()<0.3&&d.angVel.length()<0.5){d.settled=true;snapDieToFace(d);}
+    d.mesh.position.copy(d.pos);d.mesh.quaternion.copy(d.quat);
+  });
+  if(allSettled&&diceRolling){diceRolling=false;if(diceCallback){const cb=diceCallback;diceCallback=null;cb();}}
+  needsRender=true;
+}
+
+function snapDieToFace(d){
+  const rotations={1:new THREE.Quaternion(),2:new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1,0,0),Math.PI/2),3:new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0,0,1),-Math.PI/2),4:new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0,0,1),Math.PI/2),5:new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1,0,0),-Math.PI/2),6:new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1,0,0),Math.PI)};
+  d.quat.copy(rotations[d.targetVal]||rotations[1]);d.mesh.quaternion.copy(d.quat);
+}
+
+// ╔══════════════════════════════════════════════════╗
+// ║              3D TOKENS                            ║
+// ╚══════════════════════════════════════════════════╝
+function updateTokens3D(){
+  if(!G)return;tokenGroup.clear();tokenMeshes=[];
+  const byPos={};
+  G.players.forEach(p=>{if(!p.bankrupt){if(!byPos[p.position])byPos[p.position]=[];byPos[p.position].push(p);}});
+  G.players.forEach(p=>{
+    if(p.bankrupt)return;
+    const{x,y,z}=cellCenter3D(p.position);
+    const slot=byPos[p.position].indexOf(p);
+    const offsets=[[-0.3,-0.3],[0.3,-0.3],[-0.3,0.3],[0.3,0.3]];
+    const[ox,oz]=offsets[slot]||[0,0];
+    const color=parseInt(p.color.replace('#',''),16);
+    const mob=isMobile();
+    const bodyGeo=new THREE.CylinderGeometry(mob?0.22:0.15,mob?0.35:0.25,mob?0.65:0.5,8);
+    const bodyMat=new THREE.MeshStandardMaterial({color,roughness:0.4,metalness:0.3,emissive:color,emissiveIntensity:mob?0.3:0});
+    const body=new THREE.Mesh(bodyGeo,bodyMat);body.castShadow=true;
+    const headGeo=new THREE.SphereGeometry(mob?0.24:0.18,8,6);
+    const head=new THREE.Mesh(headGeo,bodyMat);head.position.y=0.4;head.castShadow=true;
+    const group=new THREE.Group();group.add(body,head);
+    group.position.set(x+ox,y+0.25,z+oz);group.userData.playerId=p.id;
+    tokenGroup.add(group);tokenMeshes[p.id]=group;
+  });
+  needsRender=true;
+}
+
+function updateBuildings3D(){
+  if(!G)return;buildingGroup.clear();
+  G.spaces.forEach(s=>{
+    if(s.type!=='prop'||s.buildings===0)return;
+    const{x,y,z}=cellCenter3D(s.id);const[r,c]=spaceToGrid(s.id);
+    for(let i=0;i<(s.buildings===5?1:s.buildings);i++){
+      const isHotel=s.buildings===5;const bw=isHotel?0.4:0.2;const bh=isHotel?0.5:0.3;
+      const geo=new THREE.BoxGeometry(bw,bh,bw);
+      const mat=new THREE.MeshStandardMaterial({color:isHotel?0xc0392b:0x1a7a1a,roughness:0.6});
+      const mesh=new THREE.Mesh(geo,mat);
+      const offset=(i-(isHotel?0:s.buildings/2-0.5))*0.3;
+      let bx=x,bz=z;
+      if(r===10)bz-=0.5;else if(r===0)bz+=0.5;else if(c===0)bx+=0.5;else if(c===10)bx-=0.5;
+      if(r===10||r===0)bx+=offset;else bz+=offset;
+      mesh.position.set(bx,y+bh/2,bz);mesh.castShadow=true;buildingGroup.add(mesh);
+    }
+    if(s.owner!==null){
+      const oGeo=new THREE.SphereGeometry(0.08,6,4);
+      const oMat=new THREE.MeshStandardMaterial({color:parseInt(G.players[s.owner].color.replace('#',''),16),emissive:parseInt(G.players[s.owner].color.replace('#',''),16),emissiveIntensity:0.5});
+      const oMesh=new THREE.Mesh(oGeo,oMat);
+      const{w,h}=cellSize(r,c);oMesh.position.set(x+w/2-0.2,CELL_H+0.25,z+h/2-0.2);
+      buildingGroup.add(oMesh);
+    }
+  });
+  needsRender=true;
+}
+
+// ╔══════════════════════════════════════════════════╗
+// ║              TWEEN ENGINE                         ║
+// ╚══════════════════════════════════════════════════╝
+const tweens=[];
+function tw(obj,props,dur,ease){
+  return new Promise(resolve=>{
+    const start={};for(const k in props)start[k]=obj[k]!=null?obj[k]:0;
+    tweens.push({obj,props,start,dur,elapsed:0,ease:ease||(t=>1-Math.pow(1-t,3)),resolve});
+  });
+}
+setInterval(()=>{
+  if(!tweens.length)return;
+  for(let i=tweens.length-1;i>=0;i--){
+    const t=tweens[i];t.elapsed+=16;
+    const p=Math.min(t.elapsed/t.dur,1);const ep=t.ease(p);
+    for(const k in t.props)t.obj[k]=t.start[k]+(t.props[k]-t.start[k])*ep;
+    if(p>=1){tweens.splice(i,1);t.resolve();}
+  }
+  needsRender=true;
+},16);
+
+// ╔══════════════════════════════════════════════════╗
+// ║              GAME FLOW                            ║
+// ╚══════════════════════════════════════════════════╝
+function selectCountry(c){
+  selectedCountry=c;setupNames=['','','',''];setupAI=[false,true,true,true];playerCount=2;
+  welcomePanel.hide();setupPanel.show();drawSetupPanel();
+}
+
+function startGame(){
+  const boards=makeBoard(selectedCountry);
+  const spaces=boards[selectedCountry].map(s=>({...s,rent:[...s.rent]}));
+  const players=[];
+  for(let i=0;i<playerCount;i++){
+    players.push({id:i,name:setupNames[i]||DEFAULT_NAMES[i],color:PLAYER_COLORS[i],avatar:PLAYER_AVATARS[i],isAI:setupAI[i],money:1500,position:0,inJail:false,jailTurns:0,bankrupt:false,doublesCount:0});
+  }
+  chanceCards=shuffleArr([...CHANCE_CARDS]);commCards=shuffleArr([...COMM_CARDS]);
+  G={country:selectedCountry,spaces,players,current:0,phase:'roll',dice:[1,1],doublesRolled:false,log:[]};
+  setupPanel.hide();sidePanel.show();
+
+  renderBoard3D();updateTokens3D();updateBuildings3D();
+  addLog('🎮 遊戲開始！地區：'+COUNTRY_META[selectedCountry].name);
+  cameraFollowPlayer(0);
+  maybeAI();
+}
+
+function addLog(msg,type=''){
+  if(!G)return;G.log.unshift({msg,type});if(G.log.length>50)G.log.pop();
+  drawSidePanel();
+}
+
+function backToMenu(){
+  G=null;sidePanel.hide();hideModal();
+  boardGroup.clear();tokenGroup.clear();buildingGroup.clear();
+  welcomePanel.show();drawWelcomePanel();needsRender=true;
+}
+
+function renderUI(){drawSidePanel();}
+
+// ── GAME LOGIC ──
+function doRoll(){
+  if(!G||G.phase!=='roll'||diceRolling)return;
+  const cur=G.players[G.current];if(cur.bankrupt){doEndTurn();return;}
+  SFX.diceRoll();
+  const d1=1+Math.floor(Math.random()*6);const d2=1+Math.floor(Math.random()*6);
+  G.dice=[d1,d2];G.doublesRolled=(d1===d2);
+  launchDice(d1,d2);
+  diceCallback=()=>{SFX.diceHit();drawSidePanel();afterRoll(d1,d2);};
+}
+
+function afterRoll(d1,d2){
+  const cur=G.players[G.current];const total=d1+d2;
+  if(cur.inJail){
+    if(G.doublesRolled){cur.inJail=false;cur.jailTurns=0;addLog(cur.name+' 擲出雙胞胎，出獄了！','good');}
+    else{cur.jailTurns++;if(cur.jailTurns>=3){cur.inJail=false;cur.jailTurns=0;addLog(cur.name+' 服滿刑期，繳 $50 出獄。','warn');cur.money-=50;}
+    else{addLog(cur.name+' 在監獄裡（第'+cur.jailTurns+'回合）。');G.phase='post';drawSidePanel();autoAIEndTurn();return;}}
+  }
+  if(G.doublesRolled){cur.doublesCount=(cur.doublesCount||0)+1;if(cur.doublesCount>=3){addLog(cur.name+' 連擲三次雙胞胎，進監獄！','warn');goToJailDirect();return;}}
+  else{cur.doublesCount=0;}
+  movePlayer(cur,total);
+}
+
+async function movePlayer(player,steps){
+  const oldPos=player.position;let newPos=(player.position+steps)%40;
+  if(newPos<oldPos||(oldPos+steps>=40)){player.money+=200;addLog(player.name+' 經過出發點，領取 $200！','good');}
+  player.position=newPos;updateTokens3D();
+  const tok=tokenMeshes[player.id];
+  if(tok){
+    const startP=cellCenter3D(oldPos);tok.position.set(startP.x,startP.y+0.25,startP.z);
+    const numSteps=((newPos-oldPos)+40)%40;
+    for(let i=1;i<=numSteps;i++){
+      const pp=(oldPos+i)%40;const{x,y,z}=cellCenter3D(pp);
+      const cf=isMobile()?0.6:0.5;camTarget.x=x*cf;camTarget.z=z*cf;
+      SFX.tokenHop();
+      await tw(tok.position,{x,y:y+0.25+0.4,z},60);
+      await tw(tok.position,{y:y+0.25},40);
+    }
+  }
+  updateTokens3D();cameraFollowPlayer(player.id);landOn(player);
+}
+
+function landOn(player){
+  const space=G.spaces[player.position];
+  addLog(player.name+' 停在 【'+space.name+'】');
+  switch(space.type){
+    case 'go':case 'jail':case 'free':G.phase='post';drawSidePanel();autoAIEndTurn();break;
+    case 'gotojail':goToJailDirect();break;
+    case 'tax':const amt=space.id===4?200:75;player.money-=amt;addLog(player.name+' 繳稅 $'+amt+'。','warn');checkBankrupt(player);G.phase='post';drawSidePanel();autoAIEndTurn();break;
+    case 'chance':drawCard('chance',player);break;
+    case 'comm':drawCard('comm',player);break;
+    case 'prop':case 'rr':case 'util':handlePropertyLand(player,space);break;
+    default:G.phase='post';drawSidePanel();autoAIEndTurn();
+  }
+}
+
+function autoAIEndTurn(){if(G&&G.phase==='post'&&G.players[G.current].isAI)setTimeout(()=>doEndTurn(),600);}
+
+function handlePropertyLand(player,space){
+  if(space.mortgaged){addLog(space.name+' 已抵押，免收租金。');G.phase='post';drawSidePanel();autoAIEndTurn();return;}
+  if(space.owner===null){
+    if(player.money>=space.price)promptBuy(player,space);
+    else{addLog(player.name+' 資金不足，無法購買 '+space.name+'。','warn');G.phase='post';drawSidePanel();autoAIEndTurn();}
+  }else if(space.owner===player.id){
+    addLog(player.name+' 停在自己的地產上。');G.phase='post';drawSidePanel();autoAIEndTurn();
+  }else{
+    const owner=G.players[space.owner];const rent=calcRent(space,G.dice[0]+G.dice[1]);
+    addLog(player.name+' 向 '+owner.name+' 支付租金 $'+rent+'！','warn');
+    player.money-=rent;owner.money+=rent;
+    showRentModal(player,owner,space,rent);
+    checkBankrupt(player);G.phase='post';drawSidePanel();
+  }
+}
+
+function calcRent(space,diceTotal){
+  if(space.type==='rr'){const n=G.spaces.filter(s=>s.type==='rr'&&s.owner===space.owner).length;return RR_RENT[n-1]||25;}
+  if(space.type==='util'){const n=G.spaces.filter(s=>s.type==='util'&&s.owner===space.owner).length;return diceTotal*(n===2?10:4);}
+  if(space.type==='prop'){if(space.buildings>0)return space.rent[space.buildings];const grp=G.spaces.filter(s=>s.group===space.group);return grp.every(s=>s.owner===space.owner)?space.rent[0]*2:space.rent[0];}
+  return 0;
+}
+
+function promptBuy(player,space){
+  if(player.isAI){if(player.money>=space.price+200)doBuySpace(player,space);else{addLog(player.name+'（電腦）決定不購買 '+space.name+'。');G.phase='post';drawSidePanel();autoAIEndTurn();}return;}
+  pendingBuy={player,space};showBuyModal(player,space);
+}
+
+function doBuySpace(player,space){
+  player.money-=space.price;space.owner=player.id;SFX.buy();
+  addLog(player.name+' 購買了 '+space.name+'（$'+space.price+'）！','gold');
+  updateBuildings3D();G.phase='post';drawSidePanel();
+  if(player.isAI)setTimeout(()=>{aiBuild(player);setTimeout(()=>doEndTurn(),500);},400);
+}
+
+function canBuild(player,space){
+  if(space.type!=='prop'||space.owner!==player.id||space.mortgaged||space.buildings>=5)return false;
+  const grp=GROUPS[space.group];if(!grp||grp.buildCost===0)return false;
+  const grpS=G.spaces.filter(s=>s.group===space.group);
+  if(!grpS.every(s=>s.owner===player.id))return false;
+  if(space.buildings>Math.min(...grpS.map(s=>s.buildings)))return false;
+  return player.money>=grp.buildCost;
+}
+
+function aiBuild(player){
+  G.spaces.forEach(s=>{if(canBuild(player,s)&&player.money>s.price+300){
+    const grp=GROUPS[s.group];player.money-=grp.buildCost;s.buildings++;
+    addLog(player.name+'（電腦）在 '+s.name+' 建造了'+(s.buildings===5?'旅館':'房屋')+'！','gold');
+    updateBuildings3D();drawSidePanel();
+  }});
+}
+
+function doBuildOn(space){
+  const cur=G.players[G.current];if(!canBuild(cur,space))return;
+  const grp=GROUPS[space.group];cur.money-=grp.buildCost;space.buildings++;
+  addLog(cur.name+' 在 '+space.name+' 建造了'+(space.buildings===5?'旅館':'房屋')+'！','gold');
+  updateBuildings3D();drawSidePanel();
+}
+
+function doSellBuilding(space){
+  const cur=G.players[G.current];if(space.buildings===0)return;
+  const grp=GROUPS[space.group];cur.money+=Math.floor(grp.buildCost/2);space.buildings--;
+  addLog(cur.name+' 從 '+space.name+' 拆除了建築。');
+  updateBuildings3D();drawSidePanel();
+}
+
+function drawCard(type,player){
+  SFX.card();
+  const deck=type==='chance'?chanceCards:commCards;const card=deck[0];deck.push(deck.shift());
+  addLog(player.name+' 抽到'+(type==='chance'?'機會':'命運')+'卡：'+card.text);
+  pendingCard={card,player};showCardModal(type,card);
+}
+
+function gainMoney(p,amt){p.money+=amt;addLog(p.name+' 獲得 $'+amt+'。','good');G.phase='post';drawSidePanel();autoAIEndTurn();}
+function loseMoney(p,amt){p.money-=amt;addLog(p.name+' 支付 $'+amt+'。','warn');checkBankrupt(p);G.phase='post';drawSidePanel();autoAIEndTurn();}
+function advanceTo(p,pos,go){if(go&&pos<p.position){p.money+=200;addLog(p.name+' 領取出發點 $200。','good');}p.position=pos;updateTokens3D();cameraFollowPlayer(p.id);setTimeout(()=>landOn(p),300);}
+function repairTax(p,h,ho){const houses=G.spaces.filter(s=>s.owner===p.id&&s.buildings>0&&s.buildings<5).reduce((a,s)=>a+s.buildings,0);const hotels=G.spaces.filter(s=>s.owner===p.id&&s.buildings===5).length;const t=houses*h+hotels*ho;p.money-=t;addLog(p.name+' 維修費 $'+t,'warn');checkBankrupt(p);G.phase='post';drawSidePanel();autoAIEndTurn();}
+function advanceNearestRR(p){const rr=[5,15,25,35];const n=rr.find(x=>x>p.position)||rr[0];advanceTo(p,n,n<p.position);}
+function advanceNearestUtil(p){const u=[12,28];const n=u.find(x=>x>p.position)||u[0];advanceTo(p,n,n<p.position);}
+function collectFromAll(p,amt){G.players.forEach(o=>{if(o.id!==p.id&&!o.bankrupt){o.money-=amt;p.money+=amt;}});addLog(p.name+' 向每位玩家收取 $'+amt+'。','gold');G.phase='post';drawSidePanel();autoAIEndTurn();}
+function goToJail(p){goToJailDirect();}
+
+function goToJailDirect(){
+  SFX.jail();const cur=G.players[G.current];
+  cur.position=10;cur.inJail=true;cur.jailTurns=0;cur.doublesCount=0;
+  updateTokens3D();cameraFollowPlayer(G.current);
+  addLog(cur.name+' 進入監獄！','warn');G.phase='post';drawSidePanel();autoAIEndTurn();
+}
+
+function doBailJail(){
+  const cur=G.players[G.current];if(!cur.inJail)return;
+  cur.money-=50;cur.inJail=false;cur.jailTurns=0;
+  addLog(cur.name+' 繳保釋金 $50 出獄。');drawSidePanel();
+}
+
+function checkBankrupt(player){
+  if(player.money<0){player.bankrupt=true;G.spaces.forEach(s=>{if(s.owner===player.id){s.owner=null;s.buildings=0;}});
+  addLog('💸 '+player.name+' 破產出局！','warn');updateBuildings3D();checkWinner();}
+}
+
+function checkWinner(){const active=G.players.filter(p=>!p.bankrupt);if(active.length===1)showWinnerModal(active[0]);}
+
+function doEndTurn(){
+  if(!G||G.phase!=='post')return;SFX.endTurn();const cur=G.players[G.current];
+  if(!cur.isAI){G.spaces.forEach(s=>{if(canBuild(cur,s)&&cur.money>s.price+400){const grp=GROUPS[s.group];cur.money-=grp.buildCost;s.buildings++;addLog(cur.name+' 在 '+s.name+' 建造！','gold');updateBuildings3D();drawSidePanel();}});}
+  if(G.doublesRolled&&!cur.inJail&&cur.doublesCount>0&&cur.doublesCount<3){
+    addLog(cur.name+' 擲出雙胞胎，再擲一次！');G.phase='roll';drawSidePanel();
+    if(cur.isAI)setTimeout(()=>doRoll(),800);return;
+  }
+  G.doublesRolled=false;
+  let next=(G.current+1)%G.players.length;let tries=0;
+  while(G.players[next].bankrupt&&tries<G.players.length){next=(next+1)%G.players.length;tries++;}
+  if(tries>=G.players.length){checkWinner();return;}
+  G.current=next;G.phase='roll';drawSidePanel();
+  addLog('─── '+G.players[G.current].name+' 的回合 ───');
+  cameraFollowPlayer(G.current);maybeAI();
+}
+
+function maybeAI(){if(!G)return;const cur=G.players[G.current];if(cur.isAI&&!cur.bankrupt)setTimeout(()=>doRoll(),900);}
+
+// ╔══════════════════════════════════════════════════╗
+// ║              INPUT HANDLING                       ║
+// ╚══════════════════════════════════════════════════╝
+const raycaster=new THREE.Raycaster();
+const mouse=new THREE.Vector2();
+
+document.addEventListener('pointerdown',(e)=>{
+  const px=e.clientX,py=e.clientY;
+
+  // 先檢查 UI 面板（按 z-index 降序）
+  const sorted=[...allPanels].sort((a,b)=>b.zIndex-a.zIndex);
+  for(const panel of sorted){
+    if(!panel.visible)continue;
+    const hit=panel.hitTest(px,py);
+    if(hit){
+      if(hit.cb){SFX.click();hit.cb();}
+      return; // 吸收點擊
+    }
+  }
+
+  // 檢查是否在側邊欄區域（吸收點擊防止穿透到攝影機拖曳）
+  if(sidePanel.visible){
+    if(px>=sidePanel.screenX&&px<=sidePanel.screenX+sidePanel.screenW&&
+       py>=sidePanel.screenY&&py<=sidePanel.screenY+sidePanel.screenH)return;
+  }
+
+  // 棋盤點擊（raycaster）
+  if(G&&!modalVisible){
+    const rect=renderer.domElement.getBoundingClientRect();
+    if(px>=rect.left&&px<=rect.right&&py>=rect.top&&py<=rect.bottom){
+      mouse.x=((px-rect.left)/rect.width)*2-1;
+      mouse.y=-((py-rect.top)/rect.height)*2+1;
+      raycaster.setFromCamera(mouse,gameCamera);
+      const hits=raycaster.intersectObjects(cellMeshes.filter(Boolean));
+      if(hits.length>0){const id=hits[0].object.userData.spaceId;if(id!=null)showPropInfo(id);return;}
+    }
+  }
+
+  // 攝影機拖曳
+  camDragging=true;camLastX=px;camLastY=py;
+});
+
+document.addEventListener('pointermove',(e)=>{
+  if(!camDragging)return;
+  // 平移攝影機目標
+  const dx=(e.clientX-camLastX)*0.06;
+  const dz=(e.clientY-camLastY)*0.06;
+  camTarget.x-=dx*Math.cos(camTheta)-dz*Math.sin(camTheta);
+  camTarget.z-=dx*Math.sin(camTheta)+dz*Math.cos(camTheta);
+  camLastX=e.clientX;camLastY=e.clientY;
+});
+
+document.addEventListener('pointerup',()=>{camDragging=false;});
+
+document.addEventListener('wheel',(e)=>{
+  e.preventDefault();
+  camDist=Math.max(14,Math.min(45,camDist+e.deltaY*0.03));
+},{passive:false});
+
+// 觸控縮放
+let touchDist=0;
+document.addEventListener('touchstart',(e)=>{
+  if(e.touches.length===2){touchDist=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY);}
+});
+document.addEventListener('touchmove',(e)=>{
+  if(e.touches.length===2){const d=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY);camDist=Math.max(14,Math.min(45,camDist-(d-touchDist)*0.05));touchDist=d;}
+});
+
+// 鍵盤
+document.addEventListener('keydown',(e)=>{
+  if(e.key===' '&&G&&G.phase==='roll'&&!G.players[G.current].isAI&&!diceRolling){e.preventDefault();doRoll();}
+});
+
+// ╔══════════════════════════════════════════════════╗
+// ║              INIT                                 ║
+// ╚══════════════════════════════════════════════════╝
+function initAll(){
+  // 遊戲場景
+  gameScene=new THREE.Scene();
+  gameScene.background=new THREE.Color(0x2d4a2d);
+  gameScene.fog=new THREE.Fog(0x2d4a2d,40,80);
+
+  gameCamera=new THREE.PerspectiveCamera(45,window.innerWidth/window.innerHeight,0.1,200);
+
+  // UI 場景
+  uiScene=new THREE.Scene();
+  uiCamera=new THREE.OrthographicCamera(-1,1,1,-1,0,1000);
+  uiCamera.position.z=10;
+
+  // 渲染器
+  renderer=new THREE.WebGLRenderer({antialias:true});
+  renderer.setSize(window.innerWidth,window.innerHeight);
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio,2));
+  renderer.shadowMap.enabled=true;
+  renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+  renderer.toneMapping=THREE.ACESFilmicToneMapping;
+  renderer.toneMappingExposure=1.2;
+  renderer.autoClear=false;
+  document.body.appendChild(renderer.domElement);
+
+  // 燈光
+  const amb=new THREE.AmbientLight(0xffffff,0.6);gameScene.add(amb);
+  const dir=new THREE.DirectionalLight(0xfff8e0,1.0);
+  dir.position.set(8,20,12);dir.castShadow=true;
+  dir.shadow.mapSize.set(1024,1024);
+  dir.shadow.camera.left=-15;dir.shadow.camera.right=15;dir.shadow.camera.top=15;dir.shadow.camera.bottom=-15;
+  gameScene.add(dir);
+  const point=new THREE.PointLight(0xfff0c0,0.4,40);
+  point.position.set(0,10,0);gameScene.add(point);
+
+  // 桌面
+  const tableGeo=new THREE.PlaneGeometry(50,50);
+  const tableMat=new THREE.MeshStandardMaterial({color:0x3d2b1f,roughness:0.85,metalness:0.05});
+  const table=new THREE.Mesh(tableGeo,tableMat);
+  table.rotation.x=-Math.PI/2;table.position.y=-0.1;table.receiveShadow=true;
+  gameScene.add(table);
+
+  boardGroup=new THREE.Group();tokenGroup=new THREE.Group();
+  buildingGroup=new THREE.Group();diceGroup=new THREE.Group();
+  gameScene.add(boardGroup,tokenGroup,buildingGroup,diceGroup);
+
+  createDice();
+  updateCamera();
+
+  // UI 面板
+  createPanels();
+
+  // 顯示歡迎畫面
+  welcomePanel.show();
+  drawWelcomePanel();
+
+  // resize
+  window.addEventListener('resize',onResize);
+
+  // 渲染迴圈
+  animate();
+}
+
+function onResize(){
+  const vw=window.innerWidth,vh=window.innerHeight;
+  gameCamera.aspect=vw/vh;gameCamera.updateProjectionMatrix();
+  renderer.setSize(vw,vh);
+
+  // 重建面板
+  const dpr=Math.min(window.devicePixelRatio,2);
+  allPanels.forEach(p=>{
+    if(p===welcomePanel||p===setupPanel||p===modalBackdrop||p===modalPanel){
+      p.canvas.width=Math.floor(vw*dpr);p.canvas.height=Math.floor(vh*dpr);p.w=p.canvas.width;p.h=p.canvas.height;p.dpr=dpr;
+    }else if(p===sidePanel){
+      const spw=isMobile()?vw:280;const sph=isMobile()?Math.floor(vh*0.42):vh;
+      p.canvas.width=Math.floor(spw*dpr);p.canvas.height=Math.floor(sph*dpr);p.w=p.canvas.width;p.h=p.canvas.height;p.dpr=dpr;
+    }
+    p.texture.dispose();p.texture=new THREE.CanvasTexture(p.canvas);
+    p.texture.minFilter=THREE.LinearFilter;p.texture.magFilter=THREE.LinearFilter;
+    p.material.map=p.texture;p.material.needsUpdate=true;
+  });
+  layoutPanels();
+
+  // 重繪可見面板
+  if(welcomePanel.visible)drawWelcomePanel();
+  if(setupPanel.visible)drawSetupPanel();
+  if(sidePanel.visible)drawSidePanel();
+  needsRender=true;
+}
+
+function animate(){
+  requestAnimationFrame(animate);
+
+  // 更新攝影機
+  const dx=Math.abs(camTarget.x-curTarget.x)+Math.abs(camTarget.z-curTarget.z);
+  if(dx>0.001)updateCamera();
+
+  // 骰子物理
+  if(diceRolling)for(let i=0;i<3;i++)updateDicePhysics();
+
+  if(needsRender||diceRolling){
+    renderer.clear();
+    renderer.render(gameScene,gameCamera);
+    renderer.clearDepth();
+    renderer.render(uiScene,uiCamera);
+    needsRender=false;
+  }
+}
+
+// 備用渲染迴圈
+setInterval(()=>{
+  if(!renderer)return;
+  const dx2=Math.abs(camTarget.x-curTarget.x)+Math.abs(camTarget.z-curTarget.z);
+  if(dx2>0.001)updateCamera();
+  if(diceRolling)for(let i=0;i<3;i++)updateDicePhysics();
+  if(needsRender||diceRolling){
+    try{renderer.clear();renderer.render(gameScene,gameCamera);renderer.clearDepth();renderer.render(uiScene,uiCamera);needsRender=false;}catch(e){}
+  }
+},16);
+
+// 啟動
+Promise.all([
+  document.fonts.load('16px "Noto Sans TC"').catch(()=>{})
+]).then(()=>initAll()).catch(()=>initAll());
+</script>
+</body>
+</html>
