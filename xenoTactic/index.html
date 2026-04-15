@@ -2,12 +2,13 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
 <title>xenoTactic - Tower Defense</title>
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; }
 body { background: #111; display: flex; justify-content: center; align-items: center; min-height: 100vh; font-family: 'Segoe UI', Arial, sans-serif; overflow: hidden; }
-#gameContainer { position: relative; width: 672px; height: 504px; background: #000; }
-canvas { display: block; position: absolute; top: 0; left: 0; }
+#gameContainer { position: relative; width: 672px; height: 504px; background: #000; transform-origin: top left; }
+canvas { display: block; position: absolute; top: 0; left: 0; touch-action: none; }
 #startScreen, #gameOverScreen {
   position: absolute; top: 0; left: 0; width: 100%; height: 100%;
   background: rgba(0,0,0,0.92); display: flex; flex-direction: column;
@@ -345,6 +346,32 @@ canvas.style.height = CANVAS_H + 'px';
 const ctx = canvas.getContext('2d');
 ctx.scale(dpr, dpr);
 let game = null;
+
+// 手機自適應縮放
+const gameContainer = document.getElementById('gameContainer');
+function resizeGame() {
+  const vw = window.innerWidth;
+  const vh = window.innerHeight;
+  const scaleX = vw / CANVAS_W;
+  const scaleY = vh / CANVAS_H;
+  const scale = Math.min(scaleX, scaleY, 1); // 不超過 1x
+  gameContainer.style.transform = `scale(${scale})`;
+  // 修正佈局尺寸讓 flexbox 置中正確
+  gameContainer.style.width = CANVAS_W + 'px';
+  gameContainer.style.height = CANVAS_H + 'px';
+  gameContainer.style.margin = '0';
+  // 用外層 wrapper 的 margin 達成真正置中
+  const scaledW = CANVAS_W * scale;
+  const scaledH = CANVAS_H * scale;
+  const offsetX = (vw - scaledW) / 2;
+  const offsetY = (vh - scaledH) / 2;
+  gameContainer.style.transformOrigin = 'top left';
+  gameContainer.style.position = 'absolute';
+  gameContainer.style.left = offsetX + 'px';
+  gameContainer.style.top = Math.max(0, offsetY) + 'px';
+}
+resizeGame();
+window.addEventListener('resize', resizeGame);
 
 // ==================== CELL ====================
 class Cell {
@@ -1119,6 +1146,11 @@ class Game {
     this.messageTimer = 0;
     this.mouseX = 0;
     this.mouseY = 0;
+    // 拖曳放置狀態
+    this.dragging = false;
+    this.dragTowerType = 0;
+    this.dragX = 0;
+    this.dragY = 0;
   }
 
   applyMissionObstacles() {
@@ -1251,10 +1283,17 @@ class Game {
   startNextWave() {
     if (this.waveIndex >= this.totalWaves) return;
 
-    // 提前送波獎勵：剩餘秒數 × 2 金幣
+    // 提前送波獎勵
     if (this.waveTimer > 0) {
+      // 波間倒數中提前送：剩餘秒數 × 2 金幣
       const remainSecs = Math.ceil(this.waveTimer / FPS);
       const bonus = remainSecs * 2;
+      this.gold += bonus;
+      this.score += bonus;
+      this.showMessage('提前獎勵 +$' + bonus);
+    } else if (this.waveActive) {
+      // 上一波還在打就送下一波：固定獎勵（等於跳過 20 秒倒數）
+      const bonus = 20 * 2; // 40 金幣
       this.gold += bonus;
       this.score += bonus;
       this.showMessage('提前獎勵 +$' + bonus);
@@ -1558,15 +1597,18 @@ function render() {
   if (g.dualPath) for (const ec of g.endCellsUD) ctx.fillRect(ec.x, ec.y, CELL_SIZE, CELL_SIZE);
   ctx.globalAlpha = 1;
 
-  // Placement preview
-  if (g.selectedTowerType > 0 && g.hoverCol >= 0 && g.hoverRow >= 0 &&
-      g.mouseX < PANEL_X && g.mouseY >= GRID_Y) {
+  // Placement preview（滑鼠 hover 或拖曳中都顯示）
+  const previewType = g.dragging ? g.dragTowerType : g.selectedTowerType;
+  const previewX = g.dragging ? g.dragX : g.mouseX;
+  const previewY = g.dragging ? g.dragY : g.mouseY;
+  if (previewType > 0 && g.hoverCol >= 0 && g.hoverRow >= 0 &&
+      previewX < PANEL_X && previewY >= GRID_Y) {
     const canP = g.canPlace(g.hoverCol, g.hoverRow);
     ctx.globalAlpha = 0.4;
     ctx.fillStyle = canP ? '#00ff00' : '#ff0000';
     ctx.fillRect(g.hoverCol * CELL_SIZE + GRID_X, g.hoverRow * CELL_SIZE + GRID_Y, CELL_SIZE * 2, CELL_SIZE * 2);
     if (canP) {
-      const def = TowerDefs[g.selectedTowerType];
+      const def = TowerDefs[previewType];
       const range = def.levels[0].range;
       if (range > 0) {
         const cx = g.hoverCol * CELL_SIZE + GRID_X + CELL_SIZE;
@@ -1583,6 +1625,16 @@ function render() {
       }
     }
     ctx.globalAlpha = 1;
+  }
+
+  // 拖曳中的塔圖示（跟隨手指/滑鼠）
+  if (g.dragging && g.dragTowerType > 0) {
+    const icon = ASSETS.towerIcons[g.dragTowerType];
+    if (icon) {
+      ctx.globalAlpha = 0.7;
+      ctx.drawImage(icon, g.dragX - 16, g.dragY - 16, 32, 32);
+      ctx.globalAlpha = 1;
+    }
   }
 
   // Draw towers（使用原版 Flash sprite）
@@ -2084,14 +2136,44 @@ function render() {
 }
 
 // ==================== INPUT ====================
+// 座標轉換：處理 CSS scale 縮放後的正確座標
+function canvasCoords(clientX, clientY) {
+  const rect = canvas.getBoundingClientRect();
+  const scaleX = CANVAS_W / rect.width;
+  const scaleY = CANVAS_H / rect.height;
+  return {
+    x: (clientX - rect.left) * scaleX,
+    y: (clientY - rect.top) * scaleY
+  };
+}
+
+// 判斷點擊是否在塔按鈕上，回傳塔類型 (1-7) 或 0
+function hitTestTowerBtn(mx, my) {
+  if (mx < PANEL_X) return 0;
+  const btnW = 62, btnH = 56, btnStartY = GRID_Y + 4;
+  for (let i = 1; i <= 7; i++) {
+    const col = (i - 1) % 3;
+    const row = Math.floor((i - 1) / 3);
+    const bx = PANEL_X + 4 + col * (btnW + 3);
+    const by = btnStartY + row * (btnH + 3);
+    if (mx >= bx && mx < bx + btnW && my >= by && my < by + btnH) return i;
+  }
+  return 0;
+}
+
 canvas.addEventListener('mousemove', (e) => {
   if (!game) return;
-  const rect = canvas.getBoundingClientRect();
-  game.mouseX = e.clientX - rect.left;
-  game.mouseY = e.clientY - rect.top;
-  const { col, row } = game.getGridPos(game.mouseX, game.mouseY);
+  const { x, y } = canvasCoords(e.clientX, e.clientY);
+  game.mouseX = x;
+  game.mouseY = y;
+  const { col, row } = game.getGridPos(x, y);
   game.hoverCol = col;
   game.hoverRow = row;
+  // 滑鼠拖曳中更新位置
+  if (game.dragging) {
+    game.dragX = x;
+    game.dragY = y;
+  }
 });
 
 canvas.addEventListener('click', (e) => {
@@ -2103,9 +2185,7 @@ canvas.addEventListener('click', (e) => {
     return;
   }
   if (!game) return;
-  const rect = canvas.getBoundingClientRect();
-  const mx = e.clientX - rect.left;
-  const my = e.clientY - rect.top;
+  const { x: mx, y: my } = canvasCoords(e.clientX, e.clientY);
   const g = game;
 
   // 選關按鈕（top bar 右側）
@@ -2223,6 +2303,126 @@ document.addEventListener('keydown', (e) => {
     g.showGrid = !g.showGrid;
   }
 });
+
+// ==================== DRAG & DROP (滑鼠 + 觸控) ====================
+// 滑鼠拖曳：從塔按鈕開始拖曳
+canvas.addEventListener('mousedown', (e) => {
+  if (!game) return;
+  const { x, y } = canvasCoords(e.clientX, e.clientY);
+  const towerType = hitTestTowerBtn(x, y);
+  if (towerType > 0) {
+    const def = TowerDefs[towerType];
+    if (game.gold >= def.levels[0].cost) {
+      game.dragging = true;
+      game.dragTowerType = towerType;
+      game.dragX = x;
+      game.dragY = y;
+      game.selectedTowerType = towerType;
+      game.selectedTower = null;
+      e.preventDefault();
+    }
+  }
+});
+
+canvas.addEventListener('mouseup', (e) => {
+  if (!game || !game.dragging) return;
+  const { x, y } = canvasCoords(e.clientX, e.clientY);
+  const { col, row } = game.getGridPos(x, y);
+  // 在地圖範圍內且可放置才執行
+  if (x < PANEL_X && y >= GRID_Y && col >= 0 && row >= 0) {
+    game.placeTower(game.dragTowerType, col, row);
+  }
+  game.dragging = false;
+  game.dragTowerType = 0;
+});
+
+// 觸控事件
+canvas.addEventListener('touchstart', (e) => {
+  e.preventDefault();
+  if (!game && !previewMode) return;
+  const touch = e.touches[0];
+  const { x, y } = canvasCoords(touch.clientX, touch.clientY);
+
+  // 怪物圖鑑模式
+  if (previewMode) {
+    previewMode = false;
+    previewTick = 0;
+    startScreen.style.display = 'flex';
+    return;
+  }
+  if (!game) return;
+  const g = game;
+  g.mouseX = x;
+  g.mouseY = y;
+
+  // 檢查是否點到塔按鈕 → 開始拖曳
+  const towerType = hitTestTowerBtn(x, y);
+  if (towerType > 0) {
+    const def = TowerDefs[towerType];
+    if (g.gold >= def.levels[0].cost) {
+      g.dragging = true;
+      g.dragTowerType = towerType;
+      g.dragX = x;
+      g.dragY = y;
+      g.selectedTowerType = towerType;
+      g.selectedTower = null;
+    }
+    return;
+  }
+
+  // 右面板其他按鈕（升級、販賣、控制按鈕等）直接觸發 click
+  if (x >= PANEL_X) {
+    canvas.dispatchEvent(new MouseEvent('click', {
+      clientX: touch.clientX, clientY: touch.clientY
+    }));
+    return;
+  }
+
+  // 地圖區域：點擊選取已放置的塔
+  if (y >= GRID_Y && y < GRID_Y + GRID_ROWS * CELL_SIZE) {
+    const { col, row } = g.getGridPos(x, y);
+    if (col >= 0 && row >= 0) {
+      const tower = g.getTowerAt(col, row);
+      if (tower) {
+        g.selectedTower = tower;
+        g.selectedTowerType = 0;
+      } else {
+        g.selectedTower = null;
+      }
+    }
+  }
+}, { passive: false });
+
+canvas.addEventListener('touchmove', (e) => {
+  e.preventDefault();
+  if (!game) return;
+  const touch = e.touches[0];
+  const { x, y } = canvasCoords(touch.clientX, touch.clientY);
+  game.mouseX = x;
+  game.mouseY = y;
+  const { col, row } = game.getGridPos(x, y);
+  game.hoverCol = col;
+  game.hoverRow = row;
+  if (game.dragging) {
+    game.dragX = x;
+    game.dragY = y;
+  }
+}, { passive: false });
+
+canvas.addEventListener('touchend', (e) => {
+  e.preventDefault();
+  if (!game || !game.dragging) return;
+  const g = game;
+  const { col, row } = g.getGridPos(g.dragX, g.dragY);
+  // 放在地圖範圍內才放置
+  if (g.dragX < PANEL_X && g.dragY >= GRID_Y && col >= 0 && row >= 0) {
+    g.placeTower(g.dragTowerType, col, row);
+  }
+  g.dragging = false;
+  g.dragTowerType = 0;
+  g.hoverCol = -1;
+  g.hoverRow = -1;
+}, { passive: false });
 
 // ==================== START / GAME OVER ====================
 const startScreen = document.getElementById('startScreen');
