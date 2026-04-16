@@ -2,35 +2,40 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
 <title>xenoTactic - Tower Defense</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;700&family=Inter:wght@400;600&display=swap" rel="stylesheet">
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; }
-body { background: #111; display: flex; justify-content: center; align-items: center; min-height: 100vh; font-family: 'Segoe UI', Arial, sans-serif; overflow: hidden; }
-#gameContainer { position: relative; width: 672px; height: 504px; background: #000; transform-origin: top left; }
+body { background: #080C10; display: flex; justify-content: center; align-items: center; min-height: 100vh; font-family: 'Inter', 'Space Grotesk', sans-serif; overflow: hidden; }
+#gameContainer { position: relative; width: 672px; height: 504px; background: #080C10; transform-origin: top left; }
 canvas { display: block; position: absolute; top: 0; left: 0; touch-action: none; }
 #startScreen, #gameOverScreen {
   position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-  background: rgba(0,0,0,0.92); display: flex; flex-direction: column;
-  align-items: center; justify-content: center; z-index: 10; color: #fff;
+  background: rgba(8,12,16,0.95); display: flex; flex-direction: column;
+  align-items: center; justify-content: center; z-index: 10; color: #E0E6ED;
 }
-#startScreen h1 { font-size: 42px; color: #0ff; margin-bottom: 10px; text-shadow: 0 0 20px #0ff; }
-#startScreen h2 { font-size: 16px; color: #888; margin-bottom: 30px; }
+#startScreen h1 { font-size: 42px; color: #00E5FF; margin-bottom: 10px; text-shadow: 0 0 20px rgba(0,229,255,0.6), 0 0 40px rgba(0,229,255,0.3); font-family: 'Space Grotesk', sans-serif; letter-spacing: 6px; }
+#startScreen h2 { font-size: 16px; color: #7A8A9A; margin-bottom: 30px; letter-spacing: 4px; text-transform: uppercase; font-family: 'Space Grotesk', sans-serif; }
 .startRow { display: flex; gap: 12px; margin: 8px 0; align-items: center; }
-.startRow label { color: #aaa; width: 80px; text-align: right; font-size: 14px; }
-.startRow select { background: #222; color: #fff; border: 1px solid #555; padding: 6px 12px; font-size: 14px; border-radius: 4px; }
+.startRow label { color: #7A8A9A; width: 80px; text-align: right; font-size: 14px; }
+.startRow select { background: #0D1520; color: #E0E6ED; border: 1px solid #1A2A3A; padding: 6px 12px; font-size: 14px; border-radius: 4px; }
 #playBtn {
   margin-top: 24px; padding: 14px 60px; font-size: 20px; font-weight: bold;
-  background: linear-gradient(180deg, #0f8, #0a6); color: #000; border: none;
-  border-radius: 8px; cursor: pointer; letter-spacing: 2px;
+  background: #00E5FF; color: #080C10; border: none;
+  border-radius: 8px; cursor: pointer; letter-spacing: 2px; font-family: 'Space Grotesk', sans-serif;
 }
-#playBtn:hover { background: linear-gradient(180deg, #0fa, #0c8); }
-#gameOverScreen h1 { font-size: 36px; margin-bottom: 10px; }
-#gameOverScreen .goScore { font-size: 24px; color: #ff0; margin: 10px 0; }
-#gameOverScreen .goStats { color: #aaa; font-size: 14px; margin: 4px 0; }
+#playBtn:hover { background: #33EBFF; }
+.mission-card:hover { border-color: #00E5FF !important; box-shadow: 0 0 15px rgba(0,229,255,0.2); }
+#gameOverScreen h1 { font-size: 36px; margin-bottom: 10px; color: #E0E6ED; font-family: 'Space Grotesk', sans-serif; }
+#gameOverScreen .goScore { font-size: 24px; color: #00E5FF; margin: 10px 0; }
+#gameOverScreen .goStats { color: #7A8A9A; font-size: 14px; margin: 4px 0; }
 #restartBtn {
   margin-top: 20px; padding: 12px 40px; font-size: 18px;
-  background: #0af; color: #000; border: none; border-radius: 6px; cursor: pointer; font-weight: bold;
+  background: #00E5FF; color: #080C10; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; font-family: 'Space Grotesk', sans-serif;
 }
 </style>
 </head>
@@ -41,43 +46,46 @@ canvas { display: block; position: absolute; top: 0; left: 0; touch-action: none
     <h1>xenoTactic</h1>
     <h2>Tower Defense</h2>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;max-width:580px;margin:10px auto;">
-      <div class="mission-card" data-mission="1" data-diff="1" data-waves="20" style="cursor:pointer;background:#1a2a1a;border:2px solid #0a4;padding:10px;border-radius:6px;text-align:center;">
-        <div style="font-size:16px;color:#0ff;font-weight:bold;">MISSION 1</div>
-        <div style="color:#0a4;font-size:11px;margin:4px 0;">BEGINNER</div>
-        <div style="color:#aaa;font-size:10px;">1 line of aliens · Lots of money</div>
-        <div style="color:#ff0;font-size:12px;margin-top:4px;">20 WAVES</div>
+      <div class="mission-card" data-mission="1" data-diff="1" data-waves="20" style="cursor:pointer;background:#0D1520;border:1px solid #1A2A3A;padding:12px;border-radius:4px;text-align:center;">
+        <div style="font-size:16px;color:#00E5FF;font-weight:bold;font-family:'Space Grotesk',sans-serif;">MISSION 1</div>
+        <div style="color:#00E5FF;font-size:11px;margin:4px 0;letter-spacing:2px;">BEGINNER</div>
+        <div style="color:#7A8A9A;font-size:10px;">1 line of aliens · Lots of money</div>
+        <div style="color:#00E5FF;font-size:12px;margin-top:4px;">20 WAVES</div>
       </div>
-      <div class="mission-card" data-mission="4" data-diff="2" data-waves="30" style="cursor:pointer;background:#1a1a2a;border:2px solid #444;padding:10px;border-radius:6px;text-align:center;">
-        <div style="font-size:16px;color:#0ff;font-weight:bold;">MISSION 4</div>
-        <div style="color:#48f;font-size:11px;margin:4px 0;">NORMAL</div>
-        <div style="color:#aaa;font-size:10px;">2 lines of aliens</div>
-        <div style="color:#ff0;font-size:12px;margin-top:4px;">30 WAVES</div>
+      <div class="mission-card" data-mission="4" data-diff="2" data-waves="30" style="cursor:pointer;background:#0D1520;border:1px solid #1A2A3A;padding:12px;border-radius:4px;text-align:center;">
+        <div style="font-size:16px;color:#00E5FF;font-weight:bold;font-family:'Space Grotesk',sans-serif;">MISSION 4</div>
+        <div style="color:#2979FF;font-size:11px;margin:4px 0;letter-spacing:2px;">NORMAL</div>
+        <div style="color:#7A8A9A;font-size:10px;">2 lines of aliens</div>
+        <div style="color:#00E5FF;font-size:12px;margin-top:4px;">30 WAVES</div>
       </div>
-      <div class="mission-card" data-mission="2" data-diff="2" data-waves="20" style="cursor:pointer;background:#1a1a2a;border:2px solid #444;padding:10px;border-radius:6px;text-align:center;">
-        <div style="font-size:16px;color:#0ff;font-weight:bold;">MISSION 2</div>
-        <div style="color:#48f;font-size:11px;margin:4px 0;">NORMAL</div>
-        <div style="color:#aaa;font-size:10px;">2 lines of aliens</div>
-        <div style="color:#ff0;font-size:12px;margin-top:4px;">20 WAVES</div>
+      <div class="mission-card" data-mission="2" data-diff="2" data-waves="20" style="cursor:pointer;background:#0D1520;border:1px solid #1A2A3A;padding:12px;border-radius:4px;text-align:center;">
+        <div style="font-size:16px;color:#00E5FF;font-weight:bold;font-family:'Space Grotesk',sans-serif;">MISSION 2</div>
+        <div style="color:#2979FF;font-size:11px;margin:4px 0;letter-spacing:2px;">NORMAL</div>
+        <div style="color:#7A8A9A;font-size:10px;">2 lines of aliens</div>
+        <div style="color:#00E5FF;font-size:12px;margin-top:4px;">20 WAVES</div>
       </div>
-      <div class="mission-card" data-mission="5" data-diff="3" data-waves="50" style="cursor:pointer;background:#2a1a1a;border:2px solid #a44;padding:10px;border-radius:6px;text-align:center;">
-        <div style="font-size:16px;color:#0ff;font-weight:bold;">MISSION 5</div>
-        <div style="color:#f44;font-size:11px;margin:4px 0;">HARD</div>
-        <div style="color:#aaa;font-size:10px;">2 lines of aliens</div>
-        <div style="color:#ff0;font-size:12px;margin-top:4px;">50 WAVES</div>
+      <div class="mission-card" data-mission="5" data-diff="3" data-waves="50" style="cursor:pointer;background:#0D1520;border:1px solid #1A2A3A;padding:12px;border-radius:4px;text-align:center;">
+        <div style="font-size:16px;color:#00E5FF;font-weight:bold;font-family:'Space Grotesk',sans-serif;">MISSION 5</div>
+        <div style="color:#FF3D00;font-size:11px;margin:4px 0;letter-spacing:2px;">HARD</div>
+        <div style="color:#7A8A9A;font-size:10px;">2 lines of aliens</div>
+        <div style="color:#00E5FF;font-size:12px;margin-top:4px;">50 WAVES</div>
       </div>
-      <div class="mission-card" data-mission="3" data-diff="2" data-waves="30" style="cursor:pointer;background:#1a1a2a;border:2px solid #444;padding:10px;border-radius:6px;text-align:center;">
-        <div style="font-size:16px;color:#0ff;font-weight:bold;">MISSION 3</div>
-        <div style="color:#48f;font-size:11px;margin:4px 0;">NORMAL</div>
-        <div style="color:#aaa;font-size:10px;">2 lines of aliens · 30 waves</div>
-        <div style="color:#ff0;font-size:12px;margin-top:4px;">30 WAVES</div>
+      <div class="mission-card" data-mission="3" data-diff="2" data-waves="30" style="cursor:pointer;background:#0D1520;border:1px solid #1A2A3A;padding:12px;border-radius:4px;text-align:center;">
+        <div style="font-size:16px;color:#00E5FF;font-weight:bold;font-family:'Space Grotesk',sans-serif;">MISSION 3</div>
+        <div style="color:#2979FF;font-size:11px;margin:4px 0;letter-spacing:2px;">NORMAL</div>
+        <div style="color:#7A8A9A;font-size:10px;">2 lines of aliens · 30 waves</div>
+        <div style="color:#00E5FF;font-size:12px;margin-top:4px;">30 WAVES</div>
       </div>
-      <div class="mission-card" data-mission="6" data-diff="4" data-waves="100" style="cursor:pointer;background:#2a1a2a;border:2px solid #a0a;padding:10px;border-radius:6px;text-align:center;">
-        <div style="font-size:16px;color:#0ff;font-weight:bold;">MISSION 6</div>
-        <div style="color:#f0f;font-size:11px;margin:4px 0;">EXPERT</div>
-        <div style="color:#aaa;font-size:10px;">2 lines of aliens</div>
-        <div style="color:#ff0;font-size:12px;margin-top:4px;">100 WAVES</div>
+      <div class="mission-card" data-mission="6" data-diff="4" data-waves="100" style="cursor:pointer;background:#0D1520;border:1px solid #1A2A3A;padding:12px;border-radius:4px;text-align:center;">
+        <div style="font-size:16px;color:#00E5FF;font-weight:bold;font-family:'Space Grotesk',sans-serif;">MISSION 6</div>
+        <div style="color:#FF3D00;font-size:11px;margin:4px 0;letter-spacing:2px;">EXPERT</div>
+        <div style="color:#7A8A9A;font-size:10px;">2 lines of aliens</div>
+        <div style="color:#00E5FF;font-size:12px;margin-top:4px;">100 WAVES</div>
       </div>
-    <button id="previewBtn" style="margin-top:16px;padding:10px 36px;font-size:16px;font-weight:bold;background:#1a1a3a;color:#0ff;border:2px solid #0aa;border-radius:6px;cursor:pointer;letter-spacing:2px;">怪物圖鑑</button>
+    <div style="display:flex;gap:12px;margin-top:16px;">
+      <button id="previewBtn" style="padding:10px 28px;font-size:15px;font-weight:bold;background:#0D1520;color:#00E5FF;border:1px solid rgba(0,229,255,0.25);border-radius:4px;cursor:pointer;letter-spacing:3px;font-family:'Space Grotesk',sans-serif;text-transform:uppercase;">怪物圖鑑</button>
+      <button id="weaponPreviewBtn" style="padding:10px 28px;font-size:15px;font-weight:bold;background:#0D1520;color:#FF3D00;border:1px solid rgba(255,61,0,0.25);border-radius:4px;cursor:pointer;letter-spacing:3px;font-family:'Space Grotesk',sans-serif;text-transform:uppercase;">武器圖鑑</button>
+    </div>
     </div>
   </div>
   <div id="gameOverScreen" style="display:none;">
@@ -301,28 +309,31 @@ async function preloadAssets() {
   ASSETS.frostChassis = fc;
   ASSETS.frostTurret = ft;
 
-  // 塔預覽圖示（從原版裁切的 JPEG，用於右側面板按鈕）
+  // tower_hd 檔名對照
+  const hdNames = {1:'vulcan', 2:'sam', 3:'plasma', 4:'dca', 5:'freeze', 6:'sonic', 7:'wall'};
+
+  // 塔預覽圖示（直接用 tower_hd 高畫質圖）
   const iconPromises = [];
   for (let i = 1; i <= 7; i++) {
-    iconPromises.push(loadImage(base + 'tower_icons/tower_' + i + '.jpg'));
+    iconPromises.push(loadImage(base + 'tower_hd/' + hdNames[i] + '.png?v=' + Date.now()));
   }
   const iconImgs = await Promise.all(iconPromises);
   for (let i = 0; i < 8; i++) ASSETS.towerIcons[i + 1] = iconImgs[i];
 
-  // 武器 spritesheet (Turrets.png: 237x64) — 底座用
+  // 武器 spritesheet (Turrets.png: 237x64) — 備用
   ASSETS.turretSheet = await loadImage(base + 'Turrets.png');
 
-  // 各等級砲塔 sprite（變色用）
+  // 直接載入 tower_hd 高畫質圖（格子內繪製用，所有等級共用同一張）
   ASSETS.towerLevelSprites = {};
   const tlPromises = [];
   for (let t = 1; t <= 7; t++) {
     ASSETS.towerLevelSprites[t] = {};
-    for (let lv = 1; lv <= 6; lv++) {
-      tlPromises.push(
-        loadImage(base + 'tower_sprites/t' + t + '_lv' + lv + '.png?v=3')
-          .then(img => { ASSETS.towerLevelSprites[t][lv] = img; })
-      );
-    }
+    tlPromises.push(
+      loadImage(base + 'tower_hd/' + hdNames[t] + '.png?v=' + Date.now())
+        .then(img => {
+          for (let lv = 1; lv <= 6; lv++) ASSETS.towerLevelSprites[t][lv] = img;
+        })
+    );
   }
   await Promise.all(tlPromises);
 
@@ -337,36 +348,39 @@ preloadAssets();
 
 // ==================== CANVAS ====================
 const canvas = document.getElementById('gameCanvas');
-// 高 DPI 支援：讓 Canvas 在 Retina 螢幕上不模糊
-const dpr = window.devicePixelRatio || 1;
-canvas.width = CANVAS_W * dpr;
-canvas.height = CANVAS_H * dpr;
-canvas.style.width = CANVAS_W + 'px';
-canvas.style.height = CANVAS_H + 'px';
 const ctx = canvas.getContext('2d');
-ctx.scale(dpr, dpr);
 let game = null;
+let renderScale = 1; // 全域渲染倍率
 
-// 手機自適應縮放
+// 自適應縮放 — 用 Canvas 原生解析度，不用 CSS transform（避免模糊）
 const gameContainer = document.getElementById('gameContainer');
 function resizeGame() {
   const vw = window.innerWidth;
   const vh = window.innerHeight;
+  const dpr = window.devicePixelRatio || 1;
   const scaleX = vw / CANVAS_W;
   const scaleY = vh / CANVAS_H;
-  const scale = Math.min(scaleX, scaleY, 1); // 不超過 1x
-  gameContainer.style.transform = `scale(${scale})`;
-  // 修正佈局尺寸讓 flexbox 置中正確
-  gameContainer.style.width = CANVAS_W + 'px';
-  gameContainer.style.height = CANVAS_H + 'px';
-  gameContainer.style.margin = '0';
-  // 用外層 wrapper 的 margin 達成真正置中
-  const scaledW = CANVAS_W * scale;
-  const scaledH = CANVAS_H * scale;
-  const offsetX = (vw - scaledW) / 2;
-  const offsetY = (vh - scaledH) / 2;
-  gameContainer.style.transformOrigin = 'top left';
+  const fitScale = Math.min(scaleX, scaleY);
+
+  // 實際顯示的 CSS 尺寸
+  const displayW = Math.round(CANVAS_W * fitScale);
+  const displayH = Math.round(CANVAS_H * fitScale);
+
+  // Canvas 像素 = 顯示尺寸 × 設備像素比（1:1 對應螢幕像素，完全不模糊）
+  renderScale = fitScale * dpr;
+  canvas.width = Math.round(CANVAS_W * renderScale);
+  canvas.height = Math.round(CANVAS_H * renderScale);
+  canvas.style.width = displayW + 'px';
+  canvas.style.height = displayH + 'px';
+  ctx.setTransform(renderScale, 0, 0, renderScale, 0, 0);
+
+  // 不用 CSS transform，直接設定容器大小
+  gameContainer.style.transform = 'none';
+  gameContainer.style.width = displayW + 'px';
+  gameContainer.style.height = displayH + 'px';
   gameContainer.style.position = 'absolute';
+  const offsetX = (vw - displayW) / 2;
+  const offsetY = (vh - displayH) / 2;
   gameContainer.style.left = offsetX + 'px';
   gameContainer.style.top = Math.max(0, offsetY) + 'px';
 }
@@ -1223,8 +1237,10 @@ class Game {
 
     // Block cells temporarily
     for (let dr = 0; dr < 2; dr++)
-      for (let dc = 0; dc < 2; dc++)
+      for (let dc = 0; dc < 2; dc++) {
         this.grid[row + dr][col + dc].cost = 0;
+        this.grid[row + dr][col + dc].hasTower = true;
+      }
 
     this.clearPathCache();
     const lrOk = this.floodPathLR.compute();
@@ -1232,8 +1248,10 @@ class Game {
 
     if (!lrOk || !udOk) {
       for (let dr = 0; dr < 2; dr++)
-        for (let dc = 0; dc < 2; dc++)
+        for (let dc = 0; dc < 2; dc++) {
           this.grid[row + dr][col + dc].cost = 1;
+          this.grid[row + dr][col + dc].hasTower = false;
+        }
       this.rebuildPaths();
       this.showMessage('PATH BLOCKED');
       playSound('blocked');
@@ -1250,8 +1268,10 @@ class Game {
 
   removeTower(tower) {
     for (let dr = 0; dr < 2; dr++)
-      for (let dc = 0; dc < 2; dc++)
+      for (let dc = 0; dc < 2; dc++) {
         this.grid[tower.row + dr][tower.col + dc].cost = 1;
+        this.grid[tower.row + dr][tower.col + dc].hasTower = false;
+      }
     tower.removeFromRangeCells();
     this.towers = this.towers.filter(t => t !== tower);
     this.rebuildPaths();
@@ -1487,10 +1507,12 @@ function render() {
   const g = game;
   if (!g) return;
 
+  // 確保渲染倍率正確（resize 後需要重設）
+  ctx.setTransform(renderScale, 0, 0, renderScale, 0, 0);
   ctx.clearRect(0, 0, CANVAS_W, CANVAS_H);
 
   // 背景：程式繪製金屬質感地圖，和格子完全對齊
-  ctx.fillStyle = '#0c0c18';
+  ctx.fillStyle = '#0c0e14';
   ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
 
   // 繪製每個格子
@@ -1516,8 +1538,13 @@ function render() {
             ctx.fillStyle = '#2a2a44';
             ctx.fill();
           }
+        } else if (cell.hasTower) {
+          // 塔佔的格子 — 畫普通地板（塔圖會蓋在上面）
+          const shade = ((r + c) % 2 === 0) ? '#0e1018' : '#0d0f16';
+          ctx.fillStyle = shade;
+          ctx.fillRect(cx, cy, CELL_SIZE, CELL_SIZE);
         } else {
-          // 牆壁/邊界 — 深色金屬質感
+          // 邊界牆壁 — 深色金屬質感
           const shade = ((r + c) % 2 === 0) ? '#1a1a28' : '#181826';
           ctx.fillStyle = shade;
           ctx.fillRect(cx, cy, CELL_SIZE, CELL_SIZE);
@@ -1527,7 +1554,7 @@ function render() {
         }
       } else {
         // 可通行地板 — 淺色交錯棋盤格
-        const shade = ((r + c) % 2 === 0) ? '#2a2a3e' : '#262638';
+        const shade = ((r + c) % 2 === 0) ? '#0e1018' : '#0d0f16';
         ctx.fillStyle = shade;
         ctx.fillRect(cx, cy, CELL_SIZE, CELL_SIZE);
       }
@@ -1605,7 +1632,7 @@ function render() {
       previewX < PANEL_X && previewY >= GRID_Y) {
     const canP = g.canPlace(g.hoverCol, g.hoverRow);
     ctx.globalAlpha = 0.4;
-    ctx.fillStyle = canP ? '#00ff00' : '#ff0000';
+    ctx.fillStyle = canP ? '#00E5FF' : '#FF3D00';
     ctx.fillRect(g.hoverCol * CELL_SIZE + GRID_X, g.hoverRow * CELL_SIZE + GRID_Y, CELL_SIZE * 2, CELL_SIZE * 2);
     if (canP) {
       const def = TowerDefs[previewType];
@@ -1637,72 +1664,27 @@ function render() {
     }
   }
 
-  // Draw towers（使用原版 Flash sprite）
-  // 砲塔 spritesheet 位置對照表 (Turrets.png 第二行)
-  // type → {x, y, w, h} 在 spritesheet 中的位置
-  const TURRET_RECTS = {
-    3: {x:0,   y:32, w:28, h:32}, // 等離子塔
-    2: {x:121, y:32, w:22, h:32}, // 對空飛彈 SAM
-    1: {x:62,  y:32, w:28, h:32}, // 火神機炮
-    5: {x:92,  y:32, w:28, h:32}, // 冷凍塔
-    6: {x:30,  y:32, w:30, h:32}, // 聲波塔
-    4: {x:145, y:32, w:30, h:32}, // 防空砲 DCA
-    7: {x:177, y:32, w:32, h:32}, // 圍牆
-  };
-  // 底座圓盤位置（第一行，7個從小到大，根據升級等級選用）
-  // 底座是連續排列的，手動估算各個圓盤中心
-  const BASE_RECTS = [
-    {x:0,   y:0, w:22, h:28}, // 最小底座 (lv1)
-    {x:22,  y:0, w:26, h:30}, // lv2
-    {x:48,  y:0, w:28, h:32}, // lv3
-    {x:78,  y:0, w:30, h:32}, // lv4
-    {x:110, y:0, w:32, h:32}, // lv5
-    {x:142, y:0, w:34, h:32}, // lv6 大底座
-    {x:176, y:0, w:34, h:32}, // 備用
-  ];
-
+  // Draw towers（使用高畫質 sprite）
   for (const tower of g.towers) {
     const tx = tower.x, ty = tower.y;
-    const S = 15;
-    const ts = ASSETS.turretSheet;
-    const rect = TURRET_RECTS[tower.type];
+    const S = CELL_SIZE; // 完整填滿 2x2 格
+    const lvl = Math.min((tower.level || 0) + 1, 6);
+    const lvlSprite = ASSETS.towerLevelSprites?.[tower.type]?.[lvl];
 
-    if (ts && rect) {
-      const baseIdx = Math.min(tower.level || 0, BASE_RECTS.length - 1);
-      const lvl = Math.min((tower.level || 0) + 1, 6);
-      const lvlSprite = ASSETS.towerLevelSprites?.[tower.type]?.[lvl];
-
+    if (lvlSprite) {
       if (tower.def.isWall) {
-        // 圍牆：用等級圖檔（有顏色變化）
-        if (lvlSprite) {
-          ctx.drawImage(lvlSprite, tx - S, ty - S, S*2, S*2);
-        } else {
-          ctx.drawImage(ts, rect.x, rect.y, rect.w, rect.h, tx - S, ty - S, S*2, S*2);
-        }
+        // 圍牆：直接繪製（方形）
+        ctx.drawImage(lvlSprite, tx - S, ty - S, S*2, S*2);
+      } else if (tower.def.rotating) {
+        // 旋轉型砲塔
+        ctx.save();
+        ctx.translate(tx, ty);
+        ctx.rotate(tower.angle);
+        ctx.drawImage(lvlSprite, -S, -S, S*2, S*2);
+        ctx.restore();
       } else {
-        // 先畫底座（不旋轉，根據等級大小不同）
-        const base = BASE_RECTS[baseIdx];
-        ctx.drawImage(ts, base.x, base.y, base.w, base.h, tx - S, ty - S, S*2, S*2);
-
-        // 再畫砲塔（用預先上色的等級圖檔）
-        if (tower.def.rotating) {
-          ctx.save();
-          ctx.translate(tx, ty);
-          ctx.rotate(tower.angle);
-          if (lvlSprite) {
-            ctx.drawImage(lvlSprite, -S, -S, S*2, S*2);
-          } else {
-            ctx.drawImage(ts, rect.x, rect.y, rect.w, rect.h, -S, -S, S*2, S*2);
-          }
-          ctx.restore();
-        } else {
-          // 非旋轉型（DCA、聲波）
-          if (lvlSprite) {
-            ctx.drawImage(lvlSprite, tx - S, ty - S, S*2, S*2);
-          } else {
-            ctx.drawImage(ts, rect.x, rect.y, rect.w, rect.h, tx - S, ty - S, S*2, S*2);
-          }
-        }
+        // 非旋轉型（DCA、聲波）
+        ctx.drawImage(lvlSprite, tx - S, ty - S, S*2, S*2);
       }
     } else {
       ctx.fillStyle = tower.def.color;
@@ -1882,7 +1864,7 @@ function render() {
     } else if (p.type === 'text') {
       ctx.globalAlpha = alpha;
       ctx.fillStyle = p.color;
-      ctx.font = 'bold 11px sans-serif'; ctx.textAlign = 'center';
+      ctx.font = "bold 11px 'Space Grotesk', sans-serif"; ctx.textAlign = 'center';
       ctx.fillText(p.text, p.x, p.y);
     }
   }
@@ -1891,55 +1873,146 @@ function render() {
   // Message
   if (g.messageTimer > 0 && g.message) {
     ctx.globalAlpha = Math.min(1, g.messageTimer / 24);
-    ctx.fillStyle = '#ff4444';
-    ctx.font = 'bold 18px sans-serif'; ctx.textAlign = 'center';
+    ctx.fillStyle = '#FF3D00';
+    ctx.font = "bold 18px 'Space Grotesk', sans-serif"; ctx.textAlign = 'center';
     ctx.fillText(g.message, GRID_COLS * CELL_SIZE / 2, GRID_Y + GRID_ROWS * CELL_SIZE / 2);
     ctx.globalAlpha = 1;
   }
 
   // ========== TOP BAR ==========
-  // 在地圖背景上覆蓋半透明暗色，讓文字可讀
-  ctx.fillStyle = 'rgba(10, 10, 20, 0.85)';
-  ctx.fillRect(0, 0, CANVAS_W, TOP_BAR_H);
-  ctx.strokeStyle = '#333'; ctx.lineWidth = 1;
-  ctx.beginPath(); ctx.moveTo(0, TOP_BAR_H); ctx.lineTo(CANVAS_W, TOP_BAR_H); ctx.stroke();
-
-  ctx.font = 'bold 14px sans-serif'; ctx.textAlign = 'left';
-  ctx.fillStyle = '#ffd700'; ctx.fillText('金幣: ' + g.gold, 10, 22);
-  ctx.fillStyle = g.lives > 5 ? '#0f0' : '#f44'; ctx.fillText('生命: ' + g.lives, 10, 42);
-  ctx.fillStyle = '#fff'; ctx.fillText('波次: ' + g.waveIndex + '/' + g.totalWaves, 130, 22);
-  ctx.fillStyle = '#0ff'; ctx.fillText('分數: ' + g.score, 130, 42);
-  const secs = Math.floor(g.gameTime / FPS);
-  ctx.fillStyle = '#aaa'; ctx.fillText('時間: ' + Math.floor(secs / 60) + ':' + String(secs % 60).padStart(2, '0'), 260, 22);
-  ctx.fillStyle = '#f88'; ctx.fillText('擊殺: ' + g.kills, 260, 42);
-  ctx.fillStyle = '#888'; ctx.fillText(g.speedMult + 'x', 380, 22);
-
-  // State indicator / 波次倒數
-  if (g.state === 'paused') {
-    ctx.fillStyle = '#ff0'; ctx.font = 'bold 14px sans-serif';
-    ctx.fillText('已暫停', 380, 42);
-  } else if (g.waveTimer > 0 && !g.waveActive) {
-    const countDown = Math.ceil(g.waveTimer / FPS);
-    ctx.fillStyle = '#0ff'; ctx.font = 'bold 14px sans-serif';
-    ctx.fillText('下一波: ' + countDown + 's', 380, 42);
-  } else if (g.state === 'setup') {
-    ctx.fillStyle = '#0f0'; ctx.font = 'bold 14px sans-serif';
-    ctx.fillText('佈置中', 380, 42);
-  }
-
-  // 選關按鈕（top bar 右側）
   {
-    const mbx = CANVAS_W - 68, mby = 20, mbw = 60, mbh = 24;
-    ctx.fillStyle = '#2a1a1a'; ctx.fillRect(mbx, mby, mbw, mbh);
-    ctx.strokeStyle = '#f80'; ctx.lineWidth = 1; ctx.strokeRect(mbx, mby, mbw, mbh);
-    ctx.fillStyle = '#f80'; ctx.font = 'bold 11px sans-serif'; ctx.textAlign = 'center';
-    ctx.fillText('選關', mbx + mbw / 2, mby + 16);
+    // 背景
+    ctx.fillStyle = '#080C10';
+    ctx.fillRect(0, 0, CANVAS_W, TOP_BAR_H);
+
+    // 底部邊線（青色微光）
+    const grad = ctx.createLinearGradient(0, TOP_BAR_H - 1, CANVAS_W, TOP_BAR_H - 1);
+    grad.addColorStop(0, '#00E5FF00');
+    grad.addColorStop(0.2, '#00E5FF40');
+    grad.addColorStop(0.5, '#00E5FF80');
+    grad.addColorStop(0.8, '#00E5FF40');
+    grad.addColorStop(1, '#00E5FF00');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, TOP_BAR_H - 1, CANVAS_W, 1);
+
+    // 輔助函式：繪製單一資訊區塊
+    const drawStat = (x, y, label, value, valueColor, w) => {
+      // 標籤（小字、灰色、大寫）
+      ctx.font = "9px 'Space Grotesk', sans-serif";
+      ctx.textAlign = 'left';
+      ctx.fillStyle = '#4A5A6A';
+      ctx.fillText(label, x, y);
+      // 數值（大字、亮色）
+      ctx.font = "bold 16px 'Space Grotesk', sans-serif";
+      ctx.fillStyle = valueColor;
+      ctx.fillText(value, x, y + 16);
+    };
+
+    // 垂直分隔線
+    const drawSep = (x) => {
+      ctx.strokeStyle = '#1A2A3A';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(x, 8);
+      ctx.lineTo(x, TOP_BAR_H - 8);
+      ctx.stroke();
+    };
+
+    const secs = Math.floor(g.gameTime / FPS);
+    const timeStr = Math.floor(secs / 60) + ':' + String(secs % 60).padStart(2, '0');
+
+    // 佈局：每個區塊約 80px 寬，間隔分隔線
+    const baseY = 18;
+
+    // 1. 金幣
+    drawStat(12, baseY, 'CREDITS', String(g.gold), '#00E5FF', 80);
+    drawSep(90);
+
+    // 2. 生命
+    drawStat(100, baseY, 'HULL', String(g.lives), g.lives > 5 ? '#00E5FF' : '#FF3D00', 60);
+    drawSep(158);
+
+    // 3. 波次
+    drawStat(168, baseY, 'WAVE', g.waveIndex + ' / ' + g.totalWaves, '#E0E6ED', 80);
+    drawSep(252);
+
+    // 4. 擊殺
+    drawStat(262, baseY, 'KILLS', String(g.kills), '#FF3D00', 60);
+    drawSep(320);
+
+    // 5. 分數
+    drawStat(330, baseY, 'SCORE', String(g.score), '#00E5FF', 70);
+    drawSep(398);
+
+    // 6. 時間
+    drawStat(408, baseY, 'TIME', timeStr, '#7A8A9A', 60);
+
+    // 右側狀態指示（選關按鈕左邊）
+    {
+      const stX = CANVAS_W - 145;
+      let statusText = '';
+      let statusColor = '#00E5FF';
+
+      if (g.state === 'paused') {
+        statusText = 'PAUSED'; statusColor = '#2979FF';
+      } else if (g.waveTimer > 0 && !g.waveActive) {
+        const countDown = Math.ceil(g.waveTimer / FPS);
+        statusText = 'NEXT ' + countDown + 's'; statusColor = '#00E5FF';
+      } else if (g.state === 'setup') {
+        statusText = 'DEPLOY'; statusColor = '#00E5FF';
+      } else if (g.waveActive) {
+        statusText = 'COMBAT'; statusColor = '#FF3D00';
+      }
+
+      if (statusText) {
+        // 狀態背景框
+        ctx.fillStyle = statusColor + '15';
+        const stW = 66, stH = 26;
+        const stY = (TOP_BAR_H - stH) / 2;
+        ctx.fillRect(stX, stY, stW, stH);
+        ctx.strokeStyle = statusColor + '60';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(stX, stY, stW, stH);
+
+        // 閃爍的狀態圓點
+        const blink = Math.floor(Date.now() / 600) % 2 === 0;
+        if (blink || g.state !== 'playing') {
+          ctx.fillStyle = statusColor;
+          ctx.beginPath();
+          ctx.arc(stX + 10, stY + stH / 2, 3, 0, Math.PI * 2);
+          ctx.fill();
+        }
+
+        ctx.font = "bold 10px 'Space Grotesk', sans-serif";
+        ctx.textAlign = 'left';
+        ctx.fillStyle = statusColor;
+        ctx.fillText(statusText, stX + 18, stY + stH / 2 + 4);
+      }
+    }
+
+    // 選關按鈕
+    {
+      const mbx = CANVAS_W - 68, mby = (TOP_BAR_H - 24) / 2, mbw = 58, mbh = 24;
+      ctx.fillStyle = '#FF3D0015';
+      ctx.fillRect(mbx, mby, mbw, mbh);
+      ctx.strokeStyle = '#FF3D0060'; ctx.lineWidth = 1;
+      ctx.strokeRect(mbx, mby, mbw, mbh);
+      ctx.fillStyle = '#FF3D00';
+      ctx.font = "bold 10px 'Space Grotesk', sans-serif"; ctx.textAlign = 'center';
+      ctx.fillText('EXIT', mbx + mbw / 2, mby + 16);
+    }
+
+    // 倍速指示（小）
+    ctx.font = "bold 10px 'Space Grotesk', sans-serif";
+    ctx.textAlign = 'left';
+    ctx.fillStyle = g.speedMult > 1 ? '#00E5FF' : '#4A5A6A';
+    ctx.fillText(g.speedMult + 'x', 462, baseY + 16);
   }
 
   // ========== RIGHT PANEL ==========
-  ctx.fillStyle = 'rgba(10, 10, 20, 0.9)';
+  ctx.fillStyle = 'rgba(8, 12, 16, 0.95)';
   ctx.fillRect(PANEL_X, GRID_Y, PANEL_W, GRID_ROWS * CELL_SIZE);
-  ctx.strokeStyle = '#222'; ctx.lineWidth = 1;
+  ctx.strokeStyle = '#1A2A3A'; ctx.lineWidth = 1;
   ctx.beginPath(); ctx.moveTo(PANEL_X, GRID_Y); ctx.lineTo(PANEL_X, GRID_Y + GRID_ROWS * CELL_SIZE); ctx.stroke();
 
   const btnW = 62, btnH = 56, btnStartY = GRID_Y + 4;
@@ -1954,87 +2027,93 @@ function render() {
     const affordable = g.gold >= cost;
 
     // 按鈕背景
-    ctx.fillStyle = selected ? '#2a2a5a' : '#1a1a3a';
+    ctx.fillStyle = selected ? '#0D2530' : '#0D1520';
     ctx.fillRect(bx, by, btnW, btnH);
-    ctx.strokeStyle = selected ? '#ffff00' : (affordable ? '#556' : '#333');
+    ctx.strokeStyle = selected ? '#00E5FF' : (affordable ? '#1A2A3A' : '#111820');
     ctx.lineWidth = selected ? 2 : 1;
     ctx.strokeRect(bx, by, btnW, btnH);
 
-    // 塔預覽圖（原版 JPEG）
+    // 塔預覽圖（高畫質）
     const icon = ASSETS.towerIcons[i];
     if (icon) {
       if (!affordable) ctx.globalAlpha = 0.4;
-      ctx.drawImage(icon, bx + 1, by + 1, btnW - 2, btnH - 16);
+      // 等比縮放填入按鈕區域（留空間給底部文字）
+      const drawArea = btnH - 14;
+      const iw = icon.naturalWidth || icon.width;
+      const ih = icon.naturalHeight || icon.height;
+      const scale = Math.min((btnW - 4) / iw, drawArea / ih);
+      const dw = iw * scale, dh = ih * scale;
+      const dx = bx + (btnW - dw) / 2;
+      const dy = by + 1 + (drawArea - dh) / 2;
+      ctx.drawImage(icon, dx, dy, dw, dh);
       ctx.globalAlpha = 1;
     } else {
-      // 後備：色塊
       ctx.fillStyle = affordable ? def.color : '#555';
       ctx.fillRect(bx + 4, by + 4, btnW - 8, btnH - 20);
     }
 
     // 名稱與價格
-    ctx.font = '9px sans-serif'; ctx.textAlign = 'center';
-    ctx.fillStyle = affordable ? '#ccc' : '#555';
+    ctx.font = "9px 'Inter', sans-serif"; ctx.textAlign = 'center';
+    ctx.fillStyle = affordable ? '#E0E6ED' : '#3A4A5A';
     ctx.fillText(def.name, bx + btnW / 2, by + btnH - 5);
 
     // 快捷鍵編號
-    ctx.fillStyle = '#888'; ctx.font = '8px sans-serif'; ctx.textAlign = 'right';
+    ctx.fillStyle = '#7A8A9A'; ctx.font = "8px 'Inter', sans-serif"; ctx.textAlign = 'right';
     ctx.fillText(i.toString(), bx + btnW - 3, by + 10);
   }
 
   // 選中塔資訊面板
-  const infoPanelY = btnStartY + 3 * (btnH + 3) + 4;
+  const infoPanelY = btnStartY + 3 * (btnH + 3) + 2;
   if (g.selectedTower) {
     const t = g.selectedTower;
     const s = t.stats;
-    const panelH = 110;
+    const panelH = 90;
 
-    ctx.fillStyle = '#1a1a3a';
+    ctx.fillStyle = '#0D1520';
     ctx.fillRect(PANEL_X + 4, infoPanelY, PANEL_W - 8, panelH);
 
-    ctx.font = 'bold 12px sans-serif'; ctx.textAlign = 'left';
+    ctx.font = "bold 11px 'Space Grotesk', sans-serif"; ctx.textAlign = 'left';
     ctx.fillStyle = t.def.color;
-    ctx.fillText(t.displayName, PANEL_X + 12, infoPanelY + 15);
+    ctx.fillText(t.displayName, PANEL_X + 12, infoPanelY + 13);
 
-    ctx.font = '10px sans-serif'; ctx.fillStyle = '#ccc';
-    let iy = infoPanelY + 28;
-    // 左欄
+    ctx.font = "9px 'Inter', sans-serif"; ctx.fillStyle = '#E0E6ED';
+    let iy = infoPanelY + 24;
     if (s.damage) { ctx.fillText('傷害: ' + s.damage, PANEL_X + 12, iy); }
     if (s.range)  { ctx.fillText('射程: ' + s.range, PANEL_X + 110, iy); }
-    iy += 13;
+    iy += 12;
     if (s.hitRate) { ctx.fillText('速率: ' + s.hitRate, PANEL_X + 12, iy); }
     if (s.splash)  { ctx.fillText('濺射: ' + s.splash, PANEL_X + 110, iy); }
-    iy += 13;
+    iy += 12;
     if (s.slow)    { ctx.fillText('減速: ' + s.slow + '%', PANEL_X + 12, iy); }
     ctx.fillText('擊殺: ' + t.kills, PANEL_X + 110, iy);
 
     // 升級與販賣按鈕（並排）
-    const btnY = infoPanelY + panelH - 28;
+    const btnY = infoPanelY + panelH - 24;
     const halfW = (PANEL_W - 20) / 2;
 
     // 升級按鈕
     const upgCost = t.getUpgradeCost();
     if (upgCost > 0) {
       const canUpg = g.gold >= upgCost;
-      ctx.fillStyle = canUpg ? '#1a4a1a' : '#2a1a1a';
-      ctx.fillRect(PANEL_X + 8, btnY, halfW, 22);
-      ctx.strokeStyle = canUpg ? '#0f0' : '#600'; ctx.lineWidth = 1;
-      ctx.strokeRect(PANEL_X + 8, btnY, halfW, 22);
-      ctx.fillStyle = canUpg ? '#0f0' : '#800';
-      ctx.font = '10px sans-serif'; ctx.textAlign = 'center';
-      ctx.fillText('升級 $' + upgCost, PANEL_X + 8 + halfW / 2, btnY + 15);
+      ctx.fillStyle = canUpg ? '#0D2530' : '#0D1520';
+      ctx.fillRect(PANEL_X + 8, btnY, halfW, 20);
+      ctx.strokeStyle = canUpg ? '#00E5FF' : '#1A2A3A'; ctx.lineWidth = 1;
+      ctx.strokeRect(PANEL_X + 8, btnY, halfW, 20);
+      ctx.fillStyle = canUpg ? '#00E5FF' : '#3A4A5A';
+      ctx.font = "10px 'Space Grotesk', sans-serif"; ctx.textAlign = 'center';
+      ctx.fillText('升級 $' + upgCost, PANEL_X + 8 + halfW / 2, btnY + 14);
     }
 
     // 販賣按鈕
     const sellVal = t.getSellValue(g.state === 'setup');
     const sbx = PANEL_X + 12 + halfW;
-    ctx.fillStyle = '#4a1a1a';
-    ctx.fillRect(sbx, btnY, halfW, 22);
-    ctx.strokeStyle = '#f44'; ctx.lineWidth = 1;
-    ctx.strokeRect(sbx, btnY, halfW, 22);
-    ctx.fillStyle = '#f44';
-    ctx.font = '10px sans-serif'; ctx.textAlign = 'center';
-    ctx.fillText('販賣 $' + sellVal, sbx + halfW / 2, btnY + 15);
+    ctx.fillStyle = '#1A1010';
+    ctx.fillRect(sbx, btnY, halfW, 20);
+    ctx.strokeStyle = '#FF3D00'; ctx.lineWidth = 1;
+    ctx.strokeRect(sbx, btnY, halfW, 20);
+    ctx.fillStyle = '#FF3D00';
+    ctx.font = "10px 'Space Grotesk', sans-serif"; ctx.textAlign = 'center';
+    ctx.fillText('販賣 $' + sellVal, sbx + halfW / 2, btnY + 14);
   }
 
   // Bottom buttons row
@@ -2043,41 +2122,41 @@ function render() {
   const bw2 = 46;
 
   // NEXT
-  ctx.fillStyle = '#1a2a3a'; ctx.fillRect(PANEL_X + 8, smallY, bw2, 24);
-  ctx.strokeStyle = '#0af'; ctx.strokeRect(PANEL_X + 8, smallY, bw2, 24);
-  ctx.fillStyle = '#0af'; ctx.font = '10px sans-serif'; ctx.textAlign = 'center';
+  ctx.fillStyle = '#0D1520'; ctx.fillRect(PANEL_X + 8, smallY, bw2, 24);
+  ctx.strokeStyle = '#00E5FF'; ctx.strokeRect(PANEL_X + 8, smallY, bw2, 24);
+  ctx.fillStyle = '#00E5FF'; ctx.font = "10px 'Space Grotesk', sans-serif"; ctx.textAlign = 'center';
   ctx.fillText('下一波', PANEL_X + 8 + bw2 / 2, smallY + 16);
 
   // GRID
-  ctx.fillStyle = g.showGrid ? '#2a2a1a' : '#1a1a1a';
+  ctx.fillStyle = g.showGrid ? '#0D2530' : '#0D1520';
   ctx.fillRect(PANEL_X + 58, smallY, bw2, 24);
-  ctx.strokeStyle = '#888'; ctx.strokeRect(PANEL_X + 58, smallY, bw2, 24);
-  ctx.fillStyle = '#aaa'; ctx.fillText('格線', PANEL_X + 58 + bw2 / 2, smallY + 16);
+  ctx.strokeStyle = '#1A2A3A'; ctx.strokeRect(PANEL_X + 58, smallY, bw2, 24);
+  ctx.fillStyle = '#7A8A9A'; ctx.fillText('格線', PANEL_X + 58 + bw2 / 2, smallY + 16);
 
   // SPEED
-  ctx.fillStyle = '#1a1a2a'; ctx.fillRect(PANEL_X + 108, smallY, bw2, 24);
-  ctx.strokeStyle = '#88f'; ctx.strokeRect(PANEL_X + 108, smallY, bw2, 24);
-  ctx.fillStyle = '#88f'; ctx.fillText(g.speedMult + 'x', PANEL_X + 108 + bw2 / 2, smallY + 16);
+  ctx.fillStyle = '#0D1520'; ctx.fillRect(PANEL_X + 108, smallY, bw2, 24);
+  ctx.strokeStyle = '#2979FF'; ctx.strokeRect(PANEL_X + 108, smallY, bw2, 24);
+  ctx.fillStyle = '#2979FF'; ctx.fillText(g.speedMult + 'x', PANEL_X + 108 + bw2 / 2, smallY + 16);
 
   // 靜音按鈕（用圖示）
-  ctx.fillStyle = muted ? '#3a1a1a' : '#1a2a1a';
+  ctx.fillStyle = muted ? '#1A1010' : '#0D1520';
   ctx.fillRect(PANEL_X + 158, smallY, 42, 24);
-  ctx.strokeStyle = muted ? '#f44' : '#4f4';
+  ctx.strokeStyle = muted ? '#FF3D00' : '#00E5FF';
   ctx.strokeRect(PANEL_X + 158, smallY, 42, 24);
-  ctx.fillStyle = muted ? '#f44' : '#4f4';
-  ctx.font = '14px sans-serif';
+  ctx.fillStyle = muted ? '#FF3D00' : '#00E5FF';
+  ctx.font = "14px 'Inter', sans-serif";
   ctx.fillText(muted ? '🔇' : '🔊', PANEL_X + 158 + 21, smallY + 17);
 
   // START/PAUSE button
   {
     const bx = PANEL_X + 8, by = bottomY, bw = PANEL_W - 16, bh = 30;
-    let label, bgColor;
-    if (g.state === 'setup') { label = '開始'; bgColor = '#0a4a0a'; }
-    else if (g.state === 'paused') { label = '繼續'; bgColor = '#0a3a4a'; }
-    else { label = '暫停'; bgColor = '#3a3a0a'; }
+    let label, bgColor, borderColor;
+    if (g.state === 'setup') { label = '開始'; bgColor = '#00342F'; borderColor = '#00E5FF'; }
+    else if (g.state === 'paused') { label = '繼續'; bgColor = '#0D1520'; borderColor = '#2979FF'; }
+    else { label = '暫停'; bgColor = '#1A1800'; borderColor = '#7A8A9A'; }
     ctx.fillStyle = bgColor; ctx.fillRect(bx, by, bw, bh);
-    ctx.strokeStyle = '#666'; ctx.strokeRect(bx, by, bw, bh);
-    ctx.fillStyle = '#fff'; ctx.font = 'bold 14px sans-serif'; ctx.textAlign = 'center';
+    ctx.strokeStyle = borderColor; ctx.strokeRect(bx, by, bw, bh);
+    ctx.fillStyle = '#E0E6ED'; ctx.font = "bold 14px 'Space Grotesk', sans-serif"; ctx.textAlign = 'center';
     ctx.fillText(label, bx + bw / 2, by + 20);
   }
 
@@ -2086,7 +2165,7 @@ function render() {
     const waveBarY = GRID_Y + GRID_ROWS * CELL_SIZE;
     const waveBarH = CANVAS_H - waveBarY;
     if (waveBarH > 0) {
-      ctx.fillStyle = '#111122';
+      ctx.fillStyle = '#080C10';
       ctx.fillRect(0, waveBarY, CANVAS_W, waveBarH);
 
       // 進度條背景（顯示當前波次進度）
@@ -2103,7 +2182,7 @@ function render() {
         if (wi >= g.totalWaves) break;
         const wd = g.waveDefs[wi];
         const bx = i * wbw;
-        ctx.fillStyle = i === 0 && g.waveActive ? '#2a2a0a' : '#0a0a1a';
+        ctx.fillStyle = i === 0 && g.waveActive ? 'rgba(0,229,255,0.15)' : '#0D1520';
         ctx.fillRect(bx + 1, waveBarY + 1, wbw - 2, waveBarH - 2);
 
         const typeLabels = {
@@ -2124,11 +2203,11 @@ function render() {
           case 'boss': wColor = '#ff3333'; break;    // 紅色 Boss
         }
 
-        ctx.fillStyle = wColor; ctx.font = 'bold 10px sans-serif'; ctx.textAlign = 'center';
+        ctx.fillStyle = wColor; ctx.font = "bold 10px 'Space Grotesk', sans-serif"; ctx.textAlign = 'center';
         ctx.fillText(wi + 1, bx + wbw / 2, waveBarY + 13);
-        ctx.font = '9px sans-serif'; ctx.fillStyle = '#aaa';
+        ctx.font = "9px 'Inter', sans-serif"; ctx.fillStyle = '#7A8A9A';
         ctx.fillText(typeLabels[wd.waveType] || wd.waveType, bx + wbw / 2, waveBarY + 25);
-        ctx.fillStyle = '#666'; ctx.font = '8px sans-serif';
+        ctx.fillStyle = '#3A4A5A'; ctx.font = "8px 'Inter', sans-serif";
         ctx.fillText('x' + wd.count, bx + wbw / 2, waveBarY + 36);
       }
     }
@@ -2184,6 +2263,13 @@ canvas.addEventListener('click', (e) => {
     startScreen.style.display = 'flex';
     return;
   }
+  // 武器圖鑑模式：點擊任意處返回開始畫面
+  if (weaponPreviewMode) {
+    weaponPreviewMode = false;
+    weaponPreviewTick = 0;
+    startScreen.style.display = 'flex';
+    return;
+  }
   if (!game) return;
   const { x: mx, y: my } = canvasCoords(e.clientX, e.clientY);
   const g = game;
@@ -2216,18 +2302,18 @@ canvas.addEventListener('click', (e) => {
       }
     }
 
-    const infoPanelY = btnStartY + 3 * (btnH + 3) + 4;
-    const panelH = 110;
+    const infoPanelY = btnStartY + 3 * (btnH + 3) + 2;
+    const panelH = 90;
     const halfW = (PANEL_W - 20) / 2;
-    const actionBtnY = infoPanelY + panelH - 28;
+    const actionBtnY = infoPanelY + panelH - 24;
     if (g.selectedTower) {
       // 升級按鈕
-      if (mx >= PANEL_X + 8 && mx < PANEL_X + 8 + halfW && my >= actionBtnY && my < actionBtnY + 22) {
+      if (mx >= PANEL_X + 8 && mx < PANEL_X + 8 + halfW && my >= actionBtnY && my < actionBtnY + 20) {
         g.upgradeTower(g.selectedTower); return;
       }
       // 販賣按鈕
       const sbx = PANEL_X + 12 + halfW;
-      if (mx >= sbx && mx < sbx + halfW && my >= actionBtnY && my < actionBtnY + 22) {
+      if (mx >= sbx && mx < sbx + halfW && my >= actionBtnY && my < actionBtnY + 20) {
         g.sellTower(g.selectedTower); return;
       }
     }
@@ -2339,7 +2425,7 @@ canvas.addEventListener('mouseup', (e) => {
 // 觸控事件
 canvas.addEventListener('touchstart', (e) => {
   e.preventDefault();
-  if (!game && !previewMode) return;
+  if (!game && !previewMode && !weaponPreviewMode) return;
   const touch = e.touches[0];
   const { x, y } = canvasCoords(touch.clientX, touch.clientY);
 
@@ -2347,6 +2433,13 @@ canvas.addEventListener('touchstart', (e) => {
   if (previewMode) {
     previewMode = false;
     previewTick = 0;
+    startScreen.style.display = 'flex';
+    return;
+  }
+  // 武器圖鑑模式
+  if (weaponPreviewMode) {
+    weaponPreviewMode = false;
+    weaponPreviewTick = 0;
     startScreen.style.display = 'flex';
     return;
   }
@@ -2536,14 +2629,14 @@ function renderPreview() {
   const sheet = ASSETS.enemySheet;
   if (!sheet) return;
 
-  ctx.fillStyle = '#0c0c18';
+  ctx.fillStyle = '#080C10';
   ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
 
   // 標題
-  ctx.fillStyle = '#0ff'; ctx.font = 'bold 20px sans-serif'; ctx.textAlign = 'center';
+  ctx.fillStyle = '#00E5FF'; ctx.font = "bold 20px 'Space Grotesk', sans-serif"; ctx.textAlign = 'center';
   ctx.fillText('怪物圖鑑', CANVAS_W / 2, 30);
 
-  ctx.fillStyle = '#666'; ctx.font = '11px sans-serif';
+  ctx.fillStyle = '#7A8A9A'; ctx.font = "11px 'Inter', sans-serif";
   ctx.fillText('點擊任意處返回', CANVAS_W / 2, 48);
 
   previewTick++;
@@ -2562,9 +2655,9 @@ function renderPreview() {
     const by = startY + row * cellH;
 
     // 卡片背景
-    ctx.fillStyle = '#141428';
+    ctx.fillStyle = '#0D1520';
     ctx.fillRect(bx, by, cellW - 6, cellH - 6);
-    ctx.strokeStyle = '#333'; ctx.lineWidth = 1;
+    ctx.strokeStyle = '#1A2A3A'; ctx.lineWidth = 1;
     ctx.strokeRect(bx, by, cellW - 6, cellH - 6);
 
     // Sprite 動畫
@@ -2597,28 +2690,28 @@ function renderPreview() {
     const tx = bx + 72;
     ctx.textAlign = 'left';
 
-    ctx.fillStyle = e.color; ctx.font = 'bold 13px sans-serif';
+    ctx.fillStyle = e.color; ctx.font = "bold 13px 'Space Grotesk', sans-serif";
     ctx.fillText(e.name, tx, by + 18);
 
-    ctx.fillStyle = '#aaa'; ctx.font = '10px sans-serif';
+    ctx.fillStyle = '#7A8A9A'; ctx.font = "10px 'Inter', sans-serif";
     ctx.fillText(e.desc, tx, by + 33);
 
-    ctx.fillStyle = '#0f0';
+    ctx.fillStyle = '#00E5FF';
     ctx.fillText('HP: ' + e.hp, tx, by + 50);
 
-    ctx.fillStyle = e.speed > 1 ? '#f44' : '#ccc';
+    ctx.fillStyle = e.speed > 1 ? '#FF3D00' : '#E0E6ED';
     ctx.fillText('速度: ' + e.speed, tx + 60, by + 50);
 
     // HP 條
     const barW = cellW - 82, barH = 6;
     const barX = tx, barY = by + 56;
-    ctx.fillStyle = '#222'; ctx.fillRect(barX, barY, barW, barH);
+    ctx.fillStyle = '#111820'; ctx.fillRect(barX, barY, barW, barH);
     const hpRatio = Math.min(e.hp / 240, 1);
-    ctx.fillStyle = hpRatio > 0.5 ? '#0a0' : hpRatio > 0.25 ? '#aa0' : '#a00';
+    ctx.fillStyle = hpRatio > 0.5 ? '#00E5FF' : hpRatio > 0.25 ? '#2979FF' : '#FF3D00';
     ctx.fillRect(barX, barY, barW * hpRatio, barH);
 
     // 循環出現波次
-    ctx.fillStyle = '#556'; ctx.font = '9px sans-serif';
+    ctx.fillStyle = '#3A4A5A'; ctx.font = "9px 'Inter', sans-serif";
     const waveLabels = {
       normal: '循環1', tank: '循環2', swarm: '循環3', immune: '循環4',
       fast: '循環5', spawner: '循環6', flying: '循環7', boss: '每8波',
@@ -2628,7 +2721,7 @@ function renderPreview() {
   }
 
   // 底部說明
-  ctx.fillStyle = '#555'; ctx.font = '10px sans-serif'; ctx.textAlign = 'center';
+  ctx.fillStyle = '#3A4A5A'; ctx.font = "10px 'Inter', sans-serif"; ctx.textAlign = 'center';
   ctx.fillText('HP 為第 1 輪基礎值，每 7 波 ×2.2 成長', CANVAS_W / 2, CANVAS_H - 10);
 }
 
@@ -2648,6 +2741,199 @@ function getEnemySprites() {
     { x:1281, w:48, frames:[{y:36,h:36},{y:132,h:36},{y:228,h:36}] },
     { x:1350, w:93, frames:[{y:3,h:84},{y:99,h:87},{y:198,h:84}] },
   ];
+}
+
+// ==================== 武器圖鑑 ====================
+let weaponPreviewMode = false;
+let weaponPreviewTick = 0;
+
+// 武器資料（對應 TowerDefs 1~7）
+const PREVIEW_WEAPONS = [
+  { type: 1, name: '火神機炮 Vulcan',   color: '#ff4444', desc: '高速單體·可攻空地',    rotating: true },
+  { type: 2, name: '對空飛彈 SAM',      color: '#44ff44', desc: '範圍對空·無法攻地',    rotating: true },
+  { type: 3, name: '等離子塔 Plasma',   color: '#4488ff', desc: '極速射擊·全能攻擊',    rotating: true },
+  { type: 4, name: '防空砲 DCA',        color: '#ffff44', desc: '多目標對空·不可轉向',  rotating: false },
+  { type: 5, name: '冷凍塔 Freeze',     color: '#00ffff', desc: '範圍減速·僅攻地面',    rotating: true },
+  { type: 6, name: '聲波塔 Sonic',      color: '#ff44ff', desc: '範圍擊退·僅攻地面',    rotating: false },
+  { type: 7, name: '圍牆 Wall',         color: '#888888', desc: '阻擋路線·無攻擊',      rotating: false },
+];
+
+document.getElementById('weaponPreviewBtn').addEventListener('click', () => {
+  weaponPreviewMode = true;
+  weaponPreviewTick = 0;
+  startScreen.style.display = 'none';
+});
+
+function renderWeaponPreview() {
+  ctx.fillStyle = '#080C10';
+  ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
+
+  // 標題
+  ctx.fillStyle = '#FF3D00'; ctx.font = "bold 20px 'Space Grotesk', sans-serif"; ctx.textAlign = 'center';
+  ctx.fillText('武器圖鑑', CANVAS_W / 2, 30);
+  ctx.fillStyle = '#7A8A9A'; ctx.font = "11px 'Inter', sans-serif";
+  ctx.fillText('點擊任意處返回', CANVAS_W / 2, 48);
+
+  weaponPreviewTick++;
+
+  const cols = 2;
+  const cellW = Math.floor((CANVAS_W - 20) / cols);
+  const cellH = 120;
+  const startY = 58;
+
+  for (let i = 0; i < PREVIEW_WEAPONS.length; i++) {
+    const w = PREVIEW_WEAPONS[i];
+    const def = TowerDefs[w.type];
+    const col = i % cols;
+    const row = Math.floor(i / cols);
+    const bx = 10 + col * cellW;
+    const by = startY + row * cellH;
+
+    // 卡片背景
+    ctx.fillStyle = '#0D1520';
+    ctx.fillRect(bx, by, cellW - 6, cellH - 6);
+    ctx.strokeStyle = '#1A2A3A'; ctx.lineWidth = 1;
+    ctx.strokeRect(bx, by, cellW - 6, cellH - 6);
+
+    // 武器圖示（使用 tower_hd 圖檔）
+    const icon = ASSETS.towerLevelSprites?.[w.type]?.[1];
+    const imgSize = 56;
+    const cx = bx + 42, cy = by + 50;
+
+    if (icon) {
+      ctx.save();
+      ctx.translate(cx, cy);
+
+      if (w.rotating) {
+        // 旋轉動畫：緩慢轉動展示
+        const angle = weaponPreviewTick * 0.04;
+        ctx.rotate(angle);
+      }
+
+      ctx.drawImage(icon, -imgSize/2, -imgSize/2, imgSize, imgSize);
+      ctx.restore();
+
+      // 攻擊動畫（非圍牆）
+      if (!def.isWall) {
+        const attackCycle = 60; // 每60幀一次攻擊
+        const attackFrame = weaponPreviewTick % attackCycle;
+
+        if (attackFrame < 10) {
+          // 射擊閃光效果
+          const flashAlpha = 1 - attackFrame / 10;
+          ctx.save();
+          ctx.globalAlpha = flashAlpha * 0.7;
+
+          if (def.levels[0].splash > 0) {
+            // 範圍攻擊：爆炸圓圈
+            const splashR = 12 + attackFrame * 2;
+            ctx.strokeStyle = w.color;
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.arc(cx + 30, cy, splashR, 0, Math.PI * 2);
+            ctx.stroke();
+          } else {
+            // 單體攻擊：射線
+            ctx.strokeStyle = def.shotColor || w.color;
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(cx + imgSize/2 - 5, cy);
+            ctx.lineTo(cx + imgSize/2 + 25, cy);
+            ctx.stroke();
+
+            // 命中閃光
+            ctx.fillStyle = '#fff';
+            ctx.beginPath();
+            ctx.arc(cx + imgSize/2 + 25, cy, 3 - attackFrame * 0.3, 0, Math.PI * 2);
+            ctx.fill();
+          }
+          ctx.restore();
+        }
+
+        // 範圍圈預覽
+        const rangeR = def.levels[0].range * 0.35;
+        ctx.save();
+        ctx.globalAlpha = 0.15;
+        ctx.strokeStyle = w.color;
+        ctx.lineWidth = 1;
+        ctx.setLineDash([3, 3]);
+        ctx.beginPath();
+        ctx.arc(cx, cy, rangeR, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.restore();
+      }
+    }
+
+    // 文字資訊
+    const tx = bx + 80;
+    ctx.textAlign = 'left';
+
+    // 名稱
+    ctx.fillStyle = w.color; ctx.font = "bold 13px 'Space Grotesk', sans-serif";
+    ctx.fillText(w.name, tx, by + 16);
+
+    // 描述
+    ctx.fillStyle = '#7A8A9A'; ctx.font = "10px 'Inter', sans-serif";
+    ctx.fillText(w.desc, tx, by + 31);
+
+    // 屬性
+    if (!def.isWall) {
+      const lv1 = def.levels[0];
+      const lvMax = def.levels[def.levels.length - 1];
+
+      ctx.fillStyle = '#FF3D00'; ctx.font = "10px 'Inter', sans-serif";
+      ctx.fillText('傷害: ' + lv1.damage + ' → ' + lvMax.damage, tx, by + 48);
+
+      ctx.fillStyle = '#2979FF';
+      ctx.fillText('射程: ' + lv1.range, tx + 120, by + 48);
+
+      ctx.fillStyle = '#00E5FF';
+      ctx.fillText('射速: ' + (FPS / lv1.hitRate).toFixed(1) + '/s', tx, by + 63);
+
+      ctx.fillStyle = '#7A8A9A';
+      ctx.fillText('目標: ' + lv1.targets, tx + 120, by + 63);
+
+      // 攻擊屬性標籤
+      const tags = [];
+      if (def.hitsGround) tags.push({ text: '地面', color: '#0a0' });
+      if (def.hitsFlying) tags.push({ text: '飛行', color: '#08f' });
+      if (def.hitsImmune) tags.push({ text: '免疫', color: '#c5c' });
+      if (lv1.splash > 0) tags.push({ text: '範圍', color: '#fa0' });
+      if (lv1.slow > 0) tags.push({ text: '減速', color: '#00E5FF' });
+      if (lv1.bash > 0) tags.push({ text: '擊退', color: '#f0f' });
+
+      let tagX = tx;
+      ctx.font = "9px 'Inter', sans-serif";
+      for (const tag of tags) {
+        const tw = ctx.measureText(tag.text).width + 8;
+        ctx.fillStyle = tag.color + '33';
+        ctx.fillRect(tagX, by + 70, tw, 14);
+        ctx.strokeStyle = tag.color; ctx.lineWidth = 1;
+        ctx.strokeRect(tagX, by + 70, tw, 14);
+        ctx.fillStyle = tag.color;
+        ctx.fillText(tag.text, tagX + 4, by + 81);
+        tagX += tw + 4;
+      }
+
+      // 升級資訊
+      ctx.fillStyle = '#3A4A5A'; ctx.font = "9px 'Inter', sans-serif";
+      const costTotal = def.levels.reduce((s, l) => s + l.cost, 0);
+      ctx.fillText('費用: ' + lv1.cost + ' (滿級總計 ' + costTotal + ')', tx, by + 100);
+      if (lvMax.upgName) {
+        ctx.fillStyle = '#FF3D00';
+        ctx.fillText('終極: ' + lvMax.upgName, tx + 140, by + 100);
+      }
+    } else {
+      ctx.fillStyle = '#7A8A9A'; ctx.font = "10px 'Inter', sans-serif";
+      ctx.fillText('費用: ' + def.levels[0].cost, tx, by + 48);
+      ctx.fillText('用途: 建造迷宮引導敵人路線', tx, by + 63);
+    }
+  }
+
+  // 底部說明
+  ctx.fillStyle = '#3A4A5A'; ctx.font = "10px 'Inter', sans-serif"; ctx.textAlign = 'center';
+  ctx.fillText('所有武器佔 2×2 格，傷害為 Lv1 → 滿級', CANVAS_W / 2, CANVAS_H - 10);
 }
 
 function startGame(diff, totalWaves) {
@@ -2683,6 +2969,12 @@ function gameLoop(timestamp) {
 
   if (previewMode) {
     renderPreview();
+    requestAnimationFrame(gameLoop);
+    return;
+  }
+
+  if (weaponPreviewMode) {
+    renderWeaponPreview();
     requestAnimationFrame(gameLoop);
     return;
   }
