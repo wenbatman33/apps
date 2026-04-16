@@ -2359,16 +2359,15 @@ canvas.addEventListener('click', (e) => {
   const { col, row } = g.getGridPos(mx, my);
   if (col < 0 || col >= GRID_COLS || row < 0 || row >= GRID_ROWS) return;
 
-  if (g.selectedTowerType > 0) {
+  // 優先選中已放置的塔（方便升級），空格才放新塔
+  const clickedTower = g.getTowerAt(col, row);
+  if (clickedTower) {
+    g.selectedTower = clickedTower;
+    g.selectedTowerType = 0;
+  } else if (g.selectedTowerType > 0) {
     g.placeTower(g.selectedTowerType, col, row);
   } else {
-    const tower = g.getTowerAt(col, row);
-    if (tower) {
-      g.selectedTower = tower;
-      g.selectedTowerType = 0;
-    } else {
-      g.selectedTower = null;
-    }
+    g.selectedTower = null;
   }
 });
 
