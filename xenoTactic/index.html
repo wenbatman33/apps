@@ -1547,13 +1547,45 @@ function render() {
           ctx.fillStyle = shade;
           ctx.fillRect(cx, cy, CELL_SIZE, CELL_SIZE);
         } else {
-          // 邊界牆壁 — 深色金屬質感
-          const shade = ((r + c) % 2 === 0) ? '#1a1a28' : '#181826';
-          ctx.fillStyle = shade;
-          ctx.fillRect(cx, cy, CELL_SIZE, CELL_SIZE);
-          ctx.strokeStyle = '#252535';
-          ctx.lineWidth = 0.5;
-          ctx.strokeRect(cx + 0.5, cy + 0.5, CELL_SIZE - 1, CELL_SIZE - 1);
+          // 判斷是否為最外層周圍（圍牆）
+          const isPerimeter = (r === 0 || r === GRID_ROWS - 1 || c === 0 || c === GRID_COLS - 1);
+          if (isPerimeter) {
+            // 外圍圍牆 — 厚重金屬牆板
+            ctx.fillStyle = '#1c2030';
+            ctx.fillRect(cx, cy, CELL_SIZE, CELL_SIZE);
+            // 內側凹槽陰影（立體感）
+            ctx.fillStyle = 'rgba(0,0,0,0.4)';
+            ctx.fillRect(cx, cy, CELL_SIZE, 2);
+            ctx.fillRect(cx, cy, 2, CELL_SIZE);
+            // 高光邊
+            ctx.fillStyle = 'rgba(120,160,200,0.15)';
+            ctx.fillRect(cx + CELL_SIZE - 2, cy, 2, CELL_SIZE);
+            ctx.fillRect(cx, cy + CELL_SIZE - 2, CELL_SIZE, 2);
+            // 金屬板分隔線
+            ctx.strokeStyle = '#0a0c14';
+            ctx.lineWidth = 0.8;
+            ctx.strokeRect(cx + 0.5, cy + 0.5, CELL_SIZE - 1, CELL_SIZE - 1);
+            // 四角鉚釘
+            ctx.fillStyle = '#3a4258';
+            ctx.fillRect(cx + 2, cy + 2, 2, 2);
+            ctx.fillRect(cx + CELL_SIZE - 4, cy + 2, 2, 2);
+            ctx.fillRect(cx + 2, cy + CELL_SIZE - 4, 2, 2);
+            ctx.fillRect(cx + CELL_SIZE - 4, cy + CELL_SIZE - 4, 2, 2);
+            // 鉚釘高光
+            ctx.fillStyle = '#5a6278';
+            ctx.fillRect(cx + 2, cy + 2, 1, 1);
+            ctx.fillRect(cx + CELL_SIZE - 4, cy + 2, 1, 1);
+            ctx.fillRect(cx + 2, cy + CELL_SIZE - 4, 1, 1);
+            ctx.fillRect(cx + CELL_SIZE - 4, cy + CELL_SIZE - 4, 1, 1);
+          } else {
+            // 內部不可走區域 — 深色金屬質感
+            const shade = ((r + c) % 2 === 0) ? '#1a1a28' : '#181826';
+            ctx.fillStyle = shade;
+            ctx.fillRect(cx, cy, CELL_SIZE, CELL_SIZE);
+            ctx.strokeStyle = '#252535';
+            ctx.lineWidth = 0.5;
+            ctx.strokeRect(cx + 0.5, cy + 0.5, CELL_SIZE - 1, CELL_SIZE - 1);
+          }
         }
       } else {
         // 可通行地板 — 淺色交錯棋盤格
@@ -1616,16 +1648,62 @@ function render() {
     }
   }
 
-  // 入口標記 — 綠色箭頭方向
-  ctx.globalAlpha = 0.5;
-  ctx.fillStyle = '#00ff44';
-  for (const sc of g.startCellsLR) ctx.fillRect(sc.x, sc.y, CELL_SIZE, CELL_SIZE);
-  if (g.dualPath) for (const sc of g.startCellsUD) ctx.fillRect(sc.x, sc.y, CELL_SIZE, CELL_SIZE);
-  // 出口標記 — 紅色
-  ctx.fillStyle = '#ff2222';
-  for (const ec of g.endCellsLR) ctx.fillRect(ec.x, ec.y, CELL_SIZE, CELL_SIZE);
-  if (g.dualPath) for (const ec of g.endCellsUD) ctx.fillRect(ec.x, ec.y, CELL_SIZE, CELL_SIZE);
-  ctx.globalAlpha = 1;
+  // 入口/出口 — 警戒斜紋（黃黑為入口，橘黑為出口）
+  function drawHazardStripes(cell, color) {
+    const sx = cell.x, sy = cell.y, sz = CELL_SIZE;
+    // 底色：深黑
+    ctx.fillStyle = '#0a0a0a';
+    ctx.fillRect(sx, sy, sz, sz);
+    // 斜紋：使用 clip 裁切在格子內
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(sx, sy, sz, sz);
+    ctx.clip();
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 3;
+    ctx.lineCap = 'butt';
+    for (let i = -sz; i < sz * 2; i += 6) {
+      ctx.beginPath();
+      ctx.moveTo(sx + i, sy);
+      ctx.lineTo(sx + i + sz, sy + sz);
+      ctx.stroke();
+    }
+    ctx.restore();
+    // 外框
+    ctx.strokeStyle = '#000';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(sx + 0.5, sy + 0.5, sz - 1, sz - 1);
+  }
+  // 入口：黃色警戒斜紋
+  for (const sc of g.startCellsLR) drawHazardStripes(sc, '#FFD400');
+  if (g.dualPath) for (const sc of g.startCellsUD) drawHazardStripes(sc, '#FFD400');
+  // 出口：橘紅警戒斜紋
+  for (const ec of g.endCellsLR) drawHazardStripes(ec, '#FF3D00');
+  if (g.dualPath) for (const ec of g.endCellsUD) drawHazardStripes(ec, '#FF3D00');
+
+  // 入口/出口旁的警戒燈（閃爍）
+  const pulse = 0.5 + 0.5 * Math.sin(Date.now() / 250);
+  function drawWarnLight(cx, cy, color) {
+    ctx.fillStyle = color;
+    ctx.globalAlpha = 0.4 + 0.6 * pulse;
+    ctx.beginPath();
+    ctx.arc(cx, cy, 2.5, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.globalAlpha = 1;
+  }
+  // LR 入口兩側加警戒燈（上下各一個）
+  if (g.startCellsLR && g.startCellsLR.length > 0) {
+    const topSc = g.startCellsLR[0];
+    const botSc = g.startCellsLR[g.startCellsLR.length - 1];
+    drawWarnLight(topSc.x + 2, topSc.y - 3, '#FFD400');
+    drawWarnLight(botSc.x + 2, botSc.y + CELL_SIZE + 3, '#FFD400');
+  }
+  if (g.endCellsLR && g.endCellsLR.length > 0) {
+    const topEc = g.endCellsLR[0];
+    const botEc = g.endCellsLR[g.endCellsLR.length - 1];
+    drawWarnLight(topEc.x + CELL_SIZE - 2, topEc.y - 3, '#FF3D00');
+    drawWarnLight(botEc.x + CELL_SIZE - 2, botEc.y + CELL_SIZE + 3, '#FF3D00');
+  }
 
   // Placement preview（滑鼠 hover 或拖曳中都顯示）
   const previewType = g.dragging ? g.dragTowerType : g.selectedTowerType;
