@@ -337,6 +337,9 @@ async function preloadAssets() {
   }
   await Promise.all(tlPromises);
 
+  // 武器底盤圖（所有塔共用，不旋轉）
+  ASSETS.basePlate = await loadImage(base + 'tower_hd/basePlate.png?v=' + Date.now());
+
   // 怪物 spritesheet — Enemies_3x.png (1446x390, 原圖 482x130 放大3倍, 已去藍底)
   ASSETS.enemySheet = await loadImage(base + 'Enemies_3x.png');
 
@@ -1675,16 +1678,22 @@ function render() {
       if (tower.def.isWall) {
         // 圍牆：直接繪製（方形）
         ctx.drawImage(lvlSprite, tx - S, ty - S, S*2, S*2);
-      } else if (tower.def.rotating) {
-        // 旋轉型砲塔
-        ctx.save();
-        ctx.translate(tx, ty);
-        ctx.rotate(tower.angle);
-        ctx.drawImage(lvlSprite, -S, -S, S*2, S*2);
-        ctx.restore();
       } else {
-        // 非旋轉型（DCA、聲波）
-        ctx.drawImage(lvlSprite, tx - S, ty - S, S*2, S*2);
+        // 先畫底盤（固定不旋轉）
+        if (ASSETS.basePlate) {
+          ctx.drawImage(ASSETS.basePlate, tx - S, ty - S, S*2, S*2);
+        }
+        if (tower.def.rotating) {
+          // 旋轉型砲塔
+          ctx.save();
+          ctx.translate(tx, ty);
+          ctx.rotate(tower.angle);
+          ctx.drawImage(lvlSprite, -S, -S, S*2, S*2);
+          ctx.restore();
+        } else {
+          // 非旋轉型（DCA、聲波）
+          ctx.drawImage(lvlSprite, tx - S, ty - S, S*2, S*2);
+        }
       }
     } else {
       ctx.fillStyle = tower.def.color;
@@ -2801,6 +2810,11 @@ function renderWeaponPreview() {
     const cx = bx + 42, cy = by + 50;
 
     if (icon) {
+      // 先畫底盤（固定不旋轉，圍牆除外）
+      if (ASSETS.basePlate && !def.isWall) {
+        ctx.drawImage(ASSETS.basePlate, cx - imgSize/2, cy - imgSize/2, imgSize, imgSize);
+      }
+
       ctx.save();
       ctx.translate(cx, cy);
 
