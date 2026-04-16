@@ -183,7 +183,7 @@ const TowerDefs = [
       { cost: 180, hitRate: 10, range: 90,  damage: 110, splash: 0, slow: 0, bash: 0, targets: 6 },
       { cost: 400, hitRate: 6,  range: 120, damage: 300, splash: 0, slow: 0, bash: 0, targets: 8, upgName: 'SAM' },
     ],
-    rotating: false, hitsFlying: true, hitsGround: false, hitsImmune: false,
+    rotating: true, hitsFlying: true, hitsGround: false, hitsImmune: false,
     shotSound: 'zip', shotColor: '#ffff00'
   },
   // 5: Freeze (冷凍塔)
@@ -822,6 +822,23 @@ class Tower {
     if (fired > 0) {
       this.shotTick = this.stats.hitRate;
       playSound(this.def.shotSound);
+      // 砲口閃光
+      const ang = this.angle;
+      const fx = this.x + Math.cos(ang) * 10;
+      const fy = this.y + Math.sin(ang) * 10;
+      g.particles.push({ x: fx, y: fy, life: 5, maxLife: 5, color: '#FFE680', type: 'flash', size: 7 });
+      // 砲口火花
+      for (let i = 0; i < 3; i++) {
+        const sa = ang + (Math.random() - 0.5) * 0.6;
+        g.particles.push({
+          x: fx, y: fy,
+          vx: Math.cos(sa) * (1.5 + Math.random() * 1.5),
+          vy: Math.sin(sa) * (1.5 + Math.random() * 1.5),
+          life: 8, maxLife: 8, color: '#FFB030', type: 'spark', size: 2
+        });
+      }
+      // 煙霧
+      g.particles.push({ x: fx, y: fy, life: 14, maxLife: 14, color: '#555', type: 'smoke', size: 4 });
     }
   }
 
@@ -857,7 +874,22 @@ class Tower {
 
     this.shotTick = this.stats.hitRate;
     playSound(this.def.shotSound);
-    g.particles.push({ x: this.x, y: this.y, radius: splashR, life: 8, maxLife: 8, color: this.def.shotColor, type: 'ring' });
+    // 爆炸衝擊波（雙圈）
+    g.particles.push({ x: this.x, y: this.y, radius: splashR, life: 14, maxLife: 14, color: this.def.shotColor, type: 'ring' });
+    g.particles.push({ x: this.x, y: this.y, radius: splashR * 0.6, life: 8, maxLife: 8, color: '#FFFFFF', type: 'ring' });
+    // 放射狀火花
+    const sparks = this.def.isMine ? 18 : 10;
+    for (let i = 0; i < sparks; i++) {
+      const sa = (Math.PI * 2 * i) / sparks + Math.random() * 0.3;
+      const sv = 2 + Math.random() * 2;
+      g.particles.push({
+        x: this.x, y: this.y,
+        vx: Math.cos(sa) * sv, vy: Math.sin(sa) * sv,
+        life: 14, maxLife: 14, color: this.def.shotColor, type: 'spark', size: 2
+      });
+    }
+    // 中心閃光
+    g.particles.push({ x: this.x, y: this.y, life: 6, maxLife: 6, color: '#FFFFFF', type: 'flash', size: 12 });
 
     if (this.def.isMine) {
       g.removeTower(this);
@@ -900,6 +932,12 @@ class Shot {
     }
     this.x += (dx / dist) * this.speed;
     this.y += (dy / dist) * this.speed;
+    // 彈道拖尾
+    g.particles.push({
+      x: this.x + (Math.random() - 0.5) * 2,
+      y: this.y + (Math.random() - 0.5) * 2,
+      life: 5, maxLife: 5, color: this.color, type: 'trail', size: 2
+    });
   }
 
   hit(g) {
@@ -928,11 +966,32 @@ class Shot {
       }
     }
 
-    for (let i = 0; i < 4; i++) {
+    // 命中閃光
+    g.particles.push({
+      x: this.target.x, y: this.target.y,
+      life: 5, maxLife: 5, color: '#FFFFFF', type: 'flash', size: 6
+    });
+    // 放射狀火花
+    const sparkCount = this.splash > 0 ? 12 : 6;
+    for (let i = 0; i < sparkCount; i++) {
+      const sa = (Math.PI * 2 * i) / sparkCount + Math.random() * 0.4;
+      const sv = 1 + Math.random() * 2.5;
       g.particles.push({
         x: this.target.x, y: this.target.y,
-        vx: (Math.random() - 0.5) * 4, vy: (Math.random() - 0.5) * 4,
-        life: 10, maxLife: 10, color: this.color, type: 'spark', size: 2
+        vx: Math.cos(sa) * sv, vy: Math.sin(sa) * sv,
+        life: 12, maxLife: 12, color: this.color, type: 'spark', size: 2
+      });
+    }
+    // 若是範圍攻擊，額外產生衝擊波
+    if (this.splash > 0) {
+      g.particles.push({
+        x: this.target.x, y: this.target.y, radius: this.splash,
+        life: 12, maxLife: 12, color: this.color, type: 'ring'
+      });
+      // 煙霧
+      g.particles.push({
+        x: this.target.x, y: this.target.y,
+        life: 18, maxLife: 18, color: '#666', type: 'smoke', size: 5
       });
     }
   }
@@ -1371,6 +1430,11 @@ class Game {
       p.life--;
       if (p.vx !== undefined) { p.x += p.vx; p.y += p.vy; }
       if (p.vy !== undefined && p.type === 'spark') p.vy += 0.15;
+      // 煙霧上升 + 減速
+      if (p.type === 'smoke') {
+        p.y -= 0.4;
+        if (p.vx !== undefined) { p.vx *= 0.9; p.vy *= 0.9; }
+      }
     }
     this.particles = this.particles.filter(p => p.life > 0);
 
@@ -1526,21 +1590,24 @@ function render() {
 
       if (cell.cost === 0) {
         if (cell.isObstacle) {
-          // 預設障礙物 — 深色金屬質感，比地板明顯更暗
-          const shade = ((r + c) % 2 === 0) ? '#10101e' : '#0e0e1a';
-          ctx.fillStyle = shade;
+          // 障礙物 — 凸起金屬方塊
+          // 底色（比地板亮，讓障礙物凸顯）
+          const base = ((r + c) % 2 === 0) ? '#3a4256' : '#343c50';
+          ctx.fillStyle = base;
           ctx.fillRect(cx, cy, CELL_SIZE, CELL_SIZE);
-          // 金屬邊框
-          ctx.strokeStyle = '#1a1a30';
-          ctx.lineWidth = 0.5;
-          ctx.strokeRect(cx + 0.5, cy + 0.5, CELL_SIZE - 1, CELL_SIZE - 1);
-          // 每隔幾格加一個鉚釘點
-          if (r % 3 === 0 && c % 3 === 0) {
-            ctx.beginPath();
-            ctx.arc(cx + CELL_SIZE / 2, cy + CELL_SIZE / 2, 2, 0, Math.PI * 2);
-            ctx.fillStyle = '#2a2a44';
-            ctx.fill();
-          }
+          // 上 + 左 高光邊（凸起效果）
+          ctx.fillStyle = 'rgba(160,180,210,0.45)';
+          ctx.fillRect(cx, cy, CELL_SIZE, 2);
+          ctx.fillRect(cx, cy, 2, CELL_SIZE);
+          // 下 + 右 陰影邊
+          ctx.fillStyle = 'rgba(0,0,0,0.55)';
+          ctx.fillRect(cx, cy + CELL_SIZE - 2, CELL_SIZE, 2);
+          ctx.fillRect(cx + CELL_SIZE - 2, cy, 2, CELL_SIZE);
+          // 中央鉚釘（每格都有，小一點）
+          ctx.fillStyle = '#1a1e2c';
+          ctx.fillRect(cx + CELL_SIZE / 2 - 1, cy + CELL_SIZE / 2 - 1, 2, 2);
+          ctx.fillStyle = '#6a7488';
+          ctx.fillRect(cx + CELL_SIZE / 2 - 1, cy + CELL_SIZE / 2 - 1, 1, 1);
         } else if (cell.hasTower) {
           // 塔佔的格子 — 畫普通地板（塔圖會蓋在上面）
           const shade = ((r + c) % 2 === 0) ? '#0e1018' : '#0d0f16';
@@ -1614,53 +1681,20 @@ function render() {
     }
   }
 
-  // Mission 4 圓形障礙物裝飾 — 金屬圓盤效果
-  if (g.mission === 4) {
-    const circles = [
-      { cx: 6, cy: 6, r: 2.5 }, { cx: 20, cy: 6, r: 2.5 },
-      { cx: 6, cy: 15, r: 2.5 }, { cx: 20, cy: 15, r: 2.5 },
-    ];
-    for (const circ of circles) {
-      const px = circ.cx * CELL_SIZE + GRID_X + CELL_SIZE / 2;
-      const py = circ.cy * CELL_SIZE + GRID_Y + CELL_SIZE / 2;
-      const pr = circ.r * CELL_SIZE;
-      // 外圈金屬環
-      ctx.beginPath();
-      ctx.arc(px, py, pr + 2, 0, Math.PI * 2);
-      ctx.fillStyle = '#3a3a50';
-      ctx.fill();
-      // 內圈暗色
-      ctx.beginPath();
-      ctx.arc(px, py, pr - 2, 0, Math.PI * 2);
-      ctx.fillStyle = '#14142a';
-      ctx.fill();
-      // 高光環
-      ctx.beginPath();
-      ctx.arc(px, py, pr, 0, Math.PI * 2);
-      ctx.strokeStyle = '#555580';
-      ctx.lineWidth = 2;
-      ctx.stroke();
-      // 中心點
-      ctx.beginPath();
-      ctx.arc(px, py, 3, 0, Math.PI * 2);
-      ctx.fillStyle = '#444468';
-      ctx.fill();
-    }
-  }
-
-  // 入口/出口 — 警戒斜紋（黃黑為入口，橘黑為出口）
+  // 入口/出口 — 暗色警戒斜紋
   function drawHazardStripes(cell, color) {
     const sx = cell.x, sy = cell.y, sz = CELL_SIZE;
-    // 底色：深黑
-    ctx.fillStyle = '#0a0a0a';
+    // 底色：深黑但透出地板
+    ctx.fillStyle = 'rgba(10,10,10,0.6)';
     ctx.fillRect(sx, sy, sz, sz);
-    // 斜紋：使用 clip 裁切在格子內
+    // 斜紋：低透明度
     ctx.save();
     ctx.beginPath();
     ctx.rect(sx, sy, sz, sz);
     ctx.clip();
     ctx.strokeStyle = color;
-    ctx.lineWidth = 3;
+    ctx.globalAlpha = 0.45;
+    ctx.lineWidth = 2;
     ctx.lineCap = 'butt';
     for (let i = -sz; i < sz * 2; i += 6) {
       ctx.beginPath();
@@ -1668,42 +1702,15 @@ function render() {
       ctx.lineTo(sx + i + sz, sy + sz);
       ctx.stroke();
     }
-    ctx.restore();
-    // 外框
-    ctx.strokeStyle = '#000';
-    ctx.lineWidth = 1;
-    ctx.strokeRect(sx + 0.5, sy + 0.5, sz - 1, sz - 1);
-  }
-  // 入口：黃色警戒斜紋
-  for (const sc of g.startCellsLR) drawHazardStripes(sc, '#FFD400');
-  if (g.dualPath) for (const sc of g.startCellsUD) drawHazardStripes(sc, '#FFD400');
-  // 出口：橘紅警戒斜紋
-  for (const ec of g.endCellsLR) drawHazardStripes(ec, '#FF3D00');
-  if (g.dualPath) for (const ec of g.endCellsUD) drawHazardStripes(ec, '#FF3D00');
-
-  // 入口/出口旁的警戒燈（閃爍）
-  const pulse = 0.5 + 0.5 * Math.sin(Date.now() / 250);
-  function drawWarnLight(cx, cy, color) {
-    ctx.fillStyle = color;
-    ctx.globalAlpha = 0.4 + 0.6 * pulse;
-    ctx.beginPath();
-    ctx.arc(cx, cy, 2.5, 0, Math.PI * 2);
-    ctx.fill();
     ctx.globalAlpha = 1;
+    ctx.restore();
   }
-  // LR 入口兩側加警戒燈（上下各一個）
-  if (g.startCellsLR && g.startCellsLR.length > 0) {
-    const topSc = g.startCellsLR[0];
-    const botSc = g.startCellsLR[g.startCellsLR.length - 1];
-    drawWarnLight(topSc.x + 2, topSc.y - 3, '#FFD400');
-    drawWarnLight(botSc.x + 2, botSc.y + CELL_SIZE + 3, '#FFD400');
-  }
-  if (g.endCellsLR && g.endCellsLR.length > 0) {
-    const topEc = g.endCellsLR[0];
-    const botEc = g.endCellsLR[g.endCellsLR.length - 1];
-    drawWarnLight(topEc.x + CELL_SIZE - 2, topEc.y - 3, '#FF3D00');
-    drawWarnLight(botEc.x + CELL_SIZE - 2, botEc.y + CELL_SIZE + 3, '#FF3D00');
-  }
+  // 入口：暗黃警戒斜紋
+  for (const sc of g.startCellsLR) drawHazardStripes(sc, '#8A7000');
+  if (g.dualPath) for (const sc of g.startCellsUD) drawHazardStripes(sc, '#8A7000');
+  // 出口：暗橘紅警戒斜紋
+  for (const ec of g.endCellsLR) drawHazardStripes(ec, '#8A2000');
+  if (g.dualPath) for (const ec of g.endCellsUD) drawHazardStripes(ec, '#8A2000');
 
   // Placement preview（滑鼠 hover 或拖曳中都顯示）
   const previewType = g.dragging ? g.dragTowerType : g.selectedTowerType;
@@ -1945,9 +1952,31 @@ function render() {
       ctx.fillStyle = p.color;
       ctx.fillRect(p.x - p.size / 2, p.y - p.size / 2, p.size, p.size);
     } else if (p.type === 'ring') {
-      ctx.globalAlpha = alpha * 0.4;
+      // 衝擊波環 — 從中心擴散出去
+      ctx.globalAlpha = alpha * 0.55;
       ctx.strokeStyle = p.color; ctx.lineWidth = 2;
       ctx.beginPath(); ctx.arc(p.x, p.y, p.radius * (1 - alpha), 0, Math.PI * 2); ctx.stroke();
+    } else if (p.type === 'flash') {
+      // 亮白閃光
+      const r = p.size * (0.6 + (1 - alpha) * 0.8);
+      ctx.globalAlpha = alpha;
+      const grad = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, r);
+      grad.addColorStop(0, p.color);
+      grad.addColorStop(0.4, p.color + 'CC');
+      grad.addColorStop(1, p.color + '00');
+      ctx.fillStyle = grad;
+      ctx.beginPath(); ctx.arc(p.x, p.y, r, 0, Math.PI * 2); ctx.fill();
+    } else if (p.type === 'trail') {
+      // 彈道拖尾 — 漸變亮點
+      ctx.globalAlpha = alpha * 0.7;
+      ctx.fillStyle = p.color;
+      ctx.beginPath(); ctx.arc(p.x, p.y, p.size * alpha, 0, Math.PI * 2); ctx.fill();
+    } else if (p.type === 'smoke') {
+      // 煙霧 — 擴大 + 淡出
+      const r = p.size * (1 + (1 - alpha) * 2.5);
+      ctx.globalAlpha = alpha * 0.35;
+      ctx.fillStyle = p.color;
+      ctx.beginPath(); ctx.arc(p.x, p.y, r, 0, Math.PI * 2); ctx.fill();
     } else if (p.type === 'text') {
       ctx.globalAlpha = alpha;
       ctx.fillStyle = p.color;
@@ -2693,18 +2722,26 @@ let previewMode = false;
 let previewTick = 0;
 
 const PREVIEW_ENEMIES = [
-  { name: '星形蟲',   type: 'normal',  spriteIdx: 6,  hp: 20,   speed: 1,   desc: '普通', color: '#999' },
-  { name: '黃鉤爪',   type: 'tank',    spriteIdx: 1,  hp: 27,   speed: 1,   desc: '重甲 (HP↑)', color: '#dd0' },
-  { name: '褐小蟲',   type: 'swarm',   spriteIdx: 5,  hp: 30,   speed: 1,   desc: '快速群 (delay↓)', color: '#59f' },
-  { name: '綠圓盤',   type: 'immune',  spriteIdx: 3,  hp: 33,   speed: 1,   desc: '免疫減速', color: '#c5c' },
-  { name: '紅鉤爪',   type: 'fast',    spriteIdx: 2,  hp: 36,   speed: 1.5, desc: '快速 (speed↑)', color: '#c44' },
-  { name: '褐甲蟲',   type: 'spawner', spriteIdx: 4,  hp: 60,   speed: 1,   desc: '分裂者 (×2~3)', color: '#4a4' },
-  { name: '黑翅蟲',   type: 'flying',  spriteIdx: 0,  hp: 40,   speed: 1,   desc: '飛行 (無視地形)', color: '#8cf' },
-  { name: '黃綠大蛛', type: 'boss',    spriteIdx: 9,  hp: 240,  speed: 0.8, desc: 'Boss (HP×12)', color: '#f80' },
-  { name: '紅眼蛛',   type: 'special', spriteIdx: 8,  hp: 50,   speed: 1.5, desc: '快速+免疫', color: '#f66' },
-  { name: '黑紅蛛',   type: 'late',    spriteIdx: 11, hp: 80,   speed: 1,   desc: '後期普通替換', color: '#a66' },
-  { name: '小灰蟲',   type: 'child',   spriteIdx: 10, hp: 15,   speed: 1,   desc: '分裂子體', color: '#888' },
+  { name: '星形蟲',   type: 'normal',  spriteIdx: 6,  hp: 20,   speed: 1,   desc: '一般敵人，無特殊能力', color: '#999', tags: ['地面'] },
+  { name: '黃鉤爪',   type: 'tank',    spriteIdx: 1,  hp: 27,   speed: 1,   desc: 'HP 較高，較耐打', color: '#dd0', tags: ['地面','重甲'] },
+  { name: '褐小蟲',   type: 'swarm',   spriteIdx: 5,  hp: 30,   speed: 1,   desc: '大量湧入、間隔短', color: '#59f', tags: ['地面','群體'] },
+  { name: '綠圓盤',   type: 'immune',  spriteIdx: 3,  hp: 33,   speed: 1,   desc: '冷凍塔/聲波塔無效', color: '#c5c', tags: ['地面','免疫'] },
+  { name: '紅鉤爪',   type: 'fast',    spriteIdx: 2,  hp: 36,   speed: 1.5, desc: '移動速度比常態快', color: '#c44', tags: ['地面','快速'] },
+  { name: '褐甲蟲',   type: 'spawner', spriteIdx: 4,  hp: 60,   speed: 1,   desc: '死亡後分裂出 2~3 隻小灰蟲', color: '#4a4', tags: ['地面','分裂'] },
+  { name: '黑翅蟲',   type: 'flying',  spriteIdx: 0,  hp: 40,   speed: 1,   desc: '飛行，無視牆壁地形', color: '#8cf', tags: ['飛行'] },
+  { name: '黃綠大蛛', type: 'boss',    spriteIdx: 9,  hp: 240,  speed: 0.8, desc: '每 8 波出現的 Boss，HP 極高', color: '#f80', tags: ['地面','Boss'] },
+  { name: '紅眼蛛',   type: 'special', spriteIdx: 8,  hp: 50,   speed: 1.5, desc: '速度快且無法被減速', color: '#f66', tags: ['地面','快速','免疫'] },
+  { name: '黑紅蛛',   type: 'late',    spriteIdx: 11, hp: 80,   speed: 1,   desc: '中後期取代星形蟲的強化版', color: '#a66', tags: ['地面','重甲'] },
+  { name: '小灰蟲',   type: 'child',   spriteIdx: 10, hp: 15,   speed: 1,   desc: '褐甲蟲死亡時產生', color: '#888', tags: ['地面','子體'] },
 ];
+
+// 屬性標籤顏色 — 統一 Aurebesh Terminal 三色配置
+// cyan: 基本屬性 / blue: 中性特徵 / orange: 威脅屬性
+const TAG_COLORS = {
+  '地面': '#00E5FF', '飛行': '#00E5FF',
+  '群體': '#2979FF', '子體': '#2979FF', '重甲': '#2979FF', '分裂': '#2979FF',
+  '免疫': '#FF3D00', '快速': '#FF3D00', 'Boss': '#FF3D00',
+};
 
 document.getElementById('previewBtn').addEventListener('click', () => {
   previewMode = true;
@@ -2730,8 +2767,8 @@ function renderPreview() {
 
   const cols = 3;
   const cellW = Math.floor((CANVAS_W - 20) / cols);
-  const cellH = 110;
-  const startY = 60;
+  const cellH = 96;
+  const startY = 52;
 
   for (let i = 0; i < PREVIEW_ENEMIES.length; i++) {
     const e = PREVIEW_ENEMIES[i];
@@ -2755,46 +2792,62 @@ function renderPreview() {
 
       const srcX = sp.x, srcY = frame.y, srcW = sp.w, srcH = frame.h;
       const maxDim = Math.max(srcW, srcH);
-      const scale = 40 / maxDim;
+      const scale = 36 / maxDim;
       const dw = srcW * scale, dh = srcH * scale;
 
-      const cx = bx + 36, cy = by + 42;
+      const cx = bx + 32, cy = by + 40;
 
-      // 旋轉動畫：Boss 慢轉，其他固定朝右
       ctx.save();
       ctx.translate(cx, cy);
       if (e.type === 'boss') {
         ctx.rotate(previewTick * 0.02 + Math.PI);
       } else {
-        ctx.rotate(Math.PI); // 面朝右
+        ctx.rotate(Math.PI);
       }
       ctx.drawImage(sheet, srcX, srcY, srcW, srcH, -dw/2, -dh/2, dw, dh);
       ctx.restore();
     }
 
     // 文字資訊
-    const tx = bx + 72;
+    const tx = bx + 66;
     ctx.textAlign = 'left';
 
-    ctx.fillStyle = e.color; ctx.font = "bold 13px 'Space Grotesk', sans-serif";
-    ctx.fillText(e.name, tx, by + 18);
+    ctx.fillStyle = e.color; ctx.font = "bold 12px 'Space Grotesk', sans-serif";
+    ctx.fillText(e.name, tx, by + 14);
 
-    ctx.fillStyle = '#7A8A9A'; ctx.font = "10px 'Inter', sans-serif";
-    ctx.fillText(e.desc, tx, by + 33);
+    ctx.fillStyle = '#7A8A9A'; ctx.font = "9px 'Inter', sans-serif";
+    ctx.fillText(e.desc, tx, by + 27);
 
-    ctx.fillStyle = '#00E5FF';
-    ctx.fillText('HP: ' + e.hp, tx, by + 50);
+    ctx.fillStyle = '#00E5FF'; ctx.font = "9px 'Inter', sans-serif";
+    ctx.fillText('HP: ' + e.hp, tx, by + 41);
 
     ctx.fillStyle = e.speed > 1 ? '#FF3D00' : '#E0E6ED';
-    ctx.fillText('速度: ' + e.speed, tx + 60, by + 50);
+    ctx.fillText('速度: ' + e.speed, tx + 50, by + 41);
 
     // HP 條
-    const barW = cellW - 82, barH = 6;
-    const barX = tx, barY = by + 56;
+    const barW = cellW - 76, barH = 4;
+    const barX = tx, barY = by + 45;
     ctx.fillStyle = '#111820'; ctx.fillRect(barX, barY, barW, barH);
     const hpRatio = Math.min(e.hp / 240, 1);
     ctx.fillStyle = hpRatio > 0.5 ? '#00E5FF' : hpRatio > 0.25 ? '#2979FF' : '#FF3D00';
     ctx.fillRect(barX, barY, barW * hpRatio, barH);
+
+    // 屬性標籤
+    if (e.tags) {
+      let tagX = tx;
+      ctx.font = "8px 'Inter', sans-serif";
+      for (const tagText of e.tags) {
+        const color = TAG_COLORS[tagText] || '#7A8A9A';
+        const tw = ctx.measureText(tagText).width + 6;
+        ctx.fillStyle = color + '33';
+        ctx.fillRect(tagX, by + 54, tw, 11);
+        ctx.strokeStyle = color; ctx.lineWidth = 0.5;
+        ctx.strokeRect(tagX + 0.5, by + 54.5, tw - 1, 10);
+        ctx.fillStyle = color;
+        ctx.fillText(tagText, tagX + 3, by + 62);
+        tagX += tw + 3;
+      }
+    }
 
     // 循環出現波次
     ctx.fillStyle = '#3A4A5A'; ctx.font = "9px 'Inter', sans-serif";
@@ -2806,9 +2859,36 @@ function renderPreview() {
     ctx.fillText(waveLabels[e.type] || '', tx, by + 78);
   }
 
-  // 底部說明
-  ctx.fillStyle = '#3A4A5A'; ctx.font = "10px 'Inter', sans-serif"; ctx.textAlign = 'center';
-  ctx.fillText('HP 為第 1 輪基礎值，每 7 波 ×2.2 成長', CANVAS_W / 2, CANVAS_H - 10);
+  // 底部圖例說明
+  const legendY = startY + Math.ceil(PREVIEW_ENEMIES.length / cols) * cellH + 4;
+  ctx.textAlign = 'left';
+  ctx.font = "9px 'Inter', sans-serif";
+  const legendItems = [
+    ['地面', '地面敵人'], ['飛行', '僅 SAM/DCA 可攻擊'],
+    ['免疫', '不受減速/擊退'], ['重甲', 'HP 特別高'],
+    ['快速', '移動速度較快'], ['分裂', '死亡時生成子體'],
+  ];
+  let lx = 12, ly = legendY;
+  for (const [tag, desc] of legendItems) {
+    const color = TAG_COLORS[tag] || '#7A8A9A';
+    const tw = ctx.measureText(tag).width + 6;
+    // 標籤
+    ctx.fillStyle = color + '33'; ctx.fillRect(lx, ly, tw, 11);
+    ctx.strokeStyle = color; ctx.lineWidth = 0.5;
+    ctx.strokeRect(lx + 0.5, ly + 0.5, tw - 1, 10);
+    ctx.fillStyle = color; ctx.fillText(tag, lx + 3, ly + 8);
+    // 說明
+    ctx.fillStyle = '#7A8A9A';
+    const descW = ctx.measureText(desc).width;
+    ctx.fillText(desc, lx + tw + 3, ly + 8);
+    lx += tw + descW + 14;
+    // 換行
+    if (lx > CANVAS_W - 80) { lx = 12; ly += 14; }
+  }
+
+  // 底部成長提示
+  ctx.fillStyle = '#3A4A5A'; ctx.font = "9px 'Inter', sans-serif"; ctx.textAlign = 'center';
+  ctx.fillText('HP 為第 1 輪基礎值，每 7 波 ×2.2 成長', CANVAS_W / 2, CANVAS_H - 4);
 }
 
 function getEnemySprites() {
@@ -2838,7 +2918,7 @@ const PREVIEW_WEAPONS = [
   { type: 1, name: '火神機炮 Vulcan',   color: '#ff4444', desc: '高速單體·可攻空地',    rotating: true },
   { type: 2, name: '對空飛彈 SAM',      color: '#44ff44', desc: '範圍對空·無法攻地',    rotating: true },
   { type: 3, name: '等離子塔 Plasma',   color: '#4488ff', desc: '極速射擊·全能攻擊',    rotating: true },
-  { type: 4, name: '防空砲 DCA',        color: '#ffff44', desc: '多目標對空·不可轉向',  rotating: false },
+  { type: 4, name: '防空砲 DCA',        color: '#ffff44', desc: '多目標對空·密集火力',  rotating: true },
   { type: 5, name: '冷凍塔 Freeze',     color: '#00ffff', desc: '範圍減速·僅攻地面',    rotating: true },
   { type: 6, name: '聲波塔 Sonic',      color: '#ff44ff', desc: '範圍擊退·僅攻地面',    rotating: false },
   { type: 7, name: '圍牆 Wall',         color: '#888888', desc: '阻擋路線·無攻擊',      rotating: false },
@@ -2985,14 +3065,14 @@ function renderWeaponPreview() {
       ctx.fillStyle = '#7A8A9A';
       ctx.fillText('目標: ' + lv1.targets, tx + 120, by + 63);
 
-      // 攻擊屬性標籤
+      // 攻擊屬性標籤 — 統一三色：cyan=目標 / blue=效果 / orange=破免疫
       const tags = [];
-      if (def.hitsGround) tags.push({ text: '地面', color: '#0a0' });
-      if (def.hitsFlying) tags.push({ text: '飛行', color: '#08f' });
-      if (def.hitsImmune) tags.push({ text: '免疫', color: '#c5c' });
-      if (lv1.splash > 0) tags.push({ text: '範圍', color: '#fa0' });
-      if (lv1.slow > 0) tags.push({ text: '減速', color: '#00E5FF' });
-      if (lv1.bash > 0) tags.push({ text: '擊退', color: '#f0f' });
+      if (def.hitsGround) tags.push({ text: '地面', color: '#00E5FF' });
+      if (def.hitsFlying) tags.push({ text: '飛行', color: '#00E5FF' });
+      if (def.hitsImmune) tags.push({ text: '免疫', color: '#FF3D00' });
+      if (lv1.splash > 0) tags.push({ text: '範圍', color: '#2979FF' });
+      if (lv1.slow > 0) tags.push({ text: '減速', color: '#2979FF' });
+      if (lv1.bash > 0) tags.push({ text: '擊退', color: '#2979FF' });
 
       let tagX = tx;
       ctx.font = "9px 'Inter', sans-serif";
