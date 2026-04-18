@@ -148,6 +148,22 @@ async function init(){
     buildMenuScreen();buildLobbyScreen();buildGameScreen();buildResultOverlay();buildPauseOverlay();buildBuyInOverlay();
     showScreen('menu');
     app.ticker.add(dt=>updateTweens(dt));
+    // 資源全部就緒 → 淡出 loading 首屏
+    hideLoader();
+}
+
+// 更新 loading 進度文字
+function setLoadProgress(done,total){
+    const el=document.getElementById('loader-prog');
+    if(!el)return;
+    const pct=total>0?Math.floor(done/total*100):0;
+    el.textContent=`LOADING  ${pct}%`;
+}
+function hideLoader(){
+    const el=document.getElementById('loader');
+    if(!el)return;
+    el.classList.add('hide');
+    setTimeout(()=>el.remove(),600);
 }
 
 async function loadAssets(){
@@ -177,7 +193,12 @@ async function loadAssets(){
     };
     for(const v of [1,4,10,25,50,100,500,1000,5000,10000])p[`chip_${v}`]=`assets/Chips/png/${v}.png`;
     for(const s of SUITS)for(const r of RANKS)p[`card_${s}_${r}`]=`assets/Cards/png/${s}_${r}.png`;
-    for(const[k,v]of Object.entries(p)){try{tex[k]=await PIXI.Assets.load(v);}catch(e){}}
+    const entries=Object.entries(p);
+    for(let i=0;i<entries.length;i++){
+        const[k,v]=entries[i];
+        try{tex[k]=await PIXI.Assets.load(v);}catch(e){}
+        setLoadProgress(i+1,entries.length);
+    }
 }
 
 // Tween
