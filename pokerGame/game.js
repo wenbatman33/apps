@@ -167,38 +167,10 @@ function hideLoader(){
 }
 
 async function loadAssets(){
-    const p={
-        table_royale:'assets/table_royale.jpg',   // 主要牌桌底圖（設計系統）
-        bg_violet:'assets/Interface_game/png/background_violet.png',
-        table:'assets/Interface_game/png/table-green.png',
-        dealer_menu:'assets/Croupier/png/woman_menu.png',
-        dealer_game:'assets/Croupier/png/woman_ingame.png',
-        avatar_frame:'assets/Interface_game/png/avatar_player.png',
-        default_avatar:'assets/Interface_game/png/default_avatar.png',
-        empty_card:'assets/Interface_game/png/empty_card_field.png',
-        btn_play_menu:'assets/Menu/png/button_play.png',
-        btn_fold:'assets/Interface_game/png/button_fold.png',
-        btn_check:'assets/Interface_game/png/button_check.png',
-        btn_call:'assets/Interface_game/png/button_call.png',
-        btn_raise:'assets/Interface_game/png/button_raise.png',
-        btn_ok:'assets/Win/png/button_ok.png',
-        btn_resume:'assets/Pause/png/button_resume.png',
-        btn_lobby_pause:'assets/Pause/png/button_lobby.png',
-        icon_coin:'assets/Menu/png/icon_coin.png',
-        icon_chip:'assets/Menu/png/icon_chip.png',
-        win_title:'assets/Win/png/win.png',
-        lose_title:'assets/Lose/png/you_lose.png',
-        card_back:'assets/Cards/png/shirt_blue.png',
-        card_back_red:'assets/Cards/png/shirt_red.png',
-    };
-    for(const v of [1,4,10,25,50,100,500,1000,5000,10000])p[`chip_${v}`]=`assets/Chips/png/${v}.png`;
-    for(const s of SUITS)for(const r of RANKS)p[`card_${s}_${r}`]=`assets/Cards/png/${s}_${r}.png`;
-    const entries=Object.entries(p);
-    for(let i=0;i<entries.length;i++){
-        const[k,v]=entries[i];
-        try{tex[k]=await PIXI.Assets.load(v);}catch(e){}
-        setLoadProgress(i+1,entries.length);
-    }
+    // 遊戲全部使用 PIXI.Graphics 向量繪製，唯一需要載入的圖片是牌桌底圖
+    setLoadProgress(0,1);
+    try{ tex.table_royale = await PIXI.Assets.load('assets/table_royale.jpg'); }catch(e){}
+    setLoadProgress(1,1);
 }
 
 // Tween
