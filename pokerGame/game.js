@@ -1067,28 +1067,51 @@ function loadImg(url){
         img.src=url;
     });
 }
-async function applyPhotoAvatars(){
-    const ps=gameState.players;
-    for(let i=0;i<ps.length;i++){
-        const p=ps[i];if(!p.photoUrl)continue;
-        try{
-            const img=await loadImg(p.photoUrl);
-            const s=seatUI[i];if(!s||!s.avatarC)continue;
-            const t=PIXI.Texture.from(img);
-            // 保留最外圈金環（child 0），移除內部舊頭像
-            while(s.avatarC.children.length>1)s.avatarC.removeChildAt(1);
-            const sp=new PIXI.Sprite(t);sp.anchor.set(0.5);
-            const r=s.avR,scale=(r*2)/Math.max(img.naturalWidth,img.naturalHeight);
-            sp.scale.set(scale);
-            const mask=new PIXI.Graphics();mask.beginFill(0xFFFFFF);mask.drawCircle(0,0,r-1);mask.endFill();
-            s.avatarC.addChild(mask);sp.mask=mask;s.avatarC.addChild(sp);
-        }catch(e){console.warn('avatar load failed',i,e);}
-    }
+async function loadAvatarForSeat(i){
+    const p=gameState.players?.[i];if(!p||!p.photoUrl)return;
+    try{
+        const img=await loadImg(p.photoUrl);
+        const s=seatUI[i];if(!s||!s.avatarC)return;
+        const t=PIXI.Texture.from(img);
+        while(s.avatarC.children.length>1)s.avatarC.removeChildAt(1);
+        const sp=new PIXI.Sprite(t);sp.anchor.set(0.5);
+        const r=s.avR,scale=(r*2)/Math.max(img.naturalWidth,img.naturalHeight);
+        sp.scale.set(scale);
+        const mask=new PIXI.Graphics();mask.beginFill(0xFFFFFF);mask.drawCircle(0,0,r-1);mask.endFill();
+        s.avatarC.addChild(mask);sp.mask=mask;s.avatarC.addChild(sp);
+    }catch(e){console.warn('avatar load failed',i,e);}
+}
+async function applyPhotoAvatars(){for(let i=0;i<gameState.players.length;i++)await loadAvatarForSeat(i);}
+
+// AI 重新入場：隨機分配新頭像與名字，以全新身份坐下
+function rejoinAI(i){
+    const gs=gameState,p=gs.players[i];
+    p.chips=gs.startChips||STARTING_CHIPS;
+    p.leftTable=false;p.isActive=true;p.folded=false;p.allIn=false;p.bet=0;p.totalBet=0;p.hand=[];
+    // 隨機分配未被其他人使用的頭像
+    const usedPhotos=new Set(gs.players.filter((q,idx)=>idx!==i&&!q.leftTable).map(q=>q.photoUrl));
+    const availPhotos=LOCAL_AVATARS.filter(u=>!usedPhotos.has(u));
+    if(availPhotos.length>0)p.photoUrl=availPhotos[0|Math.random()*availPhotos.length];
+    // 隨機分配未重複的名字
+    const usedNames=new Set(gs.players.filter((q,idx)=>idx!==i&&!q.leftTable).map(q=>q.name));
+    const availNames=AI_NAMES.filter(n=>!usedNames.has(n));
+    if(availNames.length>0)p.name=availNames[0|Math.random()*availNames.length];
+    // 重新載入頭像
+    loadAvatarForSeat(i);
 }
 function startNewRound(){const gs=gameState;gs.dealing=true;gs.deck=shuffleDeck(createDeck());gs.communityCards=[];gs.pot=0;gs.currentBet=0;gs.minRaise=BIG_BLIND;gs.phase='preflop';gs.actedThisRound=new Set();gs.lastRaiserIndex=-1;gs.isRunning=true;gs.actionLock=false;gs.handNumber++;gs.preAction=null;if(actionBar?._preBtns)for(const b of actionBar._preBtns){if(b._arm)b._arm.visible=false;if(b._arm2)b._arm2.visible=false;}
-// AI 自動補倉：破產的電腦玩家以起始籌碼復活，避免牌桌逐局減少玩家
+// AI 破產離場 / 隨機重新入場邏輯（「我」不套用）
 const startChips=gs.startChips||STARTING_CHIPS;
-for(let i=1;i<gs.players.length;i++){if(gs.players[i].chips<=0)gs.players[i].chips=startChips;}
+for(let i=1;i<gs.players.length;i++){
+    const p=gs.players[i];
+    if(p.chips<=0&&!p.leftTable){
+        // 剛破產 → 離場
+        p.leftTable=true;p.isActive=false;
+    }else if(p.leftTable){
+        // 已離場的 AI 有機率重新入場（30% 每局）
+        if(Math.random()<0.3)rejoinAI(i);
+    }
+}
 for(const p of gs.players){p.hand=[];p.bet=0;p.totalBet=0;p.folded=false;p.allIn=false;p.isActive=p.chips>0;}
 gs.dealerIndex=nextAP(gs.dealerIndex);clearUI();updateSeats();showDealer();
 if(topBarTexts.hand)topBarTexts.hand.text='第 '+gs.handNumber+' 局';
@@ -1329,7 +1352,19 @@ function clearUI(){
     for(const c of communityUI){if(c.cardSprite){c.container.removeChild(c.cardSprite);c.cardSprite=null;}c.placeholder.visible=true;}
     hideAB();msgC.visible=false;
 }
-function updateSeats(){for(let i=0;i<NUM_PLAYERS;i++){const p=gameState.players[i],s=seatUI[i];s.nameT.text=p.name;s.chipsT.text='$ '+p.chips.toLocaleString();if(!p.isActive)s.container.alpha=0.3;else if(p.folded)s.container.alpha=0.4;}}
+function updateSeats(){
+    for(let i=0;i<NUM_PLAYERS;i++){
+        const p=gameState.players[i],s=seatUI[i];
+        // 離場 AI：整個座位隱藏
+        if(p.leftTable){s.container.visible=false;continue;}
+        s.container.visible=true;
+        s.nameT.text=p.name;
+        s.chipsT.text='$ '+p.chips.toLocaleString();
+        if(!p.isActive)s.container.alpha=0.3;
+        else if(p.folded)s.container.alpha=0.4;
+        else s.container.alpha=1;
+    }
+}
 function updatePot(){potText.text='$ '+gameState.pot.toLocaleString();}
 function updateBets(){
     updatePot();
