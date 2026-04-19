@@ -153,16 +153,66 @@ export function registerGameScene(k) {
       });
     });
 
-    // --- 輸入 ---
-    k.onMousePress(async () => {
+    // --- 輸入：點擊 + 拖曳/滑動 雙模式 ---
+    // 桌面點擊（先選再點相鄰）與手機滑動（按住拖向相鄰格）都支援
+    let dragStart = null;     // { gx, gy, mx, my } 按下起點
+    let dragSwapped = false;  // 本次拖曳已觸發過交換
+    const DRAG_THRESHOLD = CELL * 0.3;
+
+    k.onMousePress(() => {
       unlockAudio();
       if (state !== "idle") return;
       const mp = k.mousePos();
       const gx = Math.floor((mp.x - GRID_OFFSET_X) / CELL);
       const gy = Math.floor((mp.y - GRID_OFFSET_Y) / CELL);
-      if (gx < 0 || gx >= GRID_W || gy < 0 || gy >= GRID_H) return;
+      if (gx < 0 || gx >= GRID_W || gy < 0 || gy >= GRID_H) {
+        dragStart = null;
+        return;
+      }
       clearHintFlash();
-      onCellClick(gx, gy);
+      dragStart = { gx, gy, mx: mp.x, my: mp.y };
+      dragSwapped = false;
+    });
+
+    k.onMouseMove(() => {
+      if (!dragStart || dragSwapped || state !== "idle") return;
+      const mp = k.mousePos();
+      const dx = mp.x - dragStart.mx;
+      const dy = mp.y - dragStart.my;
+      if (Math.abs(dx) < DRAG_THRESHOLD && Math.abs(dy) < DRAG_THRESHOLD) return;
+
+      // 判斷主方向
+      let ddx = 0, ddy = 0;
+      if (Math.abs(dx) > Math.abs(dy)) ddx = dx > 0 ? 1 : -1;
+      else                             ddy = dy > 0 ? 1 : -1;
+
+      const nx = dragStart.gx + ddx;
+      const ny = dragStart.gy + ddy;
+      if (nx < 0 || nx >= GRID_W || ny < 0 || ny >= GRID_H) return;
+
+      // 取消任何既有選取狀態
+      if (selected) {
+        markSelected(selected.x, selected.y, false);
+        selected = null;
+      }
+
+      dragSwapped = true;
+      const a = { x: dragStart.gx, y: dragStart.gy };
+      const b = { x: nx, y: ny };
+      dragStart = null;
+      trySwap(a, b);
+    });
+
+    k.onMouseRelease(() => {
+      if (!dragStart || dragSwapped) {
+        dragStart = null;
+        return;
+      }
+      if (state !== "idle") { dragStart = null; return; }
+      // 沒拖曳：視為點擊（點選/切換）
+      const ds = dragStart;
+      dragStart = null;
+      onCellClick(ds.gx, ds.gy);
     });
 
     k.onKeyPress("escape", () => k.go("menu"));
@@ -281,18 +331,14 @@ export function registerGameScene(k) {
       const g = gems[y][x];
       if (!g) return;
       if (on) {
-        g.scale = 1.1;
-        // 加一個閃爍外框
-        g.selectTween = k.loop(0.5, () => {
-          k.tween(1.1, 1.22, 0.25, v => g.scale = v, k.easings.easeInOutSine);
-          k.wait(0.25, () => k.tween(1.22, 1.1, 0.25, v => g.scale = v, k.easings.easeInOutSine));
+        g._pulseT = 0;
+        g._pulseCb = g.onUpdate(() => {
+          g._pulseT += k.dt();
+          g.scale = 1.1 + Math.sin(g._pulseT * 6) * 0.08;
         });
       } else {
+        if (g._pulseCb) { g._pulseCb.cancel(); g._pulseCb = null; }
         g.scale = 1;
-        if (g.selectTween) {
-          g.selectTween.cancel();
-          g.selectTween = null;
-        }
       }
     }
 
