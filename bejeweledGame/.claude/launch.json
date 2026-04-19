@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "bejeweled",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": ["-m", "http.server", "8765", "--directory", "/Users/batman_work/claude/apps/bejeweledGame"],
+      "port": 8765
+    }
+  ]
+}
