@@ -1,6 +1,7 @@
 // 入口：初始化 Kaboom 並註冊所有場景
 import kaboom from "https://unpkg.com/kaboom@3000.1.17/dist/kaboom.mjs";
 import { CANVAS_W, CANVAS_H } from "./constants.js";
+import { preloadGemSprites } from "./gems.js";
 import { registerMenuScene } from "./scenes/menu.js";
 import { registerGameScene } from "./scenes/game.js";
 import { registerGameOverScene } from "./scenes/gameover.js";
@@ -13,8 +14,8 @@ const k = kaboom({
   root: document.getElementById("game"),
   global: false,
   letterbox: true,
-  stretch: false,
-  crisp: true,
+  stretch: true,   // 依容器縮放，手機才不會被 820x620 硬撐
+  crisp: false,    // 關閉 DPR backing，手機 GPU 負擔大幅降低
 });
 
 registerMenuScene(k);
@@ -22,4 +23,6 @@ registerGameScene(k);
 registerGameOverScene(k);
 registerLeaderboardScene(k);
 
-k.go("menu");
+// 註冊寶石 sprite，等所有 loader 完成才進主選單
+preloadGemSprites(k);
+k.onLoad(() => k.go("menu"));

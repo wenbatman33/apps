@@ -10,7 +10,8 @@ let voiceVolume = 0.95;
 let musicVolume = 0.35;
 
 // 預先建立每個音效 N 份副本，支援重疊播放
-function preload(name, count = 3) {
+// 手機（尤其是 iOS Safari）對同時播放的 HTMLAudio 數量有限制，副本愈多愈容易卡
+function preload(name, count = 2) {
   const arr = [];
   for (let i = 0; i < count; i++) {
     const a = new Audio(BASE + name);
@@ -20,14 +21,16 @@ function preload(name, count = 3) {
   pools.set(name, { arr, idx: 0 });
 }
 
-// 熱門音效預載（需要快速重疊）
+// 熱門音效預載（需要快速重疊，2 份副本已夠）
 const HOT = [
   "select.mp3", "badmove.mp3", "tick.mp3", "gem_shatters.mp3",
   "button_press.mp3", "button_mouseover.mp3", "nextlevel.mp3",
   "rankup.mp3", "gem_hit.mp3", "countdown_warning.mp3",
 ];
-for (let i = 1; i <= 9; i++) HOT.push(`speedmatch${i}.mp3`);
-HOT.forEach(n => preload(n, 3));
+// speedmatch 原本預載 1~9 共 9 個（每個 2 份 = 18 個 Audio），手機太吃
+// 只預載 1、3、5、7、9 共 5 個階段；其餘用到時 lazy load
+[1, 3, 5, 7, 9].forEach(i => HOT.push(`speedmatch${i}.mp3`));
+HOT.forEach(n => preload(n, 2));
 
 // 語音（每個單一副本即可）
 const VOICES = [
@@ -70,7 +73,9 @@ export function playSwap() {
 
 // comboIndex 從 0 起算（0=第一次配對、1=第一段連鎖、...）
 export function playMatch(comboIndex = 0, gemCount = 3) {
-  const step = Math.min(9, comboIndex + 1);
+  // 對應到預載的 1、3、5、7、9 五個階段
+  const raw = Math.min(9, comboIndex + 1);
+  const step = raw <= 1 ? 1 : raw <= 3 ? 3 : raw <= 5 ? 5 : raw <= 7 ? 7 : 9;
   play(`speedmatch${step}.mp3`, { volume: 0.75 });
   if (gemCount >= 5) play("gem_shatters.mp3", { volume: 0.5 });
 
