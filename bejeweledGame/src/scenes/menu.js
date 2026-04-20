@@ -2,6 +2,21 @@
 import { CANVAS_W, CANVAS_H } from "../constants.js";
 import { unlockAudio, playMusic, playButton, playHover, setMuted, isMuted } from "../audio.js";
 
+// AI 按鈕顯示開關：網址 ?ai=1 開啟 / ?ai=0 關閉，設定會存到 localStorage
+// 也可在主選單按 Shift+A 即時切換
+const AI_FLAG_KEY = "bejeweled_show_ai";
+function isAIVisible() {
+  try {
+    const params = new URLSearchParams(location.search);
+    if (params.get("ai") === "1") { localStorage.setItem(AI_FLAG_KEY, "1"); return true; }
+    if (params.get("ai") === "0") { localStorage.setItem(AI_FLAG_KEY, "0"); return false; }
+    return localStorage.getItem(AI_FLAG_KEY) === "1";
+  } catch { return false; }
+}
+function setAIVisible(v) {
+  try { localStorage.setItem(AI_FLAG_KEY, v ? "1" : "0"); } catch {}
+}
+
 export function registerMenuScene(k) {
   k.scene("menu", () => {
     // 背景漸層
@@ -51,17 +66,35 @@ export function registerMenuScene(k) {
       playButton();
       k.go("game", { mode: "simple" });
     });
-    // AI 代玩兩個模式並排（各半寬）
-    makeButton(k, CANVAS_W / 2 - 78, 380, "AI 計時", [80, 180, 120], () => {
+    // AI 代玩兩個模式並排（各半寬）— 預設隱藏，?ai=1 或 Shift+A 開啟
+    const aiButtons = [];
+    const aiVisible = isAIVisible();
+    aiButtons.push(makeButton(k, CANVAS_W / 2 - 78, 380, "AI 計時", [80, 180, 120], () => {
       unlockAudio();
       playButton();
       k.go("game", { mode: "timed", ai: true });
-    }, 150);
-    makeButton(k, CANVAS_W / 2 + 78, 380, "AI 自由", [80, 180, 120], () => {
+    }, 150));
+    aiButtons.push(makeButton(k, CANVAS_W / 2 + 78, 380, "AI 自由", [80, 180, 120], () => {
       unlockAudio();
       playButton();
       k.go("game", { mode: "simple", ai: true });
-    }, 150);
+    }, 150));
+    const setAIButtonsHidden = (h) => {
+      aiButtons.forEach(pair => pair.forEach(x => {
+        x.hidden = h;
+        x.paused = h;   // 暫停事件（避免隱藏時仍能點擊）
+      }));
+    };
+    if (!aiVisible) setAIButtonsHidden(true);
+
+    // Shift+A 切換 AI 按鈕顯示
+    k.onKeyPress("a", () => {
+      if (!k.isKeyDown("shift")) return;
+      const nowHidden = aiButtons[0][0].hidden;
+      setAIButtonsHidden(!nowHidden);
+      setAIVisible(nowHidden);
+    });
+
     makeButton(k, CANVAS_W / 2, 440, "排行榜", [120, 100, 200], () => {
       playButton();
       k.go("leaderboard");
@@ -141,4 +174,5 @@ function makeButton(k, cx, cy, label, rgb, onClick, width = 300) {
     txt.scale = k.vec2(1, 1);
     btn.color = k.rgb(rgb[0], rgb[1], rgb[2]);
   });
+  return [btn, txt];
 }
