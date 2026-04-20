@@ -41,22 +41,28 @@ export function registerMenuScene(k) {
     playMusic("music_menu.mp3");
 
     // 按鈕
-    makeButton(k, CANVAS_W / 2, 285, "計時模式  60 秒", [200, 80, 80], () => {
+    makeButton(k, CANVAS_W / 2, 270, "計時模式  60 秒", [200, 80, 80], () => {
       unlockAudio();
       playButton();
       k.go("game", { mode: "timed" });
     });
-    makeButton(k, CANVAS_W / 2, 350, "自由模式  無限", [80, 160, 200], () => {
+    makeButton(k, CANVAS_W / 2, 325, "自由模式  無限", [80, 160, 200], () => {
       unlockAudio();
       playButton();
       k.go("game", { mode: "simple" });
     });
-    makeButton(k, CANVAS_W / 2, 415, "AI 示範（自動代玩）", [80, 180, 120], () => {
+    // AI 代玩兩個模式並排（各半寬）
+    makeButton(k, CANVAS_W / 2 - 78, 380, "AI 計時", [80, 180, 120], () => {
+      unlockAudio();
+      playButton();
+      k.go("game", { mode: "timed", ai: true });
+    }, 150);
+    makeButton(k, CANVAS_W / 2 + 78, 380, "AI 自由", [80, 180, 120], () => {
       unlockAudio();
       playButton();
       k.go("game", { mode: "simple", ai: true });
-    });
-    makeButton(k, CANVAS_W / 2, 480, "排行榜", [120, 100, 200], () => {
+    }, 150);
+    makeButton(k, CANVAS_W / 2, 440, "排行榜", [120, 100, 200], () => {
       playButton();
       k.go("leaderboard");
     });
@@ -104,9 +110,9 @@ export function registerMenuScene(k) {
   });
 }
 
-function makeButton(k, cx, cy, label, rgb, onClick) {
+function makeButton(k, cx, cy, label, rgb, onClick, width = 300) {
   const btn = k.add([
-    k.rect(300, 54, { radius: 10 }),
+    k.rect(width, 54, { radius: 10 }),
     k.pos(cx, cy),
     k.anchor("center"),
     k.color(rgb[0], rgb[1], rgb[2]),
@@ -114,8 +120,10 @@ function makeButton(k, cx, cy, label, rgb, onClick) {
     k.outline(3, k.rgb(255, 255, 255)),
     { hovering: false },
   ]);
+  // 窄按鈕文字略縮
+  const fontSize = width < 200 ? 20 : 24;
   const txt = k.add([
-    k.text(label, { size: 24 }),
+    k.text(label, { size: fontSize }),
     k.pos(cx, cy),
     k.anchor("center"),
     k.color(255, 255, 255),
