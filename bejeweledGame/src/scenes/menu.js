@@ -55,32 +55,36 @@ export function registerMenuScene(k) {
     // 首次進入選單嘗試播放背景音樂（需使用者事件才能啟動；在第一次點擊後才會真正響）
     playMusic("music_menu.mp3");
 
-    // 按鈕
-    makeButton(k, CANVAS_W / 2, 270, "計時模式  60 秒", [200, 80, 80], () => {
+    // 按鈕佈局：AI 顯示/隱藏各有一組 y 座標（按鈕高 54，間距約 16px）
+    // 有 AI 時要塞 4 顆，間距較緊；無 AI 時 3 顆，間距較鬆
+    const LAYOUT_WITH_AI = { timed: 260, simple: 325, ai: 385, leaderboard: 450 };
+    const LAYOUT_NO_AI   = { timed: 275, simple: 345, leaderboard: 415 };
+    const aiVisible = isAIVisible();
+    const l0 = aiVisible ? LAYOUT_WITH_AI : LAYOUT_NO_AI;
+
+    const timedBtn = makeButton(k, CANVAS_W / 2, l0.timed, "計時模式  60 秒", [200, 80, 80], () => {
       unlockAudio();
       playButton();
       k.go("game", { mode: "timed" });
     });
-    makeButton(k, CANVAS_W / 2, 325, "自由模式  無限", [80, 160, 200], () => {
+    const simpleBtn = makeButton(k, CANVAS_W / 2, l0.simple, "自由模式  無限", [80, 160, 200], () => {
       unlockAudio();
       playButton();
       k.go("game", { mode: "simple" });
     });
     // AI 代玩兩個模式並排（各半寬）— 預設隱藏，?ai=1 或 Shift+A 開啟
     const aiButtons = [];
-    const aiVisible = isAIVisible();
-    aiButtons.push(makeButton(k, CANVAS_W / 2 - 78, 380, "AI 計時", [80, 180, 120], () => {
+    aiButtons.push(makeButton(k, CANVAS_W / 2 - 78, LAYOUT_WITH_AI.ai, "AI 計時", [80, 180, 120], () => {
       unlockAudio();
       playButton();
       k.go("game", { mode: "timed", ai: true });
     }, 150));
-    aiButtons.push(makeButton(k, CANVAS_W / 2 + 78, 380, "AI 自由", [80, 180, 120], () => {
+    aiButtons.push(makeButton(k, CANVAS_W / 2 + 78, LAYOUT_WITH_AI.ai, "AI 自由", [80, 180, 120], () => {
       unlockAudio();
       playButton();
       k.go("game", { mode: "simple", ai: true });
     }, 150));
-    // 排行榜按鈕 — AI 隱藏時往上遞補到 AI 的位置（380），顯示時退回 440
-    const leaderboardBtn = makeButton(k, CANVAS_W / 2, aiVisible ? 440 : 380, "排行榜", [120, 100, 200], () => {
+    const leaderboardBtn = makeButton(k, CANVAS_W / 2, l0.leaderboard, "排行榜", [120, 100, 200], () => {
       playButton();
       k.go("leaderboard");
     });
@@ -90,9 +94,11 @@ export function registerMenuScene(k) {
         x.hidden = h;
         x.paused = h;   // 暫停事件（避免隱藏時仍能點擊）
       }));
-      // 同步排行榜位置
-      const y = h ? 380 : 440;
-      leaderboardBtn.forEach(x => x.pos.y = y);
+      // 同步其他三顆按鈕位置
+      const l = h ? LAYOUT_NO_AI : LAYOUT_WITH_AI;
+      timedBtn.forEach(x => x.pos.y = l.timed);
+      simpleBtn.forEach(x => x.pos.y = l.simple);
+      leaderboardBtn.forEach(x => x.pos.y = l.leaderboard);
     };
     if (!aiVisible) setAIButtonsHidden(true);
 
