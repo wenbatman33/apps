@@ -7,12 +7,6 @@ import { registerGameScene } from "./scenes/game.js";
 import { registerGameOverScene } from "./scenes/gameover.js";
 import { registerLeaderboardScene } from "./scenes/leaderboard.js";
 
-// 開發模式：URL 加 ?dev=1 即開啟（game scene 會多出除錯快捷鍵）
-try {
-  const params = new URLSearchParams(location.search);
-  window.__DEV__ = params.has("dev") || localStorage.getItem("bejeweled_dev") === "1";
-} catch { window.__DEV__ = false; }
-
 const k = kaboom({
   width: CANVAS_W,
   height: CANVAS_H,
