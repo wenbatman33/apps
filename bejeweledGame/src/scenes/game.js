@@ -219,6 +219,58 @@ export function registerGameScene(k) {
     k.onKeyPress("r", () => restart());
     k.onKeyPress("h", () => showHint());
 
+    // --- 開發模式：快速刷分 / 跳結局 ---
+    // 啟動方式：網址加 ?dev=1，或在 console 執行 localStorage.setItem("bejeweled_dev","1")
+    if (typeof window !== "undefined" && window.__DEV__) {
+      // 畫面左上角紅色標籤
+      k.add([
+        k.rect(90, 24, { radius: 4 }),
+        k.pos(20, 20),
+        k.color(220, 60, 60),
+        k.z(200),
+      ]);
+      k.add([
+        k.text("DEV MODE", { size: 14 }),
+        k.pos(65, 32),
+        k.anchor("center"),
+        k.color(255, 255, 255),
+        k.z(201),
+      ]);
+      // 操作說明（HUD 下方）
+      k.add([
+        k.text("DEV: +加5000  -加99999  T減時  K結束  A自動連消", { size: 11 }),
+        k.pos(130, 590),
+        k.anchor("center"),
+        k.color(255, 180, 180),
+        k.z(201),
+      ]);
+
+      k.onKeyPress("equal", () => devAddScore(5000));    // '+' 通常是 shift+equal
+      k.onKeyPress("minus", () => devAddScore(99999));
+      k.onKeyPress("t", () => {
+        if (mode === "timed") timeLeft = Math.min(timeLeft, 3);
+      });
+      k.onKeyPress("k", () => {
+        if (state === "gameover") return;
+        state = "gameover";
+        k.go("gameover", { mode, score, reason: mode === "timed" ? "time" : "nomove" });
+      });
+      k.onKeyPress("a", () => devAutoMatch());
+    }
+
+    function devAddScore(amount) {
+      score += amount;
+      scoreText.text = String(score);
+      k.tween(1.5, 1, 0.25, v => scoreText.scale = k.vec2(v), k.easings.easeOutQuad);
+    }
+
+    async function devAutoMatch() {
+      if (state !== "idle") return;
+      const pair = findHint(grid);
+      if (!pair) return;
+      await trySwap(pair[0], pair[1]);
+    }
+
     // --- 更新計時 ---
     k.onUpdate(() => {
       if (state === "gameover") return;
