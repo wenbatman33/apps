@@ -6,7 +6,6 @@ import { playHighScore, playGameOver, stopMusic, playButton } from "../audio.js"
 export function registerGameOverScene(k) {
   k.scene("gameover", (params) => {
     const { mode, score, reason } = params;  // reason: "time" | "nomove"
-    const canRank = qualifies(mode, score);
 
     // 背景
     k.add([
@@ -15,12 +14,12 @@ export function registerGameOverScene(k) {
       k.color(15, 20, 40),
     ]);
 
-    // 標題
-    k.add([
-      k.text(canRank ? "恭喜上榜！" : "遊戲結束", { size: 60 }),
+    // 標題先畫佔位（qualifies 為 async，拿到結果再更新）
+    const titleText = k.add([
+      k.text("遊戲結束", { size: 60 }),
       k.pos(CANVAS_W / 2, 80),
       k.anchor("center"),
-      k.color(canRank ? k.rgb(255, 230, 100) : k.rgb(220, 220, 240)),
+      k.color(220, 220, 240),
       k.outline(3, k.rgb(80, 60, 20)),
     ]);
 
@@ -54,16 +53,25 @@ export function registerGameOverScene(k) {
 
     // 停止背景音樂，改播語音
     stopMusic();
-    // 先播時間到／沒有動作的原因語音
     playGameOver(reason);
 
-    if (canRank) {
-      // 晚一點再疊上升級音
-      setTimeout(() => playHighScore(), 800);
-      askName(k, mode, score);
-    } else {
-      addButtons(k);
-    }
+    // 非同步查詢是否能上榜，拿到結果後更新畫面
+    (async () => {
+      let canRank = false;
+      try {
+        canRank = await qualifies(mode, score);
+      } catch (e) {
+        console.warn("[gameover] qualifies failed", e);
+      }
+      if (canRank) {
+        titleText.text = "恭喜上榜！";
+        titleText.color = k.rgb(255, 230, 100);
+        setTimeout(() => playHighScore(), 800);
+        askName(k, mode, score);
+      } else {
+        addButtons(k);
+      }
+    })();
   });
 }
 
@@ -108,9 +116,9 @@ function askName(k, mode, score) {
   k.onKeyPress("backspace", () => {
     name = name.slice(0, -1);
   });
-  k.onKeyPress("enter", () => {
+  k.onKeyPress("enter", async () => {
     const finalName = name.trim() || "Player";
-    const rank = addScore(mode, finalName, score);
+    const rank = await addScore(mode, finalName, score);
     k.go("leaderboard", { highlight: { mode, rank } });
   });
 }

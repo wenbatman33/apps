@@ -73,8 +73,6 @@ function drawBoard(k, mode, title, x, y, highlight, w, h) {
     k.color(180, 220, 255),
   ]);
 
-  const scores = getScores(mode);
-
   // 表頭（三欄 x 百分比定位讓寬度改變仍對齊）
   const colX = {
     rank:  x + w * 0.08,
@@ -86,40 +84,55 @@ function drawBoard(k, mode, title, x, y, highlight, w, h) {
   k.add([k.text("玩家", { size: 16 }), k.pos(colX.name,  headerY), k.color(150, 170, 200)]);
   k.add([k.text("分數", { size: 16 }), k.pos(colX.score, headerY), k.color(150, 170, 200)]);
 
-  // 空榜
-  if (scores.length === 0) {
-    k.add([
-      k.text("尚無紀錄", { size: 20 }),
-      k.pos(x + w / 2, y + h / 2),
-      k.anchor("center"),
-      k.color(120, 140, 170),
-    ]);
-    return;
-  }
+  // 載入中佔位（遠端查詢回來後 destroy）
+  const loading = k.add([
+    k.text("載入中...", { size: 20 }),
+    k.pos(x + w / 2, y + h / 2),
+    k.anchor("center"),
+    k.color(120, 140, 170),
+  ]);
 
-  // 列表
-  for (let i = 0; i < TOP_N; i++) {
-    const rowY = y + rowStart + i * rowGap;
-    const s = scores[i];
-    const isHi = highlight && highlight.mode === mode && highlight.rank === i + 1;
-    const color = isHi ? k.rgb(255, 240, 80) : (i < 3 ? k.rgb(250, 220, 130) : k.rgb(220, 230, 240));
+  getScores(mode).then(scores => {
+    if (loading.exists()) k.destroy(loading);
 
-    if (isHi) {
+    // 空榜
+    if (scores.length === 0) {
       k.add([
-        k.rect(w - 20, rowGap - 2, { radius: 4 }),
-        k.pos(x + 10, rowY - 4),
-        k.color(180, 130, 30),
-        k.opacity(0.4),
+        k.text("尚無紀錄", { size: 20 }),
+        k.pos(x + w / 2, y + h / 2),
+        k.anchor("center"),
+        k.color(120, 140, 170),
       ]);
+      return;
     }
 
-    k.add([k.text(`${i + 1}.`, { size: 18 }), k.pos(colX.rank, rowY), k.color(color)]);
-    if (s) {
-      k.add([k.text(s.name, { size: 18 }), k.pos(colX.name,  rowY), k.color(color)]);
-      k.add([k.text(String(s.score), { size: 18 }), k.pos(colX.score, rowY), k.color(color)]);
-    } else {
-      k.add([k.text("—", { size: 18 }), k.pos(colX.name,  rowY), k.color(80, 90, 110)]);
-      k.add([k.text("—", { size: 18 }), k.pos(colX.score, rowY), k.color(80, 90, 110)]);
+    // 列表
+    for (let i = 0; i < TOP_N; i++) {
+      const rowY = y + rowStart + i * rowGap;
+      const s = scores[i];
+      const isHi = highlight && highlight.mode === mode && highlight.rank === i + 1;
+      const color = isHi ? k.rgb(255, 240, 80) : (i < 3 ? k.rgb(250, 220, 130) : k.rgb(220, 230, 240));
+
+      if (isHi) {
+        k.add([
+          k.rect(w - 20, rowGap - 2, { radius: 4 }),
+          k.pos(x + 10, rowY - 4),
+          k.color(180, 130, 30),
+          k.opacity(0.4),
+        ]);
+      }
+
+      k.add([k.text(`${i + 1}.`, { size: 18 }), k.pos(colX.rank, rowY), k.color(color)]);
+      if (s) {
+        k.add([k.text(s.name, { size: 18 }), k.pos(colX.name,  rowY), k.color(color)]);
+        k.add([k.text(String(s.score), { size: 18 }), k.pos(colX.score, rowY), k.color(color)]);
+      } else {
+        k.add([k.text("—", { size: 18 }), k.pos(colX.name,  rowY), k.color(80, 90, 110)]);
+        k.add([k.text("—", { size: 18 }), k.pos(colX.score, rowY), k.color(80, 90, 110)]);
+      }
     }
-  }
+  }).catch(e => {
+    console.warn("[leaderboard] getScores failed", e);
+    if (loading.exists()) loading.text = "載入失敗";
+  });
 }
