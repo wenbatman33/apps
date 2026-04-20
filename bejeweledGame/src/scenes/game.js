@@ -4,6 +4,7 @@ import {
   GRID_OFFSET_X, GRID_OFFSET_Y, CANVAS_W, CANVAS_H,
   SCORE_PER_GEM, COMBO_BONUS,
   TIMED_SECONDS, TIMED_BONUS_SECONDS,
+  HUD,
 } from "../constants.js";
 import {
   createGrid, findMatches, clearMatches,
@@ -38,12 +39,12 @@ export function registerGameScene(k) {
     // --- 背景 ---
     k.add([k.rect(CANVAS_W, CANVAS_H), k.pos(0, 0), k.color(15, 20, 40)]);
 
-    // HUD 背板
+    // HUD 背板（外框粗細/顏色/圓角與棋盤框統一）
     k.add([
-      k.rect(220, CANVAS_H - 40),
-      k.pos(20, 20),
+      k.rect(HUD.panel.w, HUD.panel.h, { radius: 8 }),
+      k.pos(HUD.panel.x, HUD.panel.y),
       k.color(25, 35, 70),
-      k.outline(2, k.rgb(80, 120, 200)),
+      k.outline(2, k.rgb(100, 140, 210)),
     ]);
 
     // 棋盤底板
@@ -52,7 +53,7 @@ export function registerGameScene(k) {
       k.rect(GRID_W * CELL + BOARD_PAD * 2, GRID_H * CELL + BOARD_PAD * 2, { radius: 8 }),
       k.pos(GRID_OFFSET_X - BOARD_PAD, GRID_OFFSET_Y - BOARD_PAD),
       k.color(30, 40, 70),
-      k.outline(3, k.rgb(120, 150, 220)),
+      k.outline(2, k.rgb(100, 140, 210)),
     ]);
 
     // 棋盤格紋（8x8 交錯色）
@@ -71,55 +72,55 @@ export function registerGameScene(k) {
     // --- HUD ---
     k.add([
       k.text(mode === "timed" ? "計時模式" : "自由模式", { size: 22 }),
-      k.pos(130, 50),
+      k.pos(HUD.modeLabel.x, HUD.modeLabel.y),
       k.anchor("center"),
       k.color(250, 220, 110),
     ]);
 
     k.add([
-      k.text("分數", { size: 16 }),
-      k.pos(130, 95),
+      k.text("分數", { size: HUD.scoreLabel.size }),
+      k.pos(HUD.scoreLabel.x, HUD.scoreLabel.y),
       k.anchor("center"),
       k.color(170, 200, 230),
     ]);
     const scoreText = k.add([
-      k.text("0", { size: 36 }),
-      k.pos(130, 130),
+      k.text("0", { size: HUD.scoreValue.size }),
+      k.pos(HUD.scoreValue.x, HUD.scoreValue.y),
       k.anchor("center"),
       k.color(255, 240, 130),
     ]);
 
     k.add([
-      k.text(mode === "timed" ? "剩餘時間" : "連鎖最高", { size: 16 }),
-      k.pos(130, 180),
+      k.text(mode === "timed" ? "剩餘時間" : "連鎖最高", { size: HUD.secondLabel.size }),
+      k.pos(HUD.secondLabel.x, HUD.secondLabel.y),
       k.anchor("center"),
       k.color(170, 200, 230),
     ]);
     const secondaryText = k.add([
-      k.text(mode === "timed" ? String(TIMED_SECONDS) : "0", { size: 36 }),
-      k.pos(130, 215),
+      k.text(mode === "timed" ? String(TIMED_SECONDS) : "0", { size: HUD.secondValue.size }),
+      k.pos(HUD.secondValue.x, HUD.secondValue.y),
       k.anchor("center"),
       k.color(180, 255, 200),
     ]);
 
     // 計時模式進度條（時間）或自由模式累計配對數
     const progressBg = k.add([
-      k.rect(180, 10, { radius: 4 }),
-      k.pos(40, 260),
+      k.rect(HUD.progress.w, HUD.progress.h, { radius: 4 }),
+      k.pos(HUD.progress.x, HUD.progress.y),
       k.color(40, 50, 80),
     ]);
     const progressBar = k.add([
-      k.rect(180, 10, { radius: 4 }),
-      k.pos(40, 260),
+      k.rect(HUD.progress.w, HUD.progress.h, { radius: 4 }),
+      k.pos(HUD.progress.x, HUD.progress.y),
       k.color(120, 220, 140),
     ]);
 
     let comboBest = 0;
 
-    // HUD 按鈕
-    makeHudButton(k, 130, 430, "提示 (H)", [80, 140, 180], () => { playButton(); showHint(); });
-    makeHudButton(k, 130, 480, "重新開始 (R)", [100, 100, 160], () => { playButton(); restart(); });
-    makeHudButton(k, 130, 530, "回主選單 (ESC)", [150, 80, 80], () => { playButton(); k.go("menu"); });
+    // HUD 按鈕（label / 寬度由 constants.HUD 提供，方便直橫向切換）
+    makeHudButton(k, HUD.hintBtn.x,    HUD.hintBtn.y,    HUD.hintBtn.w,    HUD.hintBtn.label,    [80, 140, 180], () => { playButton(); showHint(); });
+    makeHudButton(k, HUD.restartBtn.x, HUD.restartBtn.y, HUD.restartBtn.w, HUD.restartBtn.label, [100, 100, 160], () => { playButton(); restart(); });
+    makeHudButton(k, HUD.menuBtn.x,    HUD.menuBtn.y,    HUD.menuBtn.w,    HUD.menuBtn.label,    [150, 80, 80],  () => { playButton(); k.go("menu"); });
 
     // 當前連鎖顯示（浮動文字）
     let comboFlash = null;
@@ -156,17 +157,17 @@ export function registerGameScene(k) {
       });
     });
 
-    // --- AI 模式標籤 + 停止按鈕 ---
+    // --- AI 模式標籤 ---
     if (ai) {
       k.add([
         k.rect(110, 28, { radius: 4 }),
-        k.pos(GRID_OFFSET_X + GRID_W * CELL - 110, 30),
+        k.pos(HUD.aiLabel.x - 55, HUD.aiLabel.y - 14),
         k.color(60, 180, 120),
         k.z(200),
       ]);
       k.add([
         k.text("AI 示範中", { size: 16 }),
-        k.pos(GRID_OFFSET_X + GRID_W * CELL - 55, 44),
+        k.pos(HUD.aiLabel.x, HUD.aiLabel.y),
         k.anchor("center"),
         k.color(255, 255, 255),
         k.z(201),
@@ -264,7 +265,7 @@ export function registerGameScene(k) {
       }
 
       // 進度條
-      progressBar.width = Math.max(0, (timeLeft / TIMED_SECONDS) * 180);
+      progressBar.width = Math.max(0, (timeLeft / TIMED_SECONDS) * HUD.progress.w);
 
       if (timeLeft <= 0 && state !== "animating") {
         state = "gameover";
@@ -607,9 +608,9 @@ export function registerGameScene(k) {
   });
 }
 
-function makeHudButton(k, cx, cy, label, rgb, onClick) {
+function makeHudButton(k, cx, cy, w, label, rgb, onClick) {
   const btn = k.add([
-    k.rect(180, 40, { radius: 6 }),
+    k.rect(w, 40, { radius: 6 }),
     k.pos(cx, cy),
     k.anchor("center"),
     k.color(rgb[0], rgb[1], rgb[2]),
