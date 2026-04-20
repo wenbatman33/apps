@@ -18,6 +18,7 @@ import {
 export function registerGameScene(k) {
   k.scene("game", (params) => {
     const mode = params?.mode || "timed";
+    const ai = !!params?.ai;   // AI 代玩模式：自動用 findHint 找合法配對，沒招時重洗棋盤
 
     // --- 狀態 ---
     let grid = createGrid();
@@ -29,6 +30,7 @@ export function registerGameScene(k) {
     let lastTickPlayed = -1;
     let thirtyPlayed = false;
     let hintGems = [];
+    let aiStopped = false;
 
     // 切換背景音樂
     playMusic(mode === "timed" ? "music_speed.mp3" : "music_classic.mp3");
@@ -150,8 +152,26 @@ export function registerGameScene(k) {
       k.wait(0.6, () => {
         if (readyText.exists()) k.destroy(readyText);
         if (state !== "gameover") state = "idle";
+        if (ai) startAIPlay();
       });
     });
+
+    // --- AI 模式標籤 + 停止按鈕 ---
+    if (ai) {
+      k.add([
+        k.rect(110, 28, { radius: 4 }),
+        k.pos(GRID_OFFSET_X + GRID_W * CELL - 110, 30),
+        k.color(60, 180, 120),
+        k.z(200),
+      ]);
+      k.add([
+        k.text("AI 示範中", { size: 16 }),
+        k.pos(GRID_OFFSET_X + GRID_W * CELL - 55, 44),
+        k.anchor("center"),
+        k.color(255, 255, 255),
+        k.z(201),
+      ]);
+    }
 
     // --- 輸入：點擊 + 拖曳/滑動 雙模式 ---
     // 桌面點擊（先選再點相鄰）與手機滑動（按住拖向相鄰格）都支援
@@ -161,6 +181,7 @@ export function registerGameScene(k) {
 
     k.onMousePress(() => {
       unlockAudio();
+      if (ai) return;   // AI 模式禁用人類輸入
       if (state !== "idle") return;
       const mp = k.mousePos();
       const gx = Math.floor((mp.x - GRID_OFFSET_X) / CELL);
@@ -175,6 +196,7 @@ export function registerGameScene(k) {
     });
 
     k.onMouseMove(() => {
+      if (ai) return;
       if (!dragStart || dragSwapped || state !== "idle") return;
       const mp = k.mousePos();
       const dx = mp.x - dragStart.mx;
@@ -204,6 +226,7 @@ export function registerGameScene(k) {
     });
 
     k.onMouseRelease(() => {
+      if (ai) return;
       if (!dragStart || dragSwapped) {
         dragStart = null;
         return;
@@ -215,9 +238,9 @@ export function registerGameScene(k) {
       onCellClick(ds.gx, ds.gy);
     });
 
-    k.onKeyPress("escape", () => k.go("menu"));
-    k.onKeyPress("r", () => restart());
-    k.onKeyPress("h", () => showHint());
+    k.onKeyPress("escape", () => { aiStopped = true; k.go("menu"); });
+    k.onKeyPress("r", () => { aiStopped = true; restart(); });
+    k.onKeyPress("h", () => { if (!ai) showHint(); });
 
     // --- 更新計時 ---
     k.onUpdate(() => {
@@ -377,9 +400,55 @@ export function registerGameScene(k) {
       if (state !== "gameover") {
         state = "idle";
         if (!hasValidMove(grid)) {
-          state = "gameover";
-          k.wait(0.6, () => k.go("gameover", { mode, score, reason: "nomove" }));
+          if (ai) {
+            await reshuffleBoard();
+          } else {
+            state = "gameover";
+            k.wait(0.6, () => k.go("gameover", { mode, score, reason: "nomove" }));
+          }
         }
+      }
+    }
+
+    // AI 模式：沒有合法移動時重新洗牌，讓示範能一直跑下去
+    async function reshuffleBoard() {
+      state = "animating";
+      const tweens = [];
+      for (let y = 0; y < GRID_H; y++) {
+        for (let x = 0; x < GRID_W; x++) {
+          const g = gems[y][x];
+          if (!g) continue;
+          tweens.push(new Promise(resolve => {
+            k.tween(1, 0, 0.25, v => { if (g.opacity !== undefined) g.opacity = v; });
+            k.tween(1, 0.3, 0.25, v => g.scale = v);
+            k.wait(0.25, () => { k.destroy(g); resolve(); });
+          }));
+        }
+      }
+      await Promise.all(tweens);
+      gems = Array.from({ length: GRID_H }, () => new Array(GRID_W).fill(null));
+      grid = createGrid();
+      for (let y = 0; y < GRID_H; y++) {
+        for (let x = 0; x < GRID_W; x++) spawnGem(x, y, grid[y][x]);
+      }
+      state = "idle";
+    }
+
+    // AI 主迴圈：等 idle → findHint → trySwap，無限重複直到手動停止或 timed 結束
+    async function startAIPlay() {
+      while (!aiStopped && state !== "gameover") {
+        if (state !== "idle") {
+          await new Promise(r => k.wait(0.05, r));
+          continue;
+        }
+        const pair = findHint(grid);
+        if (!pair) {
+          await reshuffleBoard();
+          continue;
+        }
+        await trySwap(pair[0], pair[1]);
+        // 動作間稍微停一下，讓玩家看得到連鎖
+        await new Promise(r => k.wait(0.12, r));
       }
     }
 
@@ -533,7 +602,7 @@ export function registerGameScene(k) {
     }
 
     function restart() {
-      k.go("game", { mode });
+      k.go("game", { mode, ai });
     }
   });
 }

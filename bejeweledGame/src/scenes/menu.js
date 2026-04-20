@@ -41,17 +41,22 @@ export function registerMenuScene(k) {
     playMusic("music_menu.mp3");
 
     // 按鈕
-    makeButton(k, CANVAS_W / 2, 300, "計時模式  60 秒", [200, 80, 80], () => {
+    makeButton(k, CANVAS_W / 2, 285, "計時模式  60 秒", [200, 80, 80], () => {
       unlockAudio();
       playButton();
       k.go("game", { mode: "timed" });
     });
-    makeButton(k, CANVAS_W / 2, 370, "自由模式  無限", [80, 160, 200], () => {
+    makeButton(k, CANVAS_W / 2, 350, "自由模式  無限", [80, 160, 200], () => {
       unlockAudio();
       playButton();
       k.go("game", { mode: "simple" });
     });
-    makeButton(k, CANVAS_W / 2, 440, "排行榜", [120, 100, 200], () => {
+    makeButton(k, CANVAS_W / 2, 415, "AI 示範（自動代玩）", [80, 180, 120], () => {
+      unlockAudio();
+      playButton();
+      k.go("game", { mode: "simple", ai: true });
+    });
+    makeButton(k, CANVAS_W / 2, 480, "排行榜", [120, 100, 200], () => {
       playButton();
       k.go("leaderboard");
     });
