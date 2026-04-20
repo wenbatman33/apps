@@ -76,50 +76,59 @@ export function registerGameOverScene(k) {
 }
 
 function askName(k, mode, score) {
-  k.add([
-    k.text("請輸入玩家名稱（Enter 確認）", { size: 20 }),
-    k.pos(CANVAS_W / 2, 400),
-    k.anchor("center"),
-    k.color(200, 220, 255),
-  ]);
+  // 改用 HTML <input> overlay：手機虛擬鍵盤、中文輸入法、注音都支援
+  const overlay = document.createElement("div");
+  overlay.style.cssText = [
+    "position:fixed", "inset:0",
+    "display:flex", "align-items:center", "justify-content:center",
+    "z-index:9999", "background:rgba(0,0,0,0.55)",
+    "font-family:-apple-system,BlinkMacSystemFont,'PingFang TC','Microsoft JhengHei',sans-serif",
+  ].join(";");
 
-  let name = "";
-  const MAX = 8;
-  const box = k.add([
-    k.rect(320, 54, { radius: 8 }),
-    k.pos(CANVAS_W / 2, 450),
-    k.anchor("center"),
-    k.color(25, 40, 80),
-    k.outline(3, k.rgb(255, 230, 100)),
-  ]);
-  const nameText = k.add([
-    k.text("_", { size: 30 }),
-    k.pos(CANVAS_W / 2, 450),
-    k.anchor("center"),
-    k.color(255, 240, 200),
-    k.z(1),
-  ]);
+  overlay.innerHTML = `
+    <div style="background:#0f1428;border:2px solid rgb(255,230,100);border-radius:14px;
+                padding:28px 32px;text-align:center;min-width:280px;max-width:90vw;">
+      <div style="color:#c8dcff;font-size:17px;margin-bottom:14px;">輸入名稱（最多 8 字，可輸入中文）</div>
+      <input id="_ni" type="text" maxlength="8" autocomplete="off" inputmode="text"
+        style="font-size:24px;padding:8px 12px;border-radius:8px;
+               border:2px solid #ffd060;background:#1a2550;color:#fff;
+               width:200px;text-align:center;outline:none;
+               font-family:inherit;">
+      <div style="margin-top:18px;display:flex;gap:14px;justify-content:center;">
+        <button id="_nc" style="font-size:16px;padding:9px 22px;border-radius:8px;
+                                background:#444;color:#fff;border:none;cursor:pointer;">取消</button>
+        <button id="_no" style="font-size:16px;padding:9px 22px;border-radius:8px;
+                                background:#3a72b0;color:#fff;border:none;cursor:pointer;">確認上榜</button>
+      </div>
+    </div>`;
+  document.body.appendChild(overlay);
 
-  // 閃爍游標
-  let blink = 0;
-  nameText.onUpdate(() => {
-    blink += k.dt();
-    const cursor = (Math.floor(blink * 2) % 2) ? "_" : " ";
-    nameText.text = (name || "") + cursor;
-  });
+  const inp = overlay.querySelector("#_ni");
+  // iOS 需延遲才能自動 focus 並彈出鍵盤
+  setTimeout(() => inp.focus(), 80);
 
-  k.onCharInput((ch) => {
-    if (name.length < MAX && /[\w\-]/.test(ch)) {
-      name += ch;
-    }
-  });
-  k.onKeyPress("backspace", () => {
-    name = name.slice(0, -1);
-  });
-  k.onKeyPress("enter", async () => {
-    const finalName = name.trim() || "Player";
-    const rank = await addScore(mode, finalName, score);
-    k.go("leaderboard", { highlight: { mode, rank } });
+  function submit() {
+    const finalName = (inp.value.trim() || "Player").slice(0, 8);
+    cleanup();
+    addScore(mode, finalName, score).then(rank => {
+      k.go("leaderboard", { highlight: { mode, rank } });
+    });
+  }
+
+  function cancel() {
+    cleanup();
+    k.go("menu");
+  }
+
+  function cleanup() {
+    if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
+  }
+
+  overlay.querySelector("#_no").addEventListener("click", submit);
+  overlay.querySelector("#_nc").addEventListener("click", cancel);
+  inp.addEventListener("keydown", e => {
+    if (e.key === "Enter")  submit();
+    if (e.key === "Escape") cancel();
   });
 }
 
