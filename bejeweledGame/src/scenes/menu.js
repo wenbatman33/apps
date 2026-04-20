@@ -79,11 +79,20 @@ export function registerMenuScene(k) {
       playButton();
       k.go("game", { mode: "simple", ai: true });
     }, 150));
+    // 排行榜按鈕 — AI 隱藏時往上遞補到 AI 的位置（380），顯示時退回 440
+    const leaderboardBtn = makeButton(k, CANVAS_W / 2, aiVisible ? 440 : 380, "排行榜", [120, 100, 200], () => {
+      playButton();
+      k.go("leaderboard");
+    });
+
     const setAIButtonsHidden = (h) => {
       aiButtons.forEach(pair => pair.forEach(x => {
         x.hidden = h;
         x.paused = h;   // 暫停事件（避免隱藏時仍能點擊）
       }));
+      // 同步排行榜位置
+      const y = h ? 380 : 440;
+      leaderboardBtn.forEach(x => x.pos.y = y);
     };
     if (!aiVisible) setAIButtonsHidden(true);
 
@@ -93,11 +102,6 @@ export function registerMenuScene(k) {
       const nowHidden = aiButtons[0][0].hidden;
       setAIButtonsHidden(!nowHidden);
       setAIVisible(nowHidden);
-    });
-
-    makeButton(k, CANVAS_W / 2, 440, "排行榜", [120, 100, 200], () => {
-      playButton();
-      k.go("leaderboard");
     });
 
     // 靜音切換按鈕（右下角）
