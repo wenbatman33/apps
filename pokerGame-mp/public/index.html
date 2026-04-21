@@ -1,0 +1,460 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Poker Royale MP — 多人德州撲克</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600;700&family=Inter:wght@400;500;600;700&display=swap');
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: #04060E;
+      color: #F4ECD8;
+      font-family: 'Inter', 'Noto Sans TC', system-ui, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* ── 共用變數 ── */
+    :root {
+      --gold1: #6E4A1A;
+      --gold2: #D4A24C;
+      --gold3: #F2D58A;
+      --fg1:   #F4ECD8;
+      --fg2:   #BDB59D;
+      --fg3:   #7C7665;
+      --glass: rgba(13,18,32,0.78);
+      --fold:  #C8453A;
+      --call:  #3FA86A;
+    }
+
+    /* ── 主容器 ── */
+    #app {
+      width: 420px;
+      max-width: 100vw;
+      padding: 0 16px;
+    }
+
+    /* ── 畫面容器（3 個畫面疊在一起，用 display:none 切換） ── */
+    .screen { display: none; flex-direction: column; align-items: center; }
+    .screen.active { display: flex; }
+
+    /* ── 品牌標題 ── */
+    .brand {
+      text-align: center;
+      margin-bottom: 40px;
+    }
+    .brand-sub {
+      font-size: 11px;
+      letter-spacing: 4px;
+      color: var(--fg2);
+      margin-bottom: 8px;
+      text-transform: uppercase;
+    }
+    .brand-title {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 42px;
+      font-weight: 700;
+      letter-spacing: 4px;
+      background: linear-gradient(180deg, var(--gold3) 0%, var(--gold2) 60%, var(--gold1) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .brand-line {
+      width: 160px;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, var(--gold2), transparent);
+      margin: 12px auto 0;
+    }
+
+    /* ── 玻璃卡片 ── */
+    .glass-card {
+      background: var(--glass);
+      border: 1px solid rgba(212,162,76,0.35);
+      border-radius: 16px;
+      padding: 28px 24px;
+      width: 100%;
+    }
+
+    /* ── 輸入框 ── */
+    .input-label {
+      font-size: 11px;
+      letter-spacing: 3px;
+      color: var(--fg3);
+      margin-bottom: 8px;
+      text-transform: uppercase;
+    }
+    .input-field {
+      width: 100%;
+      background: rgba(0,0,0,0.4);
+      border: 1px solid rgba(212,162,76,0.3);
+      border-radius: 10px;
+      padding: 14px 18px;
+      font-size: 16px;
+      font-family: inherit;
+      color: var(--fg1);
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    .input-field:focus {
+      border-color: var(--gold2);
+    }
+    .input-field::placeholder { color: var(--fg3); }
+
+    /* ── 金色按鈕 ── */
+    .btn-gold {
+      width: 100%;
+      padding: 16px;
+      background: linear-gradient(180deg, var(--gold1) 0%, var(--gold2) 40%, var(--gold3) 60%, var(--gold2) 80%, var(--gold1) 100%);
+      border: none;
+      border-radius: 30px;
+      font-family: inherit;
+      font-size: 16px;
+      font-weight: 700;
+      letter-spacing: 3px;
+      color: #1B1408;
+      cursor: pointer;
+      transition: transform 0.1s, box-shadow 0.2s;
+      box-shadow: 0 4px 20px rgba(212,162,76,0.3);
+    }
+    .btn-gold:hover { transform: translateY(-1px); box-shadow: 0 6px 24px rgba(212,162,76,0.45); }
+    .btn-gold:active { transform: translateY(0); }
+
+    /* ── 透明邊框按鈕 ── */
+    .btn-outline {
+      width: 100%;
+      padding: 14px;
+      background: transparent;
+      border: 1px solid rgba(212,162,76,0.5);
+      border-radius: 30px;
+      font-family: inherit;
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--gold2);
+      cursor: pointer;
+      transition: all 0.2s;
+      letter-spacing: 2px;
+    }
+    .btn-outline:hover {
+      background: rgba(212,162,76,0.08);
+      border-color: var(--gold2);
+    }
+
+    /* ── 分隔線 ── */
+    .divider {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin: 20px 0;
+      color: var(--fg3);
+      font-size: 12px;
+      letter-spacing: 2px;
+    }
+    .divider::before, .divider::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: rgba(212,162,76,0.2);
+    }
+
+    /* ── 邀請碼顯示 ── */
+    .invite-code {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 48px;
+      font-weight: 700;
+      letter-spacing: 12px;
+      color: var(--gold3);
+      text-align: center;
+      padding: 16px 0;
+    }
+    .invite-hint {
+      font-size: 11px;
+      color: var(--fg3);
+      text-align: center;
+      letter-spacing: 2px;
+    }
+
+    /* ── 玩家清單 ── */
+    .player-list {
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin: 16px 0;
+    }
+    .player-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 16px;
+      background: rgba(0,0,0,0.3);
+      border: 1px solid rgba(255,255,255,0.06);
+      border-radius: 10px;
+    }
+    .player-avatar {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--gold1), var(--gold2));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 14px;
+      color: #1B1408;
+      flex-shrink: 0;
+    }
+    .player-name {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--fg1);
+    }
+    .player-badge {
+      margin-left: auto;
+      font-size: 10px;
+      letter-spacing: 1px;
+      color: var(--gold2);
+      background: rgba(212,162,76,0.12);
+      border: 1px solid rgba(212,162,76,0.3);
+      padding: 2px 8px;
+      border-radius: 20px;
+    }
+    .player-chips {
+      font-size: 12px;
+      color: var(--fg3);
+    }
+
+    /* ── 標題文字 ── */
+    .section-title {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 24px;
+      font-weight: 700;
+      color: var(--gold3);
+      letter-spacing: 3px;
+      text-align: center;
+      margin-bottom: 24px;
+    }
+    .section-sub {
+      font-size: 11px;
+      color: var(--fg3);
+      letter-spacing: 2px;
+      text-align: center;
+      margin-bottom: 20px;
+    }
+
+    /* ── 返回按鈕 ── */
+    .btn-back {
+      align-self: flex-start;
+      background: none;
+      border: none;
+      color: var(--fg3);
+      font-size: 13px;
+      cursor: pointer;
+      padding: 4px 0;
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-family: inherit;
+      letter-spacing: 1px;
+    }
+    .btn-back:hover { color: var(--gold2); }
+
+    /* ── Toast 提示 ── */
+    #toast {
+      position: fixed;
+      bottom: 40px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(13,18,32,0.95);
+      border: 1px solid rgba(212,162,76,0.4);
+      border-radius: 20px;
+      padding: 10px 24px;
+      font-size: 13px;
+      color: var(--fg1);
+      letter-spacing: 1px;
+      opacity: 0;
+      transition: opacity 0.3s;
+      pointer-events: none;
+      z-index: 9999;
+      white-space: nowrap;
+    }
+    #toast.show { opacity: 1; }
+
+    /* ── 等待人數提示 ── */
+    .wait-info {
+      font-size: 12px;
+      color: var(--fg2);
+      text-align: center;
+      letter-spacing: 1px;
+      margin-bottom: 8px;
+    }
+
+    /* ── 複製提示 ── */
+    .copy-hint {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      margin-top: 8px;
+    }
+    .btn-copy {
+      background: rgba(212,162,76,0.1);
+      border: 1px solid rgba(212,162,76,0.3);
+      border-radius: 8px;
+      padding: 6px 14px;
+      font-size: 12px;
+      color: var(--gold2);
+      cursor: pointer;
+      font-family: inherit;
+      letter-spacing: 1px;
+    }
+    .btn-copy:hover { background: rgba(212,162,76,0.2); }
+
+    /* ── 輸入邀請碼區域 ── */
+    .code-input {
+      text-align: center;
+      font-size: 24px;
+      letter-spacing: 8px;
+      font-family: 'Cormorant Garamond', serif;
+      font-weight: 700;
+    }
+
+    /* ── 間距工具 ── */
+    .mt8  { margin-top: 8px; }
+    .mt12 { margin-top: 12px; }
+    .mt16 { margin-top: 16px; }
+    .mt24 { margin-top: 24px; }
+
+    /* ── Loading 遮罩 ── */
+    #loading-mask {
+      position: fixed;
+      inset: 0;
+      background: #04060E;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 9998;
+      transition: opacity 0.5s;
+    }
+    #loading-mask.hide { opacity: 0; pointer-events: none; }
+    .loading-dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: var(--gold2);
+      animation: pulse 1.2s ease-in-out infinite;
+      margin: 0 4px;
+    }
+    .loading-dot:nth-child(2) { animation-delay: 0.2s; }
+    .loading-dot:nth-child(3) { animation-delay: 0.4s; }
+    @keyframes pulse {
+      0%, 80%, 100% { transform: scale(0.6); opacity: 0.3; }
+      40% { transform: scale(1); opacity: 1; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- Loading 遮罩 -->
+<div id="loading-mask">
+  <div style="display:flex">
+    <div class="loading-dot"></div>
+    <div class="loading-dot"></div>
+    <div class="loading-dot"></div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div id="toast"></div>
+
+<div id="app">
+
+  <!-- ── 畫面 1：姓名輸入 ── -->
+  <div id="screen-name" class="screen active">
+    <div class="brand">
+      <div class="brand-sub">德州撲克 · 多人連線</div>
+      <div class="brand-title">POKER ROYALE</div>
+      <div class="brand-line"></div>
+    </div>
+
+    <div class="glass-card">
+      <div class="input-label">你的名字</div>
+      <input id="input-name" class="input-field" type="text"
+             placeholder="輸入玩家名稱" maxlength="16" autocomplete="off" />
+      <div class="mt16">
+        <button class="btn-gold" onclick="confirmName()">進入大廳</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── 畫面 2：大廳 ── -->
+  <div id="screen-lobby" class="screen">
+    <div class="brand">
+      <div class="brand-sub">德州撲克 · 多人連線</div>
+      <div class="brand-title">POKER ROYALE</div>
+      <div class="brand-line"></div>
+    </div>
+
+    <div class="glass-card">
+      <div class="section-title">遊戲大廳</div>
+
+      <button class="btn-gold" onclick="createRoom()">建立新房間</button>
+
+      <div class="divider">或</div>
+
+      <div class="input-label">輸入邀請碼加入</div>
+      <input id="input-code" class="input-field code-input" type="text"
+             placeholder="貼上邀請碼" maxlength="20" autocomplete="off" />
+      <div class="mt12">
+        <button class="btn-outline" onclick="joinRoom()">加入房間</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── 畫面 3：等待室 ── -->
+  <div id="screen-wait" class="screen">
+    <button class="btn-back" onclick="leaveRoom()">← 返回大廳</button>
+
+    <div class="section-title" id="wait-title">等待玩家加入</div>
+
+    <div class="glass-card">
+      <div class="invite-hint">邀請碼</div>
+      <div class="invite-code" id="display-code">------</div>
+      <div class="copy-hint">
+        <button class="btn-copy" onclick="copyCode()">複製邀請碼</button>
+      </div>
+    </div>
+
+    <div class="mt16 glass-card">
+      <div class="wait-info" id="wait-count">等待玩家中... (1/6)</div>
+      <div class="player-list" id="player-list"></div>
+    </div>
+
+    <div class="mt16" style="width:100%">
+      <button class="btn-gold" id="btn-start" onclick="startGame()"
+              style="display:none">開始遊戲（最少 2 人）</button>
+      <div class="wait-info" id="wait-hint" style="margin-top:12px">
+        最少 2 人，最多 6 人
+      </div>
+    </div>
+  </div>
+
+</div><!-- #app -->
+
+<script type="module" src="/dist/lobby/lobby.js"></script>
+<script>
+  // 隱藏 loading 遮罩
+  window.addEventListener('load', () => {
+    setTimeout(() => {
+      const m = document.getElementById('loading-mask');
+      if (m) { m.classList.add('hide'); setTimeout(() => m.remove(), 500); }
+    }, 400);
+  });
+</script>
+</body>
+</html>
