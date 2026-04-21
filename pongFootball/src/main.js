@@ -84,9 +84,6 @@ function tick(now) {
     if (mode === "ai") {
       state.leftY = getPaddleTargetY("left", state.leftY, dt);
       state.rightY = updateAI(ai, state, "right", dt);
-    } else if (mode === "local") {
-      state.leftY = getPaddleTargetY("left", state.leftY, dt);
-      state.rightY = getPaddleTargetY("right", state.rightY, dt);
     } else if (mode === "net-host") {
       state.leftY = getPaddleTargetY("left", state.leftY, dt);
       if (netState.remoteInputY != null) state.rightY = clampPaddle(netState.remoteInputY);
@@ -134,8 +131,7 @@ function tick(now) {
 function showGameOver(winner) {
   const youAre = mode === "net-client" ? "right" : "left";
   const youWin = winner === youAre || (mode === "ai" && winner === "left") || (mode === "local" && true);
-  const txt = mode === "local" ? (winner === "left" ? "左方勝利！" : "右方勝利！")
-            : (youWin ? "你贏了！" : "你輸了");
+  const txt = youWin ? "你贏了！" : "你輸了";
   overlayEl.innerHTML = `
     <div class="gameover">
       <h1>${txt}</h1>
@@ -167,7 +163,6 @@ function wireMenu() {
       document.getElementById("difficulty-pane").style.display = "none";
     };
   });
-  document.getElementById("play-local").onclick = () => startGame("local");
   document.getElementById("play-net").onclick = () => {
     document.getElementById("net-pane").style.display = "flex";
   };

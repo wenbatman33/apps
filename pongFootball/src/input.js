@@ -35,10 +35,10 @@ export function setupInput(canvas, layoutFn) {
     const layout = getLayout();
     // 將畫布像素座標轉回邏輯座標
     if (layout.vertical) {
-      // 直向：canvas 座標 (px,py) 對應邏輯 (logicX = py 相關, logicY = viewW - px 相關)
-      // 反變換：先去掉 offset、除 scale，再做反旋轉
-      const lx = (py - layout.offsetY) / layout.scale;      // 邏輯 X 範圍 0..LOGIC_W
-      const ly = (layout.viewW - px - layout.offsetX) / layout.scale; // 邏輯 Y 範圍 0..LOGIC_H
+      // 直向：逆時針 -90° 旋轉後反變換
+      // screen (px, py) → logical (lx, ly)
+      const lx = LOGIC_W - (py - layout.offsetY) / layout.scale; // 邏輯 X：下方=0（我方）
+      const ly = (px - layout.offsetX) / layout.scale;            // 邏輯 Y
       pointerY = ly;
       pointerSide = lx < LOGIC_W / 2 ? "left" : "right";
     } else {

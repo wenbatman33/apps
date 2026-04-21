@@ -29,9 +29,9 @@ export const WIN_SCORE = 7;
 
 // 難度參數：AI 反應速度 (px/sec) 與「追球提前預測」比例
 export const AI_DIFFICULTY = {
-  easy:   { speed: 380, errorPx: 90, reactDelay: 0.25 },
-  normal: { speed: 620, errorPx: 40, reactDelay: 0.12 },
-  hard:   { speed: 900, errorPx: 10, reactDelay: 0.04 },
+  easy:   { speed: 260, errorPx: 140, reactDelay: 0.38 },
+  normal: { speed: 430, errorPx: 75,  reactDelay: 0.20 },
+  hard:   { speed: 720, errorPx: 22,  reactDelay: 0.07 },
 };
 
 // 數字圖 4 欄 × 3 列 = 12 格，前 10 格為 0-9

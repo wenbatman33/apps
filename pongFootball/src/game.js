@@ -143,12 +143,12 @@ export function renderGame(ctx, state, viewW, viewH, vertical) {
   // 計算縮放：直向時把邏輯空間旋轉 90° 填滿
   let scale, offsetX, offsetY;
   if (vertical) {
-    // 旋轉後邏輯寬 = LOGIC_H, 邏輯高 = LOGIC_W
+    // 逆時針旋轉 -90°：讓左側（我方）在螢幕下方
     scale = Math.min(viewW / LOGIC_H, viewH / LOGIC_W);
     offsetX = (viewW - LOGIC_H * scale) / 2;
     offsetY = (viewH - LOGIC_W * scale) / 2;
-    ctx.translate(offsetX + LOGIC_H * scale, offsetY);
-    ctx.rotate(Math.PI / 2);
+    ctx.translate(offsetX, offsetY + LOGIC_W * scale);
+    ctx.rotate(-Math.PI / 2);
     ctx.scale(scale, scale);
   } else {
     scale = Math.min(viewW / LOGIC_W, viewH / LOGIC_H);
@@ -213,8 +213,9 @@ function drawHUD(ctx, state, viewW, viewH, vertical) {
   let leftPos, rightPos;
   const pad = 80;
   if (vertical) {
-    leftPos = { x: viewW / 2, y: pad };
-    rightPos = { x: viewW / 2, y: viewH - pad };
+    // 逆時針旋轉後：左側（我方）在下、右側（AI）在上
+    leftPos  = { x: viewW / 2, y: viewH - pad };
+    rightPos = { x: viewW / 2, y: pad };
   } else {
     leftPos = { x: pad, y: viewH / 2 };
     rightPos = { x: viewW - pad, y: viewH / 2 };
