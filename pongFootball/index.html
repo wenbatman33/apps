@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Pong Football</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <canvas id="game"></canvas>
+
+  <div id="menu" class="menu">
+    <div class="logo-wrap">
+      <img src="assets/png/logo.png" alt="logo">
+    </div>
+    <h1>Pong Football</h1>
+    <div class="btn-row">
+      <button id="play-ai" class="big-btn">單人（vs AI）</button>
+      <button id="play-local" class="big-btn">雙人同機</button>
+      <button id="play-net" class="big-btn">網路對戰</button>
+    </div>
+    <div class="settings-row">
+      <label><input type="checkbox" id="sound-toggle" checked> 音效</label>
+    </div>
+    <div class="hint">
+      鍵盤：W/S（左方）、↑/↓（右方）　｜ 滑鼠 / 觸控：拖曳擋板
+    </div>
+
+    <div id="difficulty-pane" class="pane" style="display:none">
+      <div class="pane-box">
+        <h2>選擇難度</h2>
+        <button data-diff="easy" class="big-btn">簡單</button>
+        <button data-diff="normal" class="big-btn">普通</button>
+        <button data-diff="hard" class="big-btn">困難</button>
+        <button class="pane-close small-btn">取消</button>
+      </div>
+    </div>
+
+    <div id="net-pane" class="pane" style="display:none">
+      <div class="pane-box">
+        <h2>網路對戰</h2>
+        <p class="small">建立房間後把房間碼分享給對手</p>
+        <button id="btn-host" class="big-btn">建立房間（Host）</button>
+        <div class="divider">或</div>
+        <input id="code-input" type="text" placeholder="輸入房間碼" maxlength="8">
+        <button id="btn-join" class="big-btn">加入房間</button>
+        <div id="net-info" class="net-info"></div>
+        <button class="pane-close small-btn">取消</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="overlay"></div>
+
+  <button id="back-btn" title="回主選單">⏎</button>
+
+  <script type="module" src="src/main.js"></script>
+</body>
+</html>
