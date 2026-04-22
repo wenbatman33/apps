@@ -1,7 +1,7 @@
 import { Game3D } from "./game3d.js";
 import * as Net from "./net.js";
 import * as Sfx from "./sound.js";
-import { RACE_OPTIONS, BALL_COLORS } from "./constants.js";
+import { RACE_OPTIONS } from "./constants.js";
 
 document.addEventListener("pointerdown", () => Sfx.unlock(), { once: true });
 
@@ -10,7 +10,13 @@ const $hud  = document.getElementById("hud");
 const $overlay = document.getElementById("overlay");
 const $canvas = document.getElementById("gl");
 
-const state = { mode: null, raceTo: 9, difficulty: "normal", name: "玩家" };
+const NAME_KEY = "nineball_name";
+const state = {
+  mode: null,
+  raceTo: 9,
+  difficulty: "normal",
+  name: localStorage.getItem(NAME_KEY) || "玩家",
+};
 let game = null;
 
 function hash32(str) {
@@ -39,6 +45,7 @@ function el(tag, attrs = {}, ...kids) {
 
 // ---------- 選單頁面 ----------
 function showMenu() {
+  Net.leave();
   stopGame();
   $menu.classList.remove("hidden");
   $hud.classList.add("hidden");
@@ -48,8 +55,9 @@ function showMenu() {
     el("h1", {}, "9 號球"),
     el("div", { className: "sub" }, "9-Ball Pool · 3D 俯視"),
     el("div", { className: "row" },
-      el("button", { onClick: () => pickRace("ai") }, "單人挑戰 AI"),
-      el("button", { onClick: () => pickRace("net") }, "網路對戰"),
+      el("button", { onClick: () => { state.mode = "ai"; state.raceTo = 7; pickDifficulty(); } }, "單人挑戰 AI"),
+      el("button", { onClick: () => { state.mode = "net"; state.raceTo = 5; pickName(); } }, "網路對戰"),
+      el("button", { onClick: () => { state.mode = "practice"; state.raceTo = 0; startGame(); } }, "練習模式"),
     ),
     el("div", { className: "hint" }, "拖曳白球反方向瞄準，放開擊球"),
   );
@@ -63,7 +71,7 @@ function pickRace(mode) {
     el("div", { className: "sub" }, mode === "ai" ? "單人挑戰 AI" : "網路對戰"),
     el("div", { className: "row horizontal" },
       ...RACE_OPTIONS.map(n =>
-        el("button", { onClick: () => { state.raceTo = n; mode === "ai" ? pickDifficulty() : pickName(); } },
+        el("button", { onClick: () => { state.raceTo = n; pickDifficulty(); } },
           `搶 ${n} 局`)
       )
     ),
@@ -78,13 +86,14 @@ function pickDifficulty() {
   const levels = [["簡單", "easy"], ["普通", "normal"], ["困難", "hard"]];
   $menu.append(
     el("h1", {}, "選擇難度"),
+    el("div", { className: "sub" }, `搶 ${state.raceTo} 局`),
     el("div", { className: "row" },
       ...levels.map(([lbl, val]) =>
         el("button", { onClick: () => { state.difficulty = val; startGame(); } }, lbl)
       ),
     ),
     el("div", { style: { marginTop: "30px" } },
-      el("button", { className: "ghost", onClick: () => pickRace("ai") }, "返回"),
+      el("button", { className: "ghost", onClick: showMenu }, "返回"),
     ),
   );
 }
@@ -95,18 +104,19 @@ function pickName() {
   input.value = state.name || "";
   $menu.append(
     el("h1", {}, "輸入暱稱"),
-    el("div", { className: "sub" }, "系統會自動配對"),
+    el("div", { className: "sub" }, "搶 5 局 · 系統會自動配對"),
     el("div", { className: "row" },
       input,
       el("button", {
         onClick: () => {
           state.name = (input.value || "玩家").slice(0, 12);
+          localStorage.setItem(NAME_KEY, state.name);
           startMatching();
         }
       }, "開始配對"),
     ),
     el("div", { style: { marginTop: "30px" } },
-      el("button", { className: "ghost", onClick: () => pickRace("net") }, "返回"),
+      el("button", { className: "ghost", onClick: showMenu }, "返回"),
     ),
   );
   setTimeout(() => input.focus(), 100);
@@ -161,17 +171,22 @@ function stopGame() {
 function renderHud(info) {
   $hud.innerHTML = "";
   const p1Turn = info.currentPlayer === 1;
-  const col = info.target ? BALL_COLORS[info.target] : null;
-  const colHex = col !== null ? "#" + col.toString(16).padStart(6, "0") : "#666";
+  const isPractice = state.mode === "practice";
   $hud.append(
     el("div", {},
-      el("span", { className: "tag" }, `搶 ${info.raceTo}`),
+      isPractice ? null : el("span", { className: "tag" }, `搶 ${info.raceTo}`),
       el("span", { className: p1Turn ? "turn" : "" }, info.p1),
-      el("span", { className: "score" }, ` ${info.score.p1} - ${info.score.p2} `),
-      el("span", { className: !p1Turn ? "turn" : "" }, info.p2),
+      isPractice ? null : el("span", { className: "score" }, ` ${info.score.p1} - ${info.score.p2} `),
+      isPractice ? null : el("span", { className: !p1Turn ? "turn" : "" }, info.p2),
     ),
     el("div", { className: "target" },
-      info.target ? el("span", { className: "ball", style: { background: colHex, color: info.target === 8 ? "#fff" : "#111" } }, String(info.target)) : null,
+      info.target ? el("img", {
+        src: `assets/${info.target}ball.png`,
+        style: {
+          width: "28px", height: "28px", borderRadius: "50%",
+          boxShadow: "0 1px 3px rgba(0,0,0,.5)", verticalAlign: "middle",
+        },
+      }) : null,
       info.ballInHand ? el("span", { className: "tag", style: { color: "#f7c300" } }, "自由球") : null,
     ),
     el("div", {},
