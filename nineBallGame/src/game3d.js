@@ -1062,7 +1062,7 @@ export class Game3D {
     // 模擬白球軌跡含反射與碰球預測
     const traj = this._predictTrajectory(cp.x, cp.z, ux, uz);
     this.aimLines = [];
-    const y = 0.012;
+    const y = BALL_R; // 瞄準線必須與球心同高，否則透視相機會造成偏移
 
     // 力度決定虛線可顯示的總長度（愈大力愈長）
     const f = Math.min(len / 0.6, 1);
