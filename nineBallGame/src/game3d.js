@@ -16,7 +16,7 @@ import * as Sfx from "./sound.js";
 const HX = TABLE_LEN / 2; // 半長 (x 方向)
 const HZ = TABLE_WID / 2; // 半寬 (z 方向)
 // 海綿條寬度（對應 canvas 繪製 cushW = pocketR_px * 0.55）
-const CUSHION_INSET = POCKET_R * 0.55;
+const CUSHION_INSET = 0;
 
 // 袋口座標（桌面 XZ 平面）
 function pocketPositions() {
@@ -92,6 +92,8 @@ export class Game3D {
     this._rack();
     this._buildCueStick();
     this._bindInput();
+    this.spin = { x: 0, y: 0 };
+    this._buildSpinWidget();
     this._resize();
     window.addEventListener("resize", () => this._resize());
     this._loop = this._loop.bind(this);
@@ -165,7 +167,8 @@ export class Game3D {
     ));
     world.addContactMaterial(new CANNON.ContactMaterial(
       this.ballMaterial, this.cushionMaterial,
-      { friction: 0.2, restitution: CUSHION_RESTITUTION },
+      // 邊緣幾乎無摩擦才能保持入射角＝反射角，吻合預測線
+      { friction: 0.02, restitution: CUSHION_RESTITUTION },
     ));
 
     // 全域碰撞事件：播放音效（節流避免太吵）
@@ -670,7 +673,7 @@ export class Game3D {
     const h = CUSHION_H;
     const thick = 0.03;              // 枱邊厚度（向桌心延伸）
     // 海綿條寬度（必須對應 canvas 中 cushW = pocketR_px * 0.55）
-    const CUSHION_INSET = POCKET_R * 0.55;
+    const CUSHION_INSET = 0;
     const cushionMat = new THREE.MeshStandardMaterial({
       color: 0x095a2e, roughness: 0.9,
     });
@@ -727,7 +730,8 @@ export class Game3D {
 
     // 外層安全牆（隱形、貼在毛氈邊緣木紋內側）
     // cushion 內縮後袋口外木紋區會讓球逃出，這層牆擋住非袋口位置
-    const outerThick = 0.02;
+    const outerThick = 0.40;   // 超厚，避免高速球穿板
+    const outerH = 0.50;       // 超高，避免球飛越海綿條
     const pGap = POCKET_R * 1.1; // 袋口缺口半寬
     const addOuterX = (x1, x2, z0, facingOut) => {
       if (x2 - x1 <= 0) return;
@@ -736,9 +740,9 @@ export class Game3D {
       const zPos = z0 + facingOut * outerThick / 2;
       const body = new CANNON.Body({
         mass: 0, material: this.cushionMaterial,
-        shape: new CANNON.Box(new CANNON.Vec3(len / 2, h / 2, outerThick / 2)),
+        shape: new CANNON.Box(new CANNON.Vec3(len / 2, outerH / 2, outerThick / 2)),
       });
-      body.position.set(cx, h / 2, zPos);
+      body.position.set(cx, outerH / 2, zPos);
       this.world.addBody(body);
     };
     const addOuterZ = (z1, z2, x0, facingOut) => {
@@ -748,9 +752,9 @@ export class Game3D {
       const xPos = x0 + facingOut * outerThick / 2;
       const body = new CANNON.Body({
         mass: 0, material: this.cushionMaterial,
-        shape: new CANNON.Box(new CANNON.Vec3(outerThick / 2, h / 2, len / 2)),
+        shape: new CANNON.Box(new CANNON.Vec3(outerThick / 2, outerH / 2, len / 2)),
       });
-      body.position.set(xPos, h / 2, cz);
+      body.position.set(xPos, outerH / 2, cz);
       this.world.addBody(body);
     };
     // 上下邊：左-中袋、中-右段（角袋、中袋各留缺口）
@@ -767,9 +771,7 @@ export class Game3D {
   _createBall(number, x, z) {
     const isCue = number === 0;
     let mat;
-    if (isCue) {
-      mat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.25, metalness: 0.1 });
-    } else {
+    {
       const tex = new THREE.TextureLoader().load(`./assets/${number}ball.png`);
       tex.colorSpace = THREE.SRGBColorSpace;
       tex.anisotropy = 8;
@@ -893,6 +895,15 @@ export class Game3D {
     }
     this.balls = [];
 
+    // 練習模式：母球 + 1 顆目標球
+    if (this.mode === "practice") {
+      const target = this._createBall(1, HX * 0.5, 0);
+      this.balls.push(target);
+      this.cue = this._createBall(0, -HX * 0.5, 0);
+      this.balls.push(this.cue);
+      return;
+    }
+
     // 腳點（rack 前端 = 1 號球位置）：在 x = +HX/2 附近
     const footX = HX * 0.5;
     const footZ = 0;
@@ -964,6 +975,21 @@ export class Game3D {
     if (!w) return;
     const cuePos = this.cue.body.position;
 
+    // 練習模式：點到球就直接拖曳擺位
+    if (this.mode === "practice") {
+      const hitR = BALL_R * 1.6;
+      for (const b of this.balls) {
+        if (b.pocketed) continue;
+        const dx = w.x - b.body.position.x, dz = w.z - b.body.position.z;
+        if (dx * dx + dz * dz < hitR * hitR) {
+          this.dragBall = b;
+          b.body.velocity.set(0, 0, 0);
+          b.body.angularVelocity.set(0, 0, 0);
+          return;
+        }
+      }
+    }
+
     if (this.ballInHand) {
       // 放置白球（需要在桌面內且不重疊）
       if (this._inPlay(w.x, w.z) && !this._overlaps(w.x, w.z)) {
@@ -981,6 +1007,20 @@ export class Game3D {
   }
 
   _move(e) {
+    if (this.dragBall) {
+      const w = this._toWorld(e);
+      if (!w) return;
+      // 限制在海綿條內緣（別放到 cushion/木框範圍裡）
+      const lx = HX - CUSHION_INSET - BALL_R;
+      const lz = HZ - CUSHION_INSET - BALL_R;
+      let x = Math.max(-lx, Math.min(lx, w.x));
+      let z = Math.max(-lz, Math.min(lz, w.z));
+      this.dragBall.body.velocity.set(0, 0, 0);
+      this.dragBall.body.angularVelocity.set(0, 0, 0);
+      this.dragBall.body.position.set(x, BALL_R, z);
+      this.dragBall.body.wakeUp();
+      return;
+    }
     if (!this.aim) return;
     const w = this._toWorld(e);
     this.aim.curX = w.x; this.aim.curZ = w.z;
@@ -988,6 +1028,12 @@ export class Game3D {
   }
 
   _up(e) {
+    if (this.dragBall) {
+      this.dragBall.body.velocity.set(0, 0, 0);
+      this.dragBall.body.angularVelocity.set(0, 0, 0);
+      this.dragBall = null;
+      return;
+    }
     if (!this.aim) return;
     // 方向＝拖曳反向（start → cur 的反向），力度＝拖曳世界距離
     const dx = this.aim.startX - this.aim.curX;
@@ -1018,19 +1064,30 @@ export class Game3D {
     this.aimLines = [];
     const y = 0.012;
 
+    // 力度決定虛線可顯示的總長度（愈大力愈長）
+    const f = Math.min(len / 0.6, 1);
+    let budget = 0.2 + f * 3.0;
+
     // 以加粗虛線繪製每一段軌跡（用一排小球模擬粗虛線，WebGL Line 無法設粗）
     for (let i = 0; i < traj.segments.length; i++) {
       const seg = traj.segments[i];
+      const segLen = Math.hypot(seg.x2 - seg.x1, seg.z2 - seg.z1);
+      const drawLen = Math.min(segLen, budget);
+      const t = segLen > 1e-6 ? drawLen / segLen : 0;
+      const x2 = seg.x1 + (seg.x2 - seg.x1) * t;
+      const z2 = seg.z1 + (seg.z2 - seg.z1) * t;
       const col = i === 0 ? 0xffffff : 0xcccccc;
       const opacity = i === 0 ? 0.95 : 0.7;
-      const g = this._makeFatDashedLine(seg.x1, seg.z1, seg.x2, seg.z2, y, col, opacity, 0.009, 0.05);
+      const g = this._makeFatDashedLine(seg.x1, seg.z1, x2, z2, y, col, opacity, 0.006, 0.045);
       this.scene.add(g);
       this.aimLines.push(g);
+      budget -= drawLen;
+      if (budget <= 1e-4) break;
     }
 
     // 終點圓圈（ghost 球 / 袋口標記）
     if (traj.end) {
-      const ring = this._makeRing(traj.end.x, y, traj.end.z, BALL_R, traj.end.color, traj.end.dashed);
+      const ring = this._makeFatRing(traj.end.x, y, traj.end.z, BALL_R, traj.end.color, 0.004, 0.9);
       this.scene.add(ring);
       this.aimLines.push(ring);
     }
@@ -1062,7 +1119,6 @@ export class Game3D {
     }
 
     // 力度條（反向，不受反射影響）
-    const f = Math.min(len / 0.6, 1);
     const color = f < 0.4 ? 0x1ca85a : f < 0.8 ? 0xf7c300 : 0xd9212e;
     const p2 = new THREE.BufferGeometry().setFromPoints([
       new THREE.Vector3(cp.x, y, cp.z),
@@ -1112,6 +1168,19 @@ export class Game3D {
     m.renderOrder = 2;
     group.add(m);
     return group;
+  }
+
+  // 粗 torus 圓圈（有厚度）
+  _makeFatRing(cx, y, cz, radius, color, tube, opacity) {
+    const geom = new THREE.TorusGeometry(radius, tube, 8, 48);
+    const mat = new THREE.MeshBasicMaterial({
+      color, transparent: true, opacity: opacity ?? 0.9, depthWrite: false,
+    });
+    const m = new THREE.Mesh(geom, mat);
+    m.position.set(cx, y, cz);
+    m.rotation.x = Math.PI / 2;
+    m.renderOrder = 2;
+    return m;
   }
 
   _makeRing(cx, y, cz, radius, color, dashed) {
@@ -1236,6 +1305,22 @@ export class Game3D {
       new CANNON.Vec3(0, 0, 0)
     );
     const impMag = Math.hypot(ix, iz);
+    // 球桿撞擊點：推/拉 + 左右塞
+    // 基準：中心擊球 ⇒ 自然滾動（ω_z = -v/R，向前行進方向的「頂部向前」），
+    //       如此不會因為地面摩擦而被拖停；推桿再往上加，拉桿再往反向扣。
+    {
+      const speed = impMag / BALL_MASS;
+      const ux = ix / (impMag || 1), uz = iz / (impMag || 1);
+      const tx = uz, tz = -ux; // cross(up,dir)，自然滾動的軸方向（wTop 為正代表向前滾）
+      const rate = speed / BALL_R;
+      const TOP_GAIN = 2.6;    // 拉桿強度（全拉桿背旋 ~1.6v/R，撞擊後靠殘旋微倒轉）
+      const SIDE = 1.2;
+      const wTop = rate * (1 + this.spin.y * TOP_GAIN); // spin.y=+1 推桿、-1 拉桿
+      const wYaw = rate * this.spin.x * SIDE;
+      this.cue.body.angularVelocity.set(tx * wTop, wYaw, tz * wTop);
+    }
+    // 擊球後重置撞擊點，避免下一桿沿用
+    if (this.spin) { this.spin.x = 0; this.spin.y = 0; if (this.spinDot) { this.spinDot.style.left = "50%"; this.spinDot.style.top = "50%"; } }
     Sfx.playCueStrike(Math.min(impMag / MAX_SHOT_IMPULSE, 1));
     // 擊球瞬間讓球竿快速推到白球位置再隱藏（視覺回饋）
     if (this.cueStick && this.cueStick.visible) {
@@ -1327,7 +1412,23 @@ export class Game3D {
   _loop(t) {
     const dt = Math.min((t - this._lastT) / 1000, 0.05);
     this._lastT = t;
-    this.world.step(1 / 60, dt, 3);
+    this.world.step(1 / 120, dt, 8);
+
+    // 硬性位置限制：若球超出桌面範圍（穿板保險），把球拉回並歸零速度
+    const MAX_X = HX - BALL_R, MAX_Z = HZ - BALL_R;
+    for (const b of this.balls) {
+      if (b.pocketed) continue;
+      const p = b.body.position;
+      if (p.x > MAX_X + 0.2 || p.x < -MAX_X - 0.2 ||
+          p.z > MAX_Z + 0.2 || p.z < -MAX_Z - 0.2) {
+        // 明顯穿出才回收，小幅越界仍由 cushion 處理
+        p.x = Math.max(-MAX_X, Math.min(MAX_X, p.x));
+        p.z = Math.max(-MAX_Z, Math.min(MAX_Z, p.z));
+        p.y = BALL_R;
+        b.body.velocity.set(0, 0, 0);
+        b.body.angularVelocity.set(0, 0, 0);
+      }
+    }
 
     // 同步 mesh
     for (const b of this.balls) {
@@ -1364,6 +1465,32 @@ export class Game3D {
   _resolveShot() {
     const cp = this.cue.body.position;
     const cueOff = !this._inPlay(cp.x, cp.z) && !this.cue.pocketed;
+
+    // 練習模式：母球/目標球掉袋就重置，不計分、不換手
+    if (this.mode === "practice") {
+      if (this.cue.pocketed || cueOff) {
+        if (this.cue.pocketed) {
+          this.cue.pocketed = false;
+          this.cue.mesh.visible = true;
+          this.cue.mesh.scale.setScalar(1);
+          this.cue.mesh.position.y = BALL_R;
+        }
+        this._rebuildBody(this.cue, -HX * 0.5, 0);
+      }
+      const t = this.balls.find(b => b.number === 1);
+      if (t && t.pocketed) {
+        t.pocketed = false;
+        t.mesh.visible = true;
+        t.mesh.scale.setScalar(1);
+        t.mesh.position.y = BALL_R;
+        this._rebuildBody(t, HX * 0.5, 0);
+      }
+      this.firstHit = null;
+      this.pocketedThisShot = [];
+      this._pushHud();
+      return;
+    }
+
     const ctx = {
       firstHit: this.firstHit,
       pocketed: this.pocketedThisShot.slice(),
@@ -1495,6 +1622,9 @@ export class Game3D {
     if (this.mode === "net" && this.net) {
       p1 = this.net.role === "host" ? this.net.myName : (this.net.opponentName || "對手");
       p2 = this.net.role === "host" ? (this.net.opponentName || "對手") : this.net.myName;
+    } else if (this.mode === "practice") {
+      p1 = "練習模式";
+      p2 = "";
     } else {
       p1 = this.playerName;
       p2 = this.mode === "ai" ? `AI (${this.difficulty})` : "對手";
@@ -1605,6 +1735,10 @@ export class Game3D {
     }
     if (w >= h) this.camera.up.set(0, 0, -1);
 
+    // PC（精確指標）把畫面縮小至 70%，讓桌邊有空間做大力拖曳、HUD 不被遮擋
+    const isDesktop = window.matchMedia?.("(hover: hover) and (pointer: fine)").matches;
+    if (isDesktop) { viewW /= 0.62; viewH /= 0.62; }
+
     this.camera.left   = -viewW / 2;
     this.camera.right  =  viewW / 2;
     this.camera.top    =  viewH / 2;
@@ -1617,6 +1751,60 @@ export class Game3D {
     cancelAnimationFrame(this._rafId);
     this.renderer.dispose();
     if (this._adjPanel) this._adjPanel.remove();
+    if (this.spinWidget) this.spinWidget.remove();
+  }
+
+  // 球桿撞擊點選擇器（推/拉/左塞/右塞）
+  _buildSpinWidget() {
+    const w = document.createElement("div");
+    w.id = "spin-widget";
+    w.style.cssText = [
+      "position:fixed", "left:50%", "bottom:20px",
+      "transform:translateX(-50%)",
+      "width:78px", "height:78px", "border-radius:50%",
+      "background:radial-gradient(circle at 35% 30%, #fff 0%, #e6e6e6 60%, #bfbfbf 100%)",
+      "box-shadow:0 2px 10px rgba(0,0,0,0.5), inset 0 -4px 8px rgba(0,0,0,0.15)",
+      "touch-action:none", "z-index:20", "cursor:crosshair",
+      "user-select:none",
+    ].join(";");
+    const dot = document.createElement("div");
+    dot.style.cssText = [
+      "position:absolute", "left:50%", "top:50%",
+      "width:14px", "height:14px", "border-radius:50%",
+      "background:#e33", "box-shadow:0 1px 3px rgba(0,0,0,0.6)",
+      "transform:translate(-50%,-50%)", "pointer-events:none",
+    ].join(";");
+    w.appendChild(dot);
+    document.body.appendChild(w);
+    this.spinWidget = w;
+    this.spinDot = dot;
+
+    const setSpin = (nx, ny) => {
+      const len = Math.hypot(nx, ny);
+      if (len > 1) { nx /= len; ny /= len; }
+      this.spin.x = nx;
+      this.spin.y = -ny; // 螢幕上 = 推桿（上 spin），下 = 拉桿
+      dot.style.left = (50 + nx * 42) + "%";
+      dot.style.top  = (50 + ny * 42) + "%";
+    };
+    const fromEvent = (e) => {
+      const r = w.getBoundingClientRect();
+      const nx = (e.clientX - r.left - r.width / 2) / (r.width / 2);
+      const ny = (e.clientY - r.top - r.height / 2) / (r.height / 2);
+      setSpin(nx, ny);
+    };
+    w.addEventListener("pointerdown", (e) => {
+      e.preventDefault();
+      fromEvent(e);
+      w.setPointerCapture(e.pointerId);
+      const onMove = (ev) => fromEvent(ev);
+      const onUp = () => {
+        w.removeEventListener("pointermove", onMove);
+        w.removeEventListener("pointerup", onUp);
+      };
+      w.addEventListener("pointermove", onMove);
+      w.addEventListener("pointerup", onUp);
+    });
   }
 }
 

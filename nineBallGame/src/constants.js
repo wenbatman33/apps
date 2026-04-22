@@ -9,14 +9,14 @@ export const POCKET_OPENING = 0.12;    // 枱邊留給袋口的缺口寬
 export const FRAME_THICK = 0.08;       // 木框厚度
 export const FRAME_H = 0.10;           // 木框高度
 
-// 物理參數
+// 物理參數（參考真實撞球）
 export const BALL_MASS = 0.17;         // 撞球約 170g
-export const BALL_RESTITUTION = 0.92;
-export const BALL_FRICTION = 0.15;
-export const GROUND_FRICTION = 0.25;
-export const CUSHION_RESTITUTION = 0.70;
-export const LINEAR_DAMPING = 0.5;
-export const ANGULAR_DAMPING = 0.5;
+export const BALL_RESTITUTION = 0.95;  // 球-球接近彈性碰撞
+export const BALL_FRICTION = 0.04;     // 球-球接觸幾乎無摩擦
+export const GROUND_FRICTION = 0.18;   // 毛氈滑動摩擦係數
+export const CUSHION_RESTITUTION = 0.80; // 海綿條吸收約 20% 能量
+export const LINEAR_DAMPING = 0.2;     // 滾動阻力（主要靠毛氈摩擦收球）
+export const ANGULAR_DAMPING = 0.15;   // 讓旋轉可持續
 export const MIN_SPEED = 0.05;
 
 // 擊球
