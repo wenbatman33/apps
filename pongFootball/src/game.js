@@ -2,6 +2,7 @@
 import { images } from "./assets.js";
 import {
   LOGIC_W, LOGIC_H, COURT_TOP, COURT_BOTTOM, GOAL_LEFT_X, GOAL_RIGHT_X,
+  GOAL_MOUTH_TOP, GOAL_MOUTH_BOTTOM,
   PADDLE_W, PADDLE_H, PADDLE_LEFT_X, PADDLE_RIGHT_X, PADDLE_SPEED,
   BALL_R, BALL_START_SPEED, BALL_MAX_SPEED, BALL_SPEEDUP,
   WIN_SCORE, NUMBER_COLS, NUMBER_ROWS, BALL_FRAMES,
@@ -71,11 +72,26 @@ export function updatePhysics(state, dt) {
   collideBall(state, PADDLE_LEFT_X, state.leftY, +1);
   collideBall(state, PADDLE_RIGHT_X, state.rightY, -1);
 
-  // 進球判定
-  if (b.x < GOAL_LEFT_X - BALL_R) {
+  // 球門牆反彈（球門口以外的木樁/石頭區）
+  if (b.x - BALL_R < GOAL_LEFT_X && b.vx < 0) {
+    if (b.y < GOAL_MOUTH_TOP || b.y > GOAL_MOUTH_BOTTOM) {
+      b.x = GOAL_LEFT_X + BALL_R;
+      b.vx = Math.abs(b.vx);
+      playSfx("wall");
+    }
+  } else if (b.x + BALL_R > GOAL_RIGHT_X && b.vx > 0) {
+    if (b.y < GOAL_MOUTH_TOP || b.y > GOAL_MOUTH_BOTTOM) {
+      b.x = GOAL_RIGHT_X - BALL_R;
+      b.vx = -Math.abs(b.vx);
+      playSfx("wall");
+    }
+  }
+
+  // 進球判定（球中心越過進球線，且 y 在球門口範圍內）
+  if (b.x < GOAL_LEFT_X - BALL_R && b.y >= GOAL_MOUTH_TOP && b.y <= GOAL_MOUTH_BOTTOM) {
     state.rightScore++;
     triggerGoal(state, "right");
-  } else if (b.x > GOAL_RIGHT_X + BALL_R) {
+  } else if (b.x > GOAL_RIGHT_X + BALL_R && b.y >= GOAL_MOUTH_TOP && b.y <= GOAL_MOUTH_BOTTOM) {
     state.leftScore++;
     triggerGoal(state, "left");
   }
@@ -169,6 +185,11 @@ export function renderGame(ctx, state, viewW, viewH, vertical) {
   // 球門柱
   drawGoalPosts(ctx);
 
+  // Debug：顯示反彈牆（紅）與球門口（綠）
+  if (typeof location !== "undefined" && location.search.includes("debug=1")) {
+    drawDebugZones(ctx);
+  }
+
   // 擋板
   drawPaddle(ctx, images.pudLeft, PADDLE_LEFT_X, state.leftY);
   drawPaddle(ctx, images.pudRight, PADDLE_RIGHT_X, state.rightY);
@@ -237,6 +258,29 @@ function drawPaddle(ctx, img, x, y) {
   const fh = img.height;
   ctx.drawImage(img, 0, 0, fw, fh,
                 x - PADDLE_W / 2, y - PADDLE_H / 2, PADDLE_W, PADDLE_H);
+}
+
+function drawDebugZones(ctx) {
+  const wallW = 40;
+  ctx.save();
+  // 反彈牆（紅半透明）— 球門兩端 + 上下石頭牆
+  ctx.fillStyle = "rgba(255, 0, 0, 0.45)";
+  // 左球門：上半段、下半段
+  ctx.fillRect(GOAL_LEFT_X - wallW, COURT_TOP, wallW, GOAL_MOUTH_TOP - COURT_TOP);
+  ctx.fillRect(GOAL_LEFT_X - wallW, GOAL_MOUTH_BOTTOM, wallW, COURT_BOTTOM - GOAL_MOUTH_BOTTOM);
+  // 右球門：上半段、下半段
+  ctx.fillRect(GOAL_RIGHT_X, COURT_TOP, wallW, GOAL_MOUTH_TOP - COURT_TOP);
+  ctx.fillRect(GOAL_RIGHT_X, GOAL_MOUTH_BOTTOM, wallW, COURT_BOTTOM - GOAL_MOUTH_BOTTOM);
+  // 上石頭牆（COURT_TOP 以上一小段）
+  ctx.fillRect(0, COURT_TOP - wallW, LOGIC_W, wallW);
+  // 下石頭牆（COURT_BOTTOM 以下一小段）
+  ctx.fillRect(0, COURT_BOTTOM, LOGIC_W, wallW);
+
+  // 球門口（綠半透明）
+  ctx.fillStyle = "rgba(0, 255, 0, 0.35)";
+  ctx.fillRect(GOAL_LEFT_X - wallW, GOAL_MOUTH_TOP, wallW, GOAL_MOUTH_BOTTOM - GOAL_MOUTH_TOP);
+  ctx.fillRect(GOAL_RIGHT_X, GOAL_MOUTH_TOP, wallW, GOAL_MOUTH_BOTTOM - GOAL_MOUTH_TOP);
+  ctx.restore();
 }
 
 function drawGoalPosts(ctx) {

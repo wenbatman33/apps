@@ -4,12 +4,17 @@ export const LOGIC_W = 1280;
 export const LOGIC_H = 860;
 
 // 球場上下內牆（擋板活動範圍上下界、球反彈的邊界）
-export const COURT_TOP = 90;
-export const COURT_BOTTOM = 770;
+// 對齊石頭牆的內緣
+export const COURT_TOP = 170;
+export const COURT_BOTTOM = 690;
 
 // 左右球門（進球判定線）— 球中心越過此 x 判進球
 export const GOAL_LEFT_X = 110;
 export const GOAL_RIGHT_X = LOGIC_W - 110;
+
+// 球門口 y 範圍（只有這段算進球，上下木樁/石頭要反彈）
+export const GOAL_MOUTH_TOP = 240;
+export const GOAL_MOUTH_BOTTOM = 620;
 
 // 擋板
 export const PADDLE_W = 60;
