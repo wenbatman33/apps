@@ -16,16 +16,22 @@ const ctx = canvas.getContext("2d");
 const menuEl = document.getElementById("menu");
 const overlayEl = document.getElementById("overlay");
 const backBtn = document.getElementById("back-btn");
+const surrenderBtn = document.getElementById("surrender-btn");
+const netHud = document.getElementById("net-hud");
 
 let layout = { vertical: false, scale: 1, offsetX: 0, offsetY: 0, viewW: 0, viewH: 0 };
 let state = null;
 let ai = null;
-let mode = null;           // 'ai' | 'local' | 'net-host' | 'net-client'
-let aiSide = "right";      // AI 控制的邊
+let mode = null;           // 'ai' | 'net-host' | 'net-client'
+let aiSide = "right";
 let difficulty = "normal";
 let lastT = 0;
 let paused = false;
 let netState = { lastSend: 0, remoteInputY: null, remoteSnapshot: null };
+let readyLocal = false;
+let readyRemote = false;
+let gameStarted = false;   // ready 畫面等雙方按完才 true
+let savedName = localStorage.getItem("pong_name") || "";
 
 function resize() {
   const w = window.innerWidth, h = window.innerHeight;
@@ -53,6 +59,8 @@ function showMenu() {
   menuEl.style.display = "flex";
   overlayEl.innerHTML = "";
   backBtn.classList.remove("visible");
+  surrenderBtn.classList.remove("visible");
+  netHud.classList.remove("visible");
 }
 function hideMenu() {
   menuEl.style.display = "none";
@@ -73,6 +81,21 @@ function startGame(chosenMode, opts = {}) {
   hideMenu();
   paused = false;
   lastT = performance.now();
+  gameStarted = true;
+
+  if (mode === "net-host" || mode === "net-client") {
+    surrenderBtn.classList.add("visible");
+    updateNetHud();
+    netHud.classList.add("visible");
+  }
+}
+
+function updateNetHud() {
+  const me = Net.getMyName() || "我";
+  const opp = Net.getOpponentName() || "對手";
+  // net-host: 我在左、對手在右；net-client: 我在右
+  if (mode === "net-host") netHud.textContent = `${me} (左) vs (右) ${opp}`;
+  else if (mode === "net-client") netHud.textContent = `${opp} (左) vs (右) ${me}`;
 }
 
 // ---------- Main loop ----------
@@ -98,11 +121,9 @@ function tick(now) {
         });
       }
     } else if (mode === "net-client") {
-      // client 的擋板（畫面右邊）= 本地輸入；插值過去
       const target = getPaddleTargetY("right", state.rightY, dt);
       state.rightY = target;
       Net.sendInput({ y: target });
-      // 套用 host 狀態
       if (netState.remoteSnapshot) {
         const s = netState.remoteSnapshot;
         state.ball = s.ball;
@@ -113,11 +134,10 @@ function tick(now) {
       }
     }
 
-    if (mode !== "net-host" && mode !== "net-client") {
+    if (mode === "ai") {
       updatePhysics(state, dt);
     }
 
-    // 勝負顯示
     if (state.status === "gameover" && !overlayEl.dataset.shown) {
       overlayEl.dataset.shown = "1";
       showGameOver(state.winner);
@@ -128,18 +148,20 @@ function tick(now) {
   requestAnimationFrame(tick);
 }
 
-function showGameOver(winner) {
+function showGameOver(winner, overrideText = null) {
   const youAre = mode === "net-client" ? "right" : "left";
-  const youWin = winner === youAre || (mode === "ai" && winner === "left") || (mode === "local" && true);
-  const txt = youWin ? "你贏了！" : "你輸了";
+  const youWin = winner === youAre || (mode === "ai" && winner === "left");
+  const txt = overrideText || (youWin ? "你贏了！" : "你輸了");
+  const showScore = !overrideText;
   overlayEl.innerHTML = `
     <div class="gameover">
       <h1>${txt}</h1>
-      <div class="score">${state.leftScore} : ${state.rightScore}</div>
-      <button id="btn-again">再來一局</button>
+      ${showScore ? `<div class="score">${state.leftScore} : ${state.rightScore}</div>` : ""}
+      ${mode === "ai" ? `<button id="btn-again">再來一局</button>` : ""}
       <button id="btn-home">回主選單</button>
     </div>`;
-  overlayEl.querySelector("#btn-again").onclick = () => {
+  const againBtn = overlayEl.querySelector("#btn-again");
+  if (againBtn) againBtn.onclick = () => {
     overlayEl.dataset.shown = "";
     overlayEl.innerHTML = "";
     startGame(mode, { difficulty });
@@ -148,8 +170,110 @@ function showGameOver(winner) {
     overlayEl.dataset.shown = "";
     Net.leaveRoom();
     state = null;
+    gameStarted = false;
     showMenu();
   };
+}
+
+function toast(msg, ms = 2000) {
+  const t = document.createElement("div");
+  t.className = "toast";
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), ms);
+}
+
+// ---------- 網路配對 / 準備流程 ----------
+
+function openNetPane() {
+  document.getElementById("net-pane").style.display = "flex";
+  document.getElementById("name-input").value = savedName;
+}
+
+async function startMatch() {
+  const name = document.getElementById("name-input").value.trim() || "玩家";
+  savedName = name;
+  localStorage.setItem("pong_name", name);
+
+  document.getElementById("net-pane").style.display = "none";
+  document.getElementById("matching-pane").style.display = "flex";
+  document.getElementById("matching-info").textContent = "尋找對手中…";
+
+  await Net.joinLobby(name, {
+    onMatched: ({ role, opponentName }) => {
+      document.getElementById("matching-pane").style.display = "none";
+      openReadyPane();
+    },
+    onReady: ({ ready, from }) => {
+      // from 是對方的 role → 對方準備狀態
+      readyRemote = !!ready;
+      refreshReadyUI();
+      maybeStartGame();
+    },
+    onInput: (p) => { netState.remoteInputY = p.y; },
+    onState: (p) => { netState.remoteSnapshot = p; },
+    onSurrender: ({ from }) => {
+      handleOpponentSurrender();
+    },
+    onOpponentLeft: () => {
+      handleOpponentLeft();
+    },
+  });
+}
+
+function openReadyPane() {
+  readyLocal = false; readyRemote = false;
+  document.getElementById("ready-pane").style.display = "flex";
+  document.getElementById("me-name").textContent = Net.getMyName();
+  document.getElementById("opp-name").textContent = Net.getOpponentName();
+  refreshReadyUI();
+  document.getElementById("btn-ready").disabled = false;
+  document.getElementById("btn-ready").textContent = "我準備好了";
+}
+
+function refreshReadyUI() {
+  const meChip = document.getElementById("me-chip");
+  const oppChip = document.getElementById("opp-chip");
+  meChip.classList.toggle("ready", readyLocal);
+  oppChip.classList.toggle("ready", readyRemote);
+  document.getElementById("me-status").textContent = readyLocal ? "已準備" : "未準備";
+  document.getElementById("opp-status").textContent = readyRemote ? "已準備" : "未準備";
+}
+
+function maybeStartGame() {
+  if (readyLocal && readyRemote) {
+    document.getElementById("ready-pane").style.display = "none";
+    const role = Net.getRole();
+    startGame(role === "host" ? "net-host" : "net-client");
+  }
+}
+
+function handleOpponentSurrender() {
+  if (!gameStarted) return;
+  toast(`${Net.getOpponentName()} 投降了！`, 1500);
+  setTimeout(() => {
+    state.status = "gameover";
+    overlayEl.dataset.shown = "1";
+    showGameOver(null, "你贏了！（對方投降）");
+  }, 800);
+}
+
+function handleOpponentLeft() {
+  // ready 階段或遊戲中
+  const readyPane = document.getElementById("ready-pane");
+  if (readyPane.style.display === "flex") {
+    readyPane.style.display = "none";
+    Net.leaveRoom();
+    toast("對方已離開");
+    showMenu();
+    return;
+  }
+  if (gameStarted) {
+    toast(`${Net.getOpponentName()} 斷線了`, 1500);
+    state.status = "gameover";
+    overlayEl.dataset.shown = "1";
+    showGameOver(null, "對方已離線");
+  }
 }
 
 // ---------- Menu wiring ----------
@@ -163,54 +287,58 @@ function wireMenu() {
       document.getElementById("difficulty-pane").style.display = "none";
     };
   });
-  document.getElementById("play-net").onclick = () => {
-    document.getElementById("net-pane").style.display = "flex";
+
+  document.getElementById("play-net").onclick = openNetPane;
+  document.getElementById("btn-match").onclick = startMatch;
+  document.getElementById("btn-cancel-match").onclick = () => {
+    Net.cancelMatchmaking();
+    document.getElementById("matching-pane").style.display = "none";
   };
-  document.getElementById("btn-host").onclick = async () => {
-    const code = Net.genRoomCode();
-    document.getElementById("net-info").textContent = `房間碼：${code}（分享給對手）`;
-    await Net.hostRoom(code, {
-      onInput: (p) => { netState.remoteInputY = p.y; },
-      onJoin: () => {
-        document.getElementById("net-info").textContent = `對手已加入！`;
-        setTimeout(() => {
-          document.getElementById("net-pane").style.display = "none";
-          startGame("net-host");
-        }, 500);
-      }
-    });
+
+  document.getElementById("btn-ready").onclick = () => {
+    readyLocal = !readyLocal;
+    Net.sendReady(readyLocal);
+    refreshReadyUI();
+    document.getElementById("btn-ready").textContent = readyLocal ? "取消準備" : "我準備好了";
+    maybeStartGame();
   };
-  document.getElementById("btn-join").onclick = async () => {
-    const code = document.getElementById("code-input").value.trim().toUpperCase();
-    if (!code) return;
-    document.getElementById("net-info").textContent = `連線中…`;
-    const res = await Net.joinRoom(code, {
-      onState: (p) => { netState.remoteSnapshot = p; },
-    });
-    if (res.connected) {
-      document.getElementById("net-info").textContent = `已連線！`;
-      setTimeout(() => {
-        document.getElementById("net-pane").style.display = "none";
-        startGame("net-client");
-      }, 300);
-    } else {
-      document.getElementById("net-info").textContent = `找不到房間 ${code}`;
-    }
+  document.getElementById("btn-leave-ready").onclick = () => {
+    document.getElementById("ready-pane").style.display = "none";
+    Net.leaveRoom();
+    showMenu();
   };
+
   document.querySelectorAll(".pane-close").forEach(b => {
     b.onclick = (e) => e.target.closest(".pane").style.display = "none";
   });
   document.getElementById("sound-toggle").onchange = (e) => setAudioEnabled(e.target.checked);
+
   backBtn.onclick = () => {
     if (confirm("確定回主選單？")) {
       overlayEl.dataset.shown = "";
+      if (mode === "net-host" || mode === "net-client") {
+        Net.sendSurrender();
+      }
       Net.leaveRoom();
       state = null;
+      gameStarted = false;
       showMenu();
     }
   };
+
+  surrenderBtn.onclick = () => {
+    if (!confirm("確定投降？")) return;
+    Net.sendSurrender();
+    state.status = "gameover";
+    overlayEl.dataset.shown = "1";
+    showGameOver(null, "你投降了");
+  };
+
   window.addEventListener("keydown", (e) => {
     if (e.code === "Escape" && state) backBtn.click();
+  });
+  window.addEventListener("beforeunload", () => {
+    Net.leaveRoom();
   });
 }
 

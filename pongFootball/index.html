@@ -38,13 +38,38 @@
     <div id="net-pane" class="pane" style="display:none">
       <div class="pane-box">
         <h2>網路對戰</h2>
-        <p class="small">建立房間後把房間碼分享給對手</p>
-        <button id="btn-host" class="big-btn">建立房間（Host）</button>
-        <div class="divider">或</div>
-        <input id="code-input" type="text" placeholder="輸入房間碼" maxlength="8">
-        <button id="btn-join" class="big-btn">加入房間</button>
-        <div id="net-info" class="net-info"></div>
+        <p class="small">輸入暱稱，系統自動配對</p>
+        <input id="name-input" type="text" placeholder="暱稱" maxlength="12">
+        <button id="btn-match" class="big-btn">開始配對</button>
         <button class="pane-close small-btn">取消</button>
+      </div>
+    </div>
+
+    <div id="matching-pane" class="pane" style="display:none">
+      <div class="pane-box">
+        <h2>配對中…</h2>
+        <div class="spinner"></div>
+        <p class="small" id="matching-info">尋找對手中</p>
+        <button id="btn-cancel-match" class="small-btn">取消配對</button>
+      </div>
+    </div>
+
+    <div id="ready-pane" class="pane" style="display:none">
+      <div class="pane-box">
+        <h2>配對成功</h2>
+        <div class="vs-row">
+          <div class="player-chip" id="me-chip">
+            <div class="name" id="me-name">我</div>
+            <div class="status" id="me-status">未準備</div>
+          </div>
+          <div class="vs">VS</div>
+          <div class="player-chip" id="opp-chip">
+            <div class="name" id="opp-name">對手</div>
+            <div class="status" id="opp-status">未準備</div>
+          </div>
+        </div>
+        <button id="btn-ready" class="big-btn">我準備好了</button>
+        <button id="btn-leave-ready" class="small-btn">離開</button>
       </div>
     </div>
   </div>
@@ -52,6 +77,8 @@
   <div id="overlay"></div>
 
   <button id="back-btn" title="回主選單">⏎</button>
+  <button id="surrender-btn" title="投降">🏳️</button>
+  <div id="net-hud"></div>
 
   <script type="module" src="src/main.js"></script>
 </body>

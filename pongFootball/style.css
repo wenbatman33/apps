@@ -134,10 +134,8 @@ html, body {
   padding: 12px;
   font-size: 18px;
   text-align: center;
-  letter-spacing: 4px;
   border: 2px solid #ccc;
   border-radius: 10px;
-  text-transform: uppercase;
 }
 
 .divider {
@@ -216,6 +214,81 @@ html, body {
   display: none;
 }
 #back-btn.visible { display: block; }
+
+/* ---------- 網路對戰 UI ---------- */
+
+.spinner {
+  width: 40px; height: 40px;
+  border: 4px solid #eee;
+  border-top-color: #f5a623;
+  border-radius: 50%;
+  margin: 10px auto;
+  animation: spin 0.8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.vs-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 10px 0;
+}
+.player-chip {
+  flex: 1;
+  background: #fff;
+  border-radius: 10px;
+  padding: 10px;
+  text-align: center;
+  border: 2px solid #eee;
+}
+.player-chip.ready { border-color: #4caf50; background: #e8f5e9; }
+.player-chip .name { font-weight: 700; font-size: 15px; }
+.player-chip .status { font-size: 12px; color: #777; margin-top: 4px; }
+.player-chip.ready .status { color: #2e7d32; }
+.vs { font-weight: 800; color: #888; }
+
+#surrender-btn {
+  position: fixed;
+  top: 12px; right: 12px;
+  z-index: 15;
+  width: 40px; height: 40px;
+  border: none;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.85);
+  font-size: 20px;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+  display: none;
+}
+#surrender-btn.visible { display: block; }
+
+#net-hud {
+  position: fixed;
+  top: 60px; left: 50%;
+  transform: translateX(-50%);
+  z-index: 15;
+  font-size: 13px;
+  color: #333;
+  background: rgba(255,255,255,0.8);
+  padding: 4px 12px;
+  border-radius: 12px;
+  display: none;
+  white-space: nowrap;
+}
+#net-hud.visible { display: block; }
+
+.toast {
+  position: fixed;
+  left: 50%; top: 40%;
+  transform: translate(-50%, -50%);
+  background: rgba(0,0,0,0.85);
+  color: #fff;
+  padding: 16px 24px;
+  border-radius: 12px;
+  z-index: 100;
+  font-size: 15px;
+}
 
 @media (orientation: portrait) {
   .menu h1 { font-size: 28px; }

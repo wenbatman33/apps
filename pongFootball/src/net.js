@@ -1,15 +1,22 @@
 // Supabase Realtime 網路對戰（host-authoritative）
-// host 跑物理、每 50ms broadcast 全狀態；client 送自己的 paddleY。
-// 用 Broadcast channel（最輕量、不寫資料庫），房間名 = pong-<ROOM>
-// 需要透過 CDN 動態 import supabase-js
+// 配對流程：
+//   1) joinLobby 在 pong-lobby channel 用 presence 宣告自己 looking / waiting
+//   2) 最小 id 的 looker 升級為 waiting + 直接訂閱 pong-<code> 當 host 等人
+//   3) 其他 looker 看到 waiter → 離開 lobby，訂閱 pong-<code> 當 client
+//   4) host 偵測到 game channel 有對方 presence join → 配對成功
 import { SUPABASE_URL, SUPABASE_ANON_KEY } from "./supabaseConfig.js";
 
 let supabase = null;
-let channel = null;
-let role = null;        // 'host' | 'client'
-let onRemoteState = null;
-let onRemoteInput = null;
-let onOpponentJoin = null;
+let lobbyChan = null;
+let gameChan = null;
+let role = null;
+let myId = null;
+let myName = null;
+let opponentName = null;
+let roomCode = null;
+let matched = false;
+
+let cbs = {};
 
 async function loadLib() {
   if (supabase) return supabase;
@@ -21,62 +28,178 @@ async function loadLib() {
   return supabase;
 }
 
-export function genRoomCode() {
-  return Math.random().toString(36).slice(2, 7).toUpperCase();
+function genCode() {
+  return Math.random().toString(36).slice(2, 8).toUpperCase();
 }
 
-export async function hostRoom(code, callbacks) {
-  role = "host";
-  onRemoteInput = callbacks.onInput;
-  onOpponentJoin = callbacks.onJoin;
+// ---------- Lobby 配對 ----------
+
+export async function joinLobby(name, callbacks = {}) {
+  myName = name || "玩家";
+  myId = Math.random().toString(36).slice(2, 12);
+  opponentName = null;
+  roomCode = null;
+  matched = false;
+  role = null;
+  cbs = { ...cbs, ...callbacks };
+
   await loadLib();
-  channel = supabase.channel(`pong-${code}`, { config: { broadcast: { self: false } } });
-  channel.on("broadcast", { event: "input" }, ({ payload }) => {
-    if (onRemoteInput) onRemoteInput(payload);
+  lobbyChan = supabase.channel("pong-lobby", {
+    config: { presence: { key: myId } },
   });
-  channel.on("broadcast", { event: "join" }, ({ payload }) => {
-    if (onOpponentJoin) onOpponentJoin(payload);
-    channel.send({ type: "broadcast", event: "hello", payload: { role: "host" } });
+
+  let myState = null;        // 'looking' | 'waiting'
+  let committed = false;     // 已決定成為 host 或 client
+
+  const track = async (nextState) => {
+    myState = nextState.role;
+    await lobbyChan.track(nextState);
+  };
+
+  const tryMatch = async () => {
+    if (committed) return;
+    const presState = lobbyChan.presenceState();
+    // 每個 id 取最新 entry（Supabase 會累積）
+    const all = [];
+    for (const id in presState) {
+      const entries = presState[id];
+      if (!entries || !entries.length) continue;
+      const latest = entries[entries.length - 1];
+      all.push({ ...latest, id });
+    }
+
+    // 如果發現有 waiter（可能是別人）→ 我當 client
+    const waiter = all.find(x => x.role === "waiting" && x.id !== myId);
+    if (waiter) {
+      committed = true;
+      opponentName = waiter.name;
+      roomCode = waiter.roomCode;
+      try { lobbyChan.untrack(); lobbyChan.unsubscribe(); } catch {}
+      lobbyChan = null;
+      startGameChannel("client");
+      return;
+    }
+
+    // 沒 waiter：看我是不是最小 id 的 looker → 我升 waiting
+    if (myState === "looking") {
+      const lookers = all.filter(x => x.role === "looking");
+      lookers.sort((a, b) => a.id.localeCompare(b.id));
+      if (lookers[0] && lookers[0].id === myId) {
+        const code = genCode();
+        roomCode = code;
+        await track({
+          name: myName, role: "waiting", roomCode: code, ts: Date.now(),
+        });
+        // 直接開遊戲房當 host 等人
+        committed = true;
+        startGameChannel("host");
+        // 注意：暫不 unsubscribe lobby，讓他人能看到我是 waiter
+        // 等 host 收到對方 presence join → 才 finishLobby
+      }
+    }
+  };
+
+  lobbyChan.on("presence", { event: "sync" }, tryMatch);
+  lobbyChan.on("presence", { event: "join" }, tryMatch);
+
+  await lobbyChan.subscribe(async (status) => {
+    if (status === "SUBSCRIBED") {
+      await track({
+        name: myName, role: "looking", roomCode: null, ts: Date.now(),
+      });
+    }
   });
-  await channel.subscribe();
-  return { role: "host", code };
 }
 
-export async function joinRoom(code, callbacks) {
-  role = "client";
-  onRemoteState = callbacks.onState;
-  await loadLib();
-  channel = supabase.channel(`pong-${code}`, { config: { broadcast: { self: false } } });
-  channel.on("broadcast", { event: "state" }, ({ payload }) => {
-    if (onRemoteState) onRemoteState(payload);
+function finishLobby() {
+  if (!lobbyChan) return;
+  try { lobbyChan.untrack(); lobbyChan.unsubscribe(); } catch {}
+  lobbyChan = null;
+}
+
+export function cancelMatchmaking() {
+  finishLobby();
+  if (gameChan) { try { gameChan.unsubscribe(); } catch {} gameChan = null; }
+  role = null; roomCode = null; opponentName = null; matched = false;
+}
+
+// ---------- 遊戲房 ----------
+
+function startGameChannel(asRole) {
+  role = asRole;
+  gameChan = supabase.channel(`pong-${roomCode}`, {
+    config: {
+      broadcast: { self: false },
+      presence: { key: myId },
+    },
   });
-  let joined = false;
-  channel.on("broadcast", { event: "hello" }, () => { joined = true; });
-  await channel.subscribe();
-  await channel.send({ type: "broadcast", event: "join", payload: { t: Date.now() } });
-  // 等待 host hello
-  const start = Date.now();
-  while (!joined && Date.now() - start < 5000) {
-    await new Promise(r => setTimeout(r, 100));
-  }
-  return { role: "client", code, connected: joined };
+
+  gameChan.on("broadcast", { event: "input" }, ({ payload }) => {
+    if (role === "host" && cbs.onInput) cbs.onInput(payload);
+  });
+  gameChan.on("broadcast", { event: "state" }, ({ payload }) => {
+    if (role === "client" && cbs.onState) cbs.onState(payload);
+  });
+  gameChan.on("broadcast", { event: "ready" }, ({ payload }) => {
+    if (cbs.onReady) cbs.onReady(payload);
+  });
+  gameChan.on("broadcast", { event: "surrender" }, ({ payload }) => {
+    if (cbs.onSurrender) cbs.onSurrender(payload);
+  });
+
+  gameChan.on("presence", { event: "join" }, ({ key, newPresences }) => {
+    if (key === myId) return;
+    // host 等到 client 才算配對成功
+    if (role === "host" && !matched) {
+      matched = true;
+      opponentName = newPresences[0]?.name || "對手";
+      finishLobby();
+      if (cbs.onMatched) cbs.onMatched({ role, opponentName, roomCode });
+    }
+  });
+  gameChan.on("presence", { event: "leave" }, ({ key }) => {
+    if (key !== myId && matched && cbs.onOpponentLeft) cbs.onOpponentLeft();
+  });
+
+  gameChan.subscribe(async (status) => {
+    if (status === "SUBSCRIBED") {
+      await gameChan.track({ name: myName, role });
+      if (role === "client" && !matched) {
+        matched = true;
+        if (cbs.onMatched) cbs.onMatched({ role, opponentName, roomCode });
+      }
+    }
+  });
+}
+
+// ---------- 收發事件 ----------
+
+export function sendReady(isReady) {
+  if (gameChan) gameChan.send({ type: "broadcast", event: "ready", payload: { ready: isReady, from: role } });
+}
+
+export function sendSurrender() {
+  if (gameChan) gameChan.send({ type: "broadcast", event: "surrender", payload: { from: role } });
 }
 
 export function sendState(payload) {
-  if (channel && role === "host") {
-    channel.send({ type: "broadcast", event: "state", payload });
+  if (gameChan && role === "host") {
+    gameChan.send({ type: "broadcast", event: "state", payload });
   }
 }
 
 export function sendInput(payload) {
-  if (channel && role === "client") {
-    channel.send({ type: "broadcast", event: "input", payload });
+  if (gameChan && role === "client") {
+    gameChan.send({ type: "broadcast", event: "input", payload });
   }
 }
 
 export function leaveRoom() {
-  if (channel) { channel.unsubscribe(); channel = null; }
-  role = null;
+  finishLobby();
+  if (gameChan) { try { gameChan.untrack(); gameChan.unsubscribe(); } catch {} gameChan = null; }
+  role = null; roomCode = null; opponentName = null; matched = false;
 }
 
 export function getRole() { return role; }
+export function getOpponentName() { return opponentName; }
+export function getMyName() { return myName; }
