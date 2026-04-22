@@ -1,0 +1,197 @@
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body, #app {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: #0a1a12;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang TC", "Microsoft JhengHei", sans-serif;
+  color: #fff;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: none;
+}
+
+#app { position: fixed; inset: 0; }
+
+#gl {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.hidden { display: none !important; }
+
+/* ===== 選單 ===== */
+.menu {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: radial-gradient(ellipse at center, rgba(11,26,18,0.65), rgba(5,13,9,0.95));
+  z-index: 10;
+  padding: 20px;
+}
+
+.menu h1 {
+  font-size: clamp(48px, 10vw, 96px);
+  margin-bottom: 8px;
+  letter-spacing: 2px;
+  text-shadow: 0 4px 24px rgba(0,0,0,0.6);
+}
+.menu h2 {
+  font-size: clamp(28px, 5vw, 42px);
+  margin-bottom: 24px;
+  color: #9adcb5;
+}
+.menu .sub {
+  color: #7bbf95;
+  font-size: clamp(16px, 3vw, 22px);
+  margin-bottom: 40px;
+}
+.menu .row {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: min(520px, 90vw);
+}
+.menu .row.horizontal {
+  flex-direction: row;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+.menu button {
+  padding: 18px 24px;
+  font-size: clamp(20px, 3.5vw, 28px);
+  font-weight: bold;
+  color: #fff;
+  background: linear-gradient(180deg, #12a05a, #0a6e3d);
+  border: 2px solid #1ca85a;
+  border-radius: 14px;
+  cursor: pointer;
+  transition: transform 0.06s, filter 0.2s;
+  min-width: 140px;
+}
+.menu button:hover { filter: brightness(1.15); }
+.menu button:active { transform: translateY(2px); }
+.menu button.ghost {
+  background: transparent;
+  border-color: #5aa079;
+  color: #9adcb5;
+}
+.menu input[type="text"] {
+  padding: 14px 18px;
+  font-size: 22px;
+  border-radius: 10px;
+  border: 2px solid #1ca85a;
+  background: #0b1a12;
+  color: #fff;
+  text-align: center;
+  outline: none;
+}
+.menu .hint {
+  margin-top: 30px;
+  color: #5aa079;
+  font-size: 14px;
+}
+
+/* ===== HUD ===== */
+.hud {
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  padding: 10px 16px;
+  background: linear-gradient(180deg, rgba(0,0,0,0.7), rgba(0,0,0,0));
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  pointer-events: none;
+  z-index: 5;
+  font-size: clamp(14px, 2vw, 18px);
+  gap: 12px;
+}
+.hud .score { font-weight: bold; font-size: clamp(18px, 2.8vw, 24px); }
+.hud .tag {
+  padding: 4px 10px;
+  border-radius: 10px;
+  background: rgba(0,0,0,0.5);
+  margin: 0 4px;
+}
+.hud .turn { color: #f7c300; font-weight: bold; }
+.hud .target {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.hud .target .ball {
+  display: inline-block;
+  width: 24px; height: 24px; border-radius: 50%;
+  background: #f7c300;
+  color: #111;
+  font-size: 14px; font-weight: bold;
+  text-align: center; line-height: 24px;
+  border: 2px solid #fff;
+}
+.hud .back {
+  pointer-events: auto;
+  cursor: pointer;
+  padding: 6px 12px;
+  background: rgba(11,106,58,0.8);
+  border-radius: 8px;
+  border: 1px solid #1ca85a;
+  color: #fff;
+}
+
+/* ===== 結束結果 / 提示覆層 ===== */
+.overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+  background: rgba(0,0,0,0.7);
+  font-size: 22px;
+}
+.overlay h2 { font-size: clamp(42px, 8vw, 80px); color: #f7c300; }
+.overlay .big { font-size: clamp(36px, 6vw, 56px); font-weight: bold; }
+.overlay button {
+  padding: 14px 28px;
+  font-size: 22px;
+  border-radius: 12px;
+  background: #0a6e3d;
+  border: 2px solid #1ca85a;
+  color: #fff;
+  cursor: pointer;
+  font-weight: bold;
+}
+
+/* ===== 擊球提示 toast ===== */
+#toast {
+  position: absolute;
+  left: 50%;
+  top: 80px;
+  transform: translateX(-50%) translateY(-8px);
+  z-index: 30;
+  padding: 10px 18px;
+  border-radius: 10px;
+  background: rgba(0,0,0,0.75);
+  color: #fff;
+  font-size: 18px;
+  font-weight: bold;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.25s, transform 0.25s;
+  white-space: nowrap;
+  border: 1px solid rgba(247,195,0,0.5);
+}
+#toast.show {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
