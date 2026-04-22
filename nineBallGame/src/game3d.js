@@ -1237,7 +1237,7 @@ export class Game3D {
       }
       // 袋口
       for (const p of pockets) {
-        const t = raySphereT(p.x, p.z, POCKET_R);
+        const t = raySphereT(p.x, p.z, (p.r ?? POCKET_R) + BALL_R);
         if (t < minT) { minT = t; hit = { kind: "pocket", p }; }
       }
       // 邊界（內縮後的海綿條內緣）
@@ -1716,6 +1716,11 @@ export class Game3D {
     if (vv) {
       this.canvas.style.top  = vv.offsetTop  + 'px';
       this.canvas.style.left = vv.offsetLeft + 'px';
+    }
+    // 工具列高度 = 版面視口高 - 可見視口高；fixed 元素的 bottom 要額外補償
+    const toolbarH = vv ? Math.max(0, window.innerHeight - vv.offsetTop - vv.height) : 0;
+    if (this.spinWidget) {
+      this.spinWidget.style.bottom = `calc(env(safe-area-inset-bottom,0px) + ${20 + toolbarH}px)`;
     }
 
     // 目標：桌子 + 一點邊框都看得到，自適應畫面
