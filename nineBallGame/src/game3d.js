@@ -209,9 +209,33 @@ export class Game3D {
   // ---------- 桌子 & 枱邊 ----------
   _buildTable() {
     this.pocketPos = pocketPositions();
-    const railM = 0.10; // 木框寬
-    const planeW = TABLE_LEN + railM * 2;
-    const planeH = TABLE_WID + railM * 2;
+
+    // 依據貼圖（assets/table）推算 plane 尺寸，讓 SVG「滾動範圍」對齊物理 TABLE_LEN × TABLE_WID
+    // 資產規格：1240×697；滾動區 x=[79,1162]、y=[79.19,624.5]
+    const ASSET_W = 1240, ASSET_H = 697;
+    const ROLL_L = 79, ROLL_R = 1162, ROLL_T = 79.19, ROLL_B = 624.5;
+    const rollWpx = ROLL_R - ROLL_L;  // 1083
+    const rollHpx = ROLL_B - ROLL_T;  // 545.31
+    const planeW = TABLE_LEN * ASSET_W / rollWpx;   // ≈ 2.908 m
+    const planeH = TABLE_WID * ASSET_H / rollHpx;   // ≈ 1.623 m
+    // 滾動區中心相對畫布中心的偏移 → 反向平移 plane，使物理中心對到滾動區中心
+    const rollCxPx = (ROLL_L + ROLL_R) / 2;
+    const rollCyPx = (ROLL_T + ROLL_B) / 2;
+    const offX = (rollCxPx - ASSET_W / 2) / ASSET_W * planeW;
+    const offZ = (rollCyPx - ASSET_H / 2) / ASSET_H * planeH;
+
+    // 用 SVG 的黃圈圓心 + 半徑 (33 px) 覆寫袋口偵測位置（世界座標）
+    const pxToWorldX = (px) => (px - ASSET_W / 2) / ASSET_W * planeW - offX;
+    const pxToWorldZ = (py) => (py - ASSET_H / 2) / ASSET_H * planeH - offZ;
+    const POCKET_R_PX = 33;
+    const pocketRWorld = (POCKET_R_PX / ASSET_W) * planeW; // ≈ 0.0774 m
+    const holesPx = [
+      [66, 64], [620, 46], [1178, 64],
+      [66, 631], [620, 654], [1178, 631],
+    ];
+    this.pocketPos = holesPx.map(([hx, hy]) => ({
+      x: pxToWorldX(hx), z: pxToWorldZ(hy), r: pocketRWorld,
+    }));
 
     // 先放一個過渡用的純色平面，等圖檔載入後再更新材質
     const placeholder = new THREE.CanvasTexture((() => {
@@ -226,7 +250,7 @@ export class Game3D {
       new THREE.MeshStandardMaterial({ map: placeholder, roughness: 0.95, metalness: 0.0 })
     );
     tableMesh.rotation.x = -Math.PI / 2;
-    tableMesh.position.y = 0;
+    tableMesh.position.set(-offX, 0, -offZ);
     tableMesh.receiveShadow = true;
     this.scene.add(tableMesh);
     this._tableMesh = tableMesh;
@@ -291,6 +315,41 @@ export class Game3D {
 
     // 3) 疊上 layer_2（木框 + 鉻框）
     g.drawImage(layer2, 0, 0);
+
+    // 4) DEBUG: 加 ?dev=1 才顯示「滾動範圍」與「球洞區域」（驗證對齊用）
+    //    （來源：assets/table/滾動區域.svg 與 球洞.svg，原圖 1240×697）
+    const DEV = new URLSearchParams(location.search).get("dev") === "1";
+    if (DEV) {
+    g.save();
+    g.scale(cw / 1240, ch / 697);
+    g.translate(0, 2); // 兩張 svg 都有 translate(0, 2)
+    // 滾動範圍（只畫邊界，避免蓋掉毛氈）
+    const rollPath = new Path2D(
+      "M51,50 L94.4135742,50.1572266 L125.976074,77.1894531 L578.932617,77.1894531 " +
+      "L589.447266,50 L649.085938,50 L661.251953,77.1894531 L1112.47656,77.1894531 " +
+      "L1147.98754,49.1261564 L1186,49 L1185.74247,97.3592112 L1161.98438,121.130859 " +
+      "C1161.98438,375.104711 1161.98438,526.643122 1161.98438,575.746094 " +
+      "C1161.98438,578.210549 1170.98958,587.767841 1189,604.417969 L1189,645 " +
+      "L1136.89062,645 L1112.47656,622.501953 L661.251953,622.501953 " +
+      "L651.022696,645.648099 L589.447266,645.378906 L576.439453,622.501953 " +
+      "L125.976074,622.501953 L101.378418,645 L51,645 L51,604.417969 " +
+      "L79,575.746094 L79,127.904297 L51,96.3046875 L51,50 Z"
+    );
+    g.strokeStyle = "rgba(255, 89, 240, 0.95)";
+    g.lineWidth = 3;
+    g.stroke(rollPath);
+    // 球洞圓（黃色半透明）
+    g.fillStyle = "rgba(248, 231, 28, 0.55)";
+    g.strokeStyle = "rgba(248, 231, 28, 1)";
+    g.lineWidth = 2;
+    const holes = [
+      [66, 64], [66, 631], [620, 46], [620, 654], [1178, 64], [1178, 631],
+    ];
+    for (const [hx, hy] of holes) {
+      g.beginPath(); g.arc(hx, hy, 33, 0, Math.PI * 2); g.fill(); g.stroke();
+    }
+    g.restore();
+    } // end if (DEV)
 
     const tex = new THREE.CanvasTexture(canvas);
     tex.colorSpace = THREE.SRGBColorSpace;
@@ -959,23 +1018,14 @@ export class Game3D {
     this.aimLines = [];
     const y = 0.012;
 
-    // 以虛線段繪製每一段軌跡
+    // 以加粗虛線繪製每一段軌跡（用一排小球模擬粗虛線，WebGL Line 無法設粗）
     for (let i = 0; i < traj.segments.length; i++) {
       const seg = traj.segments[i];
-      const geom = new THREE.BufferGeometry().setFromPoints([
-        new THREE.Vector3(seg.x1, y, seg.z1),
-        new THREE.Vector3(seg.x2, y, seg.z2),
-      ]);
-      // 第一段亮白色，反射段稍暗
       const col = i === 0 ? 0xffffff : 0xcccccc;
-      const mat = new THREE.LineDashedMaterial({
-        color: col, dashSize: 0.035, gapSize: 0.025,
-        transparent: true, opacity: i === 0 ? 0.9 : 0.7,
-      });
-      const line = new THREE.Line(geom, mat);
-      line.computeLineDistances();
-      this.scene.add(line);
-      this.aimLines.push(line);
+      const opacity = i === 0 ? 0.95 : 0.7;
+      const g = this._makeFatDashedLine(seg.x1, seg.z1, seg.x2, seg.z2, y, col, opacity, 0.009, 0.05);
+      this.scene.add(g);
+      this.aimLines.push(g);
     }
 
     // 終點圓圈（ghost 球 / 袋口標記）
@@ -983,6 +1033,32 @@ export class Game3D {
       const ring = this._makeRing(traj.end.x, y, traj.end.z, BALL_R, traj.end.color, traj.end.dashed);
       this.scene.add(ring);
       this.aimLines.push(ring);
+    }
+
+    // 撞球預測：目標球前進方向 + 母球反彈方向
+    if (traj.end && traj.end.hitBall) {
+      const b = traj.end.hitBall;
+      const nx = traj.end.nx, nz = traj.end.nz;      // 目標球方向（ghost→target 單位向量）
+      const cx = traj.end.cueDefX, cz = traj.end.cueDefZ; // 母球偏折方向
+      // 目標球方向線：從目標球中心向前（實線細白）
+      const tLen = 0.45;
+      const tLine = this._makeSolidLine(
+        b.body.position.x, b.body.position.z,
+        b.body.position.x + nx * tLen, b.body.position.z + nz * tLen,
+        y, 0xffffff, 0.85
+      );
+      this.scene.add(tLine); this.aimLines.push(tLine);
+      // 母球偏折線：從接觸點向偏折方向（實線細白，較短）
+      const clen = Math.hypot(cx, cz);
+      if (clen > 1e-4) {
+        const cLen = 0.28;
+        const cLine = this._makeSolidLine(
+          traj.end.x, traj.end.z,
+          traj.end.x + (cx / clen) * cLen, traj.end.z + (cz / clen) * cLen,
+          y, 0xffffff, 0.8
+        );
+        this.scene.add(cLine); this.aimLines.push(cLine);
+      }
     }
 
     // 力度條（反向，不受反射影響）
@@ -997,6 +1073,45 @@ export class Game3D {
     this.scene.add(this.powerLine);
 
     this._updateCueStick();
+  }
+
+  // 粗虛線：沿直線放一排小球，用以模擬比 1px 還粗的虛線
+  _makeFatDashedLine(x1, z1, x2, z2, y, color, opacity, radius, step) {
+    const dx = x2 - x1, dz = z2 - z1;
+    const len = Math.hypot(dx, dz);
+    const group = new THREE.Group();
+    if (len < 1e-4) return group;
+    const ux = dx / len, uz = dz / len;
+    const mat = new THREE.MeshBasicMaterial({
+      color, transparent: true, opacity, depthWrite: false,
+    });
+    const geom = new THREE.SphereGeometry(radius, 10, 8);
+    for (let d = 0; d <= len + 1e-6; d += step) {
+      const m = new THREE.Mesh(geom, mat);
+      m.position.set(x1 + ux * d, y, z1 + uz * d);
+      m.renderOrder = 2;
+      group.add(m);
+    }
+    return group;
+  }
+
+  // 實線：用短 BoxGeometry 沿方向拼接（有粗度）
+  _makeSolidLine(x1, z1, x2, z2, y, color, opacity) {
+    const dx = x2 - x1, dz = z2 - z1;
+    const len = Math.hypot(dx, dz);
+    const group = new THREE.Group();
+    if (len < 1e-4) return group;
+    const mat = new THREE.MeshBasicMaterial({
+      color, transparent: true, opacity, depthWrite: false,
+    });
+    const boxH = 0.004, boxT = 0.008;
+    const geom = new THREE.BoxGeometry(len, boxH, boxT);
+    const m = new THREE.Mesh(geom, mat);
+    m.position.set((x1 + x2) / 2, y, (z1 + z2) / 2);
+    m.rotation.y = -Math.atan2(dz, dx);
+    m.renderOrder = 2;
+    group.add(m);
+    return group;
   }
 
   _makeRing(cx, y, cz, radius, color, dashed) {
@@ -1067,7 +1182,17 @@ export class Game3D {
       segments.push({ x1: x, z1: z, x2: ex, z2: ez });
 
       if (hit.kind === "ball") {
-        end = { x: ex, z: ez, color: 0xffffff, dashed: true };
+        // 等質量彈性碰撞：n̂ 為從 ghost（撞擊時白球中心）指向目標球中心的單位向量
+        const bx = hit.ball.body.position.x, bz = hit.ball.body.position.z;
+        let nx = bx - ex, nz = bz - ez;
+        const nl = Math.hypot(nx, nz) || 1;
+        nx /= nl; nz /= nl;
+        // 白球偏折方向：入射方向減去投影到 n̂ 的分量（即切線分量）
+        const dn = dx * nx + dz * nz;
+        const cueDefX = dx - dn * nx;
+        const cueDefZ = dz - dn * nz;
+        end = { x: ex, z: ez, color: 0xffffff, dashed: true,
+                hitBall: hit.ball, nx, nz, cueDefX, cueDefZ };
         break;
       }
       if (hit.kind === "pocket") {
@@ -1086,6 +1211,10 @@ export class Game3D {
     if (this.aimLines) {
       for (const l of this.aimLines) {
         this.scene.remove(l);
+        l.traverse && l.traverse(obj => {
+          if (obj.geometry) obj.geometry.dispose();
+          if (obj.material) obj.material.dispose();
+        });
         if (l.geometry) l.geometry.dispose();
         if (l.material) l.material.dispose();
       }
@@ -1158,7 +1287,10 @@ export class Game3D {
       for (const p of this.pocketPos) {
         const dx = b.body.position.x - p.x;
         const dz = b.body.position.z - p.z;
-        if (dx * dx + dz * dz < POCKET_R * POCKET_R) {
+        const r = p.r ?? POCKET_R;
+        // 只要球身與袋口圓有重疊即判定進袋
+        const rr = r + BALL_R;
+        if (dx * dx + dz * dz < rr * rr) {
           this._pocketBall(b);
           break;
         }
