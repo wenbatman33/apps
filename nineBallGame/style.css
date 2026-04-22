@@ -16,11 +16,11 @@ html, body, #app {
 #app { position: fixed; inset: 0; }
 
 #gl {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
+  position: fixed;
+  top: 0;
+  left: 0;
   display: block;
+  /* 尺寸由 JS _resize() 動態設定，不在 CSS 固定 */
 }
 
 .hidden { display: none !important; }

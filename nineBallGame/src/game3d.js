@@ -96,6 +96,10 @@ export class Game3D {
     this._buildSpinWidget();
     this._resize();
     window.addEventListener("resize", () => this._resize());
+    // 手機瀏覽器工具列出現/隱藏時 visualViewport 會觸發 resize
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener("resize", () => this._resize());
+    }
     this._loop = this._loop.bind(this);
     this._lastT = performance.now();
     requestAnimationFrame(this._loop);
@@ -1702,8 +1706,17 @@ export class Game3D {
 
   // ---------- 響應式 ----------
   _resize() {
-    const w = window.innerWidth, h = window.innerHeight;
-    this.renderer.setSize(w, h, false);
+    // 優先使用 visualViewport（手機瀏覽器工具列出現時會給正確可見高度）
+    const vv = window.visualViewport;
+    const w = vv ? Math.round(vv.width)  : window.innerWidth;
+    const h = vv ? Math.round(vv.height) : window.innerHeight;
+    // true = 同步更新 canvas CSS 尺寸（避免 canvas 被拉伸）
+    this.renderer.setSize(w, h, true);
+    // 若 visualViewport 有位移（部分瀏覽器），對齊到可見區域
+    if (vv) {
+      this.canvas.style.top  = vv.offsetTop  + 'px';
+      this.canvas.style.left = vv.offsetLeft + 'px';
+    }
 
     // 目標：桌子 + 一點邊框都看得到，自適應畫面
     const pad = 0.15;
@@ -1759,7 +1772,7 @@ export class Game3D {
     const w = document.createElement("div");
     w.id = "spin-widget";
     w.style.cssText = [
-      "position:fixed", "left:50%", "bottom:20px",
+      "position:fixed", "left:50%", "bottom:calc(env(safe-area-inset-bottom,0px) + 20px)",
       "transform:translateX(-50%)",
       "width:78px", "height:78px", "border-radius:50%",
       "background:radial-gradient(circle at 35% 30%, #fff 0%, #e6e6e6 60%, #bfbfbf 100%)",
