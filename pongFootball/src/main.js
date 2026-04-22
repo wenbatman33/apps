@@ -123,7 +123,12 @@ function tick(now) {
     } else if (mode === "net-client") {
       const target = getPaddleTargetY("right", state.rightY, dt);
       state.rightY = target;
-      Net.sendInput({ y: target });
+      // 節流送 input，避免超過 Supabase broadcast rate limit
+      netState.lastSend += dt;
+      if (netState.lastSend > 0.05) {
+        netState.lastSend = 0;
+        Net.sendInput({ y: target });
+      }
       if (netState.remoteSnapshot) {
         const s = netState.remoteSnapshot;
         state.ball = s.ball;

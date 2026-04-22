@@ -54,6 +54,7 @@ export function updatePhysics(state, dt) {
   }
 
   const b = state.ball;
+  const prevX = b.x, prevY = b.y;
   b.x += b.vx * dt;
   b.y += b.vy * dt;
 
@@ -68,9 +69,9 @@ export function updatePhysics(state, dt) {
     playSfx("wall");
   }
 
-  // 擋板碰撞
-  collideBall(state, PADDLE_LEFT_X, state.leftY, +1);
-  collideBall(state, PADDLE_RIGHT_X, state.rightY, -1);
+  // 擋板碰撞（含 swept 檢測避免高速穿透）
+  collideBall(state, PADDLE_LEFT_X, state.leftY, +1, prevX, prevY);
+  collideBall(state, PADDLE_RIGHT_X, state.rightY, -1, prevX, prevY);
 
   // 球門牆反彈（球門口以外的木樁/石頭區）
   if (b.x - BALL_R < GOAL_LEFT_X && b.vx < 0) {
@@ -108,17 +109,42 @@ export function updatePhysics(state, dt) {
   if (state.hitEffect > 0) state.hitEffect -= dt;
 }
 
-function collideBall(state, px, py, sign) {
+function collideBall(state, px, py, sign, prevX, prevY) {
   const b = state.ball;
   const halfW = PADDLE_W / 2, halfH = PADDLE_H / 2;
-  // AABB vs circle
-  const cx = Math.max(px - halfW, Math.min(b.x, px + halfW));
-  const cy = Math.max(py - halfH, Math.min(b.y, py + halfH));
-  const dx = b.x - cx, dy = b.y - cy;
-  if (dx * dx + dy * dy > BALL_R * BALL_R) return;
   // 僅當球朝擋板方向才反彈（避免黏住）
-  if (sign > 0 && b.vx > 0) return;
-  if (sign < 0 && b.vx < 0) return;
+  if (sign > 0 && b.vx >= 0) return;
+  if (sign < 0 && b.vx <= 0) return;
+
+  // Swept 檢測：球的 x 邊緣是否跨過擋板平面
+  // sign > 0 (左擋板)：球左緣 (x - BALL_R) 跨過 px + halfW（擋板右緣）
+  // sign < 0 (右擋板)：球右緣 (x + BALL_R) 跨過 px - halfW（擋板左緣）
+  const plane = sign > 0 ? (px + halfW) : (px - halfW);
+  const prevEdge = sign > 0 ? (prevX - BALL_R) : (prevX + BALL_R);
+  const nowEdge  = sign > 0 ? (b.x   - BALL_R) : (b.x   + BALL_R);
+  const crossed = (sign > 0)
+    ? (prevEdge >= plane && nowEdge <= plane)
+    : (prevEdge <= plane && nowEdge >= plane);
+
+  let hit = false;
+  if (crossed) {
+    // 用跨平面時的 y 做垂直區間檢查
+    const denom = (nowEdge - prevEdge);
+    const t = denom !== 0 ? (plane - prevEdge) / denom : 0;
+    const yAtCross = prevY + (b.y - prevY) * t;
+    if (yAtCross > py - halfH - BALL_R && yAtCross < py + halfH + BALL_R) {
+      // 把球回拉到擋板前緣（避免穿透後下一幀判進球）
+      b.y = yAtCross;
+      hit = true;
+    }
+  }
+  if (!hit) {
+    // 一般 AABB vs circle（慢速或側面接觸）
+    const cx = Math.max(px - halfW, Math.min(b.x, px + halfW));
+    const cy = Math.max(py - halfH, Math.min(b.y, py + halfH));
+    const dx = b.x - cx, dy = b.y - cy;
+    if (dx * dx + dy * dy > BALL_R * BALL_R) return;
+  }
 
   // 根據擊中擋板位置改變垂直速度 — 經典 Pong 手感
   const offset = (b.y - py) / halfH; // -1..1

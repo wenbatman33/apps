@@ -23,7 +23,7 @@ async function loadLib() {
   if (!SUPABASE_URL) throw new Error("未設定 Supabase");
   const mod = await import("https://esm.sh/@supabase/supabase-js@2");
   supabase = mod.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-    realtime: { params: { eventsPerSecond: 30 } },
+    realtime: { params: { eventsPerSecond: 60 } },
   });
   return supabase;
 }
