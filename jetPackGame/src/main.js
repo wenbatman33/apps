@@ -69,6 +69,19 @@ const SFX = (() => {
       o.connect(g).connect(c.destination); env(g, t, 0.005, 0.4, 0.4);
       o.start(t); o.stop(t + 0.45);
     },
+    bgm() {
+      // 背景音樂：循環、50% 音量
+      const c = ensure();
+      if (!this._bgmAudio) {
+        const a = new Audio('assets/mp3/Paradise_Found.mp3');
+        a.loop = true; a.preload = 'auto'; a.crossOrigin = 'anonymous';
+        const src = c.createMediaElementSource(a);
+        const g = c.createGain(); g.gain.value = 0.5;
+        src.connect(g).connect(c.destination);
+        this._bgmAudio = a; this._bgmGain = g;
+      }
+      if (this._bgmAudio.paused) this._bgmAudio.play().catch(() => {});
+    },
     thrust(on) {
       // 使用素材包提供的 jetPack.mp3，迴圈播放，淡入淡出
       const c = ensure();
@@ -293,6 +306,7 @@ class PlayScene extends Phaser.Scene {
 
     // 輸入
     const press = (ev) => {
+      SFX.bgm();
       if (this.paused || !this.alive || !this.started) return;
       // 點 HUD 不觸發
       if (ev && ev.y !== undefined) {
@@ -305,7 +319,7 @@ class PlayScene extends Phaser.Scene {
     this.input.on('pointerdown', press);
     this.input.on('pointerup', release);
     this.input.on('pointerupoutside', release);
-    this.input.keyboard.on('keydown-SPACE', () => { if (this.alive && !this.paused && this.started) { this.thrusting = true; SFX.thrust(true); } });
+    this.input.keyboard.on('keydown-SPACE', () => { SFX.bgm(); if (this.alive && !this.paused && this.started) { this.thrusting = true; SFX.thrust(true); } });
     this.input.keyboard.on('keyup-SPACE', release);
     this.input.keyboard.on('keydown-UP', () => { if (this.alive && !this.paused && this.started) { this.thrusting = true; SFX.thrust(true); } });
     this.input.keyboard.on('keyup-UP', release);
@@ -352,13 +366,13 @@ class PlayScene extends Phaser.Scene {
     const tick = () => {
       cd.setText(steps[i]);
       cd.setScale(1.6); cd.setAlpha(0);
-      this.tweens.add({ targets: cd, scale: 1, alpha: 1, duration: 200, ease: 'Back.Out' });
-      this.tweens.add({ targets: cd, alpha: 0, duration: 250, delay: 650 });
+      this.tweens.add({ targets: cd, scale: 1, alpha: 1, duration: 120, ease: 'Back.Out' });
+      this.tweens.add({ targets: cd, alpha: 0, duration: 150, delay: 300 });
       i++;
       if (i < steps.length) {
-        this.time.delayedCall(900, tick);
+        this.time.delayedCall(450, tick);
       } else {
-        this.time.delayedCall(900, () => {
+        this.time.delayedCall(450, () => {
           cd.destroy();
           this.started = true;
         });
