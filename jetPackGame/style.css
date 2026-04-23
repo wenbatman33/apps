@@ -11,14 +11,7 @@ html, body { width: 100%; height: 100%; overflow: hidden; background: #0a0a14; t
 }
 @media (max-width: 600px){ #hint { font-size: 12px; } }
 
-/* 手機直屏：整個遊戲旋轉 90 度，以橫向填滿整個螢幕 */
+#rotate-hint { display: none; }
 @media (orientation: portrait) and (max-width: 900px) {
-  #app {
-    inset: auto;
-    top: 50%; left: 50%;
-    width: 100vh; height: 100vw;
-    transform: translate(-50%, -50%) rotate(90deg);
-    transform-origin: center center;
-  }
   #hint { display: none; }
 }
