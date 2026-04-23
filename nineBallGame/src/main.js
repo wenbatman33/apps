@@ -175,7 +175,6 @@ function renderHud(info) {
   const isPractice = state.mode === "practice";
   $hud.append(
     el("div", {},
-      isPractice ? null : el("span", { className: "tag" }, `搶 ${info.raceTo}`),
       el("span", { className: p1Turn ? "turn" : "" }, info.p1),
       isPractice ? null : el("span", { className: "score" }, ` ${info.score.p1} - ${info.score.p2} `),
       isPractice ? null : el("span", { className: !p1Turn ? "turn" : "" }, info.p2),

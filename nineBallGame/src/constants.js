@@ -2,7 +2,7 @@
 export const TABLE_LEN = 2.54;         // 長軸
 export const TABLE_WID = 1.27;         // 短軸
 export const CUSHION_H = 0.04;         // 枱邊高
-export const BALL_R = 0.029;           // 球半徑
+export const BALL_R = 0.040;           // 球半徑（袋:球 ≈ 1.88）
 export const POCKET_R = 0.075;         // 袋口（偵測半徑）
 export const POCKET_OPENING = 0.12;    // 枱邊留給袋口的缺口寬
 

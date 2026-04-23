@@ -1788,13 +1788,16 @@ export class Game3D {
     }
     if (w >= h) this.camera.up.set(0, 0, -1);
 
-    // 直式（手機/平板直拿）：桌子佔整個畫面，直接把視窗貼齊
+    // 直式（手機/平板直拿）：桌子左右約 5% 邊距、上下稍大避開 HUD
     // 橫式且寬高比大（桌機）：視窗放大讓桌邊有空間做大力拖曳
     const isPortrait = h > w;
-    const yOffset = 0;
+    let yOffset = 0;
     if (isPortrait) {
-      // 視窗縮 15% 讓桌子佔更大畫面，撞擊點 modal 不佔空間
-      viewW *= 0.93; viewH *= 0.93;
+      // scale 使桌寬佔 viewW 的 ~90%（左右各 5% 空白）
+      // 上下會自動約 8%，yOffset 再把桌子微下移避免 HUD 遮到頂袋
+      // 桌子含木框寬 1.43m，base viewW=1.57 → 每邊僅 4.5% 空白；放大視窗讓木框完整露出並留 ~5%
+      viewW *= 1.02; viewH *= 1.02;
+      yOffset = 0;
     } else {
       // 橫式桌機：放大視窗保留週邊
       viewW /= 0.62; viewH /= 0.62;
