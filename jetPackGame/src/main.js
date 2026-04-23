@@ -1,16 +1,20 @@
 // Jetpack 2D — Phaser 3
 // 邏輯解析度 960x540；自適應縮放；橫向自動捲動；按住飛行。
 
-const W = 960, H = 540;
+// 動態決定遊戲尺寸：手機直屏採 540×960，其餘採 960×540
+const IS_PORTRAIT = window.matchMedia('(max-width: 900px)').matches
+  && window.innerHeight > window.innerWidth;
+const W = IS_PORTRAIT ? 540 : 960;
+const H = IS_PORTRAIT ? 960 : 540;
 const GROUND_Y = H - 78;     // 地面 y（玩家可達）
 const CEIL_Y   = 26;         // 天花板 y（貼齊螢幕頂端）
 const SCROLL_BASE = 240;     // 起始捲動速度 px/s
 const SCROLL_MAX  = 520;
-const THRUST  = -1200;     // 噴射推力（負＝向上）
-const GRAVITY = 1100;
-const VY_UP_MAX   = -640;
-const VY_DOWN_MAX = 620;
-const PLAYER_X = 220;
+const THRUST  = IS_PORTRAIT ? -1600 : -1200;   // 噴射推力（負＝向上）
+const GRAVITY = IS_PORTRAIT ? 1250 : 1100;
+const VY_UP_MAX   = IS_PORTRAIT ? -760 : -640;
+const VY_DOWN_MAX = IS_PORTRAIT ? 740 : 620;
+const PLAYER_X = IS_PORTRAIT ? 130 : 220;
 
 // ---------- WebAudio 音效 ----------
 const SFX = (() => {
@@ -356,10 +360,9 @@ class PlayScene extends Phaser.Scene {
     const press = (ev) => {
       SFX.bgm();
       if (this.paused || !this.alive || !this.started) return;
-      // 點 HUD 不觸發
+      // 點 HUD 不觸發（ev.y 已是 Phaser 邏輯座標 0..H）
       if (ev && ev.y !== undefined) {
-        const py = ev.y * (H / this.scale.canvas.clientHeight);
-        if (py < 80 || py > H - 90) return;
+        if (ev.y < 80 || ev.y > H - 90) return;
       }
       this.thrusting = true; SFX.thrust(true);
     };
