@@ -23,6 +23,14 @@
       "port": 8767,
       "autoPort": false,
       "cwd": "jetPackGame"
+    },
+    {
+      "name": "robberRun",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": ["-m", "http.server", "8768"],
+      "port": 8768,
+      "autoPort": false,
+      "cwd": "robberRun"
     }
   ]
 }
