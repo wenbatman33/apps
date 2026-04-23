@@ -285,6 +285,17 @@ class PlayScene extends Phaser.Scene {
 
     // ====== HUD ======
     this.hudLayer = this.add.container(0, 0).setScrollFactor(0).setDepth(1000);
+    // 透明熱區工具：在指定位置疊一層透明矩形用來接收點擊
+    const addHitZone = (x, y, w, h, handler) => {
+      const z = this.add.rectangle(x, y, w, h, 0xffffff, 0)
+        .setScrollFactor(0).setDepth(1010)
+        .setInteractive({ useHandCursor: true });
+      z.on('pointerdown', (pointer, lx, ly, event) => {
+        if (event && event.stopPropagation) event.stopPropagation();
+        handler();
+      });
+      return z;
+    };
     // 左上：頭像 + 金幣
     const face = this.add.image(40, 40, 'hudFace').setScale(0.22);
     this.scoreTxt = this.add.text(80, 22, '0', {
@@ -295,45 +306,45 @@ class PlayScene extends Phaser.Scene {
       fontFamily: 'system-ui, "Microsoft JhengHei", sans-serif',
       fontSize: '16px', color: '#fff', stroke: '#000', strokeThickness: 3,
     });
-    // 右上：暫停
-    this.pauseImg = this.add.image(W - 40, 40, 'pauseBtn').setScale(0.22).setInteractive({ useHandCursor: true });
-    this.pauseImg.on('pointerdown', () => this.togglePause());
+    // 右上：暫停（純顯示，熱區交給 hitZone）
+    this.pauseImg = this.add.image(W - 40, 40, 'pauseBtn').setScale(0.22);
+    this.pauseHit = addHitZone(W - 40, 40, 80, 80, () => this.togglePause());
     // 右上：靜音切換（放在暫停鈕左側）
-    this.muteBtn = this.add.text(W - 90, 28, SFX.isMuted() ? '🔇' : '🔊', {
-      fontSize: '22px', backgroundColor: '#000000aa',
-      padding: { x: 8, y: 4 },
-    }).setOrigin(0.5, 0).setInteractive({ useHandCursor: true });
-    this.muteBtn.on('pointerdown', () => {
+    this.muteBtn = this.add.text(W - 110, 40, SFX.isMuted() ? '🔇' : '🔊', {
+      fontSize: '28px',
+    }).setOrigin(0.5);
+    this.muteHit = addHitZone(W - 110, 40, 80, 80, () => {
       const m = SFX.toggleMute();
       this.muteBtn.setText(m ? '🔇' : '🔊');
     });
     // 右上：AI 切換鈕
-    this.aiBtn = this.add.text(W - 140, 28, 'AI', {
+    this.aiBtn = this.add.text(W - 180, 28, 'AI', {
       fontFamily: 'system-ui, "Microsoft JhengHei", sans-serif',
       fontSize: '20px', color: '#fff', backgroundColor: '#444',
       padding: { x: 12, y: 6 }, fontStyle: 'bold',
-    }).setOrigin(1, 0).setInteractive({ useHandCursor: true });
-    this.aiBtn.on('pointerdown', () => this.toggleAI());
+    }).setOrigin(1, 0);
+    this.aiHit = addHitZone(W - 210, 40, 80, 80, () => this.toggleAI());
     // AI 紀錄顯示
     this.aiBest = parseInt(localStorage.getItem('jp_ai_best') || '0', 10);
-    this.aiBestTxt = this.add.text(W - 140, 60, `AI 最佳 ${this.aiBest} m`, {
+    this.aiBestTxt = this.add.text(W - 180, 60, `AI 最佳 ${this.aiBest} m`, {
       fontSize: '14px', color: '#ffd166', stroke: '#000', strokeThickness: 3,
     }).setOrigin(1, 0);
     // 左下：道具列
     const ITEM_Y = H - 50;
     this.itemSlots = ['shield', 'bomb', 'magnet'].map((kind, i) => {
-      const x = 50 + i * 80;
+      const x = 60 + i * 90;
       const bgKey = kind === 'shield' ? 'shieldBtn' : kind === 'bomb' ? 'bombBtn' : 'magnetBtn';
-      const img = this.add.image(x, ITEM_Y, bgKey).setScale(0.22).setInteractive({ useHandCursor: true });
+      const img = this.add.image(x, ITEM_Y, bgKey).setScale(0.22);
       const cnt = this.add.text(x + 18, ITEM_Y + 18, '0', {
         fontSize: '18px', color: '#fff', stroke: '#000', strokeThickness: 4, fontStyle: 'bold',
       }).setOrigin(0.5);
-      img.on('pointerdown', () => this.useItem(kind));
-      return { kind, img, cnt };
+      const hit = addHitZone(x, ITEM_Y, 84, 84, () => this.useItem(kind));
+      return { kind, img, cnt, hit };
     });
 
-    this.hudLayer.add([face, this.scoreTxt, this.distTxt, this.pauseImg, this.muteBtn, this.aiBtn, this.aiBestTxt,
-      ...this.itemSlots.flatMap(s => [s.img, s.cnt])]);
+    this.hudLayer.add([face, this.scoreTxt, this.distTxt, this.pauseImg, this.pauseHit,
+      this.muteBtn, this.muteHit, this.aiBtn, this.aiHit, this.aiBestTxt,
+      ...this.itemSlots.flatMap(s => [s.img, s.cnt, s.hit])]);
 
     this.aiMode = !!this.registry.get('aiMode');
     if (this.aiMode) {
