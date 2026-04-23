@@ -12,12 +12,12 @@ export const FRAME_H = 0.10;           // 木框高度
 // 物理參數（參考真實撞球）
 export const BALL_MASS = 0.17;         // 撞球約 170g
 export const BALL_RESTITUTION = 0.95;  // 球-球接近彈性碰撞
-export const BALL_FRICTION = 0.04;     // 球-球接觸幾乎無摩擦
-export const GROUND_FRICTION = 0.18;   // 毛氈滑動摩擦係數
-export const CUSHION_RESTITUTION = 0.80; // 海綿條吸收約 20% 能量
-export const LINEAR_DAMPING = 0.2;     // 滾動阻力（主要靠毛氈摩擦收球）
-export const ANGULAR_DAMPING = 0.15;   // 讓旋轉可持續
-export const MIN_SPEED = 0.05;
+export const BALL_FRICTION = 0.0;      // 球-球零摩擦，讓實際路徑對齊預測（無 throw 效應）
+export const GROUND_FRICTION = 0.18;   // 毛氈滑動摩擦（降低以讓背旋存活更久，撞擊後仍能倒退）
+export const CUSHION_RESTITUTION = 0.80;
+export const LINEAR_DAMPING = 0.35;    // 主要讓球能收住，但仍留空間讓拉桿反向
+export const ANGULAR_DAMPING = 0.18;   // 旋轉不能衰減太快，否則拉桿效果消失
+export const MIN_SPEED = 0.10;         // 低於此速度視為靜止
 
 // 擊球
 export const MAX_SHOT_IMPULSE = 0.9;   // 最大衝量 (N·s)
