@@ -100,7 +100,8 @@ class MenuScene extends Phaser.Scene {
         title.setScale(tScale);
 
         // 角色預覽
-        const hero = this.add.sprite(GAME_W/2, GAME_H*0.55, 'run1').setScale(0.08);
+        const hero = this.add.sprite(GAME_W/2, GAME_H*0.55, 'run1');
+        hero.setScale(260 / hero.height);
         hero.play('run');
 
         // Start 按鈕
@@ -177,7 +178,7 @@ class GameScene extends Phaser.Scene {
 
         // 角色
         this.hero = this.physics.add.sprite(LANE_X[this.lane], GROUND_Y, 'run1');
-        this.hero.setScale(0.08);
+        this.hero.setScale(260 / this.hero.height);
         this.hero.body.setAllowGravity(false);
         // 收斂 hero 碰撞框到身體軀幹（原圖 2533x3381，身體約中央 40% 寬、60% 高）
         this.hero.body.setSize(this.hero.width * 0.35, this.hero.height * 0.55);
