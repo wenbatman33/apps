@@ -1788,17 +1788,16 @@ export class Game3D {
     }
     if (w >= h) this.camera.up.set(0, 0, -1);
 
-    // PC（精確指標）把畫面縮小至 62%，讓桌邊有空間做大力拖曳、HUD 不被遮擋
-    const isDesktop = window.matchMedia?.("(hover: hover) and (pointer: fine)").matches;
-    if (isDesktop) { viewW /= 0.62; viewH /= 0.62; }
-
-    // 手機直式：保留下方給撞擊點 widget
-    const isPortraitMobile = !isDesktop && h > w;
-    let yOffset = 0;
-    if (isPortraitMobile) {
-      viewW /= 0.92; viewH /= 0.92;
-      // camera.up = (-1,0,0)：畫面下 = 世界 +x；讓視窗往下偏 → 桌子畫面上移
-      yOffset = viewH * 0.10;
+    // 直式（手機/平板直拿）：桌子佔整個畫面，直接把視窗貼齊
+    // 橫式且寬高比大（桌機）：視窗放大讓桌邊有空間做大力拖曳
+    const isPortrait = h > w;
+    const yOffset = 0;
+    if (isPortrait) {
+      // 視窗縮 15% 讓桌子佔更大畫面，撞擊點 modal 不佔空間
+      viewW *= 0.93; viewH *= 0.93;
+    } else {
+      // 橫式桌機：放大視窗保留週邊
+      viewW /= 0.62; viewH /= 0.62;
     }
 
     this.camera.left   = -viewW / 2;
