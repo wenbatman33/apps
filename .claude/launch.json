@@ -15,6 +15,14 @@
       "port": 8766,
       "autoPort": false,
       "cwd": "nineBallGame"
+    },
+    {
+      "name": "jetPackGame",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": ["-m", "http.server", "8767"],
+      "port": 8767,
+      "autoPort": false,
+      "cwd": "jetPackGame"
     }
   ]
 }
