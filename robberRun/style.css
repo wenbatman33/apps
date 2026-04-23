@@ -27,6 +27,12 @@ html, body {
     box-shadow: 0 0 40px rgba(0,0,0,0.6);
     touch-action: none;
 }
+#game canvas {
+    display: block;
+    touch-action: none;
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+}
 
 /* Overlay 共用 */
 .overlay {
