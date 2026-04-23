@@ -170,22 +170,26 @@ class PlayScene extends Phaser.Scene {
   constructor() { super('play'); }
 
   create() {
-    // 隨機選一組背景配色
+    // 隨機選一組背景配色（加權）
     const schemes = [
-      { far: 'bg_04_l1', mtn: 'bg_03_l1', mtn2: 'bg_03_l2', mid: 'bg_04_l2' }, // 日落+山
-      { far: 'bg_03_l1', mtn: 'bg_03_l2', mtn2: 'bg_04_l2', mid: 'bg_04_l2' }, // 黃昏
-      { far: 'bg_02_l1', mtn: 'bg_04_l2', mtn2: 'bg_03_l2', mid: 'bg_03_l1' }, // 夜空
-      { far: 'bg_01_l1', mtn: 'bg_01_l2', mtn2: 'bg_01_l3', mid: 'bg_01_l3' }, // 室內實驗室
+      // 藍天白雲（最常見）
+      { far: 'bg_04_l1', mtn: 'bg_03_l1', mtn2: 'bg_03_l2', mid: 'bg_04_l2', w: 4 },
+      // 夕陽
+      { far: 'bg_03_l1', mtn: 'bg_03_l2', mtn2: 'bg_04_l2', mid: 'bg_03_l2', w: 2 },
+      // 實驗室（室內）
+      { far: 'bg_01_l1', mtn: 'bg_01_l2', mtn2: 'bg_01_l3', mid: 'bg_01_l3', w: 1 },
+      // 地牢（室內）
+      { far: 'bg_02_l1', mtn: 'bg_01_l2', mtn2: 'bg_01_l3', mid: 'bg_01_l3', w: 1 },
     ];
-    const sch = Phaser.Utils.Array.GetRandom(schemes);
+    const totalW = schemes.reduce((s, x) => s + x.w, 0);
+    let rr = Math.random() * totalW, sch = schemes[0];
+    for (const s of schemes) { rr -= s.w; if (rr <= 0) { sch = s; break; } }
     this.bgFar  = this.add.tileSprite(0, 0, W, H, sch.far ).setOrigin(0).setScrollFactor(0);
     this.bgMtn  = this.add.tileSprite(0, 0, W, H, sch.mtn ).setOrigin(0).setScrollFactor(0);
     this.bgMtn2 = this.add.tileSprite(0, 0, W, H, sch.mtn2).setOrigin(0).setScrollFactor(0);
     this.bgMid  = this.add.tileSprite(0, 0, W, H, sch.mid ).setOrigin(0).setScrollFactor(0);
     [this.bgFar, this.bgMtn, this.bgMtn2, this.bgMid].forEach(b => { b.tileScaleX = H / 600; b.tileScaleY = H / 600; });
-    this.bgMtn.tilePositionY  = -110;
-    this.bgMtn2.tilePositionY = -150;
-    this.bgMid.tilePositionY  = -60;
+    // 不再做 tilePositionY 偏移，避免把底部白雲拉到上緣
 
     // 上邊界貼齊螢幕頂端 + 垂掛尖刺；背後加深色漸層襯底擋住天空透出的亮帶
     this.ceilBackdrop = this.add.rectangle(0, 0, W, 80, 0x1a1420).setOrigin(0, 0).setScrollFactor(0).setDepth(47);
@@ -289,7 +293,7 @@ class PlayScene extends Phaser.Scene {
 
     // 輸入
     const press = (ev) => {
-      if (this.paused || !this.alive) return;
+      if (this.paused || !this.alive || !this.started) return;
       // 點 HUD 不觸發
       if (ev && ev.y !== undefined) {
         const py = ev.y * (H / this.scale.canvas.clientHeight);
@@ -301,9 +305,9 @@ class PlayScene extends Phaser.Scene {
     this.input.on('pointerdown', press);
     this.input.on('pointerup', release);
     this.input.on('pointerupoutside', release);
-    this.input.keyboard.on('keydown-SPACE', () => { if (this.alive && !this.paused) { this.thrusting = true; SFX.thrust(true); } });
+    this.input.keyboard.on('keydown-SPACE', () => { if (this.alive && !this.paused && this.started) { this.thrusting = true; SFX.thrust(true); } });
     this.input.keyboard.on('keyup-SPACE', release);
-    this.input.keyboard.on('keydown-UP', () => { if (this.alive && !this.paused) { this.thrusting = true; SFX.thrust(true); } });
+    this.input.keyboard.on('keydown-UP', () => { if (this.alive && !this.paused && this.started) { this.thrusting = true; SFX.thrust(true); } });
     this.input.keyboard.on('keyup-UP', release);
     // 道具熱鍵 1/2/3
     this.input.keyboard.on('keydown-ONE', () => this.useItem('shield'));
@@ -331,6 +335,36 @@ class PlayScene extends Phaser.Scene {
     this.gameOverGroup.add([panel, this.goTitle, this.goStats, this.goBtn]);
 
     this.refreshItemHud();
+
+    // 開場 3-2-1 倒數
+    this.started = false;
+    this.startCountdown();
+  }
+
+  startCountdown() {
+    const cd = this.add.text(W / 2, H / 2, '3', {
+      fontFamily: 'system-ui, "Microsoft JhengHei", sans-serif',
+      fontSize: '160px', color: '#ffd166', stroke: '#000', strokeThickness: 10, fontStyle: 'bold',
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(2500);
+    this.countdownText = cd;
+    const steps = ['3', '2', '1', 'GO!'];
+    let i = 0;
+    const tick = () => {
+      cd.setText(steps[i]);
+      cd.setScale(1.6); cd.setAlpha(0);
+      this.tweens.add({ targets: cd, scale: 1, alpha: 1, duration: 200, ease: 'Back.Out' });
+      this.tweens.add({ targets: cd, alpha: 0, duration: 250, delay: 650 });
+      i++;
+      if (i < steps.length) {
+        this.time.delayedCall(900, tick);
+      } else {
+        this.time.delayedCall(900, () => {
+          cd.destroy();
+          this.started = true;
+        });
+      }
+    };
+    tick();
   }
 
   // ---------- AI 模式 ----------
@@ -758,6 +792,16 @@ class PlayScene extends Phaser.Scene {
       this.borderTop.tilePositionX += this.scrollSpeed * dts;
       this.ceilSpikes.tilePositionX += this.scrollSpeed * dts;
       this.groundBand.tilePositionX += this.scrollSpeed * 0.85 * dts;
+    }
+
+    // 倒數中：玩家原地懸浮，不更新物理/生成
+    if (!this.started) {
+      this.player.y = H / 2;
+      this.vy = 0;
+      // HUD 仍刷新
+      this.scoreTxt.setText(String(this.score));
+      this.distTxt.setText(`${Math.floor(this.distance)} m`);
+      return;
     }
 
     if (this.alive) {
