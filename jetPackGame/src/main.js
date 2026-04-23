@@ -15,11 +15,19 @@ const PLAYER_X = 220;
 // ---------- WebAudio 音效 ----------
 const SFX = (() => {
   let ctx = null;
+  let master = null;
+  let muted = false;
   const ensure = () => {
-    if (!ctx) ctx = new (window.AudioContext || window.webkitAudioContext)();
+    if (!ctx) {
+      ctx = new (window.AudioContext || window.webkitAudioContext)();
+      master = ctx.createGain();
+      master.gain.value = muted ? 0 : 1;
+      master.connect(ctx.destination);
+    }
     if (ctx.state === 'suspended') ctx.resume();
     return ctx;
   };
+  const getMaster = () => { ensure(); return master; };
   const env = (g, t, a, d, peak = 0.3) => {
     g.gain.cancelScheduledValues(t);
     g.gain.setValueAtTime(0, t);
@@ -27,12 +35,18 @@ const SFX = (() => {
     g.gain.exponentialRampToValueAtTime(0.0001, t + a + d);
   };
   return {
+    isMuted() { return muted; },
+    setMuted(m) {
+      muted = !!m;
+      if (master) master.gain.value = muted ? 0 : 1;
+    },
+    toggleMute() { this.setMuted(!muted); return muted; },
     coin() {
       const c = ensure(); const t = c.currentTime;
       const o = c.createOscillator(), g = c.createGain();
       o.type = 'square'; o.frequency.setValueAtTime(880, t);
       o.frequency.exponentialRampToValueAtTime(1760, t + 0.08);
-      o.connect(g).connect(c.destination); env(g, t, 0.005, 0.10, 0.16);
+      o.connect(g).connect(master); env(g, t, 0.005, 0.10, 0.16);
       o.start(t); o.stop(t + 0.16);
     },
     explode() {
@@ -41,7 +55,7 @@ const SFX = (() => {
       const d = buf.getChannelData(0);
       for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / d.length, 2);
       const src = c.createBufferSource(); src.buffer = buf;
-      const g = c.createGain(); src.connect(g).connect(c.destination);
+      const g = c.createGain(); src.connect(g).connect(master);
       env(g, t, 0.005, 0.55, 0.55); src.start(t);
     },
     pickup() {
@@ -49,7 +63,7 @@ const SFX = (() => {
       const o = c.createOscillator(), g = c.createGain();
       o.type = 'triangle'; o.frequency.setValueAtTime(440, t);
       o.frequency.exponentialRampToValueAtTime(1320, t + 0.16);
-      o.connect(g).connect(c.destination); env(g, t, 0.005, 0.20, 0.25);
+      o.connect(g).connect(master); env(g, t, 0.005, 0.20, 0.25);
       o.start(t); o.stop(t + 0.22);
     },
     shoot() {
@@ -57,7 +71,7 @@ const SFX = (() => {
       const o = c.createOscillator(), g = c.createGain();
       o.type = 'sawtooth'; o.frequency.setValueAtTime(700, t);
       o.frequency.exponentialRampToValueAtTime(120, t + 0.18);
-      o.connect(g).connect(c.destination); env(g, t, 0.003, 0.18, 0.18);
+      o.connect(g).connect(master); env(g, t, 0.003, 0.18, 0.18);
       o.start(t); o.stop(t + 0.2);
     },
     bomb() {
@@ -66,7 +80,7 @@ const SFX = (() => {
       const o = c.createOscillator(), g = c.createGain();
       o.type = 'sine'; o.frequency.setValueAtTime(120, t);
       o.frequency.exponentialRampToValueAtTime(40, t + 0.4);
-      o.connect(g).connect(c.destination); env(g, t, 0.005, 0.4, 0.4);
+      o.connect(g).connect(master); env(g, t, 0.005, 0.4, 0.4);
       o.start(t); o.stop(t + 0.45);
     },
     bgm() {
@@ -77,10 +91,24 @@ const SFX = (() => {
         a.loop = true; a.preload = 'auto'; a.crossOrigin = 'anonymous';
         const src = c.createMediaElementSource(a);
         const g = c.createGain(); g.gain.value = 0.5;
-        src.connect(g).connect(c.destination);
+        src.connect(g).connect(master);
         this._bgmAudio = a; this._bgmGain = g;
       }
       if (this._bgmAudio.paused) this._bgmAudio.play().catch(() => {});
+    },
+    countDown() {
+      // 開場 3-2-1 倒數音效
+      const c = ensure();
+      if (!this._cdAudio) {
+        const a = new Audio('assets/mp3/countDown.mp3');
+        a.preload = 'auto'; a.crossOrigin = 'anonymous';
+        const src = c.createMediaElementSource(a);
+        const g = c.createGain(); g.gain.value = 0.6;
+        src.connect(g).connect(master);
+        this._cdAudio = a; this._cdGain = g;
+      }
+      this._cdAudio.currentTime = 0;
+      this._cdAudio.play().catch(() => {});
     },
     thrust(on) {
       // 使用素材包提供的 jetPack.mp3，迴圈播放，淡入淡出
@@ -90,7 +118,7 @@ const SFX = (() => {
         a.loop = true; a.preload = 'auto'; a.crossOrigin = 'anonymous';
         const src = c.createMediaElementSource(a);
         const g = c.createGain(); g.gain.value = 0;
-        src.connect(g).connect(c.destination);
+        src.connect(g).connect(master);
         this._thrAudio = a; this._thrGain = g; this._thrPeak = 0.55;
       }
       const a = this._thrAudio, g = this._thrGain;
@@ -270,8 +298,17 @@ class PlayScene extends Phaser.Scene {
     // 右上：暫停
     this.pauseImg = this.add.image(W - 40, 40, 'pauseBtn').setScale(0.22).setInteractive({ useHandCursor: true });
     this.pauseImg.on('pointerdown', () => this.togglePause());
+    // 右上：靜音切換（放在暫停鈕左側）
+    this.muteBtn = this.add.text(W - 90, 28, SFX.isMuted() ? '🔇' : '🔊', {
+      fontSize: '22px', backgroundColor: '#000000aa',
+      padding: { x: 8, y: 4 },
+    }).setOrigin(0.5, 0).setInteractive({ useHandCursor: true });
+    this.muteBtn.on('pointerdown', () => {
+      const m = SFX.toggleMute();
+      this.muteBtn.setText(m ? '🔇' : '🔊');
+    });
     // 右上：AI 切換鈕
-    this.aiBtn = this.add.text(W - 100, 28, 'AI', {
+    this.aiBtn = this.add.text(W - 140, 28, 'AI', {
       fontFamily: 'system-ui, "Microsoft JhengHei", sans-serif',
       fontSize: '20px', color: '#fff', backgroundColor: '#444',
       padding: { x: 12, y: 6 }, fontStyle: 'bold',
@@ -279,7 +316,7 @@ class PlayScene extends Phaser.Scene {
     this.aiBtn.on('pointerdown', () => this.toggleAI());
     // AI 紀錄顯示
     this.aiBest = parseInt(localStorage.getItem('jp_ai_best') || '0', 10);
-    this.aiBestTxt = this.add.text(W - 100, 60, `AI 最佳 ${this.aiBest} m`, {
+    this.aiBestTxt = this.add.text(W - 140, 60, `AI 最佳 ${this.aiBest} m`, {
       fontSize: '14px', color: '#ffd166', stroke: '#000', strokeThickness: 3,
     }).setOrigin(1, 0);
     // 左下：道具列
@@ -295,7 +332,7 @@ class PlayScene extends Phaser.Scene {
       return { kind, img, cnt };
     });
 
-    this.hudLayer.add([face, this.scoreTxt, this.distTxt, this.pauseImg, this.aiBtn, this.aiBestTxt,
+    this.hudLayer.add([face, this.scoreTxt, this.distTxt, this.pauseImg, this.muteBtn, this.aiBtn, this.aiBestTxt,
       ...this.itemSlots.flatMap(s => [s.img, s.cnt])]);
 
     this.aiMode = !!this.registry.get('aiMode');
@@ -350,9 +387,23 @@ class PlayScene extends Phaser.Scene {
 
     this.refreshItemHud();
 
-    // 開場 3-2-1 倒數
+    // 開場 3-2-1 倒數（需先點擊以解鎖音訊）
     this.started = false;
-    this.startCountdown();
+    this.countdownStarted = false;
+    this.startPrompt = this.add.text(W / 2, H / 2, '點擊開始', {
+      fontFamily: 'system-ui, "Microsoft JhengHei", sans-serif',
+      fontSize: '64px', color: '#ffd166', stroke: '#000', strokeThickness: 8, fontStyle: 'bold',
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(2500);
+    this.tweens.add({ targets: this.startPrompt, alpha: { from: 1, to: 0.4 }, duration: 700, yoyo: true, repeat: -1 });
+    const kickOff = () => {
+      if (this.countdownStarted) return;
+      this.countdownStarted = true;
+      this.startPrompt.destroy();
+      SFX.bgm();
+      this.startCountdown();
+    };
+    this.input.once('pointerdown', kickOff);
+    this.input.keyboard.once('keydown-SPACE', kickOff);
   }
 
   startCountdown() {
@@ -364,6 +415,7 @@ class PlayScene extends Phaser.Scene {
     const steps = ['3', '2', '1', 'GO!'];
     let i = 0;
     const tick = () => {
+      if (i < 3) SFX.countDown();
       cd.setText(steps[i]);
       cd.setScale(1.6); cd.setAlpha(0);
       this.tweens.add({ targets: cd, scale: 1, alpha: 1, duration: 120, ease: 'Back.Out' });
