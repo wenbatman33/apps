@@ -1303,6 +1303,12 @@ export class Game3D {
     this.firstHit = null;
     this.pocketedThisShot = [];
     this.targetAtShot = lowestBallOnTable(this.balls);
+    // 記錄本桿擊球方向與拉/推桿量，供碰撞後補救使用（cannon-es 求解器會在碰撞瞬間吃掉大量背旋，靠純物理無法呈現拉桿後退）
+    const _mag = Math.hypot(ix, iz) || 1;
+    this._shotDir = { x: ix / _mag, z: iz / _mag };
+    this._shotSpinY = this.spin ? this.spin.y : 0; // -1 全拉桿、+1 全推桿
+    this._shotSpinX = this.spin ? this.spin.x : 0;
+    this._shotBaseSpeed = _mag / BALL_MASS; // 原始母球速度估算
     this.cue.body.wakeUp();
     this.cue.body.applyImpulse(
       new CANNON.Vec3(ix, 0, iz),
@@ -1317,7 +1323,7 @@ export class Game3D {
       const ux = ix / (impMag || 1), uz = iz / (impMag || 1);
       const tx = uz, tz = -ux; // cross(up,dir)，自然滾動的軸方向（wTop 為正代表向前滾）
       const rate = speed / BALL_R;
-      const TOP_GAIN = 2.6;    // 拉桿強度（全拉桿背旋 ~1.6v/R，撞擊後靠殘旋微倒轉）
+      const TOP_GAIN = 2.0;    // 拉桿強度（全拉桿背旋 v/R；超過 2.5 會觸發 cannon-es 求解器異常讓母球瞬間倒退）
       const SIDE = 1.2;
       const wTop = rate * (1 + this.spin.y * TOP_GAIN); // spin.y=+1 推桿、-1 拉桿
       const wYaw = rate * this.spin.x * SIDE;
@@ -1344,7 +1350,34 @@ export class Game3D {
       // 對方 body 所屬球
       const other = ev.body;
       const b = this.balls.find(x => x.body === other && x.number !== 0);
-      if (b) this.firstHit = b.number;
+      if (b) {
+        this.firstHit = b.number;
+        // Scripted 拉/推桿：cannon-es 碰撞會讓真實背旋失效，改用事後延遲衝量實現
+        // 記錄「本桿擊球原速度」作為 baseline，延遲 ~40ms 等兩球分開後才施加
+        const spinY = this._shotSpinY || 0;
+        const spinX = this._shotSpinX || 0;
+        if (Math.abs(spinY) > 0.05 || Math.abs(spinX) > 0.05) {
+          const dir = this._shotDir || { x: 1, z: 0 };
+          const baseline = this._shotBaseSpeed || 1;
+          const back = -spinY;
+          const push = Math.max(0, spinY);
+          const drawV = back * baseline * 0.5; // 全拉桿最終達 ~50% 原速反向
+          const pushV = push * baseline * 0.3;
+          const sideV = spinX * baseline * 0.25;
+          const sx = dir.z, sz = -dir.x;
+          const totalDvx = (-dir.x * drawV) + (dir.x * pushV) + (sx * sideV);
+          const totalDvz = (-dir.z * drawV) + (dir.z * pushV) + (sz * sideV);
+          // 分散在 ~20 個 frame (~0.33s) 內漸進施加
+          const steps = 20;
+          setTimeout(() => {
+            this._spinForce = {
+              dvx: totalDvx / steps,
+              dvz: totalDvz / steps,
+              stepsLeft: steps,
+            };
+          }, 60);
+        }
+      }
     };
     this.cue.body.addEventListener("collide", this._cueCollHandler);
   }
@@ -1417,6 +1450,14 @@ export class Game3D {
     const dt = Math.min((t - this._lastT) / 1000, 0.05);
     this._lastT = t;
     this.world.step(1 / 120, dt, 8);
+
+    // 拉/推桿 scripted 衝量：分散在多個 frame 施加，營造「摩擦漸推」視覺而非彈開
+    if (this._spinForce && this._spinForce.stepsLeft > 0) {
+      const f = this._spinForce;
+      this.cue.body.velocity.x += f.dvx;
+      this.cue.body.velocity.z += f.dvz;
+      f.stepsLeft--;
+    }
 
     // 硬性位置限制：若球超出桌面範圍（穿板保險），把球拉回並歸零速度
     const MAX_X = HX - BALL_R, MAX_Z = HZ - BALL_R;
@@ -1717,12 +1758,6 @@ export class Game3D {
       this.canvas.style.top  = vv.offsetTop  + 'px';
       this.canvas.style.left = vv.offsetLeft + 'px';
     }
-    // 工具列高度 = 版面視口高 - 可見視口高；fixed 元素的 bottom 要額外補償
-    const toolbarH = vv ? Math.max(0, window.innerHeight - vv.offsetTop - vv.height) : 0;
-    if (this.spinWidget) {
-      this.spinWidget.style.bottom = `calc(env(safe-area-inset-bottom,0px) + ${20 + toolbarH}px)`;
-    }
-
     // 目標：桌子 + 一點邊框都看得到，自適應畫面
     const pad = 0.15;
     const needW = TABLE_LEN + pad * 2;
@@ -1753,14 +1788,23 @@ export class Game3D {
     }
     if (w >= h) this.camera.up.set(0, 0, -1);
 
-    // PC（精確指標）把畫面縮小至 70%，讓桌邊有空間做大力拖曳、HUD 不被遮擋
+    // PC（精確指標）把畫面縮小至 62%，讓桌邊有空間做大力拖曳、HUD 不被遮擋
     const isDesktop = window.matchMedia?.("(hover: hover) and (pointer: fine)").matches;
     if (isDesktop) { viewW /= 0.62; viewH /= 0.62; }
 
+    // 手機直式：保留下方給撞擊點 widget
+    const isPortraitMobile = !isDesktop && h > w;
+    let yOffset = 0;
+    if (isPortraitMobile) {
+      viewW /= 0.92; viewH /= 0.92;
+      // camera.up = (-1,0,0)：畫面下 = 世界 +x；讓視窗往下偏 → 桌子畫面上移
+      yOffset = viewH * 0.10;
+    }
+
     this.camera.left   = -viewW / 2;
     this.camera.right  =  viewW / 2;
-    this.camera.top    =  viewH / 2;
-    this.camera.bottom = -viewH / 2;
+    this.camera.top    =  viewH / 2 + yOffset;
+    this.camera.bottom = -viewH / 2 + yOffset;
     this.camera.updateProjectionMatrix();
     this.camera.lookAt(0, 0, 0);
   }
@@ -1772,39 +1816,46 @@ export class Game3D {
     if (this.spinWidget) this.spinWidget.remove();
   }
 
-  // 球桿撞擊點選擇器（推/拉/左塞/右塞）
+  // 球桿撞擊點選擇器：由上方按鈕開啟的置中 modal
   _buildSpinWidget() {
+    const backdrop = document.createElement("div");
+    backdrop.id = "spin-backdrop";
+    backdrop.style.cssText = [
+      "position:fixed", "inset:0", "background:rgba(0,0,0,0.55)",
+      "display:none", "align-items:center", "justify-content:center",
+      "z-index:30", "touch-action:none",
+    ].join(";");
     const w = document.createElement("div");
     w.id = "spin-widget";
     w.style.cssText = [
-      "position:fixed", "left:50%", "bottom:calc(env(safe-area-inset-bottom,0px) + 20px)",
-      "transform:translateX(-50%)",
-      "width:78px", "height:78px", "border-radius:50%",
+      "position:relative",
+      "width:240px", "height:240px", "border-radius:50%",
       "background:radial-gradient(circle at 35% 30%, #fff 0%, #e6e6e6 60%, #bfbfbf 100%)",
-      "box-shadow:0 2px 10px rgba(0,0,0,0.5), inset 0 -4px 8px rgba(0,0,0,0.15)",
-      "touch-action:none", "z-index:20", "cursor:crosshair",
-      "user-select:none",
+      "box-shadow:0 6px 24px rgba(0,0,0,0.6), inset 0 -8px 16px rgba(0,0,0,0.15)",
+      "touch-action:none", "cursor:crosshair", "user-select:none",
     ].join(";");
     const dot = document.createElement("div");
     dot.style.cssText = [
       "position:absolute", "left:50%", "top:50%",
-      "width:14px", "height:14px", "border-radius:50%",
-      "background:#e33", "box-shadow:0 1px 3px rgba(0,0,0,0.6)",
+      "width:32px", "height:32px", "border-radius:50%",
+      "background:#e33", "box-shadow:0 2px 6px rgba(0,0,0,0.6)",
       "transform:translate(-50%,-50%)", "pointer-events:none",
     ].join(";");
     w.appendChild(dot);
-    document.body.appendChild(w);
-    this.spinWidget = w;
+    backdrop.appendChild(w);
+    document.body.appendChild(backdrop);
+    this.spinWidget = backdrop;
     this.spinDot = dot;
 
     const setSpin = (nx, ny) => {
       const len = Math.hypot(nx, ny);
       if (len > 1) { nx /= len; ny /= len; }
       this.spin.x = nx;
-      this.spin.y = -ny; // 螢幕上 = 推桿（上 spin），下 = 拉桿
+      this.spin.y = -ny;
       dot.style.left = (50 + nx * 42) + "%";
       dot.style.top  = (50 + ny * 42) + "%";
     };
+    this._setSpin = setSpin;
     const fromEvent = (e) => {
       const r = w.getBoundingClientRect();
       const nx = (e.clientX - r.left - r.width / 2) / (r.width / 2);
@@ -1813,16 +1864,32 @@ export class Game3D {
     };
     w.addEventListener("pointerdown", (e) => {
       e.preventDefault();
+      e.stopPropagation();
       fromEvent(e);
       w.setPointerCapture(e.pointerId);
       const onMove = (ev) => fromEvent(ev);
       const onUp = () => {
         w.removeEventListener("pointermove", onMove);
         w.removeEventListener("pointerup", onUp);
+        // 選完自動關閉
+        this.closeSpinPicker();
       };
       w.addEventListener("pointermove", onMove);
       w.addEventListener("pointerup", onUp);
     });
+    // 點背景空白處關閉
+    backdrop.addEventListener("pointerdown", (e) => {
+      if (e.target === backdrop) this.closeSpinPicker();
+    });
+  }
+
+  openSpinPicker() {
+    if (!this.spinWidget) return;
+    this.spinWidget.style.display = "flex";
+  }
+  closeSpinPicker() {
+    if (!this.spinWidget) return;
+    this.spinWidget.style.display = "none";
   }
 }
 

@@ -161,6 +161,7 @@ function startGame(netInfo = null) {
     onOpponentLeft: () => showOverlay("對手離線", "連線已中斷", "返回選單", showMenu),
   });
   if (netInfo) game.setNetHandlers(Net);
+  window.__game = game; // 除錯用
 }
 
 function stopGame() {
@@ -190,6 +191,7 @@ function renderHud(info) {
       info.ballInHand ? el("span", { className: "tag", style: { color: "#f7c300" } }, "自由球") : null,
     ),
     el("div", {},
+      el("button", { className: "back", onClick: () => game?.openSpinPicker() }, "擊球點"),
       el("button", { className: "back", onClick: () => { Net.leave(); showMenu(); } }, "返回"),
     ),
   );
