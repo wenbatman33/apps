@@ -157,6 +157,7 @@ class GameScene extends Phaser.Scene {
         this.gameOver = false;
         this.jetpackTime = 0;
         this.invincibleTime = 0;
+        this.speedMult = 1;
 
         // 捲動背景：把 5 張 bg 直向拼接並循環
         this.bgLayer = this.add.group();
@@ -186,6 +187,10 @@ class GameScene extends Phaser.Scene {
         this.hero.play('run');
         this.hero.setDepth(5);
         this.heroState = 'run';
+
+        // 腳下陰影（跳躍時留在地面，讓玩家辨識落點）
+        this.heroShadow = this.add.ellipse(LANE_X[this.lane], GROUND_Y + 40, 140, 36, 0x000000, 0.65);
+        this.heroShadow.setDepth(4);
 
         // 碰撞
         this.physics.add.overlap(this.hero, this.itemsGroup, this._onItem, null, this);
@@ -260,10 +265,12 @@ class GameScene extends Phaser.Scene {
         this.hero.play('jump');
         this.sound.play('sfx_jump', { volume: 0.6 });
         if (this.runSnd?.isPlaying) this.runSnd.pause();
+        // 起跳瞬間「向前衝」：加快捲動，落地後短暫減速（喘息），再恢復
+        this.speedMult = 1.8;
         this.tweens.add({
             targets: this.hero,
-            y: GROUND_Y - 170,
-            duration: 320, ease: 'Sine.easeOut',
+            y: GROUND_Y - 190,
+            duration: 340, ease: 'Sine.easeOut',
             yoyo: true,
             onComplete: () => {
                 if (this.heroState === 'jump') {
@@ -271,6 +278,9 @@ class GameScene extends Phaser.Scene {
                     this.hero.play('run');
                     if (this.runSnd && !this.gameOver) this.runSnd.resume();
                 }
+                // 落地後減速喘息 450ms
+                this.speedMult = 0.35;
+                this.time.delayedCall(450, () => { this.speedMult = 1; });
             }
         });
     }
@@ -367,6 +377,9 @@ class GameScene extends Phaser.Scene {
         // body 寬度嚴格限制在車道內（lane 寬 180）
         this._setBodyPx(s, 110, Math.min(targetH * 0.7, 150));
         s.setData('type', 'obstacle');
+        // 不可跳躍的大型障礙（電線桿/招牌/卡車/長椅），跳了一樣失敗
+        const NON_JUMPABLE = new Set([3, 5, 8, 9, 10, 11, 12, 13]);
+        if (NON_JUMPABLE.has(idx)) s.setData('jumpproof', true);
         this.obstaclesGroup.add(s);
     }
 
@@ -404,16 +417,16 @@ class GameScene extends Phaser.Scene {
     }
 
     _onObstacle(hero, obs) {
-        // 跳躍中跨越障礙物（無敵亦然）
-        if (this.heroState === 'jump' || this.invincibleTime > 0) {
-            // 只有撞到大型障礙（如警察）在跳躍中仍會被抓到
-            const tooTall = obs.displayHeight > 200;
-            if (this.heroState === 'jump' && !tooTall) return;
-            if (this.invincibleTime > 0) {
-                this.sound.play('sfx_hit', { volume: 0.6 });
-                obs.destroy();
-                return;
-            }
+        // 無敵狀態下撞擊：無論大小都撞破
+        if (this.invincibleTime > 0) {
+            this.sound.play('sfx_hit', { volume: 0.6 });
+            obs.destroy();
+            return;
+        }
+        // 跳躍中跨越小型障礙；大型（卡車/電線桿/長椅等）即使跳也失敗
+        if (this.heroState === 'jump') {
+            const jumpproof = obs.getData('jumpproof') || obs.displayHeight > 200;
+            if (!jumpproof) return;
         }
         obs.destroy();
         this._endGame();
@@ -443,7 +456,7 @@ class GameScene extends Phaser.Scene {
     update(time, delta) {
         if (this.gameOver) return;
         const dt = delta / 1000;
-        this.speed = this.speedBase + (this.heroState === 'jetpack' ? 220 : 0);
+        this.speed = (this.speedBase + (this.heroState === 'jetpack' ? 220 : 0)) * (this.speedMult || 1);
         this.distance += this.speed * dt * 0.1;
         if (this.jetpackTime > 0) this.jetpackTime -= delta;
         if (this.invincibleTime > 0) this.invincibleTime -= delta;
@@ -471,6 +484,15 @@ class GameScene extends Phaser.Scene {
         };
         moveGroup(this.itemsGroup);
         moveGroup(this.obstaclesGroup);
+
+        // 陰影跟隨 hero.x，跳躍時依高度縮小表現騰空感（保持夠亮才看得到）
+        if (this.heroShadow) {
+            this.heroShadow.x = this.hero.x;
+            const dy = GROUND_Y - this.hero.y;
+            const k = Phaser.Math.Clamp(1 - dy / 220, 0.55, 1);
+            this.heroShadow.setScale(k, k);
+            this.heroShadow.setAlpha(0.35 + 0.3 * k);
+        }
 
         this._updateHUD();
     }
@@ -516,7 +538,10 @@ class EndScene extends Phaser.Scene {
         this.add.text(GAME_W/2, GAME_H*0.7, '再來一次', {
             fontFamily: 'Arial Black', fontSize: 34, color: '#331a00'
         }).setOrigin(0.5);
-        btn.on('pointerdown', () => this.scene.start('Menu'));
+        const restart = () => this.scene.start('Menu');
+        btn.on('pointerdown', restart);
+        this.input.keyboard.once('keydown-SPACE', restart);
+        this.input.keyboard.once('keydown-ENTER', restart);
     }
 }
 
