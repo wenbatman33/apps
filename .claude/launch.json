@@ -39,6 +39,14 @@
       "port": 8769,
       "autoPort": false,
       "cwd": "jumpVerticalGame"
+    },
+    {
+      "name": "survivorGame",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": ["-m", "http.server", "8770"],
+      "port": 8770,
+      "autoPort": false,
+      "cwd": "survivorGame"
     }
   ]
 }
