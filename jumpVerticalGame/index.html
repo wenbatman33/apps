@@ -10,12 +10,24 @@
 <body>
   <div id="stage">
     <canvas id="game" width="360" height="640"></canvas>
+    <div id="nameEditor" hidden>
+      <div class="ne-panel">
+        <div class="ne-title">輸入暱稱</div>
+        <input id="nameInput" type="text" maxlength="16" autocomplete="off" placeholder="最多 16 字">
+        <div class="ne-actions">
+          <button id="nameCancel" type="button">取消</button>
+          <button id="nameOk" type="button">確定</button>
+        </div>
+      </div>
+    </div>
   </div>
 
   <!-- 背景音樂：之後你換成自己的檔案即可 -->
   <audio id="bgm" src="audio/bgm.mp3" loop preload="auto"></audio>
 
   <script src="js/audio.js"></script>
+  <script src="js/stages.js"></script>
+  <script src="js/leaderboard.js"></script>
   <script src="js/game.js"></script>
 </body>
 </html>
