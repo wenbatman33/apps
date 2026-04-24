@@ -31,7 +31,7 @@ const GRAVITY = 0.38;
 const JUMP_VY = -13.5;
 const SPRING_VY = -20;
 const MOVE_SPEED = 5.2;
-const MAX_LIVES = 3;
+const MAX_LIVES = 10;
 const FALL_MARGIN = 120;
 const PLATFORM_GAP_MIN = 62;
 const PLATFORM_GAP_MAX = 110;
@@ -40,9 +40,6 @@ const PLATFORM_W = 72, PLATFORM_H = 18;
 // ============ 資源載入 ============
 const IMG = {};
 const toLoad = {
-  bgSky:     'assets/Background/01/Layer1.png',
-  bgFar:     'assets/Background/01/Layer2.png',
-  bgNear:    'assets/Background/01/Layer3.png',
   idle:      'assets/Characters/01/Idle.png',
   jump:      'assets/Characters/01/Jump.png',
   die:       'assets/Characters/01/Die.png',
@@ -62,6 +59,13 @@ const toLoad = {
   pausedText:'assets/Ui/PausedText.png',
   scoreBox:  'assets/Ui/ScoreBox.png',
 };
+// 6 套背景
+for(let i=1; i<=6; i++){
+  const k = i.toString().padStart(2,'0');
+  toLoad['bg_'+i+'_sky']  = 'assets/Background/'+k+'/Layer1.png';
+  toLoad['bg_'+i+'_far']  = 'assets/Background/'+k+'/Layer2.png';
+  toLoad['bg_'+i+'_near'] = 'assets/Background/'+k+'/Layer3.png';
+}
 
 let loadProgress = 0; // 0~1
 function loadAll(){
@@ -112,8 +116,14 @@ function loadingLoop(){
 }
 
 // ============ 遊戲狀態 ============
-const STATE = { MENU:'menu', PLAY:'play', PAUSE:'pause', OVER:'over' };
+const STATE = { MENU:'menu', SELECT:'select', PLAY:'play', PAUSE:'pause', OVER:'over', LEADER:'leader' };
 let state = STATE.MENU;
+let currentStage = 1; // 1..6
+let playerName = localStorage.getItem('jumpup.name') || '';
+let leaderRows = []; // 當前顯示排行榜資料
+let leaderStage = 1;
+let leaderLoading = false;
+let leaderError = '';
 let lastTime = 0;
 
 const player = {
@@ -133,7 +143,9 @@ let particles = [];
 let camY = 0;
 let highestY = 0;
 let score = 0;
-let best = parseInt(localStorage.getItem('jumpup.best')||'0',10) || 0;
+let best = 0; // 每關獨立最佳（進入關卡後依 currentStage 讀取）
+function bestKey(stage){ return 'jumpup.best.' + stage; }
+function loadBest(stage){ return parseInt(localStorage.getItem(bestKey(stage))||'0',10) || 0; }
 let lives = MAX_LIVES;
 let coinCount = 0;
 
@@ -151,14 +163,22 @@ function gapForScore(){
   return rand(min, max);
 }
 
+function stageCfg(){ return STAGES[currentStage-1] || STAGES[0]; }
+
 function spawnPlatform(y){
   const diff = Math.min(1, score / 600);
+  const sc = stageCfg();
   const type = (()=>{
     const r = Math.random();
     if(score < 80) return 'normal';
-    if(r < 0.72 - diff*0.32) return 'normal';
-    if(r < 0.85 - diff*0.20) return 'move';
-    if(r < 0.95 - diff*0.05) return 'break';
+    const moveP  = 0.13 * sc.moveMul;
+    const breakP = 0.10 * sc.breakMul;
+    const normalEnd = Math.max(0.35, 0.72 - diff*0.32 - (moveP+breakP)*0.5);
+    const moveEnd = normalEnd + moveP + diff*0.05;
+    const breakEnd = moveEnd + breakP + diff*0.03;
+    if(r < normalEnd) return 'normal';
+    if(r < moveEnd) return 'move';
+    if(r < breakEnd) return 'break';
     return 'spring';
   })();
   const moveSpeed = rand(1.2, 2.5) + diff*1.8;
@@ -176,7 +196,7 @@ function spawnPlatform(y){
     coins.push({ x: p.x + p.w/2 - 14, y: p.y - 32, w:28, h:28, frame:Math.random()*6, taken:false });
   }
   if(score > 100){
-    const enemyChance = 0.05 + diff * 0.17;
+    const enemyChance = (0.05 + diff * 0.17) * sc.enemyMul;
     if(Math.random() < enemyChance){
       const flying = Math.random() < 0.5;
       enemies.push({
@@ -303,9 +323,9 @@ function update(dt){
   }
   particles = particles.filter(p=>p.life>0);
 
-  // 自動向上捲動
+  // 自動向上捲動（依關卡強度）
   const diffAuto = Math.min(1, score / 700);
-  const autoScroll = 0.15 + diffAuto * 2.25;
+  const autoScroll = (0.15 + diffAuto * 2.25) * stageCfg().autoScrollMul;
   camY -= autoScroll;
 
   const screenY = player.y - camY;
@@ -356,7 +376,11 @@ function gameOver(){
   state = STATE.OVER;
   GameAudio.die();
   GameAudio.pauseBGM();
-  if(score > best){ best = score; localStorage.setItem('jumpup.best', ''+best); }
+  if(score > best){ best = score; localStorage.setItem(bestKey(currentStage), ''+best); }
+  // 自動提交到 Supabase（若已有暱稱）
+  if(playerName && score > 0 && window.Leaderboard){
+    window.Leaderboard.submit(currentStage, playerName, score);
+  }
 }
 
 // ============ 繪製：遊戲世界 ============
@@ -374,9 +398,9 @@ function drawBackground(){
     ctx.drawImage(img, 0, yy, W, dh);
     ctx.drawImage(img, 0, yy + dh, W, dh);
   };
-  drawBGLayer(IMG.bgSky, 0.05);
-  drawBGLayer(IMG.bgFar, 0.12);
-  drawBGLayer(IMG.bgNear, 0.22);
+  drawBGLayer(IMG['bg_'+currentStage+'_sky'],  0.05);
+  drawBGLayer(IMG['bg_'+currentStage+'_far'],  0.12);
+  drawBGLayer(IMG['bg_'+currentStage+'_near'], 0.22);
 }
 
 function drawPlatform(p){
@@ -590,14 +614,16 @@ function drawHUD(){
   ctx.font = 'bold 15px -apple-system, "Microsoft JhengHei", sans-serif';
   ctx.fillText(String(coinCount), 42, 56);
 
-  // 右上：血量
-  const heartSize = 22;
-  const heartsW = MAX_LIVES * heartSize + (MAX_LIVES-1)*4 + 14;
-  const heartsX = W - 6 - heartsW - 80;    // 留空間給 mute/pause
+  // 右上：血量（♥ x N）
+  const heartsW = 78;
+  const heartsX = W - 6 - heartsW - 80;
   drawPillBg(heartsX, 14, heartsW, 34);
-  for(let i=0;i<MAX_LIVES;i++){
-    drawIconHeart(heartsX + 7 + heartSize/2 + i*(heartSize+4), 14 + 17, heartSize, i >= lives);
-  }
+  drawIconHeart(heartsX + 20, 14 + 17, 22, false);
+  ctx.fillStyle = '#fff';
+  ctx.font = 'bold 18px -apple-system, "Microsoft JhengHei", sans-serif';
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('x' + lives, heartsX + 36, 14 + 18);
 
   // 右上：mute / pause 按鈕
   const btnR = 18;
@@ -646,22 +672,27 @@ function drawMenu(){
   ctx.font = '15px -apple-system, "Microsoft JhengHei", sans-serif';
   ctx.fillText('往上跳！別掉下去', W/2, 332);
 
-  // 開始按鈕（橢圓形避免圖片變形）
-  const startBtn = { x: W/2 - 110, y: 380, w: 220, h: 72, action:'start' };
-  drawPillButton(startBtn.x, startBtn.y, startBtn.w, startBtn.h);
+  // 選擇關卡按鈕
+  const selectBtn = { x: W/2 - 110, y: 380, w: 220, h: 72, action:'gotoSelect' };
+  drawPillButton(selectBtn.x, selectBtn.y, selectBtn.w, selectBtn.h);
   ctx.fillStyle = '#fff';
   ctx.font = 'bold 20px -apple-system, "Microsoft JhengHei", sans-serif';
   ctx.shadowColor = 'rgba(0,0,0,.55)'; ctx.shadowBlur = 3; ctx.shadowOffsetY = 2;
-  ctx.fillText('開始遊戲', W/2, startBtn.y + startBtn.h/2);
+  ctx.fillText('選擇關卡', W/2, selectBtn.y + selectBtn.h/2);
   ctx.shadowBlur = 0; ctx.shadowOffsetY = 0;
-  addButton(startBtn);
+  addButton(selectBtn);
 
-  // 最佳紀錄
-  if(best > 0){
-    ctx.fillStyle = 'rgba(255,255,255,.7)';
-    ctx.font = '13px -apple-system, "Microsoft JhengHei", sans-serif';
-    ctx.fillText('最佳 ' + best + ' m', W/2, 470);
-  }
+  // 暱稱顯示 + 修改
+  const nameBtn = { x: W/2 - 90, y: 470, w: 180, h: 36, action:'editName' };
+  ctx.fillStyle = 'rgba(255,255,255,.12)';
+  roundRect(nameBtn.x, nameBtn.y, nameBtn.w, nameBtn.h, 18, true);
+  ctx.strokeStyle = 'rgba(255,255,255,.3)';
+  ctx.lineWidth = 1.5;
+  roundRect(nameBtn.x, nameBtn.y, nameBtn.w, nameBtn.h, 18, false, true);
+  ctx.fillStyle = '#fff';
+  ctx.font = '14px -apple-system, "Microsoft JhengHei", sans-serif';
+  ctx.fillText('暱稱：' + (playerName || '(未設定)'), W/2, nameBtn.y + nameBtn.h/2);
+  addButton(nameBtn);
 
   // 提示
   ctx.fillStyle = 'rgba(255,255,255,.55)';
@@ -669,6 +700,228 @@ function drawMenu(){
   ctx.fillText('PC：← → 方向鍵　手機：點角色左右側', W/2, 560);
   ctx.fillText('（按鍵 P / Esc 可暫停）', W/2, 580);
 }
+
+function drawStageSelect(){
+  // 背景用當前選到的關卡
+  drawBackground();
+  drawDimmer(0.55);
+
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillStyle = '#ffe27a';
+  ctx.font = 'bold 28px -apple-system, "Microsoft JhengHei", sans-serif';
+  ctx.shadowColor = 'rgba(0,0,0,.6)'; ctx.shadowBlur = 6; ctx.shadowOffsetY = 2;
+  ctx.fillText('選擇關卡', W/2, 36);
+  ctx.shadowBlur = 0; ctx.shadowOffsetY = 0;
+
+  // 6 張卡片 2 欄 x 3 列
+  const cardW = 150, cardH = 130, gapX = 20, gapY = 14;
+  const totalW = cardW*2 + gapX;
+  const startX = (W - totalW)/2;
+  const startY = 70;
+  for(let i=0;i<6;i++){
+    const s = STAGES[i];
+    const col = i % 2, row = Math.floor(i/2);
+    const x = startX + col*(cardW+gapX);
+    const y = startY + row*(cardH+gapY);
+    const isSel = (currentStage === s.id);
+
+    // 卡底（以該關縮圖 Layer3 當封面）
+    const cover = IMG['bg_'+s.id+'_near'];
+    ctx.fillStyle = '#1e1540';
+    roundRect(x, y, cardW, cardH, 14, true);
+    if(cover){
+      ctx.save();
+      // 用圓角裁切
+      ctx.beginPath();
+      roundRect(x, y, cardW, cardH-32, 14, false);
+      ctx.clip();
+      const r = cardW / cover.width;
+      ctx.drawImage(cover, x, y - 20, cardW, cover.height*r);
+      ctx.restore();
+    }
+    // 遮罩
+    ctx.fillStyle = 'rgba(0,0,0,0.25)';
+    roundRect(x, y, cardW, cardH-32, 14, true);
+
+    // 關卡名
+    ctx.fillStyle = '#fff';
+    ctx.font = 'bold 16px -apple-system, "Microsoft JhengHei", sans-serif';
+    ctx.fillText((s.id) + '. ' + s.name, x + cardW/2, y + 18);
+
+    // 底部資訊
+    ctx.fillStyle = '#ffe27a';
+    ctx.font = 'bold 14px -apple-system, "Microsoft JhengHei", sans-serif';
+    ctx.fillText('最佳 ' + loadBest(s.id) + ' m', x + cardW/2, y + cardH - 18);
+
+    // 外框（選中高亮）
+    ctx.lineWidth = isSel ? 3 : 1.5;
+    ctx.strokeStyle = isSel ? '#ffd24a' : 'rgba(255,255,255,.35)';
+    roundRect(x, y, cardW, cardH, 14, false, true);
+
+    addButton({ x, y, w:cardW, h:cardH, action:'pickStage', stageId:s.id });
+  }
+
+  // 底部：開始、排行榜、返回
+  const playBtn = { x: 20, y: H - 60, w: 140, h: 44, action:'startStage' };
+  drawPillButton(playBtn.x, playBtn.y, playBtn.w, playBtn.h);
+  ctx.fillStyle = '#fff';
+  ctx.font = 'bold 16px -apple-system, "Microsoft JhengHei", sans-serif';
+  ctx.shadowColor = 'rgba(0,0,0,.55)'; ctx.shadowBlur = 3; ctx.shadowOffsetY = 2;
+  ctx.fillText('開始第 ' + currentStage + ' 關', playBtn.x + playBtn.w/2, playBtn.y + playBtn.h/2);
+  ctx.shadowBlur = 0; ctx.shadowOffsetY = 0;
+  addButton(playBtn);
+
+  const lbBtn = { x: 170, y: H - 60, w: 110, h: 44, action:'showLeader' };
+  ctx.fillStyle = 'rgba(255,255,255,.12)';
+  roundRect(lbBtn.x, lbBtn.y, lbBtn.w, lbBtn.h, 22, true);
+  ctx.strokeStyle = 'rgba(255,255,255,.35)';
+  ctx.lineWidth = 1.5;
+  roundRect(lbBtn.x, lbBtn.y, lbBtn.w, lbBtn.h, 22, false, true);
+  ctx.fillStyle = '#fff';
+  ctx.font = '14px -apple-system, "Microsoft JhengHei", sans-serif';
+  ctx.fillText('排行榜', lbBtn.x + lbBtn.w/2, lbBtn.y + lbBtn.h/2);
+  addButton(lbBtn);
+
+  const backBtn = { x: 290, y: H - 60, w: 50, h: 44, action:'menu' };
+  ctx.fillStyle = 'rgba(255,255,255,.12)';
+  roundRect(backBtn.x, backBtn.y, backBtn.w, backBtn.h, 22, true);
+  ctx.strokeStyle = 'rgba(255,255,255,.35)';
+  roundRect(backBtn.x, backBtn.y, backBtn.w, backBtn.h, 22, false, true);
+  ctx.fillStyle = '#fff';
+  ctx.font = 'bold 18px -apple-system, sans-serif';
+  ctx.fillText('‹', backBtn.x + backBtn.w/2, backBtn.y + backBtn.h/2);
+  addButton(backBtn);
+}
+
+function drawLeaderboard(){
+  drawBackground();
+  drawDimmer(0.7);
+
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillStyle = '#ffe27a';
+  ctx.font = 'bold 26px -apple-system, "Microsoft JhengHei", sans-serif';
+  ctx.shadowColor = 'rgba(0,0,0,.6)'; ctx.shadowBlur = 6; ctx.shadowOffsetY = 2;
+  ctx.fillText('排行榜 第 ' + leaderStage + ' 關', W/2, 36);
+  ctx.shadowBlur = 0; ctx.shadowOffsetY = 0;
+
+  // 關卡切換箭頭
+  const prevBtn = { x: 20, y: 18, w: 40, h: 40, action:'leaderPrev' };
+  const nextBtn = { x: W-60, y: 18, w: 40, h: 40, action:'leaderNext' };
+  [prevBtn, nextBtn].forEach(b=>{
+    ctx.fillStyle = 'rgba(255,255,255,.12)';
+    roundRect(b.x, b.y, b.w, b.h, 20, true);
+    ctx.strokeStyle = 'rgba(255,255,255,.3)';
+    roundRect(b.x, b.y, b.w, b.h, 20, false, true);
+  });
+  ctx.fillStyle = '#fff';
+  ctx.font = 'bold 22px -apple-system, sans-serif';
+  ctx.fillText('‹', prevBtn.x + prevBtn.w/2, prevBtn.y + prevBtn.h/2);
+  ctx.fillText('›', nextBtn.x + nextBtn.w/2, nextBtn.y + nextBtn.h/2);
+  addButton(prevBtn); addButton(nextBtn);
+
+  // 清單
+  const listX = 24, listY = 80, rowH = 36;
+  ctx.textAlign = 'left';
+  if(leaderLoading){
+    ctx.fillStyle = 'rgba(255,255,255,.75)';
+    ctx.font = '15px -apple-system, "Microsoft JhengHei", sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('載入中…', W/2, 160);
+  } else if(leaderError){
+    ctx.fillStyle = '#ff8a8a';
+    ctx.font = '14px -apple-system, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(leaderError, W/2, 160);
+  } else if(leaderRows.length === 0){
+    ctx.fillStyle = 'rgba(255,255,255,.6)';
+    ctx.font = '15px -apple-system, "Microsoft JhengHei", sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('尚無紀錄', W/2, 160);
+  } else {
+    for(let i=0;i<leaderRows.length;i++){
+      const r = leaderRows[i];
+      const y = listY + i*rowH;
+      ctx.fillStyle = i<3 ? 'rgba(255,210,74,.15)' : 'rgba(255,255,255,.06)';
+      roundRect(listX, y, W-48, rowH-6, 10, true);
+      // 名次
+      ctx.fillStyle = i===0 ? '#ffd24a' : i===1 ? '#cfe3ff' : i===2 ? '#ffb37a' : '#fff';
+      ctx.font = 'bold 16px -apple-system, sans-serif';
+      ctx.textAlign = 'left';
+      ctx.fillText('#' + (i+1), listX + 10, y + (rowH-6)/2);
+      // 名字
+      ctx.fillStyle = '#fff';
+      ctx.font = '14px -apple-system, "Microsoft JhengHei", sans-serif';
+      ctx.fillText(String(r.name).slice(0,16), listX + 52, y + (rowH-6)/2);
+      // 分數
+      ctx.fillStyle = '#ffe27a';
+      ctx.font = 'bold 15px -apple-system, sans-serif';
+      ctx.textAlign = 'right';
+      ctx.fillText(r.score + ' m', W - listX - 10, y + (rowH-6)/2);
+    }
+  }
+
+  // 返回
+  const backBtn = { x: W/2 - 70, y: H - 60, w: 140, h: 44, action:'back' };
+  ctx.fillStyle = 'rgba(255,255,255,.12)';
+  roundRect(backBtn.x, backBtn.y, backBtn.w, backBtn.h, 22, true);
+  ctx.strokeStyle = 'rgba(255,255,255,.35)';
+  roundRect(backBtn.x, backBtn.y, backBtn.w, backBtn.h, 22, false, true);
+  ctx.fillStyle = '#fff';
+  ctx.font = '15px -apple-system, "Microsoft JhengHei", sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('返回', backBtn.x + backBtn.w/2, backBtn.y + backBtn.h/2);
+  addButton(backBtn);
+}
+
+function loadLeader(stage){
+  leaderStage = stage;
+  leaderLoading = true;
+  leaderError = '';
+  leaderRows = [];
+  if(!window.Leaderboard){
+    leaderError = '排行榜服務未載入';
+    leaderLoading = false;
+    return;
+  }
+  window.Leaderboard.getTop(stage, 10).then(rows=>{
+    leaderRows = rows || [];
+    leaderLoading = false;
+  }).catch(err=>{
+    leaderError = '載入失敗';
+    leaderLoading = false;
+  });
+}
+
+const nameEditor = document.getElementById('nameEditor');
+const nameInput = document.getElementById('nameInput');
+const nameOkBtn = document.getElementById('nameOk');
+const nameCancelBtn = document.getElementById('nameCancel');
+let nameCallback = null;
+
+function askName(cb){
+  nameCallback = cb || null;
+  nameInput.value = playerName || '';
+  nameEditor.hidden = false;
+  setTimeout(()=>{ nameInput.focus(); nameInput.select(); }, 30);
+}
+function closeNameEditor(save){
+  nameEditor.hidden = true;
+  if(save){
+    const n = nameInput.value.trim().slice(0,16);
+    if(n){ playerName = n; localStorage.setItem('jumpup.name', n); }
+  }
+  const cb = nameCallback; nameCallback = null;
+  if(cb) cb();
+}
+nameOkBtn.addEventListener('click', ()=>closeNameEditor(true));
+nameCancelBtn.addEventListener('click', ()=>closeNameEditor(false));
+nameInput.addEventListener('keydown', e => {
+  if(e.key === 'Enter'){ e.preventDefault(); closeNameEditor(true); }
+  else if(e.key === 'Escape'){ e.preventDefault(); closeNameEditor(false); }
+});
 
 function drawPauseOverlay(){
   drawDimmer(0.7);
@@ -741,16 +994,40 @@ function drawGameOverOverlay(){
   ctx.shadowBlur = 0; ctx.shadowOffsetY = 0;
   addButton(restartBtn);
 
-  const menuBtn = { x: W/2 - 90, y: 450, w: 180, h: 48, action:'menu' };
-  ctx.fillStyle = 'rgba(255,255,255,.12)';
-  roundRect(menuBtn.x, menuBtn.y, menuBtn.w, menuBtn.h, 24, true);
+  // 查看排行榜
+  const lbBtn = { x: W/2 - 100, y: 450, w: 95, h: 40, action:'gameOverLeader' };
+  ctx.fillStyle = 'rgba(255,255,255,.14)';
+  roundRect(lbBtn.x, lbBtn.y, lbBtn.w, lbBtn.h, 20, true);
   ctx.strokeStyle = 'rgba(255,255,255,.3)';
   ctx.lineWidth = 1.5;
-  roundRect(menuBtn.x, menuBtn.y, menuBtn.w, menuBtn.h, 24, false, true);
+  roundRect(lbBtn.x, lbBtn.y, lbBtn.w, lbBtn.h, 20, false, true);
   ctx.fillStyle = '#fff';
-  ctx.font = '16px -apple-system, "Microsoft JhengHei", sans-serif';
-  ctx.fillText('主選單', W/2, menuBtn.y + menuBtn.h/2);
+  ctx.font = '14px -apple-system, "Microsoft JhengHei", sans-serif';
+  ctx.fillText('排行榜', lbBtn.x + lbBtn.w/2, lbBtn.y + lbBtn.h/2);
+  addButton(lbBtn);
+
+  // 主選單
+  const menuBtn = { x: W/2 + 5, y: 450, w: 95, h: 40, action:'menu' };
+  ctx.fillStyle = 'rgba(255,255,255,.12)';
+  roundRect(menuBtn.x, menuBtn.y, menuBtn.w, menuBtn.h, 20, true);
+  ctx.strokeStyle = 'rgba(255,255,255,.3)';
+  ctx.lineWidth = 1.5;
+  roundRect(menuBtn.x, menuBtn.y, menuBtn.w, menuBtn.h, 20, false, true);
+  ctx.fillStyle = '#fff';
+  ctx.font = '14px -apple-system, "Microsoft JhengHei", sans-serif';
+  ctx.fillText('主選單', menuBtn.x + menuBtn.w/2, menuBtn.y + menuBtn.h/2);
   addButton(menuBtn);
+
+  // 暱稱提示（若未設定）
+  if(!playerName){
+    ctx.fillStyle = '#ff8a8a';
+    ctx.font = '12px -apple-system, "Microsoft JhengHei", sans-serif';
+    ctx.fillText('未設定暱稱，成績不會上傳排行榜', W/2, 510);
+  } else {
+    ctx.fillStyle = 'rgba(255,255,255,.6)';
+    ctx.font = '12px -apple-system, "Microsoft JhengHei", sans-serif';
+    ctx.fillText('已以 ' + playerName + ' 上傳', W/2, 510);
+  }
 }
 
 // ============ 主迴圈 ============
@@ -772,6 +1049,10 @@ function loop(ts){
     renderWorld();
     drawHUD();
     drawGameOverOverlay();
+  } else if(state === STATE.SELECT){
+    drawStageSelect();
+  } else if(state === STATE.LEADER){
+    drawLeaderboard();
   } else {
     drawMenu();
   }
@@ -806,6 +1087,7 @@ function hitButton(x, y){
   return null;
 }
 
+let lastClickedBtn = null;
 function handleButton(action){
   GameAudio.click();
   switch(action){
@@ -815,11 +1097,40 @@ function handleButton(action){
     case 'pause':    pauseGame(); break;
     case 'quit':
     case 'menu':     toMenu(); break;
-    case 'mute': {
-      const m = GameAudio.toggleMute();
-      void m;
+    case 'mute':     GameAudio.toggleMute(); break;
+    case 'gotoSelect': toSelect(); break;
+    case 'editName':   askName(); break;
+    case 'pickStage':
+      if(lastClickedBtn && lastClickedBtn.stageId){
+        currentStage = lastClickedBtn.stageId;
+        best = loadBest(currentStage);
+      }
       break;
-    }
+    case 'startStage':
+      if(!playerName){
+        askName(()=>{ if(playerName){ best = loadBest(currentStage); startGame(); } });
+        return;
+      }
+      best = loadBest(currentStage);
+      startGame();
+      break;
+    case 'showLeader':
+      state = STATE.LEADER;
+      loadLeader(currentStage);
+      break;
+    case 'gameOverLeader':
+      state = STATE.LEADER;
+      loadLeader(currentStage);
+      break;
+    case 'leaderPrev':
+      loadLeader(((leaderStage-1-1+6)%6)+1);
+      break;
+    case 'leaderNext':
+      loadLeader((leaderStage % 6) + 1);
+      break;
+    case 'back':
+      state = STATE.SELECT;
+      break;
   }
 }
 
@@ -831,6 +1142,7 @@ canvas.addEventListener('pointerdown', e => {
   const btn = hitButton(x, y);
   if(btn){
     e.preventDefault();
+    lastClickedBtn = btn;
     handleButton(btn.action);
     return;
   }
@@ -859,9 +1171,14 @@ window.addEventListener('blur', releasePointer);
 // ============ 狀態切換 ============
 function startGame(){
   GameAudio.init(); GameAudio.resume();
+  best = loadBest(currentStage);
   initWorld();
   state = STATE.PLAY;
   GameAudio.playBGM();
+}
+function toSelect(){
+  state = STATE.SELECT;
+  best = loadBest(currentStage);
 }
 function pauseGame(){
   if(state !== STATE.PLAY) return;
@@ -884,7 +1201,7 @@ function toMenu(){
   loadingRaf = requestAnimationFrame(loadingLoop);
   await loadAll();
   cancelAnimationFrame(loadingRaf);
-  best = parseInt(localStorage.getItem('jumpup.best')||'0',10) || 0;
+  best = loadBest(currentStage);
   requestAnimationFrame(loop);
 })();
 

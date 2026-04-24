@@ -3,3 +3,13 @@ html,body{width:100%;height:100%;overflow:hidden;background:#0a0818;font-family:
 #stage{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:
   radial-gradient(ellipse at 50% 0%, #2a1f5c 0%, #120a2a 60%, #05030f 100%)}
 #game{display:block;width:min(100vw, calc(100vh * 9/16));height:min(100vh, calc(100vw * 16/9));max-width:100vw;max-height:100vh;background:#1a1235;touch-action:none;image-rendering:auto;box-shadow:0 0 40px rgba(0,0,0,.5);cursor:pointer}
+#nameEditor{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.65);z-index:10;touch-action:auto}
+#nameEditor[hidden]{display:none}
+.ne-panel{background:#231846;border:2px solid #5a3fa0;border-radius:14px;padding:20px 22px;width:min(320px,82vw);box-shadow:0 12px 40px rgba(0,0,0,.55);font-family:inherit}
+.ne-title{color:#ffe27a;font-size:18px;font-weight:700;margin-bottom:12px;text-align:center}
+#nameInput{width:100%;box-sizing:border-box;padding:10px 12px;font-size:16px;border-radius:8px;border:1.5px solid #7a5fc8;background:#120a2a;color:#fff;outline:none;margin-bottom:14px;-webkit-user-select:text;user-select:text}
+#nameInput:focus{border-color:#ffd24a}
+.ne-actions{display:flex;gap:10px;justify-content:flex-end}
+.ne-actions button{border:none;border-radius:8px;padding:8px 18px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit}
+#nameCancel{background:rgba(255,255,255,.12);color:#fff}
+#nameOk{background:linear-gradient(180deg,#ffd066,#ff9a1f);color:#4a2400}
