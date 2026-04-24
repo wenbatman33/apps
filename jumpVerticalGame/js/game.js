@@ -139,6 +139,8 @@ let coinCount = 0;
 
 let keys = { left:false, right:false };
 let touchDir = 0;
+let pointerTargetX = null;
+const POINTER_DEADZONE = 24;
 
 // ============ 平台/金幣/敵人生成 ============
 function rand(a,b){ return a + Math.random()*(b-a); }
@@ -207,6 +209,12 @@ function initWorld(){
 
 // ============ 物理 / 更新 ============
 function update(dt){
+  // 依滑鼠/觸控目標位置逐幀重算左右方向，進入容許值即停止
+  if(pointerTargetX !== null){
+    const dx = pointerTargetX - player.x;
+    if(Math.abs(dx) < POINTER_DEADZONE) touchDir = 0;
+    else touchDir = dx < 0 ? -1 : 1;
+  }
   const dir = (keys.left ? -1:0) + (keys.right ? 1:0) + touchDir;
   if(player.bounceTimer > 0){
     player.vx = player.bounceVx;
@@ -464,6 +472,34 @@ function drawPillBg(x, y, w, h, alpha){
   ctx.lineWidth = 1;
   roundRect(x, y, w, h, h/2, false, true);
 }
+function drawPillButton(x, y, w, h){
+  const r = h/2;
+  // 外框陰影
+  ctx.save();
+  ctx.shadowColor = 'rgba(0,0,0,0.35)';
+  ctx.shadowBlur = 8;
+  ctx.shadowOffsetY = 3;
+  // 漸層底色
+  const g = ctx.createLinearGradient(0, y, 0, y+h);
+  g.addColorStop(0, '#ffd066');
+  g.addColorStop(0.5, '#ff9a1f');
+  g.addColorStop(1, '#e07a0a');
+  ctx.fillStyle = g;
+  roundRect(x, y, w, h, r, true);
+  ctx.restore();
+  // 外框
+  ctx.strokeStyle = '#7a3a00';
+  ctx.lineWidth = 2;
+  roundRect(x, y, w, h, r, false, true);
+  // 上方高光
+  ctx.save();
+  ctx.beginPath();
+  ctx.ellipse(x + w/2, y + h*0.28, w*0.38, h*0.22, 0, 0, Math.PI*2);
+  ctx.fillStyle = 'rgba(255,255,255,0.35)';
+  ctx.fill();
+  ctx.restore();
+}
+
 function roundRect(x, y, w, h, r, fill, stroke){
   const rr = Math.min(r, w/2, h/2);
   ctx.beginPath();
@@ -610,14 +646,9 @@ function drawMenu(){
   ctx.font = '15px -apple-system, "Microsoft JhengHei", sans-serif';
   ctx.fillText('往上跳！別掉下去', W/2, 332);
 
-  // 開始按鈕
-  const startBtn = { x: W/2 - 100, y: 380, w: 200, h: 64, action:'start' };
-  if(IMG.playBtn){
-    ctx.drawImage(IMG.playBtn, startBtn.x, startBtn.y, startBtn.w, startBtn.h);
-  } else {
-    ctx.fillStyle = '#ffb347';
-    roundRect(startBtn.x, startBtn.y, startBtn.w, startBtn.h, 32, true);
-  }
+  // 開始按鈕（橢圓形避免圖片變形）
+  const startBtn = { x: W/2 - 110, y: 380, w: 220, h: 72, action:'start' };
+  drawPillButton(startBtn.x, startBtn.y, startBtn.w, startBtn.h);
   ctx.fillStyle = '#fff';
   ctx.font = 'bold 20px -apple-system, "Microsoft JhengHei", sans-serif';
   ctx.shadowColor = 'rgba(0,0,0,.55)'; ctx.shadowBlur = 3; ctx.shadowOffsetY = 2;
@@ -653,8 +684,8 @@ function drawPauseOverlay(){
     ctx.fillText('PAUSED', W/2, 220);
   }
 
-  const resumeBtn = { x: W/2 - 100, y: 310, w: 200, h: 64, action:'resume' };
-  if(IMG.playBtn) ctx.drawImage(IMG.playBtn, resumeBtn.x, resumeBtn.y, resumeBtn.w, resumeBtn.h);
+  const resumeBtn = { x: W/2 - 110, y: 310, w: 220, h: 72, action:'resume' };
+  drawPillButton(resumeBtn.x, resumeBtn.y, resumeBtn.w, resumeBtn.h);
   ctx.fillStyle = '#fff';
   ctx.font = 'bold 20px -apple-system, "Microsoft JhengHei", sans-serif';
   ctx.shadowColor = 'rgba(0,0,0,.55)'; ctx.shadowBlur = 3; ctx.shadowOffsetY = 2;
@@ -701,8 +732,8 @@ function drawGameOverOverlay(){
   ctx.fillText(score + ' m', W/2 - 60, 275);
   ctx.fillText(best + ' m', W/2 + 60, 275);
 
-  const restartBtn = { x: W/2 - 100, y: 360, w: 200, h: 64, action:'restart' };
-  if(IMG.restartBtn) ctx.drawImage(IMG.restartBtn, restartBtn.x, restartBtn.y, restartBtn.w, restartBtn.h);
+  const restartBtn = { x: W/2 - 110, y: 360, w: 220, h: 72, action:'restart' };
+  drawPillButton(restartBtn.x, restartBtn.y, restartBtn.w, restartBtn.h);
   ctx.fillStyle = '#fff';
   ctx.font = 'bold 20px -apple-system, "Microsoft JhengHei", sans-serif';
   ctx.shadowColor = 'rgba(0,0,0,.55)'; ctx.shadowBlur = 3; ctx.shadowOffsetY = 2;
@@ -806,9 +837,10 @@ canvas.addEventListener('pointerdown', e => {
   // 遊戲中：依點擊點與主角 x 判左右
   if(state === STATE.PLAY){
     const dx = x - player.x;
-    if(Math.abs(dx) < 6) return;
-    touchDir = dx < 0 ? -1 : 1;
     pointerHeld = true;
+    pointerTargetX = x;
+    if(Math.abs(dx) < POINTER_DEADZONE) touchDir = 0;
+    else touchDir = dx < 0 ? -1 : 1;
     if(canvas.setPointerCapture && e.pointerId != null){
       try{ canvas.setPointerCapture(e.pointerId); }catch{}
     }
@@ -817,11 +849,9 @@ canvas.addEventListener('pointerdown', e => {
 canvas.addEventListener('pointermove', e => {
   if(!pointerHeld || state !== STATE.PLAY) return;
   const { x } = eventToCanvas(e);
-  const dx = x - player.x;
-  if(Math.abs(dx) < 6) return;
-  touchDir = dx < 0 ? -1 : 1;
+  pointerTargetX = x;
 });
-function releasePointer(){ if(pointerHeld){ pointerHeld = false; touchDir = 0; } }
+function releasePointer(){ if(pointerHeld){ pointerHeld = false; touchDir = 0; pointerTargetX = null; } }
 canvas.addEventListener('pointerup', releasePointer);
 canvas.addEventListener('pointercancel', releasePointer);
 window.addEventListener('blur', releasePointer);
