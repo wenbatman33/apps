@@ -255,7 +255,9 @@ function spawnPlatform(y){
     coins.push({ x: p.x + p.w/2 - 14, y: p.y - 32, w:28, h:28, frame:Math.random()*6, taken:false });
   }
   // 第 1 關提早、少量出怪；其他關維持原本「score > 100 才出」的門檻
-  const enemyGate = currentStage === 1 ? score > 60 : score > 100;
+  // 關卡越後面怪物越早出現
+  const ENEMY_GATES = [80, 70, 60, 50, 40, 30];
+  const enemyGate = score > (ENEMY_GATES[currentStage-1] || 80);
   if(enemyGate){
     const enemyChance = (0.05 + diff * 0.17) * sc.enemyMul;
     if(Math.random() < enemyChance){
@@ -483,7 +485,11 @@ function update(dt){
   // 飛行愛心：每累積一定分數生一顆，只在玩家血量未滿時才刷
   if(score >= nextHeartScore && lives < MAX_LIVES){
     spawnHeart();
-    nextHeartScore = score + Math.floor(rand(350, 550));
+    // 前三關愛心刷新頻率高一點
+    const early = currentStage <= 3;
+    const loRange = early ? 200 : 350;
+    const hiRange = early ? 320 : 550;
+    nextHeartScore = score + Math.floor(rand(loRange, hiRange));
   }
   // 更新愛心位置 + 碰撞
   for(const hc of hearts){
