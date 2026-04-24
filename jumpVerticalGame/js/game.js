@@ -63,14 +63,52 @@ const toLoad = {
   scoreBox:  'assets/Ui/ScoreBox.png',
 };
 
+let loadProgress = 0; // 0~1
 function loadAll(){
   const keys = Object.keys(toLoad);
+  const total = keys.length;
+  let done = 0;
   return Promise.all(keys.map(k => new Promise(res=>{
     const im = new Image();
-    im.onload = ()=>{ IMG[k] = im; res(); };
-    im.onerror = ()=>{ IMG[k] = null; res(); };
+    const finish = ()=>{ done++; loadProgress = done/total; res(); };
+    im.onload = ()=>{ IMG[k] = im; finish(); };
+    im.onerror = ()=>{ IMG[k] = null; finish(); };
     im.src = toLoad[k];
   })));
+}
+
+// 載入畫面：進度條 + 提示
+function drawLoading(){
+  ctx.fillStyle = '#1a1235';
+  ctx.fillRect(0, 0, W, H);
+  // 標題
+  ctx.fillStyle = '#ffd24a';
+  ctx.font = 'bold 36px -apple-system, "Microsoft JhengHei", sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('Jump Up!', W/2, H/2 - 60);
+  // 副標
+  ctx.fillStyle = '#cfc7f0';
+  ctx.font = '16px -apple-system, "Microsoft JhengHei", sans-serif';
+  ctx.fillText('載入中…', W/2, H/2 - 20);
+  // 進度條
+  const bw = 240, bh = 14, bx = W/2 - bw/2, by = H/2 + 20;
+  ctx.fillStyle = 'rgba(255,255,255,0.15)';
+  ctx.fillRect(bx, by, bw, bh);
+  ctx.fillStyle = '#7dd87a';
+  ctx.fillRect(bx, by, bw * loadProgress, bh);
+  ctx.strokeStyle = 'rgba(255,255,255,0.4)';
+  ctx.lineWidth = 2;
+  ctx.strokeRect(bx, by, bw, bh);
+  // 百分比
+  ctx.fillStyle = '#fff';
+  ctx.font = '14px -apple-system, sans-serif';
+  ctx.fillText(Math.round(loadProgress*100) + '%', W/2, by + bh + 22);
+}
+let loadingRaf = 0;
+function loadingLoop(){
+  drawLoading();
+  loadingRaf = requestAnimationFrame(loadingLoop);
 }
 
 // ============ 遊戲狀態 ============
@@ -813,7 +851,9 @@ function toMenu(){
 // ============ 啟動 ============
 (async function(){
   GameAudio.init();
+  loadingRaf = requestAnimationFrame(loadingLoop);
   await loadAll();
+  cancelAnimationFrame(loadingRaf);
   best = parseInt(localStorage.getItem('jumpup.best')||'0',10) || 0;
   requestAnimationFrame(loop);
 })();
