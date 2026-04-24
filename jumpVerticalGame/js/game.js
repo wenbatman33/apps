@@ -43,16 +43,24 @@ const toLoad = {
   idle:      'assets/Characters/01/Idle.png',
   jump:      'assets/Characters/01/Jump.png',
   die:       'assets/Characters/01/Die.png',
-  plat:      'assets/OtherAssets/Platformer1.png',
-  platBreak: 'assets/OtherAssets/Platformer4.png',
-  platMove:  'assets/OtherAssets/Platformer2.png',
-  platSpring:'assets/OtherAssets/Platformer3.png',
+  // 跳板素材重新對應（依官方 6 張 Platformer PNG）
+  plat:      'assets/OtherAssets/Platformer5.png', // normal 黃綠
+  platMove:  'assets/OtherAssets/Platformer1.png', // 橘棕
+  platBreak: 'assets/OtherAssets/Platformer4.png', // 黑底火焰
+  platSpring:'assets/OtherAssets/Platformer6.png', // 金棕（加彈簧裝飾）
+  platIce:   'assets/OtherAssets/Platformer2.png', // 冰雪（官方雪頂）
+  platFlash: 'assets/OtherAssets/Platformer3.png', // 紫色（加閃爍動畫）
+  spring1:   'assets/Spring/spring_1.png',         // 彈簧展開
+  spring2:   'assets/Spring/spring_2.png',         // 彈簧壓縮
   obstacle:  'assets/OtherAssets/obstacle.png',
   coin1:'assets/Coins/1.png', coin2:'assets/Coins/2.png', coin3:'assets/Coins/3.png',
   coin4:'assets/Coins/4.png', coin5:'assets/Coins/5.png', coin6:'assets/Coins/6.png',
-  bat1:'assets/Enemies/Bat/1.png', bat2:'assets/Enemies/Bat/2.png',
-  bat3:'assets/Enemies/Bat/3.png', bat4:'assets/Enemies/Bat/4.png',
-  life: 'assets/Life/1.png',
+  life:  'assets/Life/1.png',
+  life1: 'assets/Life/1.png',
+  life2: 'assets/Life/2.png',
+  life3: 'assets/Life/3.png',
+  life4: 'assets/Life/4.png',
+  life5: 'assets/Life/5.png',
   bigLogo:   'assets/Ui/BigLogo.png',
   playBtn:   'assets/Ui/PlayBtn.png',
   restartBtn:'assets/Ui/RestartBtn.png',
@@ -65,6 +73,41 @@ for(let i=1; i<=6; i++){
   toLoad['bg_'+i+'_sky']  = 'assets/Background/'+k+'/Layer1.png';
   toLoad['bg_'+i+'_far']  = 'assets/Background/'+k+'/Layer2.png';
   toLoad['bg_'+i+'_near'] = 'assets/Background/'+k+'/Layer3.png';
+}
+
+// ============ 怪物種類定義 ============
+// kind: flyer=水平飛行；walker=在跳板上走；static=釘在跳板上方不可碰
+const ENEMY_FOLDER = {
+  bee:'Bee', bat:'Bat', bird:'Bird', spider:'Spider', penguin:'Penguin',
+  snail:'Snail', crab:'Crab', evilflower:'EvilFlower', hedgehog:'hedgehog', tentacle:'tentacle'
+};
+const ENEMY_META = {
+  bee:        { kind:'flyer',  frames:2, w:48, h:42, spd:[1.0, 1.8] },
+  bat:        { kind:'flyer',  frames:4, w:62, h:48, spd:[1.4, 2.6] },
+  bird:       { kind:'flyer',  frames:4, w:58, h:44, spd:[1.6, 2.8] },
+  tentacle:   { kind:'flyer',  frames:4, w:56, h:70, spd:[0.8, 1.5] },
+  penguin:    { kind:'walker', frames:3, w:54, h:54, spd:[0.6, 1.2] },
+  snail:      { kind:'walker', frames:2, w:56, h:40, spd:[0.3, 0.7] },
+  crab:       { kind:'walker', frames:2, w:58, h:40, spd:[1.0, 1.8] },
+  spider:     { kind:'static', frames:2, w:54, h:56 },
+  evilflower: { kind:'static', frames:4, w:50, h:58 },
+  hedgehog:   { kind:'static', frames:1, w:56, h:42 },
+};
+// 每關的怪物池（第 1 關只出溫和的蜜蜂）
+const ENEMY_POOLS = {
+  1: ['bee'],
+  2: ['hedgehog', 'penguin', 'bat', 'bird'],
+  3: ['spider', 'bat'],
+  4: ['evilflower', 'snail'],
+  5: ['crab', 'hedgehog'],
+  6: ['tentacle', 'bat', 'bird', 'spider', 'evilflower'],
+};
+// 載入全部怪物素材
+for(const [key, meta] of Object.entries(ENEMY_META)){
+  const folder = ENEMY_FOLDER[key];
+  for(let i=1; i<=meta.frames; i++){
+    toLoad[key + i] = 'assets/Enemies/' + folder + '/' + i + '.png';
+  }
 }
 
 let loadProgress = 0; // 0~1
@@ -139,6 +182,8 @@ let platforms = [];
 let coins = [];
 let enemies = [];
 let particles = [];
+let hearts = [];
+let nextHeartScore = 250; // 下一次補血心的觸發分數
 
 let camY = 0;
 let highestY = 0;
@@ -165,20 +210,33 @@ function gapForScore(){
 
 function stageCfg(){ return STAGES[currentStage-1] || STAGES[0]; }
 
+// flash 跳板週期：2.3 秒一循環，1.5 秒實體，0.8 秒透明無碰撞
+const FLASH_CYCLE = 2.3, FLASH_ON = 1.5;
+function flashOn(p){
+  const t = ((performance.now()/1000) + (p.phase||0)) % FLASH_CYCLE;
+  return t < FLASH_ON;
+}
+
 function spawnPlatform(y){
   const diff = Math.min(1, score / 600);
   const sc = stageCfg();
   const type = (()=>{
     const r = Math.random();
-    if(score < 80) return 'normal';
-    const moveP  = 0.13 * sc.moveMul;
-    const breakP = 0.10 * sc.breakMul;
-    const normalEnd = Math.max(0.35, 0.72 - diff*0.32 - (moveP+breakP)*0.5);
-    const moveEnd = normalEnd + moveP + diff*0.05;
-    const breakEnd = moveEnd + breakP + diff*0.03;
-    if(r < normalEnd) return 'normal';
-    if(r < moveEnd) return 'move';
-    if(r < breakEnd) return 'break';
+    // 一開始前幾塊強制 normal，避免開場就踩空
+    if(score < 40) return 'normal';
+    const moveP  = 0.13 * (sc.moveMul  || 0);
+    const breakP = 0.10 * (sc.breakMul || 0);
+    const iceP   = 0.11 * (sc.iceMul   || 0);
+    const flashP = 0.09 * (sc.flashMul || 0);
+    const springP = 0.06; // spring 固定少量
+    const specialSum = moveP + breakP + iceP + flashP + springP;
+    const normalEnd = Math.max(0.30, 0.85 - diff*0.30 - specialSum);
+    let acc = normalEnd;
+    if(r < acc) return 'normal';
+    acc += moveP + diff*0.04;  if(r < acc) return 'move';
+    acc += breakP + diff*0.03; if(r < acc) return 'break';
+    acc += iceP;               if(r < acc) return 'ice';
+    acc += flashP;             if(r < acc) return 'flash';
     return 'spring';
   })();
   const moveSpeed = rand(1.2, 2.5) + diff*1.8;
@@ -189,35 +247,77 @@ function spawnPlatform(y){
     vx: type==='move' ? (Math.random()<.5?-1:1)*moveSpeed : 0,
     broken: false,
     hasSpring: type === 'spring',
+    phase: type === 'flash' ? Math.random() * 2.3 : 0, // 閃爍相位偏移
   };
   platforms.push(p);
 
   if(Math.random() < 0.22){
     coins.push({ x: p.x + p.w/2 - 14, y: p.y - 32, w:28, h:28, frame:Math.random()*6, taken:false });
   }
-  if(score > 100){
+  // 第 1 關提早、少量出怪；其他關維持原本「score > 100 才出」的門檻
+  const enemyGate = currentStage === 1 ? score > 60 : score > 100;
+  if(enemyGate){
     const enemyChance = (0.05 + diff * 0.17) * sc.enemyMul;
     if(Math.random() < enemyChance){
-      const flying = Math.random() < 0.5;
-      enemies.push({
-        x: flying ? rand(20, W-64) : p.x + p.w/2 - 22,
-        y: p.y - (flying ? rand(70, 130) : 50),
-        w:44, h:34,
-        vx: (Math.random()<.5?-1:1) * (flying ? rand(1.4, 2.6) : rand(0.8, 1.8)),
-        frame: 0, type:'bat',
-      });
+      const pool = ENEMY_POOLS[currentStage] || ['bat'];
+      const etype = pool[Math.floor(Math.random() * pool.length)];
+      spawnEnemy(etype, p);
     }
   }
 }
 
+function spawnHeart(){
+  // 從畫面左或右側飛入，y 在畫面上半部
+  const fromLeft = Math.random() < 0.5;
+  const w = 56, h = 44;
+  const y = camY + rand(60, H * 0.55);
+  const vx = (fromLeft ? 1 : -1) * rand(1.4, 2.2);
+  const x = fromLeft ? -w - 8 : W + 8;
+  hearts.push({
+    x, y, w, h, vx, vy: rand(-0.15, 0.15),
+    frame: 0, taken: false,
+  });
+}
+
+function spawnEnemy(type, host){
+  const m = ENEMY_META[type];
+  if(!m) return;
+  const e = {
+    type, kind: m.kind, frames: m.frames,
+    w: m.w, h: m.h, frame: Math.random()*m.frames, host: null,
+  };
+  if(m.kind === 'flyer'){
+    e.x = rand(20, W - m.w - 20);
+    e.y = host.y - rand(70, 140);
+    const sp = m.spd || [1.2, 2.2];
+    e.vx = (Math.random()<.5?-1:1) * rand(sp[0], sp[1]);
+  } else if(m.kind === 'walker'){
+    e.host = host;
+    e.offsetX = Math.max(2, host.w/2 - m.w/2);
+    e.x = host.x + e.offsetX;
+    e.y = host.y - m.h + 2;
+    const sp = m.spd || [0.5, 1.0];
+    e.vx = (Math.random()<.5?-1:1) * rand(sp[0], sp[1]);
+  } else { // static（不可踩，釘在跳板正上方）
+    e.host = host;
+    e.offsetX = Math.max(2, host.w/2 - m.w/2);
+    e.x = host.x + e.offsetX;
+    e.y = host.y - m.h + 2;
+    e.vx = 0;
+  }
+  enemies.push(e);
+}
+
 function initWorld(){
-  platforms = []; coins = []; enemies = []; particles = [];
+  platforms = []; coins = []; enemies = []; particles = []; hearts = [];
+  nextHeartScore = 250;
   camY = 0; highestY = 0; score = 0; coinCount = 0;
   lives = MAX_LIVES;
   player.x = W/2; player.y = H - 140;
   player.vx = 0; player.vy = JUMP_VY;
   player.alive = true; player.invuln = 0; player.facing = 1;
   player.bounceVx = 0; player.bounceTimer = 0;
+  player.iceTimer = 0;
 
   platforms.push({ x: 0, y: H - 60, w: W, h: 20, type:'ground', vx:0 });
   let y = H - 140;
@@ -241,7 +341,14 @@ function update(dt){
     player.bounceTimer -= dt;
     player.bounceVx *= 0.92;
   } else {
-    player.vx = Math.sign(dir) * MOVE_SPEED;
+    const targetVx = Math.sign(dir) * MOVE_SPEED;
+    if(player.iceTimer > 0){
+      // 打滑：逐漸逼近目標速度（鬆開方向鍵仍會滑一段）
+      player.vx += (targetVx - player.vx) * 0.06;
+      player.iceTimer -= dt;
+    } else {
+      player.vx = targetVx;
+    }
     if(dir !== 0) player.facing = Math.sign(dir);
   }
 
@@ -270,11 +377,14 @@ function update(dt){
       p.x += p.vx;
       if(p.x < 10 || p.x + p.w > W - 10) p.vx *= -1;
     }
+    if(p.springT > 0) p.springT -= dt;
   }
 
   if(player.vy > 0){
     for(const p of platforms){
       if(p.broken) continue;
+      // flash 透明期間無碰撞
+      if(p.type === 'flash' && !flashOn(p)) continue;
       const screenPy = p.y - camY;
       if(screenPy > H - 8 || screenPy < -20) continue;
       const feetPrev = player.y + player.h/2 - player.vy;
@@ -283,6 +393,7 @@ function update(dt){
          player.x + player.w*0.3 > p.x && player.x - player.w*0.3 < p.x + p.w){
         if(p.type === 'spring'){
           player.vy = SPRING_VY;
+          p.springT = 180; // 壓縮動畫計時
           GameAudio.powerup();
         } else {
           player.vy = JUMP_VY;
@@ -291,6 +402,12 @@ function update(dt){
         if(p.type === 'break'){
           p.broken = true;
           for(let i=0;i<6;i++) particles.push({x:p.x+p.w/2, y:p.y, vx:rand(-2,2), vy:rand(-3,-1), life:30, color:'#8a5a2b'});
+        }
+        if(p.type === 'ice'){
+          player.iceTimer = 600; // 0.6 秒打滑狀態
+          for(let i=0;i<4;i++) particles.push({x:p.x+p.w/2, y:p.y, vx:rand(-2,2), vy:rand(-2,-0.5), life:25, color:'#cfefff'});
+        } else {
+          player.iceTimer = 0;
         }
         break;
       }
@@ -308,13 +425,28 @@ function update(dt){
   }
 
   for(const e of enemies){
-    e.x += e.vx;
-    e.frame = (e.frame + 0.2) % 4;
-    if(e.x < 0 || e.x + e.w > W) e.vx *= -1;
+    if(e.kind === 'flyer'){
+      e.x += e.vx;
+      if(e.x < 0 || e.x + e.w > W) e.vx *= -1;
+    } else if(e.kind === 'walker' && e.host){
+      e.offsetX += e.vx;
+      if(e.offsetX < 0 || e.offsetX + e.w > e.host.w){
+        e.vx *= -1;
+        e.offsetX = Math.max(0, Math.min(e.host.w - e.w, e.offsetX));
+      }
+      e.x = e.host.x + e.offsetX;
+      e.y = e.host.y - e.h + 2;
+    } else if(e.kind === 'static' && e.host){
+      e.x = e.host.x + e.offsetX;
+      e.y = e.host.y - e.h + 2;
+    }
+    e.frame = (e.frame + 0.18) % e.frames;
     if(player.invuln <= 0 && rectOverlap(player.x-player.w/2+6, player.y-player.h/2+6, player.w-12, player.h-12, e.x+4, e.y+4, e.w-8, e.h-8)){
       hurt();
     }
   }
+  // 移除 host 已消失的怪物
+  enemies = enemies.filter(e => !(e.host && e.host.broken));
 
   for(const pt of particles){
     pt.x += pt.vx; pt.y += pt.vy;
@@ -347,6 +479,28 @@ function update(dt){
 
   coins = coins.filter(c => !c.taken && c.y < camY + H + 100);
   enemies = enemies.filter(e => e.y < camY + H + 100);
+
+  // 飛行愛心：每累積一定分數生一顆，只在玩家血量未滿時才刷
+  if(score >= nextHeartScore && lives < MAX_LIVES){
+    spawnHeart();
+    nextHeartScore = score + Math.floor(rand(350, 550));
+  }
+  // 更新愛心位置 + 碰撞
+  for(const hc of hearts){
+    if(hc.taken) continue;
+    hc.x += hc.vx;
+    hc.y += hc.vy;
+    hc.vy += hc.vy > 0 ? -0.005 : 0.005; // 輕微上下飄
+    hc.frame = (hc.frame + 0.18) % 5;
+    if(hc.x < -50 || hc.x > W + 50) hc.taken = true; // 飛出畫面
+    if(!hc.taken && rectOverlap(player.x-player.w/2, player.y-player.h/2, player.w, player.h, hc.x, hc.y, hc.w, hc.h)){
+      hc.taken = true;
+      if(lives < MAX_LIVES){ lives++; score += 30; }
+      GameAudio.powerup && GameAudio.powerup();
+      for(let i=0;i<10;i++) particles.push({x:hc.x+hc.w/2, y:hc.y+hc.h/2, vx:rand(-3,3), vy:rand(-4,-1), life:30, color:'#ff5a6e'});
+    }
+  }
+  hearts = hearts.filter(h => !h.taken && h.y < camY + H + 80 && h.y > camY - 200);
 
   if(player.y > camY + H + FALL_MARGIN){
     lives = 0;
@@ -406,10 +560,6 @@ function drawBackground(){
 function drawPlatform(p){
   const y = p.y - camY;
   if(y < -30 || y > H + 30) return;
-  let img = IMG.plat;
-  if(p.type === 'break') img = IMG.platBreak || IMG.plat;
-  else if(p.type === 'move') img = IMG.platMove || IMG.plat;
-  else if(p.type === 'spring') img = IMG.platSpring || IMG.plat;
   if(p.type === 'ground'){
     ctx.fillStyle = '#3d2b6b';
     ctx.fillRect(p.x, y, p.w, p.h);
@@ -417,11 +567,63 @@ function drawPlatform(p){
     ctx.fillRect(p.x, y, p.w, 4);
     return;
   }
-  if(img){
-    ctx.drawImage(img, p.x, y - 4, p.w, p.h + 8);
-  } else {
-    ctx.fillStyle = p.type==='spring'?'#ffd54a': p.type==='break'?'#b56b34':'#6c9b55';
-    ctx.fillRect(p.x, y, p.w, p.h);
+  const baseKey = stageCfg().basePlat || 'plat';
+  let img = IMG[baseKey] || IMG.plat;
+  if(p.type === 'break') img = IMG.platBreak || img;
+  else if(p.type === 'move') img = IMG.platMove || img;
+  else if(p.type === 'spring') img = IMG.platSpring || img;
+  else if(p.type === 'ice') img = IMG.platIce || img;
+  else if(p.type === 'flash') img = IMG.platFlash || img;
+
+  // flash：依週期決定透明度，透明期近乎消失但留虛線框
+  let alpha = 1;
+  let flashOff = false;
+  if(p.type === 'flash'){
+    const t = ((performance.now()/1000) + (p.phase||0)) % FLASH_CYCLE;
+    const on = t < FLASH_ON;
+    if(on){
+      const remain = FLASH_ON - t;
+      alpha = remain < 0.3 ? remain / 0.3 : 1;
+    } else {
+      alpha = 0;
+      flashOff = true;
+    }
+  }
+
+  if(alpha > 0){
+    if(alpha < 1) ctx.globalAlpha = alpha;
+    if(img){
+      ctx.drawImage(img, p.x, y - 4, p.w, p.h + 8);
+    } else {
+      ctx.fillStyle = p.type==='spring'?'#ffd54a': p.type==='break'?'#b56b34':'#6c9b55';
+      ctx.fillRect(p.x, y, p.w, p.h);
+    }
+    if(alpha < 1) ctx.globalAlpha = 1;
+  }
+
+  // flash 透明期：虛線框提示位置
+  if(flashOff){
+    ctx.save();
+    ctx.globalAlpha = 0.45;
+    ctx.setLineDash([4, 4]);
+    ctx.strokeStyle = '#c59dff';
+    ctx.lineWidth = 1.5;
+    ctx.strokeRect(p.x + 0.5, y + 0.5, p.w - 1, p.h - 1);
+    ctx.restore();
+  }
+
+  // spring 跳板疊上彈簧 PNG（展開 / 壓縮兩幀）
+  if(p.type === 'spring'){
+    const compressed = p.springT > 0;
+    const spImg = IMG[compressed ? 'spring2' : 'spring1'];
+    if(spImg){
+      const sw = 52;
+      const natH = spImg.naturalHeight || 56;
+      const natW = spImg.naturalWidth  || 196;
+      const sh = sw * (natH / natW);
+      const sx = p.x + p.w/2 - sw/2;
+      ctx.drawImage(spImg, sx, y - sh + 2, sw, sh);
+    }
   }
 }
 
@@ -436,14 +638,22 @@ function drawCoin(c){
 function drawEnemy(e){
   const y = e.y - camY;
   if(y < -50 || y > H + 50) return;
-  const img = IMG['bat'+(Math.floor(e.frame)+1)];
+  const idx = Math.floor(e.frame) + 1;
+  const img = IMG[e.type + idx];
+  const flipByVx = e.kind !== 'static'; // static 類不翻轉
   if(img){
     ctx.save();
-    if(e.vx < 0){ ctx.translate(e.x + e.w, y); ctx.scale(-1,1); ctx.drawImage(img, 0, 0, e.w, e.h); }
-    else ctx.drawImage(img, e.x, y, e.w, e.h);
+    if(flipByVx && e.vx < 0){
+      ctx.translate(e.x + e.w, y);
+      ctx.scale(-1, 1);
+      ctx.drawImage(img, 0, 0, e.w, e.h);
+    } else {
+      ctx.drawImage(img, e.x, y, e.w, e.h);
+    }
     ctx.restore();
   } else {
-    ctx.fillStyle='#e74c3c'; ctx.fillRect(e.x, y, e.w, e.h);
+    ctx.fillStyle = '#e74c3c';
+    ctx.fillRect(e.x, y, e.w, e.h);
   }
 }
 
@@ -475,11 +685,32 @@ function drawParticles(){
   ctx.globalAlpha = 1;
 }
 
+function drawHeart(hc){
+  const y = hc.y - camY;
+  if(y < -50 || y > H + 50) return;
+  const idx = Math.floor(hc.frame) + 1;
+  const img = IMG['life' + idx];
+  ctx.save();
+  if(hc.vx < 0){
+    ctx.translate(hc.x + hc.w, y);
+    ctx.scale(-1, 1);
+    if(img) ctx.drawImage(img, 0, 0, hc.w, hc.h);
+  } else {
+    if(img) ctx.drawImage(img, hc.x, y, hc.w, hc.h);
+  }
+  ctx.restore();
+  if(!img){
+    ctx.fillStyle = '#ff5a6e';
+    ctx.fillRect(hc.x, y, hc.w, hc.h);
+  }
+}
+
 function renderWorld(){
   drawBackground();
   for(const p of platforms) drawPlatform(p);
   for(const c of coins) if(!c.taken) drawCoin(c);
   for(const e of enemies) drawEnemy(e);
+  for(const hc of hearts) if(!hc.taken) drawHeart(hc);
   drawPlayer();
   drawParticles();
 }
