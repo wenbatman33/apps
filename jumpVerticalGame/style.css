@@ -2,40 +2,4 @@
 html,body{width:100%;height:100%;overflow:hidden;background:#0a0818;font-family:-apple-system,BlinkMacSystemFont,"Microsoft JhengHei",sans-serif;color:#fff;user-select:none;-webkit-user-select:none;touch-action:none}
 #stage{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:
   radial-gradient(ellipse at 50% 0%, #2a1f5c 0%, #120a2a 60%, #05030f 100%)}
-#game{display:block;width:min(100vw, calc(100vh * 9/16));height:min(100vh, calc(100vw * 16/9));max-width:100vw;max-height:100vh;background:#1a1235;touch-action:none;image-rendering:auto}
-
-/* HUD */
-#hud{position:absolute;top:0;left:0;right:0;padding:12px 14px;display:flex;justify-content:space-between;align-items:flex-start;pointer-events:none;z-index:10;
-  font-family:"Outfit","Microsoft JhengHei",sans-serif}
-#hud.hidden{display:none}
-.hud-left{display:flex;flex-direction:column;gap:4px}
-.hud-right{display:flex;align-items:center;gap:8px;pointer-events:auto}
-#score{font-size:28px;font-weight:800;text-shadow:0 2px 6px rgba(0,0,0,.7);letter-spacing:.5px}
-#best{font-size:12px;opacity:.8;text-shadow:0 1px 3px rgba(0,0,0,.7)}
-#lives{display:flex;gap:3px}
-#lives img{width:22px;height:22px;filter:drop-shadow(0 2px 3px rgba(0,0,0,.5))}
-.icon-btn{background:rgba(0,0,0,.35);border:1px solid rgba(255,255,255,.15);color:#fff;border-radius:50%;width:38px;height:38px;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(6px)}
-.icon-btn:active{transform:scale(.92)}
-
-/* Overlays */
-.overlay{position:absolute;inset:0;z-index:20;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;padding:24px;background:rgba(8,4,24,.75);backdrop-filter:blur(8px);text-align:center}
-.overlay.hidden{display:none}
-.overlay h1{font-size:42px;font-weight:800;letter-spacing:1px;text-shadow:0 4px 12px rgba(0,0,0,.6);background:linear-gradient(180deg,#fff 0%,#ffe27a 100%);-webkit-background-clip:text;background-clip:text;color:transparent}
-.subtitle{opacity:.85;font-size:15px;margin-top:-6px}
-.logo{max-width:60%;max-height:140px;object-fit:contain}
-.paused-text{max-width:50%}
-.hint{opacity:.6;font-size:12px;margin-top:8px}
-
-.big-btn{position:relative;background:none;border:0;padding:0;cursor:pointer;display:flex;align-items:center;justify-content:center;min-width:200px;height:68px}
-.big-btn img{height:68px;width:auto;filter:drop-shadow(0 4px 10px rgba(0,0,0,.4))}
-.big-btn span{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:700;color:#fff;text-shadow:0 2px 3px rgba(0,0,0,.5);letter-spacing:1px}
-.big-btn.ghost{background:rgba(255,255,255,.08);border:1.5px solid rgba(255,255,255,.25);border-radius:40px;height:52px;min-width:180px}
-.big-btn.ghost span{position:static;font-size:16px}
-.big-btn:active{transform:scale(.96)}
-
-.score-box{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);border-radius:16px;padding:16px 28px;font-size:18px;line-height:1.9}
-.score-box b{color:#ffe27a;font-size:22px;margin-left:6px}
-
-/* 觸控區（不可見） */
-.touch-zone{position:absolute;top:0;bottom:0;left:0;width:50%;z-index:5}
-.touch-zone.right{left:auto;right:0}
+#game{display:block;width:min(100vw, calc(100vh * 9/16));height:min(100vh, calc(100vw * 16/9));max-width:100vw;max-height:100vh;background:#1a1235;touch-action:none;image-rendering:auto;box-shadow:0 0 40px rgba(0,0,0,.5);cursor:pointer}
