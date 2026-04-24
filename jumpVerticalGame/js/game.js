@@ -159,10 +159,23 @@ function loadingLoop(){
 }
 
 // ============ 遊戲狀態 ============
-const STATE = { MENU:'menu', SELECT:'select', PLAY:'play', PAUSE:'pause', OVER:'over', LEADER:'leader' };
+const STATE = { MENU:'menu', SELECT:'select', PLAY:'play', PAUSE:'pause', OVER:'over', LEADER:'leader', DEV:'dev' };
 let state = STATE.MENU;
 let currentStage = 1; // 1..6
-let playerName = localStorage.getItem('jumpup.name') || '';
+// 第三方串接：從 URL query 讀取宿主傳入的使用者資料
+//   範例：?name=Alice&uid=123&token=xxx&amount=1000
+(function parseHostParams(){
+  const qs = new URLSearchParams(location.search);
+  window.HOST = {
+    name:   qs.get('name'),
+    uid:    qs.get('uid'),
+    token:  qs.get('token'),
+    amount: qs.get('amount') ? Number(qs.get('amount')) : null,
+    raw:    Object.fromEntries(qs.entries()),
+  };
+})();
+// 若宿主有傳 name 優先使用，否則回退 localStorage
+let playerName = (window.HOST && window.HOST.name) || localStorage.getItem('jumpup.name') || '';
 let leaderRows = []; // 當前顯示排行榜資料
 let leaderStage = 1;
 let leaderLoading = false;
@@ -936,6 +949,69 @@ function drawMenu(){
   ctx.font = '12px -apple-system, "Microsoft JhengHei", sans-serif';
   ctx.fillText('PC：← → 方向鍵　手機：點角色左右側', W/2, 560);
   ctx.fillText('（按鍵 P / Esc 可暫停）', W/2, 580);
+
+  // 左下角 dev 按鈕
+  const devBtn = { x: 10, y: H - 34, w: 54, h: 24, action:'showDev' };
+  ctx.fillStyle = 'rgba(0,0,0,.5)';
+  roundRect(devBtn.x, devBtn.y, devBtn.w, devBtn.h, 6, true);
+  ctx.strokeStyle = 'rgba(255,255,255,.25)';
+  ctx.lineWidth = 1;
+  roundRect(devBtn.x, devBtn.y, devBtn.w, devBtn.h, 6, false, true);
+  ctx.fillStyle = '#9ef0ff';
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.font = 'bold 12px monospace';
+  ctx.fillText('dev', devBtn.x + devBtn.w/2, devBtn.y + devBtn.h/2);
+  addButton(devBtn);
+}
+
+function drawDevOverlay(){
+  drawBackground();
+  drawDimmer(0.82);
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'top';
+  ctx.fillStyle = '#9ef0ff';
+  ctx.font = 'bold 18px monospace';
+  ctx.fillText('DEV MODE', 20, 30);
+
+  ctx.fillStyle = 'rgba(255,255,255,.85)';
+  ctx.font = '13px monospace';
+  ctx.fillText('URL query 接收到的宿主資料：', 20, 62);
+
+  const host = window.HOST || {};
+  const lines = [
+    'name   : ' + (host.name   ?? '(null)'),
+    'uid    : ' + (host.uid    ?? '(null)'),
+    'token  : ' + (host.token  ?? '(null)'),
+    'amount : ' + (host.amount ?? '(null)'),
+    '',
+    'raw query :',
+    JSON.stringify(host.raw || {}, null, 2),
+    '',
+    'playerName 目前 : ' + (playerName || '(空)'),
+    'currentStage    : ' + currentStage,
+    'state           : ' + state,
+  ];
+  ctx.fillStyle = '#ffe27a';
+  ctx.font = '12px monospace';
+  let y = 92;
+  for(const line of lines){
+    for(const part of String(line).split('\n')){
+      ctx.fillText(part, 20, y);
+      y += 16;
+    }
+  }
+
+  const backBtn = { x: W/2 - 60, y: H - 70, w: 120, h: 40, action:'menu' };
+  ctx.fillStyle = 'rgba(255,255,255,.14)';
+  roundRect(backBtn.x, backBtn.y, backBtn.w, backBtn.h, 10, true);
+  ctx.strokeStyle = 'rgba(255,255,255,.35)';
+  ctx.lineWidth = 1.5;
+  roundRect(backBtn.x, backBtn.y, backBtn.w, backBtn.h, 10, false, true);
+  ctx.fillStyle = '#fff';
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.font = 'bold 16px -apple-system, "Microsoft JhengHei", sans-serif';
+  ctx.fillText('返回', backBtn.x + backBtn.w/2, backBtn.y + backBtn.h/2);
+  addButton(backBtn);
 }
 
 function drawStageSelect(){
@@ -1290,6 +1366,8 @@ function loop(ts){
     drawStageSelect();
   } else if(state === STATE.LEADER){
     drawLeaderboard();
+  } else if(state === STATE.DEV){
+    drawDevOverlay();
   } else {
     drawMenu();
   }
@@ -1367,6 +1445,9 @@ function handleButton(action){
       break;
     case 'back':
       state = STATE.SELECT;
+      break;
+    case 'showDev':
+      state = STATE.DEV;
       break;
   }
 }
