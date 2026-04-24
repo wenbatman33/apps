@@ -10,50 +10,6 @@
 <body>
   <div id="stage">
     <canvas id="game" width="360" height="640"></canvas>
-
-    <!-- HUD -->
-    <div id="hud" class="hidden">
-      <div class="hud-left">
-        <div id="score">0 m</div>
-        <div id="best">最佳 0 m</div>
-      </div>
-      <div class="hud-right">
-        <div id="lives"></div>
-        <button id="muteBtn" class="icon-btn" title="靜音">🔊</button>
-        <button id="pauseBtn" class="icon-btn" title="暫停">⏸</button>
-      </div>
-    </div>
-
-    <!-- Menu -->
-    <div id="menu" class="overlay">
-      <img src="assets/Ui/BigLogo.png" class="logo" alt="">
-      <h1>Jump Up!</h1>
-      <p class="subtitle">往上跳！別掉下去</p>
-      <button id="startBtn" class="big-btn"><img src="assets/Ui/PlayBtn.png" alt=""><span>開始遊戲</span></button>
-      <p class="hint">PC：← → 方向鍵　手機：點左右側螢幕</p>
-    </div>
-
-    <!-- Pause -->
-    <div id="pauseOverlay" class="overlay hidden">
-      <img src="assets/Ui/PausedText.png" class="paused-text" alt="Paused">
-      <button id="resumeBtn" class="big-btn"><img src="assets/Ui/PlayBtn.png" alt=""><span>繼續</span></button>
-      <button id="quitBtn" class="big-btn ghost"><span>回主選單</span></button>
-    </div>
-
-    <!-- Game Over -->
-    <div id="gameOver" class="overlay hidden">
-      <h1>Game Over</h1>
-      <div class="score-box">
-        <div>本次：<b id="finalScore">0</b> m</div>
-        <div>最佳：<b id="finalBest">0</b> m</div>
-      </div>
-      <button id="restartBtn" class="big-btn"><img src="assets/Ui/RestartBtn.png" alt=""><span>再玩一次</span></button>
-      <button id="menuBtn" class="big-btn ghost"><span>主選單</span></button>
-    </div>
-
-    <!-- 手機左右觸控提示區（可視化 debug 用，透明） -->
-    <div id="touchLeft" class="touch-zone"></div>
-    <div id="touchRight" class="touch-zone right"></div>
   </div>
 
   <!-- 背景音樂：之後你換成自己的檔案即可 -->

@@ -1,19 +1,38 @@
-// Jump Up! 垂直跳躍主程式
+// Jump Up! 垂直跳躍主程式 — Canvas only UI
 (function(){
 'use strict';
 
 // ============ 基本設定 ============
-const W = 360, H = 640;              // 邏輯畫布解析度
+const W = 360, H = 640;
 const canvas = document.getElementById('game');
 const ctx = canvas.getContext('2d');
-canvas.width = W; canvas.height = H;
+
+// 依 devicePixelRatio 與實際顯示尺寸調整 backing store，避免放大後糊掉
+function resizeCanvas(){
+  const rect = canvas.getBoundingClientRect();
+  const dpr = Math.max(1, window.devicePixelRatio || 1);
+  // backing store 以邏輯尺寸為基準按顯示比例放大，再乘 DPR
+  const cssW = rect.width || W;
+  const cssH = rect.height || H;
+  canvas.width  = Math.round(cssW * dpr);
+  canvas.height = Math.round(cssH * dpr);
+  // 把座標系 scale 回 360×640 邏輯尺寸
+  const sx = canvas.width / W;
+  const sy = canvas.height / H;
+  ctx.setTransform(sx, 0, 0, sy, 0, 0);
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = 'high';
+}
+resizeCanvas();
+window.addEventListener('resize', resizeCanvas);
+window.addEventListener('orientationchange', resizeCanvas);
 
 const GRAVITY = 0.38;
 const JUMP_VY = -13.5;
 const SPRING_VY = -20;
 const MOVE_SPEED = 5.2;
 const MAX_LIVES = 3;
-const FALL_MARGIN = 120;             // 掉出畫面下緣多少距離才算死
+const FALL_MARGIN = 120;
 const PLATFORM_GAP_MIN = 62;
 const PLATFORM_GAP_MAX = 110;
 const PLATFORM_W = 72, PLATFORM_H = 18;
@@ -37,6 +56,11 @@ const toLoad = {
   bat1:'assets/Enemies/Bat/1.png', bat2:'assets/Enemies/Bat/2.png',
   bat3:'assets/Enemies/Bat/3.png', bat4:'assets/Enemies/Bat/4.png',
   life: 'assets/Life/1.png',
+  bigLogo:   'assets/Ui/BigLogo.png',
+  playBtn:   'assets/Ui/PlayBtn.png',
+  restartBtn:'assets/Ui/RestartBtn.png',
+  pausedText:'assets/Ui/PausedText.png',
+  scoreBox:  'assets/Ui/ScoreBox.png',
 };
 
 function loadAll(){
@@ -60,6 +84,7 @@ const player = {
   facing: 1,
   alive: true,
   invuln: 0,
+  bounceVx: 0, bounceTimer: 0,
 };
 
 let platforms = [];
@@ -67,39 +92,35 @@ let coins = [];
 let enemies = [];
 let particles = [];
 
-let camY = 0;        // 攝影機世界 Y 偏移（值越小代表攝影機越高）
-let highestY = 0;    // 玩家達到的最高處（世界座標，向上為負）
+let camY = 0;
+let highestY = 0;
 let score = 0;
 let best = parseInt(localStorage.getItem('jumpup.best')||'0',10) || 0;
 let lives = MAX_LIVES;
 let coinCount = 0;
 
 let keys = { left:false, right:false };
-let touchDir = 0;  // -1 / 0 / 1
+let touchDir = 0;
 
 // ============ 平台/金幣/敵人生成 ============
 function rand(a,b){ return a + Math.random()*(b-a); }
-// 分數越高間距越大（上限 140），讓跳躍更吃精準
 function gapForScore(){
   const diff = Math.min(1, score / 600);
-  const min = PLATFORM_GAP_MIN + diff * 20;       // 62 -> 82
-  const max = PLATFORM_GAP_MAX + diff * 30;       // 110 -> 140
+  const min = PLATFORM_GAP_MIN + diff * 20;
+  const max = PLATFORM_GAP_MAX + diff * 30;
   return rand(min, max);
 }
 
 function spawnPlatform(y){
-  // 難度係數 0(起步) -> 1(極難)
   const diff = Math.min(1, score / 600);
   const type = (()=>{
     const r = Math.random();
     if(score < 80) return 'normal';
-    // 普通平台佔比隨難度遞減
     if(r < 0.72 - diff*0.32) return 'normal';
     if(r < 0.85 - diff*0.20) return 'move';
     if(r < 0.95 - diff*0.05) return 'break';
     return 'spring';
   })();
-  // 移動平台速度隨難度提升
   const moveSpeed = rand(1.2, 2.5) + diff*1.8;
   const p = {
     x: rand(20, W - PLATFORM_W - 20),
@@ -111,15 +132,12 @@ function spawnPlatform(y){
   };
   platforms.push(p);
 
-  // 有機率在平台上放金幣
   if(Math.random() < 0.22){
     coins.push({ x: p.x + p.w/2 - 14, y: p.y - 32, w:28, h:28, frame:Math.random()*6, taken:false });
   }
-  // 敵人：從 100m 開始出現、機率隨難度攀升最高到 22%
   if(score > 100){
     const enemyChance = 0.05 + diff * 0.17;
     if(Math.random() < enemyChance){
-      // 一半機率生在平台上（會左右巡邏），一半機率生在平台上方飛行段（較快）
       const flying = Math.random() < 0.5;
       enemies.push({
         x: flying ? rand(20, W-64) : p.x + p.w/2 - 22,
@@ -139,10 +157,9 @@ function initWorld(){
   player.x = W/2; player.y = H - 140;
   player.vx = 0; player.vy = JUMP_VY;
   player.alive = true; player.invuln = 0; player.facing = 1;
+  player.bounceVx = 0; player.bounceTimer = 0;
 
-  // 起始大平台（作為地面）
   platforms.push({ x: 0, y: H - 60, w: W, h: 20, type:'ground', vx:0 });
-  // 先往上填一堆平台
   let y = H - 140;
   while(y > -800){
     y -= gapForScore();
@@ -152,22 +169,36 @@ function initWorld(){
 
 // ============ 物理 / 更新 ============
 function update(dt){
-  // 輸入
   const dir = (keys.left ? -1:0) + (keys.right ? 1:0) + touchDir;
-  player.vx = Math.sign(dir) * MOVE_SPEED;
-  if(dir !== 0) player.facing = Math.sign(dir);
+  if(player.bounceTimer > 0){
+    player.vx = player.bounceVx;
+    player.bounceTimer -= dt;
+    player.bounceVx *= 0.92;
+  } else {
+    player.vx = Math.sign(dir) * MOVE_SPEED;
+    if(dir !== 0) player.facing = Math.sign(dir);
+  }
 
-  // 重力
   player.vy += GRAVITY;
   if(player.vy > 18) player.vy = 18;
   player.x += player.vx;
   player.y += player.vy;
 
-  // 左右穿牆
-  if(player.x < -player.w/2) player.x = W + player.w/2;
-  if(player.x > W + player.w/2) player.x = -player.w/2;
+  const halfW = player.w/2;
+  if(player.x < halfW){
+    player.x = halfW;
+    player.bounceVx = MOVE_SPEED * 1.6;
+    player.bounceTimer = 180;
+    player.facing = 1;
+    GameAudio.land();
+  } else if(player.x > W - halfW){
+    player.x = W - halfW;
+    player.bounceVx = -MOVE_SPEED * 1.6;
+    player.bounceTimer = 180;
+    player.facing = -1;
+    GameAudio.land();
+  }
 
-  // 更新平台
   for(const p of platforms){
     if(p.vx){
       p.x += p.vx;
@@ -175,15 +206,15 @@ function update(dt){
     }
   }
 
-  // 下落時檢查踩平台
   if(player.vy > 0){
     for(const p of platforms){
       if(p.broken) continue;
+      const screenPy = p.y - camY;
+      if(screenPy > H - 8 || screenPy < -20) continue;
       const feetPrev = player.y + player.h/2 - player.vy;
       const feet = player.y + player.h/2;
       if(feetPrev <= p.y && feet >= p.y &&
          player.x + player.w*0.3 > p.x && player.x - player.w*0.3 < p.x + p.w){
-        // 踩到
         if(p.type === 'spring'){
           player.vy = SPRING_VY;
           GameAudio.powerup();
@@ -200,7 +231,6 @@ function update(dt){
     }
   }
 
-  // 金幣
   for(const c of coins){
     if(c.taken) continue;
     c.frame = (c.frame + 0.2) % 6;
@@ -211,7 +241,6 @@ function update(dt){
     }
   }
 
-  // 敵人
   for(const e of enemies){
     e.x += e.vx;
     e.frame = (e.frame + 0.2) % 4;
@@ -221,7 +250,6 @@ function update(dt){
     }
   }
 
-  // 粒子
   for(const pt of particles){
     pt.x += pt.vx; pt.y += pt.vy;
     pt.vy += 0.2;
@@ -229,17 +257,20 @@ function update(dt){
   }
   particles = particles.filter(p=>p.life>0);
 
-  // 攝影機：當玩家超過畫面上半時推上去
+  // 自動向上捲動
+  const diffAuto = Math.min(1, score / 700);
+  const autoScroll = 0.15 + diffAuto * 2.25;
+  camY -= autoScroll;
+
   const screenY = player.y - camY;
   if(screenY < H * 0.42){
-    const diff = H * 0.42 - screenY;
-    camY -= diff;
-    highestY = Math.min(highestY, player.y);
+    const d = H * 0.42 - screenY;
+    camY -= d;
   }
+  highestY = Math.min(highestY, player.y);
 
   score = Math.max(score, Math.floor(-highestY / 10) + coinCount*10);
 
-  // 補生平台（淘汰畫面下方的）
   platforms = platforms.filter(p => p.y < camY + H + 100 && !p.broken || (p.broken && p.y > camY - 50));
   platforms = platforms.filter(p => !(p.broken && player.y > p.y + 200));
   let topY = platforms.reduce((m,p)=> Math.min(m,p.y), H);
@@ -248,11 +279,9 @@ function update(dt){
     spawnPlatform(topY);
   }
 
-  // 金幣 / 敵人清掉畫面下的
   coins = coins.filter(c => !c.taken && c.y < camY + H + 100);
   enemies = enemies.filter(e => e.y < camY + H + 100);
 
-  // 掉下畫面 → 直接結束（不再救援）
   if(player.y > camY + H + FALL_MARGIN){
     lives = 0;
     gameOver();
@@ -270,7 +299,6 @@ function hurt(){
   lives--;
   GameAudio.hurt();
   player.invuln = 1200;
-  // 被敵人撞到：彈開並往上彈一下，不轉送平台
   player.vy = JUMP_VY * 0.85;
   if(lives <= 0){
     gameOver();
@@ -283,29 +311,18 @@ function gameOver(){
   GameAudio.die();
   GameAudio.pauseBGM();
   if(score > best){ best = score; localStorage.setItem('jumpup.best', ''+best); }
-  document.getElementById('finalScore').textContent = score;
-  document.getElementById('finalBest').textContent = best;
-  document.getElementById('gameOver').classList.remove('hidden');
-  document.getElementById('hud').classList.add('hidden');
 }
 
-// ============ 繪製 ============
+// ============ 繪製：遊戲世界 ============
 function drawBackground(){
-  // 漸層底色
   const g = ctx.createLinearGradient(0,0,0,H);
   g.addColorStop(0,'#2a1f5c'); g.addColorStop(1,'#120a2a');
   ctx.fillStyle = g; ctx.fillRect(0,0,W,H);
 
-  // 視差背景層（垂直捲動）
   const drawBGLayer = (img, factor) => {
     if(!img) return;
-    const ratio = img.width > 0 ? (W / img.width) : 1;
+    const ratio = W / img.width;
     const dh = img.height * ratio;
-    const offset = (camY * factor) % dh;
-    for(let y = -dh + offset; y < H; y += dh){
-      ctx.drawImage(img, 0, y - (offset - offset), W, dh);
-    }
-    // 簡化：單張拉伸 + 垂直重複
     let yy = (camY * factor) % dh;
     if(yy > 0) yy -= dh;
     ctx.drawImage(img, 0, yy, W, dh);
@@ -365,21 +382,18 @@ function drawPlayer(){
   let img = IMG.idle;
   if(!player.alive) img = IMG.die;
   else if(player.vy < -1) img = IMG.jump;
-  if(player.invuln > 0 && Math.floor(player.invuln/80)%2 === 0){
-    // 閃爍
+  if(player.invuln > 0 && Math.floor(player.invuln/80)%2 === 0) return;
+  ctx.save();
+  if(player.facing < 0){
+    ctx.translate(player.x + player.w/2, y - player.h/2);
+    ctx.scale(-1,1);
+    if(img) ctx.drawImage(img, 0, 0, player.w, player.h);
+    else { ctx.fillStyle='#4ac7ff'; ctx.fillRect(0,0,player.w,player.h); }
   } else {
-    ctx.save();
-    if(player.facing < 0){
-      ctx.translate(player.x + player.w/2, y - player.h/2);
-      ctx.scale(-1,1);
-      if(img) ctx.drawImage(img, 0, 0, player.w, player.h);
-      else { ctx.fillStyle='#4ac7ff'; ctx.fillRect(0,0,player.w,player.h); }
-    } else {
-      if(img) ctx.drawImage(img, player.x - player.w/2, y - player.h/2, player.w, player.h);
-      else { ctx.fillStyle='#4ac7ff'; ctx.fillRect(player.x-player.w/2, y-player.h/2, player.w, player.h); }
-    }
-    ctx.restore();
+    if(img) ctx.drawImage(img, player.x - player.w/2, y - player.h/2, player.w, player.h);
+    else { ctx.fillStyle='#4ac7ff'; ctx.fillRect(player.x-player.w/2, y-player.h/2, player.w, player.h); }
   }
+  ctx.restore();
 }
 
 function drawParticles(){
@@ -391,7 +405,7 @@ function drawParticles(){
   ctx.globalAlpha = 1;
 }
 
-function render(){
+function renderWorld(){
   drawBackground();
   for(const p of platforms) drawPlatform(p);
   for(const c of coins) if(!c.taken) drawCoin(c);
@@ -400,39 +414,302 @@ function render(){
   drawParticles();
 }
 
+// ============ 繪製：UI（全部在 Canvas 上） ============
+// 按鈕定義：每幀根據 state 重建，pointerdown 用座標命中
+let uiButtons = [];
+function addButton(b){ uiButtons.push(b); }
+
+function drawPillBg(x, y, w, h, alpha){
+  ctx.fillStyle = `rgba(0,0,0,${alpha!=null?alpha:0.35})`;
+  roundRect(x, y, w, h, h/2, true);
+  ctx.strokeStyle = 'rgba(255,255,255,.18)';
+  ctx.lineWidth = 1;
+  roundRect(x, y, w, h, h/2, false, true);
+}
+function roundRect(x, y, w, h, r, fill, stroke){
+  const rr = Math.min(r, w/2, h/2);
+  ctx.beginPath();
+  ctx.moveTo(x+rr, y);
+  ctx.arcTo(x+w, y, x+w, y+h, rr);
+  ctx.arcTo(x+w, y+h, x, y+h, rr);
+  ctx.arcTo(x, y+h, x, y, rr);
+  ctx.arcTo(x, y, x+w, y, rr);
+  ctx.closePath();
+  if(fill) ctx.fill();
+  if(stroke) ctx.stroke();
+}
+
+function drawIconPause(cx, cy, size, color){
+  ctx.fillStyle = color || '#fff';
+  const w = size*0.22, h = size*0.6;
+  ctx.fillRect(cx - w - 3, cy - h/2, w, h);
+  ctx.fillRect(cx + 3, cy - h/2, w, h);
+}
+function drawIconSpeaker(cx, cy, size, muted){
+  ctx.fillStyle = '#fff';
+  const s = size/2;
+  // 喇叭本體
+  ctx.beginPath();
+  ctx.moveTo(cx-s*0.9, cy-s*0.35);
+  ctx.lineTo(cx-s*0.2, cy-s*0.35);
+  ctx.lineTo(cx+s*0.3, cy-s*0.75);
+  ctx.lineTo(cx+s*0.3, cy+s*0.75);
+  ctx.lineTo(cx-s*0.2, cy+s*0.35);
+  ctx.lineTo(cx-s*0.9, cy+s*0.35);
+  ctx.closePath();
+  ctx.fill();
+  if(muted){
+    ctx.strokeStyle = '#ff6b6b';
+    ctx.lineWidth = 2.5;
+    ctx.beginPath();
+    ctx.moveTo(cx+s*0.5, cy-s*0.5); ctx.lineTo(cx+s*0.95, cy+s*0.5);
+    ctx.moveTo(cx+s*0.95, cy-s*0.5); ctx.lineTo(cx+s*0.5, cy+s*0.5);
+    ctx.stroke();
+  } else {
+    ctx.strokeStyle = '#fff';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(cx+s*0.5, cy, s*0.35, -Math.PI/4, Math.PI/4);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(cx+s*0.5, cy, s*0.65, -Math.PI/4, Math.PI/4);
+    ctx.stroke();
+  }
+}
+function drawIconHeart(cx, cy, size, lost){
+  ctx.save();
+  if(IMG.life){
+    if(lost){ ctx.filter = 'grayscale(1) brightness(0.45)'; ctx.globalAlpha = 0.55; }
+    ctx.drawImage(IMG.life, cx - size/2, cy - size/2, size, size);
+  } else {
+    ctx.fillStyle = lost ? '#555' : '#ff4d6b';
+    ctx.beginPath();
+    ctx.moveTo(cx, cy + size*0.35);
+    ctx.bezierCurveTo(cx - size*0.6, cy - size*0.1, cx - size*0.3, cy - size*0.55, cx, cy - size*0.2);
+    ctx.bezierCurveTo(cx + size*0.3, cy - size*0.55, cx + size*0.6, cy - size*0.1, cx, cy + size*0.35);
+    ctx.fill();
+  }
+  ctx.restore();
+}
+
+function drawHUD(){
+  // 左上：分數 + 最佳 + 金幣
+  ctx.fillStyle = 'rgba(0,0,0,.35)';
+  roundRect(6, 8, 150, 72, 14, true);
+  ctx.strokeStyle = 'rgba(255,255,255,.15)';
+  ctx.lineWidth = 1;
+  roundRect(6, 8, 150, 72, 14, false, true);
+
+  ctx.fillStyle = '#fff';
+  ctx.textBaseline = 'top';
+  ctx.textAlign = 'left';
+  ctx.font = 'bold 22px -apple-system, "Microsoft JhengHei", sans-serif';
+  ctx.fillText(score + ' m', 16, 14);
+  ctx.font = '11px -apple-system, "Microsoft JhengHei", sans-serif';
+  ctx.fillStyle = 'rgba(255,255,255,.75)';
+  ctx.fillText('最佳 ' + best + ' m', 16, 40);
+
+  // 金幣
+  const coinImg = IMG.coin1;
+  if(coinImg) ctx.drawImage(coinImg, 16, 52, 20, 20);
+  ctx.fillStyle = '#ffe27a';
+  ctx.font = 'bold 15px -apple-system, "Microsoft JhengHei", sans-serif';
+  ctx.fillText(String(coinCount), 42, 56);
+
+  // 右上：血量
+  const heartSize = 22;
+  const heartsW = MAX_LIVES * heartSize + (MAX_LIVES-1)*4 + 14;
+  const heartsX = W - 6 - heartsW - 80;    // 留空間給 mute/pause
+  drawPillBg(heartsX, 14, heartsW, 34);
+  for(let i=0;i<MAX_LIVES;i++){
+    drawIconHeart(heartsX + 7 + heartSize/2 + i*(heartSize+4), 14 + 17, heartSize, i >= lives);
+  }
+
+  // 右上：mute / pause 按鈕
+  const btnR = 18;
+  const muteBtn = { x: W - 6 - btnR*2 - 4 - btnR*2, y: 14, w: btnR*2, h: btnR*2, action:'mute' };
+  const pauseBtn = { x: W - 6 - btnR*2, y: 14, w: btnR*2, h: btnR*2, action:'pause' };
+  [muteBtn, pauseBtn].forEach(b => {
+    ctx.fillStyle = 'rgba(0,0,0,.4)';
+    ctx.beginPath();
+    ctx.arc(b.x + b.w/2, b.y + b.h/2, b.w/2, 0, Math.PI*2);
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(255,255,255,.18)';
+    ctx.stroke();
+  });
+  drawIconSpeaker(muteBtn.x + muteBtn.w/2, muteBtn.y + muteBtn.h/2, 22, GameAudio.muted);
+  drawIconPause(pauseBtn.x + pauseBtn.w/2, pauseBtn.y + pauseBtn.h/2, 22);
+
+  addButton(muteBtn);
+  addButton(pauseBtn);
+}
+
+function drawDimmer(alpha){
+  ctx.fillStyle = `rgba(8,4,24,${alpha||0.75})`;
+  ctx.fillRect(0,0,W,H);
+}
+
+function drawMenu(){
+  drawBackground();
+  drawDimmer(0.55);
+
+  // logo
+  if(IMG.bigLogo){
+    const lw = 220, lh = IMG.bigLogo.height * (lw / IMG.bigLogo.width);
+    ctx.drawImage(IMG.bigLogo, W/2 - lw/2, 100, lw, lh);
+  }
+
+  // 標題
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillStyle = '#ffe27a';
+  ctx.font = 'bold 40px -apple-system, "Microsoft JhengHei", sans-serif';
+  ctx.shadowColor = 'rgba(0,0,0,.6)'; ctx.shadowBlur = 8; ctx.shadowOffsetY = 3;
+  ctx.fillText('Jump Up!', W/2, 300);
+  ctx.shadowBlur = 0; ctx.shadowOffsetY = 0;
+
+  ctx.fillStyle = 'rgba(255,255,255,.85)';
+  ctx.font = '15px -apple-system, "Microsoft JhengHei", sans-serif';
+  ctx.fillText('往上跳！別掉下去', W/2, 332);
+
+  // 開始按鈕
+  const startBtn = { x: W/2 - 100, y: 380, w: 200, h: 64, action:'start' };
+  if(IMG.playBtn){
+    ctx.drawImage(IMG.playBtn, startBtn.x, startBtn.y, startBtn.w, startBtn.h);
+  } else {
+    ctx.fillStyle = '#ffb347';
+    roundRect(startBtn.x, startBtn.y, startBtn.w, startBtn.h, 32, true);
+  }
+  ctx.fillStyle = '#fff';
+  ctx.font = 'bold 20px -apple-system, "Microsoft JhengHei", sans-serif';
+  ctx.shadowColor = 'rgba(0,0,0,.55)'; ctx.shadowBlur = 3; ctx.shadowOffsetY = 2;
+  ctx.fillText('開始遊戲', W/2, startBtn.y + startBtn.h/2);
+  ctx.shadowBlur = 0; ctx.shadowOffsetY = 0;
+  addButton(startBtn);
+
+  // 最佳紀錄
+  if(best > 0){
+    ctx.fillStyle = 'rgba(255,255,255,.7)';
+    ctx.font = '13px -apple-system, "Microsoft JhengHei", sans-serif';
+    ctx.fillText('最佳 ' + best + ' m', W/2, 470);
+  }
+
+  // 提示
+  ctx.fillStyle = 'rgba(255,255,255,.55)';
+  ctx.font = '12px -apple-system, "Microsoft JhengHei", sans-serif';
+  ctx.fillText('PC：← → 方向鍵　手機：點角色左右側', W/2, 560);
+  ctx.fillText('（按鍵 P / Esc 可暫停）', W/2, 580);
+}
+
+function drawPauseOverlay(){
+  drawDimmer(0.7);
+
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  if(IMG.pausedText){
+    const pw = 200, ph = IMG.pausedText.height * (pw / IMG.pausedText.width);
+    ctx.drawImage(IMG.pausedText, W/2 - pw/2, 180, pw, ph);
+  } else {
+    ctx.fillStyle = '#ffe27a';
+    ctx.font = 'bold 48px -apple-system, "Microsoft JhengHei", sans-serif';
+    ctx.fillText('PAUSED', W/2, 220);
+  }
+
+  const resumeBtn = { x: W/2 - 100, y: 310, w: 200, h: 64, action:'resume' };
+  if(IMG.playBtn) ctx.drawImage(IMG.playBtn, resumeBtn.x, resumeBtn.y, resumeBtn.w, resumeBtn.h);
+  ctx.fillStyle = '#fff';
+  ctx.font = 'bold 20px -apple-system, "Microsoft JhengHei", sans-serif';
+  ctx.shadowColor = 'rgba(0,0,0,.55)'; ctx.shadowBlur = 3; ctx.shadowOffsetY = 2;
+  ctx.fillText('繼續', W/2, resumeBtn.y + resumeBtn.h/2);
+  ctx.shadowBlur = 0; ctx.shadowOffsetY = 0;
+  addButton(resumeBtn);
+
+  const quitBtn = { x: W/2 - 90, y: 400, w: 180, h: 48, action:'quit' };
+  ctx.fillStyle = 'rgba(255,255,255,.12)';
+  roundRect(quitBtn.x, quitBtn.y, quitBtn.w, quitBtn.h, 24, true);
+  ctx.strokeStyle = 'rgba(255,255,255,.3)';
+  ctx.lineWidth = 1.5;
+  roundRect(quitBtn.x, quitBtn.y, quitBtn.w, quitBtn.h, 24, false, true);
+  ctx.fillStyle = '#fff';
+  ctx.font = '16px -apple-system, "Microsoft JhengHei", sans-serif';
+  ctx.fillText('回主選單', W/2, quitBtn.y + quitBtn.h/2);
+  addButton(quitBtn);
+}
+
+function drawGameOverOverlay(){
+  drawDimmer(0.78);
+
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillStyle = '#ff6b6b';
+  ctx.font = 'bold 48px -apple-system, "Microsoft JhengHei", sans-serif';
+  ctx.shadowColor = 'rgba(0,0,0,.6)'; ctx.shadowBlur = 8; ctx.shadowOffsetY = 3;
+  ctx.fillText('Game Over', W/2, 160);
+  ctx.shadowBlur = 0; ctx.shadowOffsetY = 0;
+
+  // 分數面板
+  ctx.fillStyle = 'rgba(255,255,255,.08)';
+  roundRect(W/2 - 120, 210, 240, 110, 16, true);
+  ctx.strokeStyle = 'rgba(255,255,255,.18)';
+  ctx.lineWidth = 1;
+  roundRect(W/2 - 120, 210, 240, 110, 16, false, true);
+
+  ctx.fillStyle = 'rgba(255,255,255,.75)';
+  ctx.font = '15px -apple-system, "Microsoft JhengHei", sans-serif';
+  ctx.fillText('本次', W/2 - 60, 240);
+  ctx.fillText('最佳', W/2 + 60, 240);
+  ctx.fillStyle = '#ffe27a';
+  ctx.font = 'bold 26px -apple-system, "Microsoft JhengHei", sans-serif';
+  ctx.fillText(score + ' m', W/2 - 60, 275);
+  ctx.fillText(best + ' m', W/2 + 60, 275);
+
+  const restartBtn = { x: W/2 - 100, y: 360, w: 200, h: 64, action:'restart' };
+  if(IMG.restartBtn) ctx.drawImage(IMG.restartBtn, restartBtn.x, restartBtn.y, restartBtn.w, restartBtn.h);
+  ctx.fillStyle = '#fff';
+  ctx.font = 'bold 20px -apple-system, "Microsoft JhengHei", sans-serif';
+  ctx.shadowColor = 'rgba(0,0,0,.55)'; ctx.shadowBlur = 3; ctx.shadowOffsetY = 2;
+  ctx.fillText('再玩一次', W/2, restartBtn.y + restartBtn.h/2);
+  ctx.shadowBlur = 0; ctx.shadowOffsetY = 0;
+  addButton(restartBtn);
+
+  const menuBtn = { x: W/2 - 90, y: 450, w: 180, h: 48, action:'menu' };
+  ctx.fillStyle = 'rgba(255,255,255,.12)';
+  roundRect(menuBtn.x, menuBtn.y, menuBtn.w, menuBtn.h, 24, true);
+  ctx.strokeStyle = 'rgba(255,255,255,.3)';
+  ctx.lineWidth = 1.5;
+  roundRect(menuBtn.x, menuBtn.y, menuBtn.w, menuBtn.h, 24, false, true);
+  ctx.fillStyle = '#fff';
+  ctx.font = '16px -apple-system, "Microsoft JhengHei", sans-serif';
+  ctx.fillText('主選單', W/2, menuBtn.y + menuBtn.h/2);
+  addButton(menuBtn);
+}
+
 // ============ 主迴圈 ============
 function loop(ts){
   const dt = Math.min(32, ts - lastTime || 16);
   lastTime = ts;
 
+  uiButtons = [];  // 每幀重置按鈕清單
+
   if(state === STATE.PLAY){
     update(dt);
-    render();
-    updateHUD();
-  } else if(state === STATE.PAUSE || state === STATE.OVER){
-    render();
+    renderWorld();
+    drawHUD();
+  } else if(state === STATE.PAUSE){
+    renderWorld();
+    drawHUD();
+    drawPauseOverlay();
+  } else if(state === STATE.OVER){
+    renderWorld();
+    drawHUD();
+    drawGameOverOverlay();
   } else {
-    // MENU 背景小動畫
-    drawBackground();
+    drawMenu();
   }
   requestAnimationFrame(loop);
 }
 
-function updateHUD(){
-  document.getElementById('score').textContent = score + ' m';
-  document.getElementById('best').textContent = '最佳 ' + best + ' m';
-  const livesEl = document.getElementById('lives');
-  if(livesEl.childElementCount !== lives){
-    livesEl.innerHTML = '';
-    for(let i=0;i<lives;i++){
-      const im = document.createElement('img');
-      im.src = 'assets/Life/1.png'; im.alt='♥';
-      livesEl.appendChild(im);
-    }
-  }
-}
-
-// ============ 控制 ============
+// ============ 控制 / 輸入 ============
 window.addEventListener('keydown', e => {
   if(e.code==='ArrowLeft' || e.code==='KeyA') keys.left = true;
   if(e.code==='ArrowRight' || e.code==='KeyD') keys.right = true;
@@ -445,70 +722,98 @@ window.addEventListener('keyup', e => {
   if(e.code==='ArrowRight' || e.code==='KeyD') keys.right = false;
 });
 
-// 觸控：左右半螢幕
-function bindTouch(el, dir){
-  const on = e => { e.preventDefault(); touchDir = dir; GameAudio.resume(); };
-  const off = e => { e.preventDefault(); touchDir = 0; };
-  el.addEventListener('touchstart', on, {passive:false});
-  el.addEventListener('touchend', off);
-  el.addEventListener('touchcancel', off);
-  el.addEventListener('mousedown', on);
-  el.addEventListener('mouseup', off);
-  el.addEventListener('mouseleave', off);
+// 把 client 座標轉成 canvas 邏輯座標
+function eventToCanvas(e){
+  const rect = canvas.getBoundingClientRect();
+  const x = (e.clientX - rect.left) / rect.width * W;
+  const y = (e.clientY - rect.top) / rect.height * H;
+  return { x, y, inRect: e.clientX >= rect.left && e.clientX <= rect.right && e.clientY >= rect.top && e.clientY <= rect.bottom };
 }
-bindTouch(document.getElementById('touchLeft'), -1);
-bindTouch(document.getElementById('touchRight'), 1);
 
-// ============ UI ============
-const $ = id => document.getElementById(id);
+function hitButton(x, y){
+  for(const b of uiButtons){
+    if(x >= b.x && x <= b.x + b.w && y >= b.y && y <= b.y + b.h) return b;
+  }
+  return null;
+}
 
+function handleButton(action){
+  GameAudio.click();
+  switch(action){
+    case 'start':    startGame(); break;
+    case 'restart':  startGame(); break;
+    case 'resume':   resumeGame(); break;
+    case 'pause':    pauseGame(); break;
+    case 'quit':
+    case 'menu':     toMenu(); break;
+    case 'mute': {
+      const m = GameAudio.toggleMute();
+      void m;
+      break;
+    }
+  }
+}
+
+let pointerHeld = false;
+canvas.addEventListener('pointerdown', e => {
+  GameAudio.resume();
+  const { x, y, inRect } = eventToCanvas(e);
+  if(!inRect) return;
+  const btn = hitButton(x, y);
+  if(btn){
+    e.preventDefault();
+    handleButton(btn.action);
+    return;
+  }
+  // 遊戲中：依點擊點與主角 x 判左右
+  if(state === STATE.PLAY){
+    const dx = x - player.x;
+    if(Math.abs(dx) < 6) return;
+    touchDir = dx < 0 ? -1 : 1;
+    pointerHeld = true;
+    if(canvas.setPointerCapture && e.pointerId != null){
+      try{ canvas.setPointerCapture(e.pointerId); }catch{}
+    }
+  }
+});
+canvas.addEventListener('pointermove', e => {
+  if(!pointerHeld || state !== STATE.PLAY) return;
+  const { x } = eventToCanvas(e);
+  const dx = x - player.x;
+  if(Math.abs(dx) < 6) return;
+  touchDir = dx < 0 ? -1 : 1;
+});
+function releasePointer(){ if(pointerHeld){ pointerHeld = false; touchDir = 0; } }
+canvas.addEventListener('pointerup', releasePointer);
+canvas.addEventListener('pointercancel', releasePointer);
+window.addEventListener('blur', releasePointer);
+
+// ============ 狀態切換 ============
 function startGame(){
   GameAudio.init(); GameAudio.resume();
   initWorld();
   state = STATE.PLAY;
-  $('menu').classList.add('hidden');
-  $('gameOver').classList.add('hidden');
-  $('pauseOverlay').classList.add('hidden');
-  $('hud').classList.remove('hidden');
   GameAudio.playBGM();
 }
 function pauseGame(){
   if(state !== STATE.PLAY) return;
   state = STATE.PAUSE;
-  $('pauseOverlay').classList.remove('hidden');
   GameAudio.pauseBGM();
 }
 function resumeGame(){
   if(state !== STATE.PAUSE) return;
   state = STATE.PLAY;
-  $('pauseOverlay').classList.add('hidden');
   GameAudio.playBGM();
 }
 function toMenu(){
   state = STATE.MENU;
-  $('menu').classList.remove('hidden');
-  $('gameOver').classList.add('hidden');
-  $('pauseOverlay').classList.add('hidden');
-  $('hud').classList.add('hidden');
   GameAudio.stopBGM();
 }
-
-$('startBtn').addEventListener('click', ()=>{ GameAudio.click(); startGame(); });
-$('restartBtn').addEventListener('click', ()=>{ GameAudio.click(); startGame(); });
-$('menuBtn').addEventListener('click', ()=>{ GameAudio.click(); toMenu(); });
-$('quitBtn').addEventListener('click', ()=>{ GameAudio.click(); toMenu(); });
-$('resumeBtn').addEventListener('click', ()=>{ GameAudio.click(); resumeGame(); });
-$('pauseBtn').addEventListener('click', ()=>{ GameAudio.click(); pauseGame(); });
-$('muteBtn').addEventListener('click', () => {
-  const m = GameAudio.toggleMute();
-  $('muteBtn').textContent = m ? '🔇' : '🔊';
-});
 
 // ============ 啟動 ============
 (async function(){
   GameAudio.init();
   await loadAll();
-  // 初始載入後顯示最佳紀錄
   best = parseInt(localStorage.getItem('jumpup.best')||'0',10) || 0;
   requestAnimationFrame(loop);
 })();
