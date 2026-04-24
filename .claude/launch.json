@@ -31,6 +31,14 @@
       "port": 8768,
       "autoPort": false,
       "cwd": "robberRun"
+    },
+    {
+      "name": "jumpVerticalGame",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": ["-m", "http.server", "8769"],
+      "port": 8769,
+      "autoPort": false,
+      "cwd": "jumpVerticalGame"
     }
   ]
 }
