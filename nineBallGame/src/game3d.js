@@ -79,6 +79,12 @@ export class Game3D {
     this.currentPlayer = 1;
     this.ballInHand = false;
     this.shotInProgress = false;
+    this._animating = false; // AI 球桿動畫進行中（不得干擾 _allStill 判定）
+    // 兩段式出桿：aim（選方向） → power（拖曳決定力度） → 放開出桿
+    this.phase = "aim";       // "aim" | "power"
+    this.aimDir = null;       // 鎖定後的方向 { ux, uz }
+    this.shotPower = 0;       // 0~1，力度階段累積
+    this.powerDrag = null;    // 力度階段拖曳狀態
     this.firstHit = null;
     this.pocketedThisShot = [];
     this._applyingRemote = false;
@@ -86,11 +92,15 @@ export class Game3D {
 
     this._initThree();
     this._initPhysics();
+    this._initShadowWorld();
     this._buildTable();
+    this._buildShadowCushions();
     this.balls = [];
     this.cue = null;
     this._rack();
+    this._buildShadowBalls();
     this._buildCueStick();
+    this._buildPowerGauge();
     this._bindInput();
     this.spin = { x: 0, y: 0 };
     this._buildSpinWidget();
@@ -211,6 +221,75 @@ export class Game3D {
     world.addBody(ground);
 
     this.world = world;
+  }
+
+  // 影子世界：用於瞄準預測，與主世界參數完全一致
+  // 每次模擬前同步所有球的狀態，施加與真實擊球相同的 impulse + spin，跑 N 步記錄軌跡
+  _initShadowWorld() {
+    const sw = new CANNON.World({ gravity: new CANNON.Vec3(0, -9.82, 0) });
+    sw.defaultContactMaterial.friction = 0.1;
+    sw.broadphase = new CANNON.NaiveBroadphase();
+    sw.allowSleep = false;
+
+    const bMat = new CANNON.Material("shadow-ball");
+    const fMat = new CANNON.Material("shadow-felt");
+    const cMat = new CANNON.Material("shadow-cushion");
+    sw.addContactMaterial(new CANNON.ContactMaterial(bMat, fMat,
+      { friction: GROUND_FRICTION, restitution: 0.05 }));
+    sw.addContactMaterial(new CANNON.ContactMaterial(bMat, bMat,
+      { friction: BALL_FRICTION, restitution: BALL_RESTITUTION }));
+    sw.addContactMaterial(new CANNON.ContactMaterial(bMat, cMat,
+      { friction: 0.02, restitution: CUSHION_RESTITUTION }));
+
+    const ground = new CANNON.Body({ mass: 0, material: fMat, shape: new CANNON.Plane() });
+    ground.quaternion.setFromAxisAngle(new CANNON.Vec3(1, 0, 0), -Math.PI / 2);
+    sw.addBody(ground);
+
+    this._shadowWorld = sw;
+    this._shadowBallMat = bMat;
+    this._shadowCushionMat = cMat;
+    this._shadowBalls = null;       // 於 _buildShadowBalls 填入
+    this._shadowCushionsBuilt = false;
+  }
+
+  // 掃描主世界的 cushion bodies（含內層海綿 + 外層安全牆），複製到影子世界
+  _buildShadowCushions() {
+    if (!this._shadowWorld || this._shadowCushionsBuilt) return;
+    for (const body of this.world.bodies) {
+      if (body.material !== this.cushionMaterial) continue;
+      for (const shape of body.shapes) {
+        if (!(shape instanceof CANNON.Box)) continue;
+        const he = shape.halfExtents;
+        const nb = new CANNON.Body({
+          mass: 0, material: this._shadowCushionMat,
+          shape: new CANNON.Box(new CANNON.Vec3(he.x, he.y, he.z)),
+        });
+        nb.position.copy(body.position);
+        nb.quaternion.copy(body.quaternion);
+        this._shadowWorld.addBody(nb);
+      }
+    }
+    this._shadowCushionsBuilt = true;
+  }
+
+  // 建立 / 重建影子球（每顆真實球配一個影子）
+  _buildShadowBalls() {
+    if (!this._shadowWorld) return;
+    // 清掉舊的
+    if (this._shadowBalls) {
+      for (const sb of this._shadowBalls) this._shadowWorld.removeBody(sb);
+    }
+    this._shadowBalls = this.balls.map((rb) => {
+      const sb = new CANNON.Body({
+        mass: BALL_MASS, material: this._shadowBallMat,
+        shape: new CANNON.Sphere(BALL_R),
+        linearDamping: LINEAR_DAMPING, angularDamping: ANGULAR_DAMPING,
+        allowSleep: false,
+      });
+      sb.position.copy(rb.body.position);
+      this._shadowWorld.addBody(sb);
+      return sb;
+    });
   }
 
   // ---------- 桌子 & 枱邊 ----------
@@ -866,6 +945,97 @@ export class Game3D {
     this._cueStickLen = len;
   }
 
+  // 桌下 3D 力度量表（Three.js mesh）
+  // 預設建置為「沿 +x 延伸」的水平條（未旋轉），以 group.position / rotation.y
+  // 由 _positionPowerGauge(isPortrait) 負責擺到正確位置
+  _buildPowerGauge() {
+    const group = new THREE.Group();
+    // 使用較短邊作為長度，讓直式/橫式都不會超出視窗
+    const totalW = TABLE_WID * 0.9;
+    const totalH = 0.05;
+    const y = 0.005;
+
+    // 背景
+    const bg = new THREE.Mesh(
+      new THREE.PlaneGeometry(totalW, totalH),
+      new THREE.MeshBasicMaterial({ color: 0x0f1a14, transparent: true, opacity: 0.9 })
+    );
+    bg.rotation.x = -Math.PI / 2;
+    bg.position.set(0, y, 0);
+    group.add(bg);
+
+    // 邊框
+    const borderMat = new THREE.MeshBasicMaterial({ color: 0x3a6a4a });
+    const bt = 0.005;
+    const mkBorder = (w, h, dx, dz) => {
+      const m = new THREE.Mesh(new THREE.PlaneGeometry(w, h), borderMat);
+      m.rotation.x = -Math.PI / 2;
+      m.position.set(dx, y + 0.001, dz);
+      group.add(m);
+    };
+    mkBorder(totalW, bt, 0, -totalH / 2);
+    mkBorder(totalW, bt, 0,  totalH / 2);
+    mkBorder(bt, totalH, -totalW / 2, 0);
+    mkBorder(bt, totalH,  totalW / 2, 0);
+
+    // 填充（以 scale.x 控制長度，錨在左邊 -totalW/2）
+    const fill = new THREE.Mesh(
+      new THREE.PlaneGeometry(totalW, totalH - bt * 2),
+      new THREE.MeshBasicMaterial({ color: 0x1ca85a })
+    );
+    fill.rotation.x = -Math.PI / 2;
+    fill.position.set(-totalW / 2, y + 0.002, 0);
+    fill.scale.x = 0.0001;
+    group.add(fill);
+
+    // 刻度
+    const tickMat = new THREE.MeshBasicMaterial({ color: 0x2a4a36, transparent: true, opacity: 0.7 });
+    for (const t of [0.25, 0.5, 0.75]) {
+      const tick = new THREE.Mesh(new THREE.PlaneGeometry(0.004, totalH * 0.6), tickMat);
+      tick.rotation.x = -Math.PI / 2;
+      tick.position.set(-totalW / 2 + totalW * t, y + 0.003, 0);
+      group.add(tick);
+    }
+
+    group.visible = false;
+    this.scene.add(group);
+    this.powerGauge = { group, fill, totalW, totalH, y };
+    this._updatePowerGauge(0);
+    this._positionPowerGauge(window.innerHeight > window.innerWidth);
+  }
+
+  _positionPowerGauge(isPortrait) {
+    if (!this.powerGauge) return;
+    const g = this.powerGauge.group;
+    if (isPortrait) {
+      // 直式：相機 up = (-1,0,0)，+x 為螢幕下方 → 量表擺在 +x 桌邊外
+      // 旋轉 +90° 讓 local +x 指向 world -z（＝螢幕右方），填充方向才是左→右
+      g.rotation.y = Math.PI / 2;
+      g.position.set(HX + FRAME_THICK + 0.14, 0, 0);
+    } else {
+      // 橫式：相機 up = (0,0,-1)，+z 為螢幕下方 → 量表擺在 +z 桌邊外
+      g.rotation.y = 0;
+      g.position.set(0, 0, HZ + FRAME_THICK + 0.14);
+    }
+  }
+
+  _updatePowerGauge(power) {
+    if (!this.powerGauge) return;
+    const { fill, totalW } = this.powerGauge;
+    const p = Math.max(0, Math.min(1, power));
+    // 以 scale.x 控制填充長度；原本寬為 totalW，縮放後實寬 = totalW * p
+    // 要讓左邊緣保持在 -totalW/2：position.x = -totalW/2 + (totalW*p)/2
+    fill.scale.x = Math.max(0.0001, p);
+    fill.position.x = -totalW / 2 + (totalW * p) / 2;
+    // 顏色隨力度變化
+    const c = p < 0.4 ? 0x1ca85a : p < 0.8 ? 0xf7c300 : 0xd9212e;
+    fill.material.color.setHex(c);
+  }
+
+  _showPowerGauge(show) {
+    if (this.powerGauge) this.powerGauge.group.visible = !!show;
+  }
+
   _placeCueStickAt(cx, cz, ux, uz, pull) {
     const tipX = cx - ux * (BALL_R + pull);
     const tipZ = cz - uz * (BALL_R + pull);
@@ -878,15 +1048,23 @@ export class Game3D {
   }
 
   _updateCueStick() {
-    if (!this.aim || !this.cueStick) { if (this.cueStick) this.cueStick.visible = false; return; }
+    if (!this.cueStick) return;
     const cp = this.cue.body.position;
-    // 方向＝拖曳反向（start → cur 的反向）
-    const dx = this.aim.startX - this.aim.curX;
-    const dz = this.aim.startZ - this.aim.curZ;
-    const len = Math.hypot(dx, dz);
-    if (len < 0.02) { this.cueStick.visible = false; return; }
-    const ux = dx / len, uz = dz / len;
-    const f = Math.min(len / 0.6, 1);
+    let ux, uz, f;
+    if (this.phase === "power" && this.aimDir) {
+      ux = this.aimDir.ux; uz = this.aimDir.uz;
+      f = this.shotPower;
+    } else if (this.aim) {
+      const dx = this.aim.startX - this.aim.curX;
+      const dz = this.aim.startZ - this.aim.curZ;
+      const len = Math.hypot(dx, dz);
+      if (len < 0.02) { this.cueStick.visible = false; return; }
+      ux = dx / len; uz = dz / len;
+      f = 0.5; // 瞄準階段使用預覽拉桿量
+    } else {
+      this.cueStick.visible = false;
+      return;
+    }
     const pull = 0.03 + f * 0.2;
     this._placeCueStickAt(cp.x, cp.z, ux, uz, pull);
   }
@@ -967,6 +1145,7 @@ export class Game3D {
 
   _canAim() {
     if (this.shotInProgress) return false;
+    if (this._animating) return false;
     if (this.mode === "ai" && this.currentPlayer === 2) return false;
     if (this.mode === "net" && this.currentPlayer !== this.myPlayerNum) return false;
     return true;
@@ -977,7 +1156,6 @@ export class Game3D {
     if (!this._canAim()) return;
     const w = this._toWorld(e);
     if (!w) return;
-    const cuePos = this.cue.body.position;
 
     // 練習模式：點到球就直接拖曳擺位
     if (this.mode === "practice") {
@@ -995,26 +1173,33 @@ export class Game3D {
     }
 
     if (this.ballInHand) {
-      // 放置白球（需要在桌面內且不重疊）
       if (this._inPlay(w.x, w.z) && !this._overlaps(w.x, w.z)) {
         this._placeCue(w.x, w.z);
         this.ballInHand = false;
         this._pushHud();
-        // 網路：廣播白球位置
         if (this.mode === "net") this._netSendPlace(w.x, w.z);
         return;
       }
     }
 
-    // 從畫面任何位置開始拖都可以，使用拖曳位移量計算方向與力度
-    this.aim = { startX: w.x, startZ: w.z, curX: w.x, curZ: w.z };
+    // 兩段式：Phase 1 aim（選方向）、Phase 2 power（拖曳決定力度）
+    if (this.phase === "power") {
+      // 力度階段：按下開始累積
+      this.powerDrag = { startX: w.x, startZ: w.z, curX: w.x, curZ: w.z };
+      this.shotPower = 0;
+      this._updatePowerGauge(0);
+      this._drawAim();
+    } else {
+      // 瞄準階段：按下開始旋轉方向
+      this.phase = "aim";
+      this.aim = { startX: w.x, startZ: w.z, curX: w.x, curZ: w.z };
+    }
   }
 
   _move(e) {
     if (this.dragBall) {
       const w = this._toWorld(e);
       if (!w) return;
-      // 限制在海綿條內緣（別放到 cushion/木框範圍裡）
       const lx = HX - CUSHION_INSET - BALL_R;
       const lz = HZ - CUSHION_INSET - BALL_R;
       let x = Math.max(-lx, Math.min(lx, w.x));
@@ -1025,10 +1210,20 @@ export class Game3D {
       this.dragBall.body.wakeUp();
       return;
     }
-    if (!this.aim) return;
     const w = this._toWorld(e);
-    this.aim.curX = w.x; this.aim.curZ = w.z;
-    this._drawAim();
+    if (!w) return;
+    if (this.phase === "aim" && this.aim) {
+      this.aim.curX = w.x; this.aim.curZ = w.z;
+      this._drawAim();
+    } else if (this.phase === "power" && this.powerDrag) {
+      this.powerDrag.curX = w.x; this.powerDrag.curZ = w.z;
+      const dx = w.x - this.powerDrag.startX;
+      const dz = w.z - this.powerDrag.startZ;
+      const len = Math.hypot(dx, dz);
+      this.shotPower = Math.max(0, Math.min(1, len / 0.6));
+      this._updatePowerGauge(this.shotPower);
+      this._drawAim();
+    }
   }
 
   _up(e) {
@@ -1038,101 +1233,185 @@ export class Game3D {
       this.dragBall = null;
       return;
     }
-    if (!this.aim) return;
-    // 方向＝拖曳反向（start → cur 的反向），力度＝拖曳世界距離
-    const dx = this.aim.startX - this.aim.curX;
-    const dz = this.aim.startZ - this.aim.curZ;
-    const len = Math.hypot(dx, dz);
-    this._clearAim();
+    // Phase 1 結束：鎖定方向、切到 Phase 2
+    if (this.phase === "aim" && this.aim) {
+      const dx = this.aim.startX - this.aim.curX;
+      const dz = this.aim.startZ - this.aim.curZ;
+      const len = Math.hypot(dx, dz);
+      if (len < 0.03) {
+        // 拖太短，當作未瞄，重置
+        this._clearAim();
+        this.aim = null;
+        return;
+      }
+      this.aimDir = { ux: dx / len, uz: dz / len };
+      this.phase = "power";
+      this.shotPower = 0;
+      this._showPowerGauge(true);
+      this._updatePowerGauge(0);
+      this._drawAim();
+      return;
+    }
+    // Phase 2 結束：以當下力度出桿
+    if (this.phase === "power" && this.powerDrag) {
+      const p = this.shotPower;
+      const dir = this.aimDir;
+      // 完全清除視覺與狀態
+      this.powerDrag = null;
+      this._showPowerGauge(false);
+      this._updatePowerGauge(0);
+      this._clearAim();
+      this.aim = null;
+      this.aimDir = null;
+      this.phase = "aim";
+      this.shotPower = 0;
+      if (!dir || p < 0.05) return; // 力度太小視為取消
+      const imp = MAX_SHOT_IMPULSE * p;
+      this._shoot(dir.ux * imp, dir.uz * imp);
+      return;
+    }
+  }
+
+  // 重置兩段式狀態（換人、取消、局結束時呼叫）
+  _resetShotPhase() {
+    this.phase = "aim";
     this.aim = null;
-    if (len < 0.03) return; // 拖太短
-    const ux = dx / len, uz = dz / len;
-    const f = Math.min(len / 0.6, 1);
-    const imp = MAX_SHOT_IMPULSE * f;
-    this._shoot(ux * imp, uz * imp);
+    this.aimDir = null;
+    this.powerDrag = null;
+    this.shotPower = 0;
+    this._showPowerGauge(false);
+    this._updatePowerGauge(0);
+    this._clearAim();
   }
 
   _drawAim() {
     this._clearAim();
-    if (!this.aim) return;
     const cp = this.cue.body.position;
-    // 方向＝拖曳反向（瞄準線永遠從白球出發）
-    const dx = this.aim.startX - this.aim.curX;
-    const dz = this.aim.startZ - this.aim.curZ;
-    const len = Math.hypot(dx, dz);
-    if (len < 0.02) return;
-    const ux = dx / len, uz = dz / len;
+    // 方向來源：Phase 1 看當前拖曳、Phase 2 用鎖定方向
+    let ux, uz;
+    if (this.phase === "power" && this.aimDir) {
+      ux = this.aimDir.ux;
+      uz = this.aimDir.uz;
+    } else if (this.aim) {
+      const dx = this.aim.startX - this.aim.curX;
+      const dz = this.aim.startZ - this.aim.curZ;
+      const L = Math.hypot(dx, dz);
+      if (L < 0.02) return;
+      ux = dx / L; uz = dz / L;
+    } else {
+      return;
+    }
 
-    // 模擬白球軌跡含反射與碰球預測
-    const traj = this._predictTrajectory(cp.x, cp.z, ux, uz);
     this.aimLines = [];
     const y = BALL_R; // 瞄準線必須與球心同高，否則透視相機會造成偏移
 
-    // 力度決定虛線可顯示的總長度（愈大力愈長）
-    const f = Math.min(len / 0.6, 1);
-    let budget = 0.2 + f * 3.0;
+    // 力度：Phase 1 用預覽值（方便玩家判斷路徑）；Phase 2 用實際累積力度
+    const f = this.phase === "power" ? this.shotPower : 0.5;
 
-    // 以加粗虛線繪製每一段軌跡（用一排小球模擬粗虛線，WebGL Line 無法設粗）
-    for (let i = 0; i < traj.segments.length; i++) {
-      const seg = traj.segments[i];
-      const segLen = Math.hypot(seg.x2 - seg.x1, seg.z2 - seg.z1);
-      const drawLen = Math.min(segLen, budget);
-      const t = segLen > 1e-6 ? drawLen / segLen : 0;
-      const x2 = seg.x1 + (seg.x2 - seg.x1) * t;
-      const z2 = seg.z1 + (seg.z2 - seg.z1) * t;
-      const col = i === 0 ? 0xffffff : 0xcccccc;
-      const opacity = i === 0 ? 0.95 : 0.7;
-      const g = this._makeFatDashedLine(seg.x1, seg.z1, x2, z2, y, col, opacity, 0.006, 0.045);
-      this.scene.add(g);
-      this.aimLines.push(g);
-      budget -= drawLen;
-      if (budget <= 1e-4) break;
+    // 用影子世界模擬擊球，直接取母球/目標球軌跡
+    const impMag = MAX_SHOT_IMPULSE * f;
+    const spinY = this.spin ? this.spin.y : 0;
+    const spinX = this.spin ? this.spin.x : 0;
+
+    // 快取：相同瞄準 / 力度不重算（角度變化 > 0.3°、力度變化 > 1.5% 才重跑）
+    const cacheKey = this._simCache;
+    const sameDir = cacheKey && Math.abs(cacheKey.ux - ux) + Math.abs(cacheKey.uz - uz) < 0.01;
+    const sameF = cacheKey && Math.abs(cacheKey.f - f) < 0.015;
+    const sameSpin = cacheKey && cacheKey.sy === spinY && cacheKey.sx === spinX;
+    const samePos = cacheKey && Math.abs(cacheKey.cx - cp.x) + Math.abs(cacheKey.cz - cp.z) < 0.001;
+    let sim;
+    if (sameDir && sameF && sameSpin && samePos && cacheKey.sim) {
+      sim = cacheKey.sim;
+    } else {
+      sim = this._simulateShot(ux, uz, impMag, spinY, spinX);
+      this._simCache = { ux, uz, f, sy: spinY, sx: spinX, cx: cp.x, cz: cp.z, sim };
     }
 
-    // 終點圓圈（ghost 球 / 袋口標記）
-    if (traj.end) {
-      const ring = this._makeFatRing(traj.end.x, y, traj.end.z, BALL_R, traj.end.color, 0.004, 0.9);
-      this.scene.add(ring);
-      this.aimLines.push(ring);
+    // 繪製母球軌跡：碰撞前白色粗虛線、碰撞後灰色粗虛線
+    this._drawSampledPath(sim.cueBefore, y, 0xffffff, 0.95);
+    this._drawSampledPath(sim.cueAfter, y, 0xcccccc, 0.65);
+
+    // ghost / 袋口標記
+    if (sim.cuePocket) {
+      const ring = this._makeFatRing(sim.cuePocket.x, y, sim.cuePocket.z, BALL_R, 0xff4444, 0.004, 0.9);
+      this.scene.add(ring); this.aimLines.push(ring);
+    } else if (sim.hitPoint) {
+      const ring = this._makeFatRing(sim.hitPoint.x, y, sim.hitPoint.z, BALL_R, 0xffffff, 0.004, 0.9);
+      this.scene.add(ring); this.aimLines.push(ring);
     }
 
-    // 撞球預測：目標球前進方向 + 母球反彈方向
-    if (traj.end && traj.end.hitBall) {
-      const b = traj.end.hitBall;
-      const nx = traj.end.nx, nz = traj.end.nz;      // 目標球方向（ghost→target 單位向量）
-      const cx = traj.end.cueDefX, cz = traj.end.cueDefZ; // 母球偏折方向
-      // 目標球方向線：從目標球中心向前（實線細白）
-      const tLen = 0.45;
-      const tLine = this._makeSolidLine(
-        b.body.position.x, b.body.position.z,
-        b.body.position.x + nx * tLen, b.body.position.z + nz * tLen,
-        y, 0xffffff, 0.85
-      );
-      this.scene.add(tLine); this.aimLines.push(tLine);
-      // 母球偏折線：從接觸點向偏折方向（實線細白，較短）
-      const clen = Math.hypot(cx, cz);
-      if (clen > 1e-4) {
-        const cLen = 0.28;
-        const cLine = this._makeSolidLine(
-          traj.end.x, traj.end.z,
-          traj.end.x + (cx / clen) * cLen, traj.end.z + (cz / clen) * cLen,
-          y, 0xffffff, 0.8
+    // 目標球軌跡（碰撞後）：短實線表示主方向
+    if (sim.targetSamples.length >= 2 && sim.hitBall) {
+      const start = sim.targetSamples[0];
+      // 取前幾個 sample 的方向做平均，避免接觸瞬間的雜訊
+      const look = Math.min(5, sim.targetSamples.length - 1);
+      const endP = sim.targetSamples[look];
+      const ndx = endP.x - start.x, ndz = endP.z - start.z;
+      const nlen = Math.hypot(ndx, ndz);
+      if (nlen > 1e-4) {
+        const tLen = 0.12 + f * 0.9;
+        const tLine = this._makeSolidLine(
+          start.x, start.z,
+          start.x + (ndx / nlen) * tLen, start.z + (ndz / nlen) * tLen,
+          y, 0xffffff, 0.85
         );
-        this.scene.add(cLine); this.aimLines.push(cLine);
+        this.scene.add(tLine); this.aimLines.push(tLine);
       }
     }
 
-    // 力度條（反向，不受反射影響）
+    // 白球後方力度指示線（反向），長度對應 f（0.6 是 _up 中 len/0.6 normalize 的對應）
     const color = f < 0.4 ? 0x1ca85a : f < 0.8 ? 0xf7c300 : 0xd9212e;
+    const barLen = 0.6 * f;
     const p2 = new THREE.BufferGeometry().setFromPoints([
       new THREE.Vector3(cp.x, y, cp.z),
-      new THREE.Vector3(cp.x - ux * Math.min(len, 0.6), y, cp.z - uz * Math.min(len, 0.6)),
+      new THREE.Vector3(cp.x - ux * barLen, y, cp.z - uz * barLen),
     ]);
     const m2 = new THREE.LineBasicMaterial({ color, transparent: true, opacity: 0.95 });
     this.powerLine = new THREE.Line(p2, m2);
     this.scene.add(this.powerLine);
 
     this._updateCueStick();
+  }
+
+  // 沿模擬取樣點畫粗虛線：每段累積 stepDist 就放一顆小球
+  _drawSampledPath(samples, y, color, opacity) {
+    if (!samples || samples.length < 2) return;
+    const radius = 0.006;
+    const stepDist = 0.045;
+    const mat = new THREE.MeshBasicMaterial({
+      color, transparent: true, opacity, depthWrite: false,
+    });
+    const geom = new THREE.SphereGeometry(radius, 8, 6);
+    const group = new THREE.Group();
+    let acc = 0;
+    // 第一顆放在起點
+    const first = new THREE.Mesh(geom, mat);
+    first.position.set(samples[0].x, y, samples[0].z);
+    first.renderOrder = 2;
+    group.add(first);
+    for (let i = 1; i < samples.length; i++) {
+      const a = samples[i - 1], b = samples[i];
+      const segLen = Math.hypot(b.x - a.x, b.z - a.z);
+      if (segLen < 1e-5) continue;
+      let remain = segLen;
+      let cursor = 0; // 沿此 segment 已走距離
+      while (acc + remain >= stepDist - 1e-6) {
+        const need = stepDist - acc;
+        cursor += need;
+        const frac = cursor / segLen;
+        const px = a.x + (b.x - a.x) * frac;
+        const pz = a.z + (b.z - a.z) * frac;
+        const m = new THREE.Mesh(geom, mat);
+        m.position.set(px, y, pz);
+        m.renderOrder = 2;
+        group.add(m);
+        remain -= need;
+        acc = 0;
+      }
+      acc += remain;
+    }
+    this.scene.add(group);
+    this.aimLines.push(group);
   }
 
   // 粗虛線：沿直線放一排小球，用以模擬比 1px 還粗的虛線
@@ -1201,6 +1480,118 @@ export class Game3D {
     const line = new THREE.Line(geom, mat);
     if (dashed) line.computeLineDistances();
     return line;
+  }
+
+  // 影子世界模擬：把當前球狀態複製到影子世界，以給定 (ux, uz, impulse, spin) 模擬擊球，記錄軌跡
+  // 回傳 { cueSamples, hitBall, hitPoint, targetSamples, cuePocket }
+  //   cueSamples: 母球每幾步取樣一次的位置
+  //   hitBall: 第一顆被撞到的真實 Ball 物件（或 null）
+  //   hitPoint: 第一次撞球時母球位置 (ghost 位置)
+  //   targetSamples: 被撞球之後的位置取樣（若有）
+  //   cuePocket: 若母球入袋，入袋位置
+  _simulateShot(ux, uz, impMag, spinY, spinX) {
+    const sw = this._shadowWorld;
+    const sbs = this._shadowBalls;
+    if (!sw || !sbs) return { cueSamples: [], hitBall: null, hitPoint: null, targetSamples: [], cuePocket: null };
+
+    // 1. 同步狀態：所有球位置 / 速度 / 角速度
+    const cueIdx = this.balls.findIndex(b => b.isCue);
+    for (let i = 0; i < this.balls.length; i++) {
+      const rb = this.balls[i];
+      const sb = sbs[i];
+      if (!rb || rb.pocketed) {
+        sb.collisionResponse = false;
+        sb.position.set(100 + i * 0.5, -10, 0);
+        sb.velocity.setZero();
+        sb.angularVelocity.setZero();
+        sb.quaternion.set(0, 0, 0, 1);
+        continue;
+      }
+      sb.collisionResponse = true;
+      sb.position.copy(rb.body.position);
+      sb.velocity.copy(rb.body.velocity);
+      sb.angularVelocity.copy(rb.body.angularVelocity);
+      sb.quaternion.copy(rb.body.quaternion);
+      sb.wakeUp();
+    }
+
+    // 2. 對影子母球施加與真實擊球一致的衝量 + 旋轉
+    const cs = sbs[cueIdx];
+    const speed = impMag / BALL_MASS;
+    cs.velocity.set(ux * speed, 0, uz * speed);
+    const tx = uz, tz = -ux;
+    const rate = speed / BALL_R;
+    const TOP_GAIN = 2.0, SIDE = 1.2;
+    const wTop = rate * (1 + (spinY || 0) * TOP_GAIN);
+    const wYaw = rate * (spinX || 0) * SIDE;
+    cs.angularVelocity.set(tx * wTop, wYaw, tz * wTop);
+
+    // 3. 模擬
+    const dt = 1 / 120;
+    const MAX_STEPS = 150; // 1.25s 上限（瞄準預測夠用）
+    const SAMPLE_STEPS = 2; // 每 2 步取樣（60Hz 取樣密度）
+    const STOP_SPEED = 0.15; // 母球速度低於此即視為停止
+    const cueBefore = [{ x: cs.position.x, z: cs.position.z }];
+    const cueAfter = [];
+    const targetSamples = [];
+    let hitBall = null, hitPoint = null, targetIdx = -1;
+    let cuePocket = null;
+    const pockets = this.pocketPos;
+
+    const checkPocket = (body) => {
+      for (const p of pockets) {
+        const d = Math.hypot(body.position.x - p.x, body.position.z - p.z);
+        if (d < (p.r ?? POCKET_R)) return { x: p.x, z: p.z };
+      }
+      return null;
+    };
+
+    for (let step = 0; step < MAX_STEPS; step++) {
+      sw.step(dt);
+
+      // 偵測第一次球-球碰撞
+      if (hitBall === null) {
+        for (let i = 0; i < sbs.length; i++) {
+          if (i === cueIdx) continue;
+          const rb = this.balls[i];
+          if (!rb || rb.pocketed) continue;
+          const sb = sbs[i];
+          const d = Math.hypot(cs.position.x - sb.position.x, cs.position.z - sb.position.z);
+          if (d < BALL_R * 2 + 0.003) {
+            hitBall = rb;
+            hitPoint = { x: cs.position.x, z: cs.position.z };
+            targetIdx = i;
+            // 把接觸瞬間當作 before 最後一點、after 第一點
+            cueBefore.push({ x: hitPoint.x, z: hitPoint.z });
+            cueAfter.push({ x: hitPoint.x, z: hitPoint.z });
+            targetSamples.push({ x: sb.position.x, z: sb.position.z });
+            break;
+          }
+        }
+      }
+
+      if (step % SAMPLE_STEPS === 0) {
+        const pt = { x: cs.position.x, z: cs.position.z };
+        if (hitBall === null) cueBefore.push(pt);
+        else cueAfter.push(pt);
+        if (targetIdx >= 0) {
+          const ts = sbs[targetIdx];
+          targetSamples.push({ x: ts.position.x, z: ts.position.z });
+        }
+      }
+
+      // 母球入袋
+      const pk = checkPocket(cs);
+      if (pk) { cuePocket = pk; break; }
+
+      // 母球停下（含少許延遲避免剛出發誤判）
+      if (step > 15) {
+        const cueSpeed = Math.hypot(cs.velocity.x, cs.velocity.z);
+        if (cueSpeed < STOP_SPEED) break;
+      }
+    }
+
+    return { cueBefore, cueAfter, hitBall, hitPoint, targetSamples, cuePocket };
   }
 
   // 白球軌跡預測：回傳多段 segments 與終點 end
@@ -1272,7 +1663,8 @@ export class Game3D {
         end = { x: hit.p.x, z: hit.p.z, color: 0xff4444, dashed: false };
         break;
       }
-      // 反彈
+      // 反彈：經實測 cannon-es 在此組參數下非常接近完美鏡像反射（誤差 < 2°）
+      // 直接對稱翻轉法向分量；方向為單位向量故不需重新正規化
       if (hit.axis === "x") dx = -dx; else dz = -dz;
       x = ex; z = ez;
       if (bounce === MAX_BOUNCES) break;
@@ -1295,6 +1687,51 @@ export class Game3D {
     }
     if (this.powerLine) { this.scene.remove(this.powerLine); this.powerLine.geometry.dispose(); this.powerLine = null; }
     if (this.cueStick) this.cueStick.visible = false;
+  }
+
+  // 球桿動畫：拉桿 → 出桿 → 觸球時呼叫 onStrike
+  // ux, uz 為擊球方向（母球前進方向）；power 為 0~1
+  _animateShot(ux, uz, power, onStrike) {
+    if (this.shotInProgress || this._animating) return;
+    // 注意：不能在此設 shotInProgress，因為此時球都還沒動，主 loop 的 _allStill 會誤判為「桿已結束」提早觸發 _resolveShot
+    this._animating = true; // 專用鎖，_canAim 會檢查
+    this._clearAim();
+    const cp = this.cue.body.position;
+    const cx = cp.x, cz = cp.z;
+    const pullMax = 0.08 + Math.max(0, Math.min(1, power)) * 0.24; // 拉桿量
+    const pullStart = 0.03;
+    const pullTime = 500; // ms，拉桿
+    const strikeTime = 110; // ms，擊出
+    const t0 = performance.now();
+    let struck = false;
+    const easeOut = (t) => 1 - (1 - t) * (1 - t);
+    const easeIn  = (t) => t * t;
+    const tick = () => {
+      if (!this.cueStick) return;
+      const now = performance.now();
+      const el = now - t0;
+      let pull;
+      if (el < pullTime) {
+        const t = el / pullTime;
+        pull = pullStart + (pullMax - pullStart) * easeOut(t);
+      } else if (el < pullTime + strikeTime) {
+        const t = (el - pullTime) / strikeTime;
+        pull = pullMax - (pullMax - pullStart) * easeIn(t);
+      } else {
+        pull = pullStart;
+      }
+      this._placeCueStickAt(cx, cz, ux, uz, pull);
+      // 觸球瞬間（pull 接近 0）觸發擊球
+      if (!struck && el >= pullTime + strikeTime) {
+        struck = true;
+        if (this.cueStick) this.cueStick.visible = false;
+        this._animating = false;
+        if (onStrike) onStrike(); // 這裡才真正 _shoot，球才會動
+        return;
+      }
+      requestAnimationFrame(tick);
+    };
+    requestAnimationFrame(tick);
   }
 
   // ---------- 擊球 ----------
@@ -1632,6 +2069,7 @@ export class Game3D {
     this.firstHit = null;
     this.pocketedThisShot = [];
     this._rack();
+    this._buildShadowBalls();
     this._pushHud();
     if (this.mode === "ai" && this.currentPlayer === 2) {
       setTimeout(() => this._runAI(), 600);
@@ -1654,11 +2092,20 @@ export class Game3D {
     };
     // 讓 ai.js 內比較目標 ball 物件：以 number 比對
     const plan = planAIShotAdapter(world, this.difficulty);
+    let ix, iz;
     if (!plan) {
-      this._shoot((Math.random() - 0.5) * 0.4, (Math.random() - 0.5) * 0.4);
-      return;
+      ix = (Math.random() - 0.5) * 0.4;
+      iz = (Math.random() - 0.5) * 0.4;
+    } else {
+      ix = plan.ix;
+      iz = plan.iz;
     }
-    this._shoot(plan.ix, plan.iz);
+    // 依衝量估算力度（給 AI 球桿動畫使用）
+    const mag = Math.hypot(ix, iz);
+    const pw = Math.max(0.1, Math.min(1, mag / MAX_SHOT_IMPULSE));
+    const uMag = mag || 1;
+    const ux = ix / uMag, uz = iz / uMag;
+    this._animateShot(ux, uz, pw, () => this._shoot(ix, iz));
   }
 
   // ---------- HUD ----------
@@ -1809,6 +2256,7 @@ export class Game3D {
     this.camera.bottom = -viewH / 2 + yOffset;
     this.camera.updateProjectionMatrix();
     this.camera.lookAt(0, 0, 0);
+    this._positionPowerGauge(isPortrait);
   }
 
   destroy() {
