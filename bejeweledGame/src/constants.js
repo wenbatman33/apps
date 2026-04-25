@@ -66,24 +66,13 @@ export const TIMED_BONUS_SECONDS = 2;  // 每次成功配對補時
 export const TOP_N = 10;
 export const STORAGE_KEY = "bejeweled_scores_v1";
 
-// 寶石配色（飽和寶石色）
-export const GEM_COLORS = [
-  [230, 70,  80 ],   // 0 紅 ruby
-  [245, 150, 40 ],   // 1 橘 topaz
-  [245, 220, 60 ],   // 2 黃 citrine
-  [80,  210, 110],   // 3 綠 emerald
-  [80,  200, 240],   // 4 藍 sapphire (淡藍)
-  [170, 100, 230],   // 5 紫 amethyst
-  [240, 240, 250],   // 6 白 pearl
-];
-
-// 寶石形狀名稱（給繪製用）
-export const GEM_SHAPES = [
-  "square",   // 0 紅
-  "hex",      // 1 橘
-  "kite",     // 2 黃（風箏/菱形）
-  "octagon",  // 3 綠
-  "gem4",     // 4 藍（長菱形）
-  "triangle", // 5 紫
-  "circle",   // 6 白
+// 對應 assets/gems/ 內的圖檔名稱（7 種寶石）
+export const GEM_IMAGES = [
+  "8.png",   // 0 紅愛心
+  "6.png",   // 1 橘長方形
+  "2.png",   // 2 白珍珠
+  "5.png",   // 3 綠寶石
+  "1.png",   // 4 青鑽石
+  "4.png",   // 5 紫方形
+  "3.png",   // 6 彩虹寶石
 ];
