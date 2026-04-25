@@ -13,3 +13,6 @@ pokerGame/assets/**/*.psd
 
 # DS_Store
 **/.DS_Store
+
+# Claude Code 本地設定（不推上 repo）
+**/.claude/settings.local.json
