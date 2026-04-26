@@ -1594,6 +1594,122 @@ export class Game3D {
     return { cueBefore, cueAfter, hitBall, hitPoint, targetSamples, cuePocket };
   }
 
+  // AI 專用：模擬擊球到「所有球停下」，回報哪些球進袋、母球最終位置、第一次撞到的球
+  // 用於評估候選擊球的好壞（不畫圖、不取樣）
+  _simulateShotFull(ux, uz, impMag, spinY, spinX) {
+    const sw = this._shadowWorld;
+    const sbs = this._shadowBalls;
+    if (!sw || !sbs) return null;
+
+    const cueIdx = this.balls.findIndex(b => b.isCue);
+    for (let i = 0; i < this.balls.length; i++) {
+      const rb = this.balls[i];
+      const sb = sbs[i];
+      if (!rb || rb.pocketed) {
+        sb.collisionResponse = false;
+        sb.position.set(100 + i * 0.5, -10, 0);
+        sb.velocity.setZero();
+        sb.angularVelocity.setZero();
+        sb.quaternion.set(0, 0, 0, 1);
+        continue;
+      }
+      sb.collisionResponse = true;
+      sb.position.copy(rb.body.position);
+      sb.velocity.copy(rb.body.velocity);
+      sb.angularVelocity.copy(rb.body.angularVelocity);
+      sb.quaternion.copy(rb.body.quaternion);
+      sb.wakeUp();
+    }
+
+    const cs = sbs[cueIdx];
+    const speed = impMag / BALL_MASS;
+    cs.velocity.set(ux * speed, 0, uz * speed);
+    const tx = uz, tz = -ux;
+    const rate = speed / BALL_R;
+    const TOP_GAIN = 2.0, SIDE = 1.2;
+    const wTop = rate * (1 + (spinY || 0) * TOP_GAIN);
+    const wYaw = rate * (spinX || 0) * SIDE;
+    cs.angularVelocity.set(tx * wTop, wYaw, tz * wTop);
+
+    const dt = 1 / 120;
+    const MAX_STEPS = 600; // 5s 上限
+    const STOP_SPEED = 0.05;
+    const pockets = this.pocketPos;
+    const pocketed = new Set(); // numbers that pocketed during sim
+    let firstHit = null;
+    let cuePocketed = false;
+
+    // 標記哪些球索引「在影子世界中已進袋」(讓他們之後不再參與物理)
+    const pocketedShadow = new Array(sbs.length).fill(false);
+
+    for (let step = 0; step < MAX_STEPS; step++) {
+      sw.step(dt);
+
+      // 偵測第一顆撞到的非母球
+      if (firstHit === null) {
+        for (let i = 0; i < sbs.length; i++) {
+          if (i === cueIdx) continue;
+          if (pocketedShadow[i]) continue;
+          const rb = this.balls[i];
+          if (!rb || rb.pocketed) continue;
+          const sb = sbs[i];
+          const d = Math.hypot(cs.position.x - sb.position.x, cs.position.z - sb.position.z);
+          if (d < BALL_R * 2 + 0.003) {
+            firstHit = rb.number;
+            break;
+          }
+        }
+      }
+
+      // 檢查每顆球是否進袋
+      for (let i = 0; i < sbs.length; i++) {
+        if (pocketedShadow[i]) continue;
+        const rb = this.balls[i];
+        if (!rb || rb.pocketed) continue;
+        const sb = sbs[i];
+        for (const p of pockets) {
+          const d = Math.hypot(sb.position.x - p.x, sb.position.z - p.z);
+          if (d < (p.r ?? POCKET_R)) {
+            pocketedShadow[i] = true;
+            if (i === cueIdx) cuePocketed = true;
+            else pocketed.add(rb.number);
+            // 把進袋的球移開、停掉，避免影響後續模擬
+            sb.collisionResponse = false;
+            sb.position.set(100 + i * 0.5, -10, 0);
+            sb.velocity.setZero();
+            sb.angularVelocity.setZero();
+            break;
+          }
+        }
+      }
+
+      // 全部球停下？
+      if (step > 20) {
+        let allStill = true;
+        for (let i = 0; i < sbs.length; i++) {
+          if (pocketedShadow[i]) continue;
+          const sb = sbs[i];
+          const v = Math.hypot(sb.velocity.x, sb.velocity.z);
+          if (v > STOP_SPEED) { allStill = false; break; }
+        }
+        if (allStill) break;
+      }
+    }
+
+    // 回報所有非母球的最終位置
+    const finalPositions = {};
+    for (let i = 0; i < sbs.length; i++) {
+      const rb = this.balls[i];
+      if (!rb || rb.pocketed || pocketedShadow[i]) continue;
+      finalPositions[rb.number] = { x: sbs[i].position.x, z: sbs[i].position.z };
+    }
+    const cueFinal = cuePocketed
+      ? null
+      : { x: cs.position.x, z: cs.position.z };
+
+    return { firstHit, pocketed: Array.from(pocketed), cuePocketed, cueFinal, finalPositions };
+  }
+
   // 白球軌跡預測：回傳多段 segments 與終點 end
   _predictTrajectory(x0, z0, ux, uz) {
     const segments = [];
@@ -2091,7 +2207,9 @@ export class Game3D {
       pockets: this.pocketPos,
     };
     // 讓 ai.js 內比較目標 ball 物件：以 number 比對
-    const plan = planAIShotAdapter(world, this.difficulty);
+    const simulate = (ux, uz, impMag, spinY = 0, spinX = 0) =>
+      this._simulateShotFull(ux, uz, impMag, spinY, spinX);
+    const plan = planAIShotAdapter(world, this.difficulty, simulate);
     let ix, iz;
     if (!plan) {
       ix = (Math.random() - 0.5) * 0.4;
@@ -2343,7 +2461,7 @@ export class Game3D {
   }
 }
 
-// 轉接器：ai.js 接收 world 物件（純資料）
-function planAIShotAdapter(world, diff) {
-  return planAIShot(world, diff);
+// 轉接器：ai.js 接收 world 物件（純資料）+ 模擬回呼
+function planAIShotAdapter(world, diff, simulate) {
+  return planAIShot(world, diff, simulate);
 }
