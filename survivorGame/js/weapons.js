@@ -108,6 +108,52 @@ const WEAPONS = {
         life: 3500
       };
     }
+  },
+  blades: {
+    name: '光劍環',
+    desc: '繞身旋轉光劍，碰觸即傷害',
+    type: 'orbit',
+    maxLevel: 5,
+    levelStat(level) {
+      return {
+        count: 2 + level,                 // 同時環繞數量
+        radius: 90 + level * 6,
+        rotSpeed: 2.4 + level * 0.15,     // 弧度/秒
+        damage: 8 + level * 4,
+        hitInterval: 380                  // 同一隻敵人受擊間隔
+      };
+    }
+  },
+  garlic: {
+    name: '大蒜光環',
+    desc: '玩家身邊持續傷害光環',
+    type: 'aura',
+    maxLevel: 5,
+    levelStat(level) {
+      return {
+        radius: 70 + level * 12,
+        dps: 8 + level * 5,
+        tickInterval: 350                 // 每多少 ms 結算一次
+      };
+    }
+  },
+  boomerang: {
+    name: '迴旋鏢',
+    desc: '飛出後折返再砍一刀',
+    type: 'boomerang',
+    maxLevel: 5,
+    levelStat(level) {
+      return {
+        damage: 10 + level * 4,
+        cooldown: Math.max(700, 1400 - level * 130),
+        count: 1 + Math.floor(level / 2),
+        outSpeed: 520,
+        outTime: 380,                     // 飛出時長 ms
+        returnSpeed: 460,
+        spread: 0.45,
+        hitInterval: 250                  // 對同敵間隔（迴旋多次擦過）
+      };
+    }
   }
 };
 
