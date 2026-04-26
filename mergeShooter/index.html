@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<title>Merge Shooter 合成射擊</title>
+<link rel="stylesheet" href="style.css">
+<style>
+  /* 字型 — 直接從素材包載入 */
+  @font-face {
+    font-family: 'PassionOne';
+    src: url('assets/font/Alfa_Slab_One,Noto_Sans_TC,Passion_One,Roboto/Passion_One/PassionOne-Bold.ttf') format('truetype');
+    font-weight: bold;
+  }
+  @font-face {
+    font-family: 'AlfaSlabOne';
+    src: url('assets/font/Alfa_Slab_One,Noto_Sans_TC,Passion_One,Roboto/Alfa_Slab_One/AlfaSlabOne-Regular.ttf') format('truetype');
+  }
+</style>
+</head>
+<body>
+  <div id="stage">
+    <div id="game"></div>
+  </div>
+
+  <!-- Phaser 3 -->
+  <script src="https://cdn.jsdelivr.net/npm/phaser@3.80.1/dist/phaser.min.js"></script>
+
+  <script src="js/audio.js"></script>
+  <script src="js/data.js"></script>
+  <script src="js/preloadScene.js"></script>
+  <script src="js/landingScene.js"></script>
+  <script src="js/gameScene.js"></script>
+  <script src="js/uiScene.js"></script>
+  <script src="js/popupScene.js"></script>
+  <script src="js/main.js"></script>
+</body>
+</html>

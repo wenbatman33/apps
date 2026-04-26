@@ -47,6 +47,14 @@
       "port": 8770,
       "autoPort": false,
       "cwd": "survivorGame"
+    },
+    {
+      "name": "mergeShooter",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": ["-m", "http.server", "8771"],
+      "port": 8771,
+      "autoPort": false,
+      "cwd": "mergeShooter"
     }
   ]
 }
