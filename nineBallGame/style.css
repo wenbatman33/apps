@@ -100,50 +100,130 @@ html, body, #app {
   font-size: 14px;
 }
 
-/* ===== HUD ===== */
+/* ===== HUD（grid：按鈕左 / 分數中 / 球列下） ===== */
 .hud {
   position: absolute;
   top: 0; left: 0; right: 0;
-  padding: 10px 16px;
+  padding: 8px 12px;
   background: linear-gradient(180deg, rgba(0,0,0,0.7), rgba(0,0,0,0));
-  display: flex;
-  justify-content: space-between;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  grid-template-areas:
+    "buttons score spacer"
+    "balls balls balls";
   align-items: center;
+  column-gap: 8px;
+  row-gap: 6px;
   pointer-events: none;
   z-index: 5;
-  font-size: clamp(14px, 2vw, 18px);
-  gap: 12px;
+  font-size: clamp(13px, 1.8vw, 16px);
 }
-.hud .score { font-weight: bold; font-size: clamp(18px, 2.8vw, 24px); }
-.hud .tag {
-  padding: 4px 10px;
-  border-radius: 10px;
-  background: rgba(0,0,0,0.5);
-  margin: 0 4px;
-}
-.hud .turn { color: #f7c300; font-weight: bold; }
-.hud .target {
-  display: inline-flex;
-  align-items: center;
+.hud .btn-bar {
+  grid-area: buttons;
+  display: flex;
   gap: 6px;
 }
-.hud .target .ball {
-  display: inline-block;
-  width: 24px; height: 24px; border-radius: 50%;
-  background: #f7c300;
-  color: #111;
-  font-size: 14px; font-weight: bold;
-  text-align: center; line-height: 24px;
-  border: 2px solid #fff;
-}
+.hud .score-line { grid-area: score; justify-self: center; }
+.hud .ball-row   { grid-area: balls;  justify-self: center; }
 .hud .back {
   pointer-events: auto;
   cursor: pointer;
-  padding: 6px 12px;
-  background: rgba(11,106,58,0.8);
-  border-radius: 8px;
+  padding: 5px 10px;
+  background: rgba(11,106,58,0.85);
+  border-radius: 6px;
   border: 1px solid #1ca85a;
   color: #fff;
+  font-size: 13px;
+}
+.hud .score-line {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.hud .score-num {
+  font-weight: 700;
+  font-size: clamp(18px, 2.6vw, 22px);
+  color: #fff;
+  letter-spacing: 1px;
+}
+.hud .pn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: #cfd8d2;
+  transition: color 0.25s;
+}
+.hud .pn .pname {
+  max-width: 110px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.hud .pn.active {
+  color: #f7c300;
+  font-weight: 700;
+  text-shadow: 0 0 6px rgba(247,195,0,0.6);
+}
+.hud .miss {
+  display: flex;
+  gap: 3px;
+  align-items: center;
+}
+.hud .miss-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 30% 30%, #555, #222);
+  border: 1px solid rgba(255,255,255,0.25);
+  opacity: 0.55;
+}
+.hud .miss-dot.on {
+  background: radial-gradient(circle at 30% 30%, #ffe178 0%, #f7c300 50%, #b07000 100%);
+  opacity: 1;
+  box-shadow: 0 0 5px rgba(255,200,80,0.85);
+  border-color: rgba(255,255,255,0.5);
+}
+.hud .miss-dot.warn.on {
+  background: radial-gradient(circle at 30% 30%, #ffb0b0 0%, #ff4040 50%, #a01818 100%);
+  box-shadow: 0 0 7px rgba(255,80,80,0.95);
+}
+
+/* ===== 1-9 球進度列 ===== */
+.hud .ball-row {
+  display: flex;
+  gap: 3px;
+  padding: 3px 6px;
+  background: rgba(0,0,0,0.4);
+  border-radius: 16px;
+  border: 1px solid rgba(255,255,255,0.12);
+}
+.hud .ball-icon {
+  width: clamp(20px, 4vw, 28px);
+  height: clamp(20px, 4vw, 28px);
+  border-radius: 50%;
+  transition: filter 0.2s, opacity 0.2s, transform 0.2s;
+}
+.hud .ball-icon.sunk {
+  filter: grayscale(1) brightness(0.4);
+  opacity: 0.5;
+}
+.hud .ball-icon.target-now {
+  box-shadow: 0 0 8px rgba(247,195,0,0.95), 0 0 16px rgba(247,195,0,0.6);
+  transform: scale(1.12);
+}
+.hud .score-mid {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 56px;
+}
+.hud .score-num {
+  font-weight: bold;
+  font-size: clamp(18px, 2.8vw, 24px);
+}
+.hud .race-to {
+  font-size: 11px;
+  color: #5aa079;
 }
 
 /* ===== 結束結果 / 提示覆層 ===== */

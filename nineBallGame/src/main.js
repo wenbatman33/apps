@@ -169,30 +169,58 @@ function stopGame() {
 }
 
 // ---------- HUD ----------
+function avatarFor(name, isP1) {
+  // 簡易隨機頭像：依名字 hash 取 emoji
+  const emojis = ["😀", "😎", "🤠", "🥷", "🤖", "👾", "🦊", "🐯", "🐼", "🦁", "🐸", "🐵"];
+  const idx = (hash32(name || (isP1 ? "P1" : "P2")) % emojis.length);
+  return emojis[idx];
+}
+
 function renderHud(info) {
   $hud.innerHTML = "";
   const p1Turn = info.currentPlayer === 1;
   const isPractice = state.mode === "practice";
+
+  const missDots = (cnt) => {
+    // 兩顆球：累積到第 2 顆亮 = 下次失誤對方得 1 分
+    const dots = [];
+    for (let i = 0; i < 2; i++) {
+      const cls = "miss-dot" + (i < cnt ? " on" : "") + (i === 1 && cnt >= 2 ? " warn" : "");
+      dots.push(el("span", { className: cls }));
+    }
+    return el("div", { className: "miss" }, ...dots);
+  };
+
+  const makeName = (name, isMe, isActive, missCnt) => {
+    return el("span", { className: "pn" + (isActive ? " active" : "") },
+      el("span", { className: "pname" }, name || (isMe ? "P1" : "P2")),
+      isPractice ? null : missDots(missCnt || 0),
+    );
+  };
+
+  const ballRow = () => {
+    if (!info.ballsState || isPractice) return null;
+    return el("div", { className: "ball-row" },
+      ...info.ballsState.map(({ n, pocketed }) =>
+        el("img", {
+          className: "ball-icon" + (pocketed ? " sunk" : "") + (n === info.target ? " target-now" : ""),
+          src: `assets/balls/${String(n).padStart(2, "0")}.png`,
+        })
+      )
+    );
+  };
+
   $hud.append(
-    el("div", {},
-      el("span", { className: p1Turn ? "turn" : "" }, info.p1),
-      isPractice ? null : el("span", { className: "score" }, ` ${info.score.p1} - ${info.score.p2} `),
-      isPractice ? null : el("span", { className: !p1Turn ? "turn" : "" }, info.p2),
-    ),
-    el("div", { className: "target" },
-      info.target ? el("img", {
-        src: `assets/${info.target}ball.png`,
-        style: {
-          width: "28px", height: "28px", borderRadius: "50%",
-          boxShadow: "0 1px 3px rgba(0,0,0,.5)", verticalAlign: "middle",
-        },
-      }) : null,
-      info.ballInHand ? el("span", { className: "tag", style: { color: "#f7c300" } }, "自由球") : null,
-    ),
-    el("div", {},
-      el("button", { className: "back", onClick: () => game?.openSpinPicker() }, "擊球點"),
+    el("div", { className: "btn-bar" },
       el("button", { className: "back", onClick: () => { Net.leave(); showMenu(); } }, "返回"),
+      el("button", { className: "back", onClick: () => game?.openSpinPicker() }, "擊球點"),
     ),
+    el("div", { className: "score-line" },
+      makeName(info.p1, true, p1Turn, info.miss?.p1),
+      isPractice ? null : el("span", { className: "score-num" }, `${info.score.p1} : ${info.score.p2}`),
+      isPractice ? null : makeName(info.p2, false, !p1Turn, info.miss?.p2),
+    ),
+    ballRow(),
   );
 }
 

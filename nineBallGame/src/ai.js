@@ -16,6 +16,18 @@ export function planAIShot(world, difficulty = "normal") {
   const { x: cx, z: cz } = world.cue.pos;
   const { x: tx, z: tz } = target.pos;
 
+  // 預設安全擊球：直線朝目標球（即使被擋，也保證認真攻擊最低號球，不會空桿）
+  const safeDx = tx - cx, safeDz = tz - cz;
+  const safeLen = Math.hypot(safeDx, safeDz) || 1;
+  const safe = {
+    score: -1e9,
+    uCx: safeDx / safeLen,
+    uCz: safeDz / safeLen,
+    ccLen: safeLen,
+    angle: 0,
+    isSafety: true,
+  };
+
   let best = null;
   for (const p of world.pockets) {
     const tpx = p.x - tx, tpz = p.z - tz;
@@ -45,10 +57,12 @@ export function planAIShot(world, difficulty = "normal") {
     score -= ccLen * 10;
 
     if (!best || score > best.score) {
-      best = { score, uCx, uCz, ccLen, angle };
+      best = { score, uCx, uCz, ccLen, tpLen, angle };
     }
   }
-  if (!best) return null;
+  // 安全擊球退路：困難模式只在「兩端皆被擋」時才使用（讓 AI 仍盡量試袋）
+  const safetyThreshold = difficulty === "hard" ? -1800 : -500;
+  if (!best || best.score < safetyThreshold) best = safe;
 
   // 難度擾動
   let aimErr, powerFactor;
@@ -59,8 +73,16 @@ export function planAIShot(world, difficulty = "normal") {
     aimErr = (Math.random() - 0.5) * 0.10;
     powerFactor = 0.55 + Math.random() * 0.3;
   } else {
-    aimErr = (Math.random() - 0.5) * 0.03;
-    powerFactor = 0.65 + Math.random() * 0.25;
+    // 困難 = 神準（誤差近 0、力度依距離自適應，盡量小力避免白球失控）
+    aimErr = (Math.random() - 0.5) * 0.004;
+    // 依「母球→撞點 + 撞點→袋口」總距離決定力度（夠到就好；偏小避免母球進袋）
+    const totalDist = (best.ccLen || 0) + (best.tpLen || 0);
+    powerFactor = Math.max(0.26, Math.min(0.5, 0.22 + totalDist * 0.10));
+  }
+  // 安全擊球時降低力度（避免亂炸） + 減少誤差
+  if (best.isSafety) {
+    aimErr *= 0.3;
+    powerFactor = difficulty === "hard" ? 0.5 : 0.35 + Math.random() * 0.2;
   }
   const c = Math.cos(aimErr), s = Math.sin(aimErr);
   const ux = best.uCx * c - best.uCz * s;

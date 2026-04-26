@@ -8,6 +8,7 @@ import {
   CUSHION_RESTITUTION, LINEAR_DAMPING, ANGULAR_DAMPING, MIN_SPEED,
   MAX_SHOT_IMPULSE, AIM_MAX_DRAG_PX,
   BALL_COLORS, STRIPED,
+  KITCHEN_LINE_X, PLACE_LOCK_MS, MISS_LIMIT,
 } from "./constants.js";
 import { lowestBallOnTable, judgeShot } from "./rules.js";
 import { planAIShot } from "./ai.js";
@@ -78,6 +79,9 @@ export class Game3D {
     this.score = { p1: 0, p2: 0 };
     this.currentPlayer = 1;
     this.ballInHand = false;
+    this.isBreakShot = true;       // 開球桿（母球須在開球線左側）
+    this.placeLockUntil = 0;       // 自由球擺位後鎖定時間（ms 時間戳）
+    this.missCount = { p1: 0, p2: 0 }; // 連續空桿失誤計數
     this.shotInProgress = false;
     this._animating = false; // AI 球桿動畫進行中（不得干擾 _allStill 判定）
     // 兩段式出桿：aim（選方向） → power（拖曳決定力度） → 放開出桿
@@ -114,9 +118,13 @@ export class Game3D {
     this._lastT = performance.now();
     requestAnimationFrame(this._loop);
 
+    // 開球：玩家可在頭區自由擺白球
+    if (this.mode !== "practice") {
+      this.ballInHand = true;
+    }
     this._pushHud();
     if (this.mode === "ai" && this.currentPlayer === 2) {
-      setTimeout(() => this._runAI(), 600);
+      setTimeout(() => this._runAI(), 1200);
     }
   }
 
@@ -345,6 +353,16 @@ export class Game3D {
     this._composeTableTexture(tableMesh);
 
     this._buildCushions();
+    this._buildKitchenLine();
+  }
+
+  // 開球線改畫在桌面貼圖上（_composeTableTexture 內處理），這裡保留空殼以兼容 _loop
+  _buildKitchenLine() {
+    this._kitchenLine = { visible: true };
+  }
+
+  _inKitchen(x, z) {
+    return this._inPlay(x, z) && x < KITCHEN_LINE_X;
   }
 
   async _composeTableTexture(tableMesh) {
@@ -366,40 +384,18 @@ export class Game3D {
       return;
     }
 
-    // 以 layer 原生尺寸為畫布，避免任何縮放失真
-    const cw = layer1.width;
-    const ch = layer1.height;
+    // 固定使用原始座標系 1240×697（與 layer_2、滾動區/袋口常數對齊）
+    // 若 layer_1 尺寸不同，拉伸繪製到此 canvas，避免比例跑掉造成視覺變形
+    const cw = 1240;
+    const ch = 697;
     const canvas = document.createElement("canvas");
     canvas.width = cw; canvas.height = ch;
     const g = canvas.getContext("2d");
 
-    // 1) 底層：layer_1（灰階毛氈 + 海綿 + 袋口暗影）
-    g.drawImage(layer1, 0, 0);
+    // 1) 底層：layer_1（已是上色完成的桌面圖）
+    g.drawImage(layer1, 0, 0, cw, ch);
 
-    // 2) 把灰階毛氈像素上色為綠（避開很暗的袋口/陰影與全白）
-    try {
-      const img = g.getImageData(0, 0, cw, ch);
-      const d = img.data;
-      for (let i = 0; i < d.length; i += 4) {
-        const r = d[i], gg = d[i + 1], b = d[i + 2], a = d[i + 3];
-        if (a === 0) continue;
-        const mx = Math.max(r, gg, b), mn = Math.min(r, gg, b);
-        const chroma = mx - mn;
-        // 近似灰階 & 非全黑 → 當作毛氈/海綿區域，依亮度上綠
-        if (chroma < 18 && mx > 30 && mx < 240) {
-          const l = mx / 255;
-          const noise = (Math.random() - 0.5) * 14;
-          d[i]     = Math.max(0, Math.min(255, 18 * l * 1.2 + noise));
-          d[i + 1] = Math.max(0, Math.min(255, 205 * l + noise));
-          d[i + 2] = Math.max(0, Math.min(255, 80 * l + noise * 0.6));
-        }
-      }
-      g.putImageData(img, 0, 0);
-    } catch (e) {
-      console.warn("毛氈上色失敗", e);
-    }
-
-    // 3) 疊上 layer_2（木框 + 鉻框）
+    // 2) 疊上 layer_2（木框 + 鉻框，固定 1240×697）
     g.drawImage(layer2, 0, 0);
 
     // 4) DEBUG: 加 ?dev=1 才顯示「滾動範圍」與「球洞區域」（驗證對齊用）
@@ -1081,7 +1077,7 @@ export class Game3D {
     if (this.mode === "practice") {
       const target = this._createBall(1, HX * 0.5, 0);
       this.balls.push(target);
-      this.cue = this._createBall(0, -HX * 0.5, 0);
+      this.cue = this._createBall(0, -HX * 0.75, 0);
       this.balls.push(this.cue);
       return;
     }
@@ -1114,7 +1110,7 @@ export class Game3D {
       this.balls.push(this._createBall(flat[i], coords[i].x, coords[i].z));
     }
     // 白球（頭區）
-    this.cue = this._createBall(0, -HX * 0.5, 0);
+    this.cue = this._createBall(0, -HX * 0.75, 0);
     this.balls.push(this.cue);
   }
 
@@ -1148,6 +1144,8 @@ export class Game3D {
     if (this._animating) return false;
     if (this.mode === "ai" && this.currentPlayer === 2) return false;
     if (this.mode === "net" && this.currentPlayer !== this.myPlayerNum) return false;
+    // 擺位鎖定中：1 秒內仍可調整位置但不可擊球
+    if (this.placeLockUntil && performance.now() < this.placeLockUntil) return false;
     return true;
   }
 
@@ -1173,13 +1171,15 @@ export class Game3D {
     }
 
     if (this.ballInHand) {
-      if (this._inPlay(w.x, w.z) && !this._overlaps(w.x, w.z)) {
-        this._placeCue(w.x, w.z);
-        this.ballInHand = false;
-        this._pushHud();
-        if (this.mode === "net") this._netSendPlace(w.x, w.z);
-        return;
+      // 自由球用拖曳模式：點到母球才開始拖動
+      const cp = this.cue.body.position;
+      const ddx = w.x - cp.x, ddz = w.z - cp.z;
+      const grabR = BALL_R * 3;          // 寬鬆抓取範圍（手機友善）
+      if (ddx * ddx + ddz * ddz < grabR * grabR) {
+        this._cueDragging = true;
       }
+      // 自由球期間一律不進入瞄準
+      return;
     }
 
     // 兩段式：Phase 1 aim（選方向）、Phase 2 power（拖曳決定力度）
@@ -1197,6 +1197,15 @@ export class Game3D {
   }
 
   _move(e) {
+    if (this._cueDragging) {
+      const w = this._toWorld(e);
+      if (!w) return;
+      const okZone = this.isBreakShot ? this._inKitchen(w.x, w.z) : this._inPlay(w.x, w.z);
+      if (okZone && !this._overlaps(w.x, w.z)) {
+        this._placeCue(w.x, w.z);
+      }
+      return;
+    }
     if (this.dragBall) {
       const w = this._toWorld(e);
       if (!w) return;
@@ -1227,6 +1236,17 @@ export class Game3D {
   }
 
   _up(e) {
+    if (this._cueDragging) {
+      this._cueDragging = false;
+      // 定位後鎖定 1 秒才能擊球（避免手機誤觸）
+      this.placeLockUntil = performance.now() + PLACE_LOCK_MS;
+      this._pushHud();
+      if (this.mode === "net") {
+        const cp = this.cue.body.position;
+        this._netSendPlace(cp.x, cp.z);
+      }
+      return;
+    }
     if (this.dragBall) {
       this.dragBall.body.velocity.set(0, 0, 0);
       this.dragBall.body.angularVelocity.set(0, 0, 0);
@@ -1700,8 +1720,8 @@ export class Game3D {
     const cx = cp.x, cz = cp.z;
     const pullMax = 0.08 + Math.max(0, Math.min(1, power)) * 0.24; // 拉桿量
     const pullStart = 0.03;
-    const pullTime = 500; // ms，拉桿
-    const strikeTime = 110; // ms，擊出
+    const pullTime = 750; // ms，拉桿
+    const strikeTime = 140; // ms，擊出
     const t0 = performance.now();
     let struck = false;
     const easeOut = (t) => 1 - (1 - t) * (1 - t);
@@ -1737,6 +1757,9 @@ export class Game3D {
   // ---------- 擊球 ----------
   _shoot(ix, iz) {
     this.shotInProgress = true;
+    this.ballInHand = false;
+    this.placeLockUntil = 0;
+    this.isBreakShot = false;
     this.firstHit = null;
     this.pocketedThisShot = [];
     this.targetAtShot = lowestBallOnTable(this.balls);
@@ -1862,6 +1885,7 @@ export class Game3D {
     this.pocketedThisShot.push(b.number);
     try { this.world.removeBody(b.body); } catch {}
     Sfx.playPocket();
+    this._pushHud();
     if (b.disc) b.disc.visible = false;
     // 白球進袋：不做下沉動畫（_resolveShot 會立即復活，避免狀態衝突）
     if (b.isCue) {
@@ -1929,6 +1953,16 @@ export class Game3D {
         this._resolveShot();
       }
     }
+
+    // 擺位鎖定到期：自動解除自由球狀態（讓玩家可瞄準擊球）
+    if (this.ballInHand && this.placeLockUntil > 0 && performance.now() >= this.placeLockUntil) {
+      this.ballInHand = false;
+      this.placeLockUntil = 0;
+      this._pushHud();
+    }
+
+    // 開球線：只在開球階段顯示
+    if (this._kitchenLine) this._kitchenLine.visible = !!this.isBreakShot;
 
     this.renderer.render(this.scene, this.camera);
     this._rafId = requestAnimationFrame(this._loop);
@@ -2033,6 +2067,32 @@ export class Game3D {
       return;
     }
 
+    // 連續空桿失誤：累計 MISS_LIMIT 次 → 對方贏一分（重新擺局）
+    const isMiss = this.firstHit == null;
+    const key = this.currentPlayer === 1 ? "p1" : "p2";
+    if (isMiss) this.missCount[key]++; else this.missCount[key] = 0;
+    const triggeredMissPenalty = this.missCount[key] >= MISS_LIMIT;
+
+    if (triggeredMissPenalty) {
+      const oppKey = key === "p1" ? "p2" : "p1";
+      this.score[oppKey]++;
+      this.missCount.p1 = 0;
+      this.missCount.p2 = 0;
+      this.onToast(`${who} 連續 ${MISS_LIMIT} 次空桿，對方得 1 分！`);
+      if (this.score.p1 >= this.raceTo || this.score.p2 >= this.raceTo) {
+        this._pushHud();
+        Sfx.playWin();
+        this.onMatchEnd({ score: this.score, winner: this.score.p1 > this.score.p2 ? 1 : 2 });
+        return;
+      }
+      // 由勝方開球（對方）
+      this.currentPlayer = key === "p1" ? 2 : 1;
+      setTimeout(() => this._newRack(), 900);
+      this._pushHud();
+      if (this.mode === "net" && this._wasMyShot) this._netSendSnapshot();
+      return;
+    }
+
     if (res.foul) {
       this.currentPlayer = this.currentPlayer === 1 ? 2 : 1;
       this.ballInHand = true;
@@ -2044,7 +2104,7 @@ export class Game3D {
     if (this.mode === "net" && this._wasMyShot) this._netSendSnapshot();
 
     if (this.mode === "ai" && this.currentPlayer === 2) {
-      setTimeout(() => this._runAI(), 600);
+      setTimeout(() => this._runAI(), 1500);
     }
   }
 
@@ -2065,22 +2125,35 @@ export class Game3D {
 
   _newRack() {
     this.currentPlayer = this.currentPlayer; // 輸家或贏家先開？簡化：維持現狀（贏家續）
-    this.ballInHand = false;
+    this.isBreakShot = true;
+    this.ballInHand = true;            // 重新擺局時，開球者擁有自由球
+    this.placeLockUntil = 0;
+    this.missCount.p1 = 0;
+    this.missCount.p2 = 0;
     this.firstHit = null;
     this.pocketedThisShot = [];
     this._rack();
     this._buildShadowBalls();
     this._pushHud();
     if (this.mode === "ai" && this.currentPlayer === 2) {
-      setTimeout(() => this._runAI(), 600);
+      setTimeout(() => this._runAI(), 1500);
     }
   }
 
   // ---------- AI ----------
   _runAI() {
+    // 必須等所有球完全靜止才能開始（避免在動的球上擊球）
+    if (this.shotInProgress || this._animating || !this._allStill()) {
+      setTimeout(() => this._runAI(), 200);
+      return;
+    }
     if (this.ballInHand) {
-      this._placeCue(-HX * 0.5, 0);
+      // 開球桿擺於頭區中央偏後；非開球時擺在標準頭區位置
+      const placeX = this.isBreakShot ? KITCHEN_LINE_X - 0.25 : -HX * 0.5;
+      this._placeCue(placeX, 0);
       this.ballInHand = false;
+      this.placeLockUntil = 0;
+      this._pushHud();
     }
     const world = {
       balls: this.balls.map(b => ({
@@ -2090,12 +2163,11 @@ export class Game3D {
       cue: { pos: { x: this.cue.body.position.x, z: this.cue.body.position.z } },
       pockets: this.pocketPos,
     };
-    // 讓 ai.js 內比較目標 ball 物件：以 number 比對
     const plan = planAIShotAdapter(world, this.difficulty);
     let ix, iz;
     if (!plan) {
-      ix = (Math.random() - 0.5) * 0.4;
-      iz = (Math.random() - 0.5) * 0.4;
+      // 找不到目標時的最後保險：朝桌子中心緩擊（不亂打方向）
+      ix = 0.2; iz = 0;
     } else {
       ix = plan.ix;
       iz = plan.iz;
@@ -2105,7 +2177,10 @@ export class Game3D {
     const pw = Math.max(0.1, Math.min(1, mag / MAX_SHOT_IMPULSE));
     const uMag = mag || 1;
     const ux = ix / uMag, uz = iz / uMag;
-    this._animateShot(ux, uz, pw, () => this._shoot(ix, iz));
+    // 先停頓「思考」一下再揮桿，節奏更自然
+    setTimeout(() => {
+      this._animateShot(ux, uz, pw, () => this._shoot(ix, iz));
+    }, 800);
   }
 
   // ---------- HUD ----------
@@ -2121,6 +2196,12 @@ export class Game3D {
       p1 = this.playerName;
       p2 = this.mode === "ai" ? `AI (${this.difficulty})` : "對手";
     }
+    // 1-9 球的進袋狀態
+    const ballsState = [];
+    for (let n = 1; n <= 9; n++) {
+      const b = this.balls.find(x => x.number === n);
+      ballsState.push({ n, pocketed: b ? !!b.pocketed : true });
+    }
     this.onHudChange({
       raceTo: this.raceTo,
       p1, p2,
@@ -2128,6 +2209,8 @@ export class Game3D {
       currentPlayer: this.currentPlayer,
       target: lowestBallOnTable(this.balls),
       ballInHand: this.ballInHand,
+      miss: { p1: this.missCount.p1, p2: this.missCount.p2 },
+      ballsState,
     });
   }
 

@@ -23,6 +23,16 @@ export const MIN_SPEED = 0.10;         // 低於此速度視為靜止
 export const MAX_SHOT_IMPULSE = 0.9;   // 最大衝量 (N·s)
 export const AIM_MAX_DRAG_PX = 320;    // 拖曳最大像素
 
+// 開球線：母球可在 x < KITCHEN_LINE_X 的區域自由擺位
+// (TABLE_LEN/2 = 1.27, 取頭區 1/4 桌長處 ≈ -0.635)
+export const KITCHEN_LINE_X = -TABLE_LEN / 4;
+
+// 自由球擺位後鎖定時間 (ms)：避免手機誤觸
+export const PLACE_LOCK_MS = 1000;
+
+// 連續失誤達此次數，對方贏一分
+export const MISS_LIMIT = 3;
+
 // 搶局
 export const RACE_OPTIONS = [7, 9, 11];
 
