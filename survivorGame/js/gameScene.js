@@ -91,15 +91,15 @@ class GameScene extends Phaser.Scene {
     this.joyStick = this.add.circle(0, 0, radius * 0.45, 0xffffff, 0.3).setScrollFactor(0).setDepth(101).setVisible(false);
 
     this.input.on('pointerdown', (p) => {
-      if (p.x < this.W / 2) { // 左半邊才啟用搖桿
-        this.joystick.active = true;
-        this.joystick.baseX = p.x;
-        this.joystick.baseY = p.y;
-        this.joystick.stickX = p.x;
-        this.joystick.stickY = p.y;
-        this.joyBase.setPosition(p.x, p.y).setVisible(true);
-        this.joyStick.setPosition(p.x, p.y).setVisible(true);
-      }
+      // 畫面任意位置皆可啟用搖桿
+      this.joystick.active = true;
+      this.joystick.pointerId = p.id;
+      this.joystick.baseX = p.x;
+      this.joystick.baseY = p.y;
+      this.joystick.stickX = p.x;
+      this.joystick.stickY = p.y;
+      this.joyBase.setPosition(p.x, p.y).setVisible(true);
+      this.joyStick.setPosition(p.x, p.y).setVisible(true);
     });
     this.input.on('pointermove', (p) => {
       if (!this.joystick.active || !p.isDown) return;
@@ -327,16 +327,18 @@ class GameScene extends Phaser.Scene {
   endGame() {
     this.gameOver = true;
     this.physics.pause();
-    const g = this.add.container(this.cameras.main.midPoint.x, this.cameras.main.midPoint.y).setDepth(200);
-    const panel = this.add.rectangle(0, 0, 300, 200, 0x000000, 0.8).setStrokeStyle(2, 0xff5577);
-    const t1 = this.add.text(0, -50, 'GAME OVER', { fontSize: '32px', color: '#ff5577', fontStyle: 'bold' }).setOrigin(0.5);
-    const t2 = this.add.text(0, 0, `存活 ${Math.floor(this.elapsed / 1000)} 秒\n等級 ${this.player.level}`, { fontSize: '18px', color: '#fff', align: 'center' }).setOrigin(0.5);
-    const btn = this.add.text(0, 60, '重新開始', { fontSize: '22px', color: '#4fc3ff', backgroundColor: '#222', padding: { x: 16, y: 8 } }).setOrigin(0.5).setInteractive({ useHandCursor: true });
-    btn.on('pointerdown', () => this.scene.restart());
-    g.add([panel, t1, t2, btn]);
-    g.setScrollFactor(0);
-    // 用 camera fixed 座標
-    g.x = this.W / 2;
-    g.y = this.H / 2;
+    const cx = this.W / 2;
+    const cy = this.H / 2;
+    // 不用 container，直接把元素加在固定螢幕座標，避免 container 內 setInteractive 的 hit test 異常
+    this.add.rectangle(cx, cy, 300, 200, 0x000000, 0.8).setStrokeStyle(2, 0xff5577).setScrollFactor(0).setDepth(200);
+    this.add.text(cx, cy - 50, 'GAME OVER', { fontSize: '32px', color: '#ff5577', fontStyle: 'bold' }).setOrigin(0.5).setScrollFactor(0).setDepth(201);
+    this.add.text(cx, cy, `存活 ${Math.floor(this.elapsed / 1000)} 秒\n等級 ${this.player.level}`, { fontSize: '18px', color: '#fff', align: 'center' }).setOrigin(0.5).setScrollFactor(0).setDepth(201);
+    const btn = this.add.text(cx, cy + 60, '重新開始', { fontSize: '22px', color: '#4fc3ff', backgroundColor: '#222', padding: { x: 16, y: 8 } })
+      .setOrigin(0.5).setScrollFactor(0).setDepth(201)
+      .setInteractive({ useHandCursor: true });
+    btn.on('pointerdown', (pointer, lx, ly, event) => {
+      if (event && event.stopPropagation) event.stopPropagation();
+      this.scene.restart();
+    });
   }
 }
