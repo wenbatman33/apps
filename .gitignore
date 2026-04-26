@@ -17,6 +17,10 @@ pokerGame/assets/**/*.psd
 # Claude Code 本地設定（不推上 repo）
 **/.claude/settings.local.json
 
-# mergeShooter: 本地 symlink 與大型 BGM 檔案不入庫
-mergeShooter/assets
+# mergeShooter: 排除超大字型集合與未使用素材(保留 Png/ 與 fonts_used/)
+mergeShooter/assets/font/
+mergeShooter/assets/Spine/
+mergeShooter/assets/Json Atlas/
+mergeShooter/assets/mp3/
+mergeShooter/assets/License.txt
 mergeShooter/audio/bgm.mp3

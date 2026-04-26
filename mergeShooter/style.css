@@ -1,31 +1,31 @@
-/* 字型載入 — 四種字型給 Phaser canvas text 使用 */
+/* 字型載入 — 從精簡版 fonts_used/ 載入(避免推 164MB 字型資料夾上 GitHub) */
 @font-face {
   font-family: 'AlfaSlabOne';
-  src: url('assets/font/Alfa_Slab_One,Noto_Sans_TC,Roboto/Alfa_Slab_One/AlfaSlabOne-Regular.ttf') format('truetype');
+  src: url('assets/fonts_used/AlfaSlabOne-Regular.ttf') format('truetype');
   font-weight: normal;
   font-display: block;
 }
 @font-face {
   font-family: 'PassionOne';
-  src: url('assets/font/Alfa_Slab_One,Noto_Sans_TC,Passion_One,Roboto/Passion_One/PassionOne-Black.ttf') format('truetype');
+  src: url('assets/fonts_used/PassionOne-Black.ttf') format('truetype');
   font-weight: 900;
   font-display: block;
 }
 @font-face {
   font-family: 'PassionOne';
-  src: url('assets/font/Alfa_Slab_One,Noto_Sans_TC,Passion_One,Roboto/Passion_One/PassionOne-Bold.ttf') format('truetype');
+  src: url('assets/fonts_used/PassionOne-Bold.ttf') format('truetype');
   font-weight: 700;
   font-display: block;
 }
 @font-face {
   font-family: 'NotoTC';
-  src: url('assets/font/Alfa_Slab_One,Noto_Sans_TC,Roboto/Noto_Sans_TC/static/NotoSansTC-Black.ttf') format('truetype');
+  src: url('assets/fonts_used/NotoSansTC-Black.ttf') format('truetype');
   font-weight: 900;
   font-display: block;
 }
 @font-face {
   font-family: 'NotoTC';
-  src: url('assets/font/Alfa_Slab_One,Noto_Sans_TC,Roboto/Noto_Sans_TC/static/NotoSansTC-Bold.ttf') format('truetype');
+  src: url('assets/fonts_used/NotoSansTC-Bold.ttf') format('truetype');
   font-weight: 700;
   font-display: block;
 }
