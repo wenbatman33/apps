@@ -20,6 +20,9 @@ class GameScene extends Phaser.Scene {
     Utils.makeCircleTexture(this, 'tex_spark', 4, 0xffffff);
     Utils.makeCircleTexture(this, 'tex_flame', 8, 0xff7733);
     Utils.makeCircleTexture(this, 'tex_frost', 6, 0x66ddff);
+    Utils.makeCircleTexture(this, 'tex_blade', 7, 0xccff66);
+    Utils.makeCircleTexture(this, 'tex_aura', 60, 0xaaff77);
+    Utils.makeCircleTexture(this, 'tex_boom', 8, 0xffcc44);
 
     // 玩家
     this.player = this.physics.add.sprite(this.W / 2, this.H / 2, 'tex_player');
@@ -42,6 +45,11 @@ class GameScene extends Phaser.Scene {
     this.xpGems = this.physics.add.group();
     this.missiles = this.physics.add.group();
     this.flames = this.physics.add.group();
+    this.blades = this.physics.add.group();
+    this.boomerangs = this.physics.add.group();
+    this.auraSprite = null;          // 大蒜光環視覺
+    this.auraLastTick = 0;
+    this.bladePhase = 0;             // 全體光劍共用相位
 
     // 朝向（給火焰瞄準與飛彈出手方向用）
     this.player_facing = { x: 1, y: 0 };
@@ -58,6 +66,8 @@ class GameScene extends Phaser.Scene {
     this.physics.add.overlap(this.bullets, this.enemies, this.onBulletHit, null, this);
     this.physics.add.overlap(this.missiles, this.enemies, this.onMissileHit, null, this);
     this.physics.add.overlap(this.flames, this.enemies, this.onFlameHit, null, this);
+    this.physics.add.overlap(this.blades, this.enemies, this.onBladeHit, null, this);
+    this.physics.add.overlap(this.boomerangs, this.enemies, this.onBoomerangHit, null, this);
     this.physics.add.overlap(this.player, this.enemies, this.onPlayerHit, null, this);
     this.physics.add.overlap(this.player, this.xpGems, this.onPickupXp, null, this);
 
@@ -150,6 +160,9 @@ class GameScene extends Phaser.Scene {
     this.updateWeapons(time);
     this.updateMissiles(delta);
     this.updateFlames(delta);
+    this.updateBlades(delta, time);
+    this.updateAura(time);
+    this.updateBoomerangs(delta, time);
     this.updateSpawner(time);
     this.updateEnemies(delta, time);
     this.updateXpGems();
@@ -192,6 +205,11 @@ class GameScene extends Phaser.Scene {
     for (const [key, level] of Object.entries(this.player.weapons)) {
       const def = WEAPONS[key];
       const stat = def.levelStat(level);
+      // 持續型武器：每幀更新，不受 cooldown 控制
+      if (def.type === 'orbit' || def.type === 'aura') {
+        this.fireWeapon(key, def, stat);
+        continue;
+      }
       const last = this.lastFireTime[key] || 0;
       if (time - last < stat.cooldown) continue;
       const fired = this.fireWeapon(key, def, stat);
@@ -206,6 +224,9 @@ class GameScene extends Phaser.Scene {
       case 'flame':     return this.fireFlame(stat);
       case 'frost':     return this.fireFrost(stat);
       case 'homing':    return this.fireHoming(stat);
+      case 'orbit':     return this.tickOrbit(key, stat);   // 持續存在，不走 cooldown
+      case 'aura':      return this.tickAura(stat);          // 持續存在
+      case 'boomerang': return this.fireBoomerang(stat);
     }
   }
 
@@ -352,6 +373,135 @@ class GameScene extends Phaser.Scene {
       m.setScale(1.4);
       m.setTint(0xffaa55);
     }
+  }
+
+  // 光劍環：依等級維持指定數量，每幀繞玩家旋轉
+  tickOrbit(key, stat) {
+    const list = this.blades.getChildren().filter(b => b.weaponKey === key);
+    // 數量不足則補齊
+    while (list.length < stat.count) {
+      const b = this.blades.create(this.player.x, this.player.y, 'tex_blade');
+      b.setBlendMode(Phaser.BlendModes.ADD);
+      b.setScale(1.4);
+      b.weaponKey = key;
+      b._hits = new Map(); // enemy -> nextHitTime
+      list.push(b);
+    }
+    // 過剩則銷毀
+    while (list.length > stat.count) {
+      const ex = list.pop();
+      ex.destroy();
+    }
+    // 設定光環當前狀態
+    this._orbitState = this._orbitState || {};
+    const st = this._orbitState[key] = this._orbitState[key] || { phase: 0 };
+    st.phase += stat.rotSpeed * (this.game.loop.delta / 1000);
+    list.forEach((b, i) => {
+      const ang = st.phase + (i / stat.count) * Math.PI * 2;
+      b.x = this.player.x + Math.cos(ang) * stat.radius;
+      b.y = this.player.y + Math.sin(ang) * stat.radius;
+      b.damage = stat.damage;
+      b.hitInterval = stat.hitInterval;
+      b.rotation = ang + Math.PI / 2;
+    });
+    return false;
+  }
+
+  onBladeHit(blade, enemy) {
+    if (!blade.active || !enemy.active) return;
+    const t = this.now || 0;
+    const next = blade._hits.get(enemy) || 0;
+    if (t < next) return;
+    blade._hits.set(enemy, t + blade.hitInterval);
+    this.damageEnemy(enemy, blade.damage, 0xccff66);
+    this.spawnSpark(blade.x, blade.y, 0xccff66);
+  }
+
+  // 大蒜光環：常駐玩家身上，週期掃描周圍敵人結算傷害
+  tickAura(stat) {
+    if (!this.auraSprite) {
+      this.auraSprite = this.add.circle(this.player.x, this.player.y, stat.radius, 0x88ff66, 0.12)
+        .setStrokeStyle(2, 0xaaff77, 0.4).setDepth(40).setBlendMode(Phaser.BlendModes.ADD);
+      this.auraSprite._hits = new Map();
+    }
+    this.auraSprite.setRadius(stat.radius);
+    this.auraSprite.x = this.player.x;
+    this.auraSprite.y = this.player.y;
+    // 呼吸感
+    const pulse = 0.85 + 0.15 * Math.sin((this.now || 0) / 180);
+    this.auraSprite.setScale(pulse);
+
+    const t = this.now || 0;
+    if (t - this.auraLastTick < stat.tickInterval) return false;
+    this.auraLastTick = t;
+    const dmg = stat.dps * (stat.tickInterval / 1000);
+    const r2 = stat.radius * stat.radius;
+    this.enemies.children.iterate(e => {
+      if (!e || !e.active) return;
+      const dx = e.x - this.player.x;
+      const dy = e.y - this.player.y;
+      if (dx * dx + dy * dy <= r2) this.damageEnemy(e, dmg, 0xaaff77, true);
+    });
+    return false;
+  }
+
+  // 迴旋鏢：飛出後返回玩家
+  fireBoomerang(stat) {
+    const target = Utils.nearestEnemy(this.player, this.enemies);
+    const baseAng = target
+      ? Phaser.Math.Angle.Between(this.player.x, this.player.y, target.x, target.y)
+      : Math.atan2(this.player_facing.y, this.player_facing.x);
+    for (let i = 0; i < stat.count; i++) {
+      const t = stat.count === 1 ? 0 : (i / (stat.count - 1)) - 0.5;
+      const ang = baseAng + t * stat.spread;
+      const b = this.boomerangs.create(this.player.x, this.player.y, 'tex_boom');
+      b.setVelocity(Math.cos(ang) * stat.outSpeed, Math.sin(ang) * stat.outSpeed);
+      b.setScale(1.2);
+      b.setBlendMode(Phaser.BlendModes.ADD);
+      b.damage = stat.damage;
+      b.outTime = stat.outTime;
+      b.returnSpeed = stat.returnSpeed;
+      b.hitInterval = stat.hitInterval;
+      b.phase = 'out';
+      b.bornAt = this.now || 0;
+      b._hits = new Map();
+    }
+  }
+
+  updateBoomerangs(delta, time) {
+    this.boomerangs.children.iterate(b => {
+      if (!b || !b.active) return;
+      b.rotation += 0.45;
+      const age = time - b.bornAt;
+      if (b.phase === 'out' && age >= b.outTime) {
+        b.phase = 'return';
+      }
+      if (b.phase === 'return') {
+        const dx = this.player.x - b.x;
+        const dy = this.player.y - b.y;
+        const d = Math.hypot(dx, dy) || 1;
+        b.setVelocity((dx / d) * b.returnSpeed, (dy / d) * b.returnSpeed);
+        if (d < 24) b.destroy();
+      }
+    });
+  }
+
+  onBoomerangHit(boom, enemy) {
+    if (!boom.active || !enemy.active) return;
+    const t = this.now || 0;
+    const next = boom._hits.get(enemy) || 0;
+    if (t < next) return;
+    boom._hits.set(enemy, t + boom.hitInterval);
+    this.damageEnemy(enemy, boom.damage, 0xffcc44);
+    this.spawnSpark(boom.x, boom.y, 0xffcc44);
+  }
+
+  updateBlades(delta, time) {
+    // blade 位置已在 tickOrbit 內每幀更新；這裡保留結構供未來擴充
+  }
+
+  updateAura(time) {
+    // 視覺已在 tickAura 內每幀更新
   }
 
   updateMissiles(delta) {
