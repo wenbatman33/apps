@@ -1,3 +1,35 @@
+/* 字型載入 — 四種字型給 Phaser canvas text 使用 */
+@font-face {
+  font-family: 'AlfaSlabOne';
+  src: url('assets/font/Alfa_Slab_One,Noto_Sans_TC,Roboto/Alfa_Slab_One/AlfaSlabOne-Regular.ttf') format('truetype');
+  font-weight: normal;
+  font-display: block;
+}
+@font-face {
+  font-family: 'PassionOne';
+  src: url('assets/font/Alfa_Slab_One,Noto_Sans_TC,Passion_One,Roboto/Passion_One/PassionOne-Black.ttf') format('truetype');
+  font-weight: 900;
+  font-display: block;
+}
+@font-face {
+  font-family: 'PassionOne';
+  src: url('assets/font/Alfa_Slab_One,Noto_Sans_TC,Passion_One,Roboto/Passion_One/PassionOne-Bold.ttf') format('truetype');
+  font-weight: 700;
+  font-display: block;
+}
+@font-face {
+  font-family: 'NotoTC';
+  src: url('assets/font/Alfa_Slab_One,Noto_Sans_TC,Roboto/Noto_Sans_TC/static/NotoSansTC-Black.ttf') format('truetype');
+  font-weight: 900;
+  font-display: block;
+}
+@font-face {
+  font-family: 'NotoTC';
+  src: url('assets/font/Alfa_Slab_One,Noto_Sans_TC,Roboto/Noto_Sans_TC/static/NotoSansTC-Bold.ttf') format('truetype');
+  font-weight: 700;
+  font-display: block;
+}
+
 * { margin: 0; padding: 0; box-sizing: border-box; }
 html, body {
   width: 100%; height: 100%;
@@ -28,4 +60,14 @@ html, body {
   display: block;
   margin: 0 auto;
   image-rendering: -webkit-optimize-contrast;
+}
+
+/* 隱藏的 div 用來預載字型(讓 Phaser 啟動前字型已被瀏覽器解碼) */
+.font-preload {
+  position: absolute;
+  visibility: hidden;
+  pointer-events: none;
+  font-size: 1px;
+  top: -9999px;
+  left: -9999px;
 }
