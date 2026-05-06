@@ -1,22 +1,22 @@
-// Jump Up! 垂直跳躍主程式 — Canvas only UI
+// Jump Up! 垂直跳跃主程序 — Canvas only UI
 (function(){
 'use strict';
 
-// ============ 基本設定 ============
+// ============ 基本设置 ============
 const W = 360, H = 640;
 const canvas = document.getElementById('game');
 const ctx = canvas.getContext('2d');
 
-// 依 devicePixelRatio 與實際顯示尺寸調整 backing store，避免放大後糊掉
+// 依 devicePixelRatio 与实际显示尺寸调整 backing store，避免放大后糊掉
 function resizeCanvas(){
   const rect = canvas.getBoundingClientRect();
   const dpr = Math.max(1, window.devicePixelRatio || 1);
-  // backing store 以邏輯尺寸為基準按顯示比例放大，再乘 DPR
+  // backing store 以逻辑尺寸为基准按显示比例放大，再乘 DPR
   const cssW = rect.width || W;
   const cssH = rect.height || H;
   canvas.width  = Math.round(cssW * dpr);
   canvas.height = Math.round(cssH * dpr);
-  // 把座標系 scale 回 360×640 邏輯尺寸
+  // 把座标系 scale 回 360×640 逻辑尺寸
   const sx = canvas.width / W;
   const sy = canvas.height / H;
   ctx.setTransform(sx, 0, 0, sy, 0, 0);
@@ -37,21 +37,21 @@ const PLATFORM_GAP_MIN = 62;
 const PLATFORM_GAP_MAX = 110;
 const PLATFORM_W = 72, PLATFORM_H = 18;
 
-// ============ 資源載入 ============
+// ============ 资源加载 ============
 const IMG = {};
 const toLoad = {
   idle:      'assets/Characters/01/Idle.png',
   jump:      'assets/Characters/01/Jump.png',
   die:       'assets/Characters/01/Die.png',
-  // 跳板素材重新對應（依官方 6 張 Platformer PNG）
-  plat:      'assets/OtherAssets/Platformer5.png', // normal 黃綠
+  // 跳板素材重新对应（依官方 6 张 Platformer PNG）
+  plat:      'assets/OtherAssets/Platformer5.png', // normal 黄绿
   platMove:  'assets/OtherAssets/Platformer1.png', // 橘棕
   platBreak: 'assets/OtherAssets/Platformer4.png', // 黑底火焰
-  platSpring:'assets/OtherAssets/Platformer6.png', // 金棕（加彈簧裝飾）
-  platIce:   'assets/OtherAssets/Platformer2.png', // 冰雪（官方雪頂）
-  platFlash: 'assets/OtherAssets/Platformer3.png', // 紫色（加閃爍動畫）
-  spring1:   'assets/Spring/spring_1.png',         // 彈簧展開
-  spring2:   'assets/Spring/spring_2.png',         // 彈簧壓縮
+  platSpring:'assets/OtherAssets/Platformer6.png', // 金棕（加弹簧装饰）
+  platIce:   'assets/OtherAssets/Platformer2.png', // 冰雪（官方雪顶）
+  platFlash: 'assets/OtherAssets/Platformer3.png', // 紫色（加闪烁动画）
+  spring1:   'assets/Spring/spring_1.png',         // 弹簧展开
+  spring2:   'assets/Spring/spring_2.png',         // 弹簧压缩
   obstacle:  'assets/OtherAssets/obstacle.png',
   coin1:'assets/Coins/1.png', coin2:'assets/Coins/2.png', coin3:'assets/Coins/3.png',
   coin4:'assets/Coins/4.png', coin5:'assets/Coins/5.png', coin6:'assets/Coins/6.png',
@@ -75,8 +75,8 @@ for(let i=1; i<=6; i++){
   toLoad['bg_'+i+'_near'] = 'assets/Background/'+k+'/Layer3.png';
 }
 
-// ============ 怪物種類定義 ============
-// kind: flyer=水平飛行；walker=在跳板上走；static=釘在跳板上方不可碰
+// ============ 怪物种类定义 ============
+// kind: flyer=水平飞行；walker=在跳板上走；static=钉在跳板上方不可碰
 const ENEMY_FOLDER = {
   bee:'Bee', bat:'Bat', bird:'Bird', spider:'Spider', penguin:'Penguin',
   snail:'Snail', crab:'Crab', evilflower:'EvilFlower', hedgehog:'hedgehog', tentacle:'tentacle'
@@ -93,7 +93,7 @@ const ENEMY_META = {
   evilflower: { kind:'static', frames:4, w:50, h:58 },
   hedgehog:   { kind:'static', frames:1, w:56, h:42 },
 };
-// 每關的怪物池（第 1 關只出溫和的蜜蜂）
+// 每关的怪物池（第 1 关只出温和的蜜蜂）
 const ENEMY_POOLS = {
   1: ['bee'],
   2: ['hedgehog', 'penguin', 'bat', 'bird'],
@@ -102,7 +102,7 @@ const ENEMY_POOLS = {
   5: ['crab', 'hedgehog'],
   6: ['tentacle', 'bat', 'bird', 'spider', 'evilflower'],
 };
-// 載入全部怪物素材
+// 加载全部怪物素材
 for(const [key, meta] of Object.entries(ENEMY_META)){
   const folder = ENEMY_FOLDER[key];
   for(let i=1; i<=meta.frames; i++){
@@ -124,21 +124,21 @@ function loadAll(){
   })));
 }
 
-// 載入畫面：進度條 + 提示
+// 加载画面：进度条 + 提示
 function drawLoading(){
   ctx.fillStyle = '#1a1235';
   ctx.fillRect(0, 0, W, H);
-  // 標題
+  // 标题
   ctx.fillStyle = '#ffd24a';
   ctx.font = 'bold 36px -apple-system, "Microsoft JhengHei", sans-serif';
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
   ctx.fillText('Jump Up!', W/2, H/2 - 60);
-  // 副標
+  // 副标
   ctx.fillStyle = '#cfc7f0';
   ctx.font = '16px -apple-system, "Microsoft JhengHei", sans-serif';
-  ctx.fillText('載入中…', W/2, H/2 - 20);
-  // 進度條
+  ctx.fillText('加载中…', W/2, H/2 - 20);
+  // 进度条
   const bw = 240, bh = 14, bx = W/2 - bw/2, by = H/2 + 20;
   ctx.fillStyle = 'rgba(255,255,255,0.15)';
   ctx.fillRect(bx, by, bw, bh);
@@ -158,12 +158,12 @@ function loadingLoop(){
   loadingRaf = requestAnimationFrame(loadingLoop);
 }
 
-// ============ 遊戲狀態 ============
+// ============ 游戏状态 ============
 const STATE = { MENU:'menu', SELECT:'select', PLAY:'play', PAUSE:'pause', OVER:'over', LEADER:'leader', DEV:'dev' };
 let state = STATE.MENU;
 let currentStage = 1; // 1..6
-// 第三方串接：從 URL query 讀取宿主傳入的使用者資料
-//   範例：?name=Alice&uid=123&token=xxx&amount=1000
+// 第三方串接：从 URL query 读取宿主传入的用户数据
+//   范例：?name=Alice&uid=123&token=xxx&amount=1000
 (function parseHostParams(){
   const qs = new URLSearchParams(location.search);
   window.HOST = {
@@ -174,9 +174,9 @@ let currentStage = 1; // 1..6
     raw:    Object.fromEntries(qs.entries()),
   };
 })();
-// 若宿主有傳 name 優先使用，否則回退 localStorage
+// 若宿主有传 name 优先使用，否则回退 localStorage
 let playerName = (window.HOST && window.HOST.name) || localStorage.getItem('jumpup.name') || '';
-let leaderRows = []; // 當前顯示排行榜資料
+let leaderRows = []; // 当前显示排行榜数据
 let leaderStage = 1;
 let leaderLoading = false;
 let leaderError = '';
@@ -196,12 +196,12 @@ let coins = [];
 let enemies = [];
 let particles = [];
 let hearts = [];
-let nextHeartScore = 250; // 下一次補血心的觸發分數
+let nextHeartScore = 250; // 下一次补血心的触发分数
 
 let camY = 0;
 let highestY = 0;
 let score = 0;
-let best = 0; // 每關獨立最佳（進入關卡後依 currentStage 讀取）
+let best = 0; // 每关独立最佳（进入关卡后依 currentStage 读取）
 function bestKey(stage){ return 'jumpup.best.' + stage; }
 function loadBest(stage){ return parseInt(localStorage.getItem(bestKey(stage))||'0',10) || 0; }
 let lives = MAX_LIVES;
@@ -212,7 +212,7 @@ let touchDir = 0;
 let pointerTargetX = null;
 const POINTER_DEADZONE = 24;
 
-// ============ 平台/金幣/敵人生成 ============
+// ============ 平台/金币/敌人生成 ============
 function rand(a,b){ return a + Math.random()*(b-a); }
 function gapForScore(){
   const diff = Math.min(1, score / 600);
@@ -223,7 +223,7 @@ function gapForScore(){
 
 function stageCfg(){ return STAGES[currentStage-1] || STAGES[0]; }
 
-// flash 跳板週期：2.3 秒一循環，1.5 秒實體，0.8 秒透明無碰撞
+// flash 跳板周期：2.3 秒一循环，1.5 秒实体，0.8 秒透明无碰撞
 const FLASH_CYCLE = 2.3, FLASH_ON = 1.5;
 function flashOn(p){
   const t = ((performance.now()/1000) + (p.phase||0)) % FLASH_CYCLE;
@@ -235,7 +235,7 @@ function spawnPlatform(y){
   const sc = stageCfg();
   const type = (()=>{
     const r = Math.random();
-    // 一開始前幾塊強制 normal，避免開場就踩空
+    // 一开始前几块强制 normal，避免开场就踩空
     if(score < 40) return 'normal';
     const moveP  = 0.13 * (sc.moveMul  || 0);
     const breakP = 0.10 * (sc.breakMul || 0);
@@ -260,15 +260,15 @@ function spawnPlatform(y){
     vx: type==='move' ? (Math.random()<.5?-1:1)*moveSpeed : 0,
     broken: false,
     hasSpring: type === 'spring',
-    phase: type === 'flash' ? Math.random() * 2.3 : 0, // 閃爍相位偏移
+    phase: type === 'flash' ? Math.random() * 2.3 : 0, // 闪烁相位偏移
   };
   platforms.push(p);
 
   if(Math.random() < 0.22){
     coins.push({ x: p.x + p.w/2 - 14, y: p.y - 32, w:28, h:28, frame:Math.random()*6, taken:false });
   }
-  // 第 1 關提早、少量出怪；其他關維持原本「score > 100 才出」的門檻
-  // 關卡越後面怪物越早出現
+  // 第 1 关提早、少量出怪；其他关维持原本「score > 100 才出」的门槛
+  // 关卡越后面怪物越早出现
   const ENEMY_GATES = [80, 70, 60, 50, 40, 30];
   const enemyGate = score > (ENEMY_GATES[currentStage-1] || 80);
   if(enemyGate){
@@ -282,7 +282,7 @@ function spawnPlatform(y){
 }
 
 function spawnHeart(){
-  // 從畫面左或右側飛入，y 在畫面上半部
+  // 从画面左或右侧飞入，y 在画面上半部
   const fromLeft = Math.random() < 0.5;
   const w = 56, h = 44;
   const y = camY + rand(60, H * 0.55);
@@ -313,7 +313,7 @@ function spawnEnemy(type, host){
     e.y = host.y - m.h + 2;
     const sp = m.spd || [0.5, 1.0];
     e.vx = (Math.random()<.5?-1:1) * rand(sp[0], sp[1]);
-  } else { // static（不可踩，釘在跳板正上方）
+  } else { // static（不可踩，钉在跳板正上方）
     e.host = host;
     e.offsetX = Math.max(2, host.w/2 - m.w/2);
     e.x = host.x + e.offsetX;
@@ -344,7 +344,7 @@ function initWorld(){
 
 // ============ 物理 / 更新 ============
 function update(dt){
-  // 依滑鼠/觸控目標位置逐幀重算左右方向，進入容許值即停止
+  // 依鼠标/触摸目标位置逐帧重算左右方向，进入容许值即停止
   if(pointerTargetX !== null){
     const dx = pointerTargetX - player.x;
     if(Math.abs(dx) < POINTER_DEADZONE) touchDir = 0;
@@ -358,7 +358,7 @@ function update(dt){
   } else {
     const targetVx = Math.sign(dir) * MOVE_SPEED;
     if(player.iceTimer > 0){
-      // 打滑：逐漸逼近目標速度（鬆開方向鍵仍會滑一段）
+      // 打滑：逐渐逼近目标速度（松开方向键仍会滑一段）
       player.vx += (targetVx - player.vx) * 0.06;
       player.iceTimer -= dt;
     } else {
@@ -398,7 +398,7 @@ function update(dt){
   if(player.vy > 0){
     for(const p of platforms){
       if(p.broken) continue;
-      // flash 透明期間無碰撞
+      // flash 透明期间无碰撞
       if(p.type === 'flash' && !flashOn(p)) continue;
       const screenPy = p.y - camY;
       if(screenPy > H - 8 || screenPy < -20) continue;
@@ -408,7 +408,7 @@ function update(dt){
          player.x + player.w*0.3 > p.x && player.x - player.w*0.3 < p.x + p.w){
         if(p.type === 'spring'){
           player.vy = SPRING_VY;
-          p.springT = 180; // 壓縮動畫計時
+          p.springT = 180; // 压缩动画计时
           GameAudio.powerup();
         } else {
           player.vy = JUMP_VY;
@@ -419,7 +419,7 @@ function update(dt){
           for(let i=0;i<6;i++) particles.push({x:p.x+p.w/2, y:p.y, vx:rand(-2,2), vy:rand(-3,-1), life:30, color:'#8a5a2b'});
         }
         if(p.type === 'ice'){
-          player.iceTimer = 600; // 0.6 秒打滑狀態
+          player.iceTimer = 600; // 0.6 秒打滑状态
           for(let i=0;i<4;i++) particles.push({x:p.x+p.w/2, y:p.y, vx:rand(-2,2), vy:rand(-2,-0.5), life:25, color:'#cfefff'});
         } else {
           player.iceTimer = 0;
@@ -470,7 +470,7 @@ function update(dt){
   }
   particles = particles.filter(p=>p.life>0);
 
-  // 自動向上捲動（依關卡強度）
+  // 自动向上卷动（依关卡强度）
   const diffAuto = Math.min(1, score / 700);
   const autoScroll = (0.15 + diffAuto * 2.25) * stageCfg().autoScrollMul;
   camY -= autoScroll;
@@ -495,23 +495,23 @@ function update(dt){
   coins = coins.filter(c => !c.taken && c.y < camY + H + 100);
   enemies = enemies.filter(e => e.y < camY + H + 100);
 
-  // 飛行愛心：每累積一定分數生一顆，只在玩家血量未滿時才刷
+  // 飞行爱心：每累积一定分数生一颗，只在玩家血量未满时才刷
   if(score >= nextHeartScore && lives < MAX_LIVES){
     spawnHeart();
-    // 前三關愛心刷新頻率高一點
+    // 前三关爱心刷新频率高一点
     const early = currentStage <= 3;
     const loRange = early ? 200 : 350;
     const hiRange = early ? 320 : 550;
     nextHeartScore = score + Math.floor(rand(loRange, hiRange));
   }
-  // 更新愛心位置 + 碰撞
+  // 更新爱心位置 + 碰撞
   for(const hc of hearts){
     if(hc.taken) continue;
     hc.x += hc.vx;
     hc.y += hc.vy;
-    hc.vy += hc.vy > 0 ? -0.005 : 0.005; // 輕微上下飄
+    hc.vy += hc.vy > 0 ? -0.005 : 0.005; // 轻微上下飘
     hc.frame = (hc.frame + 0.18) % 5;
-    if(hc.x < -50 || hc.x > W + 50) hc.taken = true; // 飛出畫面
+    if(hc.x < -50 || hc.x > W + 50) hc.taken = true; // 飞出画面
     if(!hc.taken && rectOverlap(player.x-player.w/2, player.y-player.h/2, player.w, player.h, hc.x, hc.y, hc.w, hc.h)){
       hc.taken = true;
       if(lives < MAX_LIVES){ lives++; score += 30; }
@@ -550,13 +550,13 @@ function gameOver(){
   GameAudio.die();
   GameAudio.pauseBGM();
   if(score > best){ best = score; localStorage.setItem(bestKey(currentStage), ''+best); }
-  // 自動提交到 Supabase（若已有暱稱）
+  // 自动提交到 Supabase（若已有昵称）
   if(playerName && score > 0 && window.Leaderboard){
     window.Leaderboard.submit(currentStage, playerName, score);
   }
 }
 
-// ============ 繪製：遊戲世界 ============
+// ============ 绘制：游戏世界 ============
 function drawBackground(){
   const g = ctx.createLinearGradient(0,0,0,H);
   g.addColorStop(0,'#2a1f5c'); g.addColorStop(1,'#120a2a');
@@ -594,7 +594,7 @@ function drawPlatform(p){
   else if(p.type === 'ice') img = IMG.platIce || img;
   else if(p.type === 'flash') img = IMG.platFlash || img;
 
-  // flash：依週期決定透明度，透明期近乎消失但留虛線框
+  // flash：依周期决定透明度，透明期近乎消失但留虚线框
   let alpha = 1;
   let flashOff = false;
   if(p.type === 'flash'){
@@ -620,7 +620,7 @@ function drawPlatform(p){
     if(alpha < 1) ctx.globalAlpha = 1;
   }
 
-  // flash 透明期：虛線框提示位置
+  // flash 透明期：虚线框提示位置
   if(flashOff){
     ctx.save();
     ctx.globalAlpha = 0.45;
@@ -631,7 +631,7 @@ function drawPlatform(p){
     ctx.restore();
   }
 
-  // spring 跳板疊上彈簧 PNG（展開 / 壓縮兩幀）
+  // spring 跳板叠上弹簧 PNG（展开 / 压缩两帧）
   if(p.type === 'spring'){
     const compressed = p.springT > 0;
     const spImg = IMG[compressed ? 'spring2' : 'spring1'];
@@ -659,7 +659,7 @@ function drawEnemy(e){
   if(y < -50 || y > H + 50) return;
   const idx = Math.floor(e.frame) + 1;
   const img = IMG[e.type + idx];
-  const flipByVx = e.kind !== 'static'; // static 類不翻轉
+  const flipByVx = e.kind !== 'static'; // static 类不翻转
   if(img){
     ctx.save();
     if(flipByVx && e.vx < 0){
@@ -734,8 +734,8 @@ function renderWorld(){
   drawParticles();
 }
 
-// ============ 繪製：UI（全部在 Canvas 上） ============
-// 按鈕定義：每幀根據 state 重建，pointerdown 用座標命中
+// ============ 绘制：UI（全部在 Canvas 上） ============
+// 按钮定义：每帧根据 state 重建，pointerdown 用座标命中
 let uiButtons = [];
 function addButton(b){ uiButtons.push(b); }
 
@@ -748,12 +748,12 @@ function drawPillBg(x, y, w, h, alpha){
 }
 function drawPillButton(x, y, w, h){
   const r = h/2;
-  // 外框陰影
+  // 外框阴影
   ctx.save();
   ctx.shadowColor = 'rgba(0,0,0,0.35)';
   ctx.shadowBlur = 8;
   ctx.shadowOffsetY = 3;
-  // 漸層底色
+  // 渐层底色
   const g = ctx.createLinearGradient(0, y, 0, y+h);
   g.addColorStop(0, '#ffd066');
   g.addColorStop(0.5, '#ff9a1f');
@@ -796,7 +796,7 @@ function drawIconPause(cx, cy, size, color){
 function drawIconSpeaker(cx, cy, size, muted){
   ctx.fillStyle = '#fff';
   const s = size/2;
-  // 喇叭本體
+  // 喇叭本体
   ctx.beginPath();
   ctx.moveTo(cx-s*0.9, cy-s*0.35);
   ctx.lineTo(cx-s*0.2, cy-s*0.35);
@@ -841,7 +841,7 @@ function drawIconHeart(cx, cy, size, lost){
 }
 
 function drawHUD(){
-  // 左上：分數 + 最佳 + 金幣
+  // 左上：分数 + 最佳 + 金币
   ctx.fillStyle = 'rgba(0,0,0,.35)';
   roundRect(6, 8, 150, 72, 14, true);
   ctx.strokeStyle = 'rgba(255,255,255,.15)';
@@ -857,7 +857,7 @@ function drawHUD(){
   ctx.fillStyle = 'rgba(255,255,255,.75)';
   ctx.fillText('最佳 ' + best + ' m', 16, 40);
 
-  // 金幣
+  // 金币
   const coinImg = IMG.coin1;
   if(coinImg) ctx.drawImage(coinImg, 16, 52, 20, 20);
   ctx.fillStyle = '#ffe27a';
@@ -875,7 +875,7 @@ function drawHUD(){
   ctx.textBaseline = 'middle';
   ctx.fillText('x' + lives, heartsX + 36, 14 + 18);
 
-  // 右上：mute / pause 按鈕
+  // 右上：mute / pause 按钮
   const btnR = 18;
   const muteBtn = { x: W - 6 - btnR*2 - 4 - btnR*2, y: 14, w: btnR*2, h: btnR*2, action:'mute' };
   const pauseBtn = { x: W - 6 - btnR*2, y: 14, w: btnR*2, h: btnR*2, action:'pause' };
@@ -909,7 +909,7 @@ function drawMenu(){
     ctx.drawImage(IMG.bigLogo, W/2 - lw/2, 100, lw, lh);
   }
 
-  // 標題
+  // 标题
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
   ctx.fillStyle = '#ffe27a';
@@ -920,19 +920,19 @@ function drawMenu(){
 
   ctx.fillStyle = 'rgba(255,255,255,.85)';
   ctx.font = '15px -apple-system, "Microsoft JhengHei", sans-serif';
-  ctx.fillText('往上跳！別掉下去', W/2, 332);
+  ctx.fillText('往上跳！别掉下去', W/2, 332);
 
-  // 選擇關卡按鈕
+  // 选择关卡按钮
   const selectBtn = { x: W/2 - 110, y: 380, w: 220, h: 72, action:'gotoSelect' };
   drawPillButton(selectBtn.x, selectBtn.y, selectBtn.w, selectBtn.h);
   ctx.fillStyle = '#fff';
   ctx.font = 'bold 20px -apple-system, "Microsoft JhengHei", sans-serif';
   ctx.shadowColor = 'rgba(0,0,0,.55)'; ctx.shadowBlur = 3; ctx.shadowOffsetY = 2;
-  ctx.fillText('選擇關卡', W/2, selectBtn.y + selectBtn.h/2);
+  ctx.fillText('选择关卡', W/2, selectBtn.y + selectBtn.h/2);
   ctx.shadowBlur = 0; ctx.shadowOffsetY = 0;
   addButton(selectBtn);
 
-  // 暱稱顯示 + 修改
+  // 昵称显示 + 修改
   const nameBtn = { x: W/2 - 90, y: 470, w: 180, h: 36, action:'editName' };
   ctx.fillStyle = 'rgba(255,255,255,.12)';
   roundRect(nameBtn.x, nameBtn.y, nameBtn.w, nameBtn.h, 18, true);
@@ -941,16 +941,16 @@ function drawMenu(){
   roundRect(nameBtn.x, nameBtn.y, nameBtn.w, nameBtn.h, 18, false, true);
   ctx.fillStyle = '#fff';
   ctx.font = '14px -apple-system, "Microsoft JhengHei", sans-serif';
-  ctx.fillText('暱稱：' + (playerName || '(未設定)'), W/2, nameBtn.y + nameBtn.h/2);
+  ctx.fillText('昵称：' + (playerName || '(未设置)'), W/2, nameBtn.y + nameBtn.h/2);
   addButton(nameBtn);
 
   // 提示
   ctx.fillStyle = 'rgba(255,255,255,.55)';
   ctx.font = '12px -apple-system, "Microsoft JhengHei", sans-serif';
-  ctx.fillText('PC：← → 方向鍵　手機：點角色左右側', W/2, 560);
-  ctx.fillText('（按鍵 P / Esc 可暫停）', W/2, 580);
+  ctx.fillText('PC：← → 方向键　手机：点角色左右侧', W/2, 560);
+  ctx.fillText('（按键 P / Esc 可暂停）', W/2, 580);
 
-  // 左下角 dev 按鈕
+  // 左下角 dev 按钮
   const devBtn = { x: 10, y: H - 34, w: 54, h: 24, action:'showDev' };
   ctx.fillStyle = 'rgba(0,0,0,.5)';
   roundRect(devBtn.x, devBtn.y, devBtn.w, devBtn.h, 6, true);
@@ -975,7 +975,7 @@ function drawDevOverlay(){
 
   ctx.fillStyle = 'rgba(255,255,255,.85)';
   ctx.font = '13px monospace';
-  ctx.fillText('URL query 接收到的宿主資料：', 20, 62);
+  ctx.fillText('URL query 接收到的宿主数据：', 20, 62);
 
   const host = window.HOST || {};
   const lines = [
@@ -1015,7 +1015,7 @@ function drawDevOverlay(){
 }
 
 function drawStageSelect(){
-  // 背景用當前選到的關卡
+  // 背景用当前选到的关卡
   drawBackground();
   drawDimmer(0.55);
 
@@ -1024,10 +1024,10 @@ function drawStageSelect(){
   ctx.fillStyle = '#ffe27a';
   ctx.font = 'bold 28px -apple-system, "Microsoft JhengHei", sans-serif';
   ctx.shadowColor = 'rgba(0,0,0,.6)'; ctx.shadowBlur = 6; ctx.shadowOffsetY = 2;
-  ctx.fillText('選擇關卡', W/2, 36);
+  ctx.fillText('选择关卡', W/2, 36);
   ctx.shadowBlur = 0; ctx.shadowOffsetY = 0;
 
-  // 6 張卡片 2 欄 x 3 列
+  // 6 张卡片 2 栏 x 3 列
   const cardW = 150, cardH = 130, gapX = 20, gapY = 14;
   const totalW = cardW*2 + gapX;
   const startX = (W - totalW)/2;
@@ -1039,13 +1039,13 @@ function drawStageSelect(){
     const y = startY + row*(cardH+gapY);
     const isSel = (currentStage === s.id);
 
-    // 卡底（以該關縮圖 Layer3 當封面）
+    // 卡底（以该关缩略图 Layer3 当封面）
     const cover = IMG['bg_'+s.id+'_near'];
     ctx.fillStyle = '#1e1540';
     roundRect(x, y, cardW, cardH, 14, true);
     if(cover){
       ctx.save();
-      // 用圓角裁切
+      // 用圆角裁切
       ctx.beginPath();
       roundRect(x, y, cardW, cardH-32, 14, false);
       ctx.clip();
@@ -1057,17 +1057,17 @@ function drawStageSelect(){
     ctx.fillStyle = 'rgba(0,0,0,0.25)';
     roundRect(x, y, cardW, cardH-32, 14, true);
 
-    // 關卡名
+    // 关卡名
     ctx.fillStyle = '#fff';
     ctx.font = 'bold 16px -apple-system, "Microsoft JhengHei", sans-serif';
     ctx.fillText((s.id) + '. ' + s.name, x + cardW/2, y + 18);
 
-    // 底部資訊
+    // 底部信息
     ctx.fillStyle = '#ffe27a';
     ctx.font = 'bold 14px -apple-system, "Microsoft JhengHei", sans-serif';
     ctx.fillText('最佳 ' + loadBest(s.id) + ' m', x + cardW/2, y + cardH - 18);
 
-    // 外框（選中高亮）
+    // 外框（选中高亮）
     ctx.lineWidth = isSel ? 3 : 1.5;
     ctx.strokeStyle = isSel ? '#ffd24a' : 'rgba(255,255,255,.35)';
     roundRect(x, y, cardW, cardH, 14, false, true);
@@ -1075,13 +1075,13 @@ function drawStageSelect(){
     addButton({ x, y, w:cardW, h:cardH, action:'pickStage', stageId:s.id });
   }
 
-  // 底部：開始、排行榜、返回
+  // 底部：开始、排行榜、返回
   const playBtn = { x: 20, y: H - 60, w: 140, h: 44, action:'startStage' };
   drawPillButton(playBtn.x, playBtn.y, playBtn.w, playBtn.h);
   ctx.fillStyle = '#fff';
   ctx.font = 'bold 16px -apple-system, "Microsoft JhengHei", sans-serif';
   ctx.shadowColor = 'rgba(0,0,0,.55)'; ctx.shadowBlur = 3; ctx.shadowOffsetY = 2;
-  ctx.fillText('開始第 ' + currentStage + ' 關', playBtn.x + playBtn.w/2, playBtn.y + playBtn.h/2);
+  ctx.fillText('开始第 ' + currentStage + ' 关', playBtn.x + playBtn.w/2, playBtn.y + playBtn.h/2);
   ctx.shadowBlur = 0; ctx.shadowOffsetY = 0;
   addButton(playBtn);
 
@@ -1116,10 +1116,10 @@ function drawLeaderboard(){
   ctx.fillStyle = '#ffe27a';
   ctx.font = 'bold 26px -apple-system, "Microsoft JhengHei", sans-serif';
   ctx.shadowColor = 'rgba(0,0,0,.6)'; ctx.shadowBlur = 6; ctx.shadowOffsetY = 2;
-  ctx.fillText('排行榜 第 ' + leaderStage + ' 關', W/2, 36);
+  ctx.fillText('排行榜 第 ' + leaderStage + ' 关', W/2, 36);
   ctx.shadowBlur = 0; ctx.shadowOffsetY = 0;
 
-  // 關卡切換箭頭
+  // 关卡切换箭头
   const prevBtn = { x: 20, y: 18, w: 40, h: 40, action:'leaderPrev' };
   const nextBtn = { x: W-60, y: 18, w: 40, h: 40, action:'leaderNext' };
   [prevBtn, nextBtn].forEach(b=>{
@@ -1134,14 +1134,14 @@ function drawLeaderboard(){
   ctx.fillText('›', nextBtn.x + nextBtn.w/2, nextBtn.y + nextBtn.h/2);
   addButton(prevBtn); addButton(nextBtn);
 
-  // 清單
+  // 清单
   const listX = 24, listY = 80, rowH = 36;
   ctx.textAlign = 'left';
   if(leaderLoading){
     ctx.fillStyle = 'rgba(255,255,255,.75)';
     ctx.font = '15px -apple-system, "Microsoft JhengHei", sans-serif';
     ctx.textAlign = 'center';
-    ctx.fillText('載入中…', W/2, 160);
+    ctx.fillText('加载中…', W/2, 160);
   } else if(leaderError){
     ctx.fillStyle = '#ff8a8a';
     ctx.font = '14px -apple-system, sans-serif';
@@ -1151,7 +1151,7 @@ function drawLeaderboard(){
     ctx.fillStyle = 'rgba(255,255,255,.6)';
     ctx.font = '15px -apple-system, "Microsoft JhengHei", sans-serif';
     ctx.textAlign = 'center';
-    ctx.fillText('尚無紀錄', W/2, 160);
+    ctx.fillText('尚无纪录', W/2, 160);
   } else {
     for(let i=0;i<leaderRows.length;i++){
       const r = leaderRows[i];
@@ -1167,7 +1167,7 @@ function drawLeaderboard(){
       ctx.fillStyle = '#fff';
       ctx.font = '14px -apple-system, "Microsoft JhengHei", sans-serif';
       ctx.fillText(String(r.name).slice(0,16), listX + 52, y + (rowH-6)/2);
-      // 分數
+      // 分数
       ctx.fillStyle = '#ffe27a';
       ctx.font = 'bold 15px -apple-system, sans-serif';
       ctx.textAlign = 'right';
@@ -1195,7 +1195,7 @@ function loadLeader(stage){
   leaderError = '';
   leaderRows = [];
   if(!window.Leaderboard){
-    leaderError = '排行榜服務未載入';
+    leaderError = '排行榜服务未加载';
     leaderLoading = false;
     return;
   }
@@ -1203,7 +1203,7 @@ function loadLeader(stage){
     leaderRows = rows || [];
     leaderLoading = false;
   }).catch(err=>{
-    leaderError = '載入失敗';
+    leaderError = '加载失败';
     leaderLoading = false;
   });
 }
@@ -1255,7 +1255,7 @@ function drawPauseOverlay(){
   ctx.fillStyle = '#fff';
   ctx.font = 'bold 20px -apple-system, "Microsoft JhengHei", sans-serif';
   ctx.shadowColor = 'rgba(0,0,0,.55)'; ctx.shadowBlur = 3; ctx.shadowOffsetY = 2;
-  ctx.fillText('繼續', W/2, resumeBtn.y + resumeBtn.h/2);
+  ctx.fillText('继续', W/2, resumeBtn.y + resumeBtn.h/2);
   ctx.shadowBlur = 0; ctx.shadowOffsetY = 0;
   addButton(resumeBtn);
 
@@ -1267,7 +1267,7 @@ function drawPauseOverlay(){
   roundRect(quitBtn.x, quitBtn.y, quitBtn.w, quitBtn.h, 24, false, true);
   ctx.fillStyle = '#fff';
   ctx.font = '16px -apple-system, "Microsoft JhengHei", sans-serif';
-  ctx.fillText('回主選單', W/2, quitBtn.y + quitBtn.h/2);
+  ctx.fillText('回主菜单', W/2, quitBtn.y + quitBtn.h/2);
   addButton(quitBtn);
 }
 
@@ -1282,7 +1282,7 @@ function drawGameOverOverlay(){
   ctx.fillText('Game Over', W/2, 160);
   ctx.shadowBlur = 0; ctx.shadowOffsetY = 0;
 
-  // 分數面板
+  // 分数面板
   ctx.fillStyle = 'rgba(255,255,255,.08)';
   roundRect(W/2 - 120, 210, 240, 110, 16, true);
   ctx.strokeStyle = 'rgba(255,255,255,.18)';
@@ -1319,7 +1319,7 @@ function drawGameOverOverlay(){
   ctx.fillText('排行榜', lbBtn.x + lbBtn.w/2, lbBtn.y + lbBtn.h/2);
   addButton(lbBtn);
 
-  // 主選單
+  // 主菜单
   const menuBtn = { x: W/2 + 5, y: 450, w: 95, h: 40, action:'menu' };
   ctx.fillStyle = 'rgba(255,255,255,.12)';
   roundRect(menuBtn.x, menuBtn.y, menuBtn.w, menuBtn.h, 20, true);
@@ -1328,27 +1328,27 @@ function drawGameOverOverlay(){
   roundRect(menuBtn.x, menuBtn.y, menuBtn.w, menuBtn.h, 20, false, true);
   ctx.fillStyle = '#fff';
   ctx.font = '14px -apple-system, "Microsoft JhengHei", sans-serif';
-  ctx.fillText('主選單', menuBtn.x + menuBtn.w/2, menuBtn.y + menuBtn.h/2);
+  ctx.fillText('主菜单', menuBtn.x + menuBtn.w/2, menuBtn.y + menuBtn.h/2);
   addButton(menuBtn);
 
-  // 暱稱提示（若未設定）
+  // 昵称提示（若未设置）
   if(!playerName){
     ctx.fillStyle = '#ff8a8a';
     ctx.font = '12px -apple-system, "Microsoft JhengHei", sans-serif';
-    ctx.fillText('未設定暱稱，成績不會上傳排行榜', W/2, 510);
+    ctx.fillText('未设置昵称，成绩不会上传排行榜', W/2, 510);
   } else {
     ctx.fillStyle = 'rgba(255,255,255,.6)';
     ctx.font = '12px -apple-system, "Microsoft JhengHei", sans-serif';
-    ctx.fillText('已以 ' + playerName + ' 上傳', W/2, 510);
+    ctx.fillText('已以 ' + playerName + ' 上传', W/2, 510);
   }
 }
 
-// ============ 主迴圈 ============
+// ============ 主循环 ============
 function loop(ts){
   const dt = Math.min(32, ts - lastTime || 16);
   lastTime = ts;
 
-  uiButtons = [];  // 每幀重置按鈕清單
+  uiButtons = [];  // 每帧重置按钮清单
 
   if(state === STATE.PLAY){
     update(dt);
@@ -1374,7 +1374,7 @@ function loop(ts){
   requestAnimationFrame(loop);
 }
 
-// ============ 控制 / 輸入 ============
+// ============ 控制 / 输入 ============
 window.addEventListener('keydown', e => {
   if(e.code==='ArrowLeft' || e.code==='KeyA') keys.left = true;
   if(e.code==='ArrowRight' || e.code==='KeyD') keys.right = true;
@@ -1387,7 +1387,7 @@ window.addEventListener('keyup', e => {
   if(e.code==='ArrowRight' || e.code==='KeyD') keys.right = false;
 });
 
-// 把 client 座標轉成 canvas 邏輯座標
+// 把 client 座标转成 canvas 逻辑座标
 function eventToCanvas(e){
   const rect = canvas.getBoundingClientRect();
   const x = (e.clientX - rect.left) / rect.width * W;
@@ -1464,7 +1464,7 @@ canvas.addEventListener('pointerdown', e => {
     handleButton(btn.action);
     return;
   }
-  // 遊戲中：依點擊點與主角 x 判左右
+  // 游戏中：依点击点与主角 x 判左右
   if(state === STATE.PLAY){
     const dx = x - player.x;
     pointerHeld = true;
@@ -1486,7 +1486,7 @@ canvas.addEventListener('pointerup', releasePointer);
 canvas.addEventListener('pointercancel', releasePointer);
 window.addEventListener('blur', releasePointer);
 
-// ============ 狀態切換 ============
+// ============ 状态切换 ============
 function startGame(){
   GameAudio.init(); GameAudio.resume();
   best = loadBest(currentStage);
@@ -1513,7 +1513,7 @@ function toMenu(){
   GameAudio.stopBGM();
 }
 
-// ============ 啟動 ============
+// ============ 启动 ============
 (async function(){
   GameAudio.init();
   loadingRaf = requestAnimationFrame(loadingLoop);

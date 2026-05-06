@@ -1,5 +1,5 @@
-// 音效系統：Web Audio 合成 + BGM 檔案槽
-// 之後使用者換 audio/bgm.mp3 / sfx/*.mp3 即可自動採用
+// 音效系统：Web Audio 合成 + BGM 文件槽
+// 之后用户换 audio/bgm.mp3 / sfx/*.mp3 即可自动采用
 (function(global){
   const Audio = {
     ctx: null,
@@ -16,7 +16,7 @@
       this.bgmEl = document.getElementById('bgm');
       if(this.bgmEl){
         this.bgmEl.volume = 0.35;
-        // 若使用者尚未放 mp3，會 404，這裡靜默處理
+        // 若用户尚未放 mp3，会 404，这里静默处理
         this.bgmEl.addEventListener('error', ()=>{ /* ignore */ });
       }
       this._loadMuted();
@@ -86,7 +86,7 @@
       src.start();
     },
 
-    // 語義化 API
+    // 语义化 API
     jump(){ this._beep({type:'sine', freq:420, freq2:820, dur:0.16, vol:0.22, attack:0.002, decay:0.18}); },
     land(){ this._noise({dur:0.08, vol:0.15, hp:300, lp:2000}); },
     coin(){

@@ -1,4 +1,4 @@
-// Supabase 排行榜 client（REST API，不依賴 SDK）
+// Supabase 排行榜 client（REST API，不依赖 SDK）
 (function(){
   const URL = 'https://igqpwzldgqocazlbawgo.supabase.co';
   const KEY = 'sb_publishable_TFd7Wcr2ZSNG6eaPEXDROg_0qt1wZTi';
@@ -44,7 +44,7 @@
         const t = await resp.text();
         throw new Error('HTTP ' + resp.status + ' ' + t);
       }
-      delete cache[stage]; // 清快取
+      delete cache[stage]; // 清缓存
       return true;
     }catch(err){
       console.warn('[leaderboard] submit fail', err);
