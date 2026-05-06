@@ -950,18 +950,20 @@ function drawMenu(){
   ctx.fillText('PC：← → 方向键　手机：点角色左右侧', W/2, 560);
   ctx.fillText('（按键 P / Esc 可暂停）', W/2, 580);
 
-  // 左下角 dev 按钮
-  const devBtn = { x: 10, y: H - 34, w: 54, h: 24, action:'showDev' };
-  ctx.fillStyle = 'rgba(0,0,0,.5)';
-  roundRect(devBtn.x, devBtn.y, devBtn.w, devBtn.h, 6, true);
-  ctx.strokeStyle = 'rgba(255,255,255,.25)';
-  ctx.lineWidth = 1;
-  roundRect(devBtn.x, devBtn.y, devBtn.w, devBtn.h, 6, false, true);
-  ctx.fillStyle = '#9ef0ff';
-  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-  ctx.font = 'bold 12px monospace';
-  ctx.fillText('dev', devBtn.x + devBtn.w/2, devBtn.y + devBtn.h/2);
-  addButton(devBtn);
+  // 左下角 dev 按钮（仅在 URL 带 ?dev=1 时显示）
+  if(window.HOST && window.HOST.raw && window.HOST.raw.dev === '1'){
+    const devBtn = { x: 10, y: H - 34, w: 54, h: 24, action:'showDev' };
+    ctx.fillStyle = 'rgba(0,0,0,.5)';
+    roundRect(devBtn.x, devBtn.y, devBtn.w, devBtn.h, 6, true);
+    ctx.strokeStyle = 'rgba(255,255,255,.25)';
+    ctx.lineWidth = 1;
+    roundRect(devBtn.x, devBtn.y, devBtn.w, devBtn.h, 6, false, true);
+    ctx.fillStyle = '#9ef0ff';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.font = 'bold 12px monospace';
+    ctx.fillText('dev', devBtn.x + devBtn.w/2, devBtn.y + devBtn.h/2);
+    addButton(devBtn);
+  }
 }
 
 function drawDevOverlay(){
