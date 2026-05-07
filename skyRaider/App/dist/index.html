@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no"
+    />
+    <meta name="theme-color" content="#050816" />
+    <title>Sky Raider</title>
+    <script type="module" crossorigin src="./assets/index-_Cx9toB6.js"></script>
+    <link rel="modulepreload" crossorigin href="./assets/phaser-DXXWZowi.js">
+    <link rel="stylesheet" crossorigin href="./assets/index-B9ciXcxH.css">
+  </head>
+  <body>
+    <main id="shell">
+      <section id="app" aria-label="Sky Raider game canvas">
+        <div id="html-loader" class="html-loader">
+          <div class="loader-card">
+            <div class="loader-title">SKY RAIDER</div>
+            <div class="loader-subtitle">Initializing combat systems</div>
+            <div class="loader-bar" aria-hidden="true"><span></span></div>
+          </div>
+        </div>
+      </section>
+      <aside id="dev-panel" aria-label="Development controls">
+        <div class="panel-header">
+          <strong>DEV VIEW</strong>
+          <span>Sky Raider</span>
+        </div>
+
+        <section class="panel-section">
+          <h2>Stages</h2>
+          <div id="stage-buttons" class="button-grid"></div>
+        </section>
+
+        <section class="panel-section">
+          <h2>Weapons</h2>
+          <div id="weapon-buttons" class="weapon-grid"></div>
+        </section>
+
+        <label class="toggle-row">
+          <input id="continue-toggle" type="checkbox" checked />
+          <span>Continue on death</span>
+        </label>
+
+        <section class="panel-section">
+          <h2>Bullet Preview</h2>
+          <div class="bullet-preview">
+            <img src="assets/images/bullet-vulcan-v2.svg" alt="Vulcan bullet" />
+            <img src="assets/images/bullet-laser.svg" alt="Laser bullet" />
+            <img src="assets/images/bullet-plasma.svg" alt="Plasma laser" />
+          </div>
+        </section>
+
+        <section class="panel-section">
+          <h2>Scene Tiles</h2>
+          <select id="tile-stage-select" aria-label="Preview stage tiles"></select>
+          <div id="tile-preview" class="tile-preview"></div>
+        </section>
+      </aside>
+    </main>
+  </body>
+</html>

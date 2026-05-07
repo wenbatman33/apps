@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16">
+  <defs><radialGradient id="g"><stop stop-color="#fff8c8"/><stop offset=".42" stop-color="#ff9d3d"/><stop offset="1" stop-color="#d83235" stop-opacity="0"/></radialGradient><filter id="b" x="-80%" y="-80%" width="260%" height="260%"><feGaussianBlur stdDeviation="1.2"/><feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>
+  <circle cx="8" cy="8" r="7" fill="url(#g)" filter="url(#b)"/>
+  <circle cx="6.5" cy="6" r="1.2" fill="#fffbe0"/>
+</svg>

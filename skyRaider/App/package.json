@@ -1,0 +1,37 @@
+{
+  "name": "sky-raider",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Sky Raider stage 1 Phaser 3 portrait shooter demo.",
+  "scripts": {
+    "dev": "vite --host 0.0.0.0",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview --host 0.0.0.0",
+    "test": "vitest run",
+    "lint": "eslint . --ext .ts",
+    "format": "prettier --write .",
+    "cap:sync": "npm run build && cap sync",
+    "tauri:dev": "tauri dev",
+    "tauri:build": "tauri build"
+  },
+  "dependencies": {
+    "@capacitor/android": "^7.4.3",
+    "@capacitor/core": "^7.4.3",
+    "@capacitor/haptics": "^7.0.2",
+    "@capacitor/ios": "^7.4.3",
+    "@tauri-apps/api": "^2.8.0",
+    "phaser": "3.90.0"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^7.4.3",
+    "@eslint/js": "^9.39.1",
+    "@tauri-apps/cli": "^2.8.4",
+    "eslint": "^9.39.1",
+    "prettier": "^3.6.2",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.46.3",
+    "vite": "^7.1.4",
+    "vitest": "^3.2.4"
+  }
+}
