@@ -59,6 +59,13 @@ export class PreloadScene extends Phaser.Scene {
       );
     }
 
+    // Parallax 多層背景：8 關完整 far/mid/near 三層
+    for (let stageId = 1; stageId <= 8; stageId += 1) {
+      this.load.image(`parallax-${stageId}-far`, `assets/parallax/stage-${stageId}/far.webp`);
+      this.load.image(`parallax-${stageId}-mid`, `assets/parallax/stage-${stageId}/mid.webp`);
+      this.load.image(`parallax-${stageId}-near`, `assets/parallax/stage-${stageId}/near.webp`);
+    }
+
     for (let index = 0; index < 8; index += 1) {
       this.load.svg(`explosion-${index}`, `assets/images/explosion-${index}.svg`, {
         width: 96,

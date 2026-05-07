@@ -6,8 +6,8 @@ import type { WeaponType } from '../types';
 // 倍率為「1.5 ÷ 原本 laser/vulcan DPS 比值（≈ 2.82）」≈ 0.53
 export const VULCAN_DAMAGE_SCALE = 1.0;
 export const LASER_DAMAGE_SCALE = 0.53;
-// plasma 倍率：「0.25 ÷ 原本 plasma/vulcan DPS 比值（≈ 0.445）」≈ 0.56
-export const PLASMA_DAMAGE_SCALE = 0.56;
+// plasma 倍率：目標 0.4× vulcan DPS（0.4 ÷ 0.445 ≈ 0.9）
+export const PLASMA_DAMAGE_SCALE = 0.9;
 
 export interface WeaponShot {
   x: number;
@@ -43,31 +43,34 @@ export class WeaponSystem {
 
   private fireVulcan(x: number, y: number, level: number): WeaponShot[] {
     const damage = (10 + level * 2.2) * VULCAN_DAMAGE_SCALE;
-    const shots: WeaponShot[] = [
-      { x, y: y - 28, vx: 0, vy: -860, damage: damage * 1.45, texture: 'bullet-vulcan', radius: 3 },
-    ];
-
-    if (level >= 4) {
-      shots.push({
-        x: x - 18,
-        y: y - 20,
-        vx: -52,
-        vy: -810,
-        damage: damage * 0.75,
-        texture: 'bullet-vulcan',
-        radius: 3,
-      });
-      shots.push({
-        x: x + 18,
-        y: y - 20,
-        vx: 52,
-        vy: -810,
-        damage: damage * 0.75,
-        texture: 'bullet-vulcan',
-        radius: 3,
-      });
+    const lv = Math.max(1, Math.min(5, level));
+    const shots: WeaponShot[] = [];
+    // 依等級遞增：1 / 2 / 3 / 4 / 5 顆子彈
+    if (lv === 1) {
+      shots.push({ x, y: y - 28, vx: 0, vy: -860, damage: damage * 1.4, texture: 'bullet-vulcan', radius: 3 });
+    } else if (lv === 2) {
+      // 雙併排
+      shots.push({ x: x - 8, y: y - 26, vx: 0, vy: -860, damage: damage * 1.0, texture: 'bullet-vulcan', radius: 3 });
+      shots.push({ x: x + 8, y: y - 26, vx: 0, vy: -860, damage: damage * 1.0, texture: 'bullet-vulcan', radius: 3 });
+    } else if (lv === 3) {
+      // 中央 + 兩翼微張
+      shots.push({ x, y: y - 30, vx: 0, vy: -880, damage: damage * 1.2, texture: 'bullet-vulcan', radius: 3 });
+      shots.push({ x: x - 14, y: y - 22, vx: -38, vy: -820, damage: damage * 0.85, texture: 'bullet-vulcan', radius: 3 });
+      shots.push({ x: x + 14, y: y - 22, vx: 38, vy: -820, damage: damage * 0.85, texture: 'bullet-vulcan', radius: 3 });
+    } else if (lv === 4) {
+      // 4 顆對稱
+      shots.push({ x: x - 8, y: y - 28, vx: -10, vy: -870, damage: damage * 1.0, texture: 'bullet-vulcan', radius: 3 });
+      shots.push({ x: x + 8, y: y - 28, vx: 10, vy: -870, damage: damage * 1.0, texture: 'bullet-vulcan', radius: 3 });
+      shots.push({ x: x - 22, y: y - 18, vx: -56, vy: -800, damage: damage * 0.8, texture: 'bullet-vulcan', radius: 3 });
+      shots.push({ x: x + 22, y: y - 18, vx: 56, vy: -800, damage: damage * 0.8, texture: 'bullet-vulcan', radius: 3 });
+    } else {
+      // 5 顆扇形
+      shots.push({ x, y: y - 30, vx: 0, vy: -900, damage: damage * 1.25, texture: 'bullet-vulcan', radius: 3 });
+      shots.push({ x: x - 12, y: y - 24, vx: -28, vy: -860, damage: damage * 0.95, texture: 'bullet-vulcan', radius: 3 });
+      shots.push({ x: x + 12, y: y - 24, vx: 28, vy: -860, damage: damage * 0.95, texture: 'bullet-vulcan', radius: 3 });
+      shots.push({ x: x - 24, y: y - 16, vx: -68, vy: -780, damage: damage * 0.75, texture: 'bullet-vulcan', radius: 3 });
+      shots.push({ x: x + 24, y: y - 16, vx: 68, vy: -780, damage: damage * 0.75, texture: 'bullet-vulcan', radius: 3 });
     }
-
     return shots;
   }
 

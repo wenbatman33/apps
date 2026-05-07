@@ -38,6 +38,8 @@ export class Bullet extends Phaser.Physics.Arcade.Image implements Poolable {
     this.setVelocity(vx, vy);
     this.setDepth(owner === 'player' ? 20 : 21);
     this.setBlendMode(Phaser.BlendModes.ADD);
+    // 預設不旋轉（避免上一次池複用時殘留旋轉，例如追蹤導彈用過後）
+    this.setRotation(0);
   }
 
   deactivatePoolItem(): void {

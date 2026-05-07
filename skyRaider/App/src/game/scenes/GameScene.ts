@@ -52,18 +52,23 @@ export class GameScene extends Phaser.Scene {
   private bossHealthBack!: Phaser.GameObjects.Rectangle;
   private scoreText!: Phaser.GameObjects.Text;
   private weaponText!: Phaser.GameObjects.Text;
-  private lifeIcons: Phaser.GameObjects.Image[] = [];
-  private bombIcons: Phaser.GameObjects.Image[] = [];
+  // HUD：以單一圖示 + 數量文字呈現
+  private lifeIcon!: Phaser.GameObjects.Image;
+  private lifeCountText!: Phaser.GameObjects.Text;
+  private bombIcon!: Phaser.GameObjects.Image;
+  private bombCountText!: Phaser.GameObjects.Text;
   private powerPips: Phaser.GameObjects.Rectangle[] = [];
-  private lifeLabel!: Phaser.GameObjects.Text;
-  private bombLabel!: Phaser.GameObjects.Text;
   private powerLabel!: Phaser.GameObjects.Text;
   private bombButton!: Phaser.GameObjects.Container;
   private pauseButton!: Phaser.GameObjects.Container;
   private pauseOverlay!: Phaser.GameObjects.Container;
   private scrollingBg!: Phaser.GameObjects.Image;
+  // 多層 parallax（如該關卡有 parallax 素材時啟用）
+  private parallaxMid?: Phaser.GameObjects.TileSprite;
+  private parallaxNear?: Phaser.GameObjects.TileSprite;
   private plasmaGraphics!: Phaser.GameObjects.Graphics;
   private plasmaNextDamageAt = 0;
+  private trackerLastFireAt = 0;
   private stageBgm?: Phaser.Sound.BaseSound;
   private backgroundHeight = GAME_HEIGHT;
   private backgroundStartY = GAME_HEIGHT / 2;
@@ -99,8 +104,19 @@ export class GameScene extends Phaser.Scene {
     this.emitStats();
   };
   private handleSetContinueMode = (event: Event): void => {
+    // 僅 dev 模式才接受續命設定
+    if (!document.documentElement.classList.contains('dev-mode')) {
+      GameScene.devContinueEnabled = false;
+      return;
+    }
     const enabled = (event as CustomEvent<{ enabled: boolean }>).detail?.enabled;
     GameScene.devContinueEnabled = enabled ?? false;
+  };
+  private handleSetPower = (event: Event): void => {
+    const power = (event as CustomEvent<{ power: number }>).detail?.power;
+    if (typeof power !== 'number') return;
+    this.stats.power = Phaser.Math.Clamp(Math.floor(power), 1, 6);
+    this.emitStats();
   };
   private handleAudioUnlock = (): void => this.audioSystem.unlock();
   private handlePauseKey = (event: KeyboardEvent): void => {
@@ -156,10 +172,25 @@ export class GameScene extends Phaser.Scene {
     this.maxCombo = 0;
 
     this.physics.world.setBounds(0, 0, GAME_WIDTH, GAME_HEIGHT);
+
+    // 若該關卡有 parallax 素材就用多層 parallax 背景（far + mid + near 三層）
+    const farKey = `parallax-${this.stageId}-far`;
+    const midKey = `parallax-${this.stageId}-mid`;
+    const nearKey = `parallax-${this.stageId}-near`;
+    // far 必須有，mid 至少要有；near 可選
+    const hasParallax = this.textures.exists(farKey) && this.textures.exists(midKey);
+    const hasNear = hasParallax && this.textures.exists(nearKey);
+
+    const farTextureKey = hasParallax ? farKey : this.stage.backgroundKey;
     this.scrollingBg = this.add
-      .image(GAME_WIDTH / 2, GAME_HEIGHT / 2, this.stage.backgroundKey)
+      .image(GAME_WIDTH / 2, GAME_HEIGHT / 2, farTextureKey)
       .setDepth(DEPTH.background)
       .setAlpha(0.96);
+    // 把背景寬度縮放到滿 canvas（避免只看到中間一小條）
+    if (this.scrollingBg.width > 0) {
+      const widthScale = GAME_WIDTH / this.scrollingBg.width;
+      this.scrollingBg.setScale(widthScale);
+    }
     this.backgroundHeight = this.scrollingBg.displayHeight;
     if (this.backgroundHeight > GAME_HEIGHT) {
       this.backgroundStartY = GAME_HEIGHT - this.backgroundHeight / 2;
@@ -170,9 +201,36 @@ export class GameScene extends Phaser.Scene {
       this.backgroundEndY = GAME_HEIGHT / 2;
       this.scrollingBg.setY(GAME_HEIGHT / 2);
     }
+
+    this.parallaxMid = undefined;
+    this.parallaxNear = undefined;
+    if (hasParallax) {
+      // 中層雲/煙：黑底 + ADD blend（黑色透明、亮色疊加發光）
+      // tileScale 讓 1024px 寬的素材塞進 432px 畫面
+      const tileScale = GAME_WIDTH / 1024;
+      this.parallaxMid = this.add
+        .tileSprite(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, midKey)
+        .setDepth(DEPTH.background + 1)
+        .setAlpha(0.55)
+        .setBlendMode(Phaser.BlendModes.ADD);
+      this.parallaxMid.tileScaleX = tileScale;
+      this.parallaxMid.tileScaleY = tileScale;
+      // 近層粒子：黑底 + ADD blend（可選）
+      if (hasNear) {
+        this.parallaxNear = this.add
+          .tileSprite(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, nearKey)
+          .setDepth(DEPTH.background + 2)
+          .setAlpha(0.6)
+          .setBlendMode(Phaser.BlendModes.ADD);
+        this.parallaxNear.tileScaleX = tileScale;
+        this.parallaxNear.tileScaleY = tileScale;
+      }
+    }
+
+    // 加深暗色 overlay 提升前景子彈/敵機可見度
     this.add
-      .rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, 0x020611, 0.28)
-      .setDepth(DEPTH.background + 1);
+      .rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, 0x020611, 0.34)
+      .setDepth(DEPTH.background + 3);
 
     this.explosionSystem = new ExplosionSystem(this);
     this.player = new Player(this);
@@ -230,6 +288,8 @@ export class GameScene extends Phaser.Scene {
     this.handleWeaponSwitch();
     this.firePlayerWeapon(time);
     this.updatePlasmaLaser(time);
+    this.fireTrackerSubweapon(time);
+    this.updateTrackerBullets(delta);
     this.handleBomb();
     this.spawnScheduledWaves(time);
     this.fireEnemies(time);
@@ -250,6 +310,15 @@ export class GameScene extends Phaser.Scene {
     window.addEventListener('skyraider:set-stage', this.handleSetStage);
     window.addEventListener('skyraider:set-weapon', this.handleSetWeapon);
     window.addEventListener('skyraider:set-continue-mode', this.handleSetContinueMode);
+    window.addEventListener('skyraider:set-power', this.handleSetPower);
+    // 只在 dev 模式（?dev=1）下才讀取 continue toggle；正式模式一律不續命
+    const isDevMode = document.documentElement.classList.contains('dev-mode');
+    if (isDevMode) {
+      const continueToggle = document.querySelector<HTMLInputElement>('#continue-toggle');
+      GameScene.devContinueEnabled = !!continueToggle?.checked;
+    } else {
+      GameScene.devContinueEnabled = false;
+    }
     document.addEventListener('visibilitychange', this.handleVisibilityChange);
     window.addEventListener('pointerdown', this.handleAudioUnlock);
     window.addEventListener('keydown', this.handleAudioUnlock);
@@ -260,6 +329,7 @@ export class GameScene extends Phaser.Scene {
     window.removeEventListener('skyraider:set-stage', this.handleSetStage);
     window.removeEventListener('skyraider:set-weapon', this.handleSetWeapon);
     window.removeEventListener('skyraider:set-continue-mode', this.handleSetContinueMode);
+    window.removeEventListener('skyraider:set-power', this.handleSetPower);
     document.removeEventListener('visibilitychange', this.handleVisibilityChange);
     window.removeEventListener('pointerdown', this.handleAudioUnlock);
     window.removeEventListener('keydown', this.handleAudioUnlock);
@@ -301,6 +371,14 @@ export class GameScene extends Phaser.Scene {
     const elapsedSeconds = this.gameplayStarted ? Math.max(0, (time - this.stageStartedAt) / 1000) : 0;
     const progress = Phaser.Math.Clamp(elapsedSeconds / Math.max(1, this.stage.duration * 0.72), 0, 1);
     this.scrollingBg.y = Phaser.Math.Linear(this.backgroundStartY, this.backgroundEndY, progress);
+
+    // Parallax 中、近層以時間為基準等速捲動，營造速度感
+    if (this.parallaxMid) {
+      this.parallaxMid.tilePositionY = -elapsedSeconds * 70;
+    }
+    if (this.parallaxNear) {
+      this.parallaxNear.tilePositionY = -elapsedSeconds * 140;
+    }
   }
 
   private playStageIntro(): void {
@@ -316,91 +394,190 @@ export class GameScene extends Phaser.Scene {
   }
 
   private showStageTitleCard(): void {
-    const panel = this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2 - 34, GAME_WIDTH, 116, 0x020611, 0.38);
-    const title = this.add
-      .text(GAME_WIDTH / 2, GAME_HEIGHT / 2 - 58, this.stage.name, {
-        fontFamily: 'Arial, sans-serif',
-        fontSize: '30px',
-        color: '#ffffff',
-        fontStyle: 'bold',
-      })
-      .setOrigin(0.5);
-    const subtitle = this.add
-      .text(GAME_WIDTH / 2, GAME_HEIGHT / 2 - 18, this.stage.subtitle, {
-        fontFamily: 'Arial, sans-serif',
-        fontSize: '17px',
-        color: '#bfefff',
-      })
-      .setOrigin(0.5);
-    const titleCard = this.add.container(0, 10, [panel, title, subtitle]).setDepth(DEPTH.ui + 3).setAlpha(0);
+    const panel = this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2 - 34, GAME_WIDTH, 116, 0x020611, 0.42);
+    const titleCard = this.add.container(0, 0, [panel]).setDepth(DEPTH.ui + 3);
 
-    this.tweens.add({
-      targets: titleCard,
-      y: 0,
-      alpha: 1,
-      duration: 260,
-      ease: 'Sine.easeOut',
-      onComplete: () => {
-        this.time.delayedCall(820, () => {
+    // 文字 shutter 特效：每個字母從上方落下、scale 從 1.6 → 1，帶 glow，依序逐字進場
+    const buildShutterText = (
+      text: string,
+      y: number,
+      style: Phaser.Types.GameObjects.Text.TextStyle,
+      letterSpacing: number,
+    ): { letters: Phaser.GameObjects.Text[]; totalWidth: number } => {
+      const letters: Phaser.GameObjects.Text[] = [];
+      // 先個別建立量測寬度
+      const widths: number[] = [];
+      for (const ch of text) {
+        const t = this.add.text(0, 0, ch, style).setOrigin(0.5);
+        letters.push(t);
+        widths.push(t.width + letterSpacing);
+      }
+      const totalWidth = widths.reduce((a, b) => a + b, 0) - letterSpacing;
+      let cursor = -totalWidth / 2;
+      letters.forEach((letter, idx) => {
+        const w = widths[idx];
+        const x = cursor + w / 2 - letterSpacing / 2;
+        letter.setPosition(GAME_WIDTH / 2 + x, y);
+        cursor += w;
+      });
+      return { letters, totalWidth };
+    };
+
+    const titleStyle: Phaser.Types.GameObjects.Text.TextStyle = {
+      fontFamily: 'Arial, sans-serif',
+      fontSize: '30px',
+      color: '#ffffff',
+      fontStyle: 'bold',
+      shadow: { offsetX: 0, offsetY: 0, color: '#9eeeff', blur: 12, fill: true },
+    };
+    const subStyle: Phaser.Types.GameObjects.Text.TextStyle = {
+      fontFamily: 'Arial, sans-serif',
+      fontSize: '17px',
+      color: '#bfefff',
+    };
+
+    const { letters: titleLetters } = buildShutterText(this.stage.name, GAME_HEIGHT / 2 - 58, titleStyle, 0);
+    const { letters: subLetters } = buildShutterText(this.stage.subtitle, GAME_HEIGHT / 2 - 18, subStyle, 0);
+    titleCard.add([...titleLetters, ...subLetters]);
+
+    // tha 風：每個字「橫向滑入」+ 殘影。隱藏起點：往右偏移、scaleX 壓扁、alpha 0
+    const startOffsetX = 36;
+    const animateLetter = (
+      letter: Phaser.GameObjects.Text,
+      finalY: number,
+      delay: number,
+      duration: number,
+    ): void => {
+      const finalX = letter.x;
+      // 殘影：用半透明複製字符跟在後面（往右偏一點），製造 motion-blur 感
+      const ghostA = this.add
+        .text(finalX + startOffsetX, finalY, letter.text, letter.style.toJSON())
+        .setOrigin(0.5)
+        .setAlpha(0);
+      const ghostB = this.add
+        .text(finalX + startOffsetX * 0.6, finalY, letter.text, letter.style.toJSON())
+        .setOrigin(0.5)
+        .setAlpha(0);
+      ghostA.setTint(0x9eeeff);
+      ghostB.setTint(0xffe184);
+      titleCard.add([ghostA, ghostB]);
+
+      letter.setX(finalX + startOffsetX);
+      letter.setAlpha(0);
+      letter.setScale(1, 1);
+
+      // 主字
+      this.tweens.add({
+        targets: letter,
+        x: finalX,
+        alpha: 1,
+        delay,
+        duration,
+        ease: 'Cubic.easeOut',
+      });
+      // 殘影 A：稍慢、淡入後立刻淡出
+      this.tweens.add({
+        targets: ghostA,
+        x: finalX,
+        alpha: { from: 0, to: 0.42 },
+        delay,
+        duration,
+        ease: 'Cubic.easeOut',
+        onComplete: () => {
           this.tweens.add({
-            targets: titleCard,
+            targets: ghostA,
             alpha: 0,
-            y: -12,
-            duration: 360,
-            ease: 'Sine.easeIn',
-            onComplete: () => {
-              titleCard.destroy(true);
-              this.gameplayStarted = true;
-              this.stageStartedAt = this.time.now;
-              this.player.invulnerableUntil = this.time.now + 900;
-            },
+            duration: 100,
+            onComplete: () => ghostA.destroy(),
           });
-        });
-      },
+        },
+      });
+      // 殘影 B：再慢一點
+      this.tweens.add({
+        targets: ghostB,
+        x: finalX,
+        alpha: { from: 0, to: 0.28 },
+        delay: delay + 18,
+        duration,
+        ease: 'Cubic.easeOut',
+        onComplete: () => {
+          this.tweens.add({
+            targets: ghostB,
+            alpha: 0,
+            duration: 100,
+            onComplete: () => ghostB.destroy(),
+          });
+        },
+      });
+    };
+
+    // 標題：每個字 18ms 間距、進場 180ms（俐落 tha 節奏）
+    const titleStep = 22;
+    const titleDuration = 200;
+    titleLetters.forEach((letter, idx) => {
+      letter.setY(GAME_HEIGHT / 2 - 58);
+      animateLetter(letter, GAME_HEIGHT / 2 - 58, idx * titleStep, titleDuration);
+    });
+    // 副標：稍快流動
+    const subStartDelay = titleLetters.length * titleStep + 60;
+    const subStep = 16;
+    const subDuration = 160;
+    subLetters.forEach((letter, idx) => {
+      letter.setY(GAME_HEIGHT / 2 - 18);
+      animateLetter(letter, GAME_HEIGHT / 2 - 18, subStartDelay + idx * subStep, subDuration);
+    });
+
+    // 全部出場後停留，再整體淡出
+    const totalEnter = subStartDelay + subLetters.length * subStep + subDuration;
+    this.time.delayedCall(totalEnter + 700, () => {
+      this.tweens.add({
+        targets: titleCard,
+        alpha: 0,
+        y: -16,
+        duration: 360,
+        ease: 'Sine.easeIn',
+        onComplete: () => {
+          titleCard.destroy(true);
+        },
+      });
+    });
+    // 遊戲開始時間以「文字進場完成」為準
+    this.time.delayedCall(Math.max(280, totalEnter * 0.4), () => {
+      this.gameplayStarted = true;
+      this.stageStartedAt = this.time.now;
+      this.player.invulnerableUntil = this.time.now + 900;
     });
   }
 
   private createHud(): void {
     const hudWidth = 412;
     const hudHeight = 58;
+    // 面板形狀：左右兩端均有斜切角，包含暫停按鈕區
+    const shape: Phaser.Geom.Point[] = [
+      new Phaser.Geom.Point(18, 0),
+      new Phaser.Geom.Point(hudWidth - 18, 0),
+      new Phaser.Geom.Point(hudWidth, 15),
+      new Phaser.Geom.Point(hudWidth, hudHeight - 15),
+      new Phaser.Geom.Point(hudWidth - 18, hudHeight),
+      new Phaser.Geom.Point(14, hudHeight),
+      new Phaser.Geom.Point(0, hudHeight - 14),
+      new Phaser.Geom.Point(0, 15),
+    ];
     const panelBg = this.add.graphics();
     panelBg.fillStyle(0x061229, 0.8);
-    panelBg.fillPoints(
-      [
-        new Phaser.Geom.Point(18, 0),
-        new Phaser.Geom.Point(hudWidth - 62, 0),
-        new Phaser.Geom.Point(hudWidth - 46, 15),
-        new Phaser.Geom.Point(hudWidth - 46, hudHeight - 13),
-        new Phaser.Geom.Point(hudWidth - 62, hudHeight),
-        new Phaser.Geom.Point(14, hudHeight),
-        new Phaser.Geom.Point(0, hudHeight - 14),
-        new Phaser.Geom.Point(0, 15),
-      ],
-      true,
-    );
+    panelBg.fillPoints(shape, true);
     panelBg.lineStyle(2, 0x54e8ff, 0.62);
-    panelBg.strokePoints(
-      [
-        new Phaser.Geom.Point(18, 0),
-        new Phaser.Geom.Point(hudWidth - 62, 0),
-        new Phaser.Geom.Point(hudWidth - 46, 15),
-        new Phaser.Geom.Point(hudWidth - 46, hudHeight - 13),
-        new Phaser.Geom.Point(hudWidth - 62, hudHeight),
-        new Phaser.Geom.Point(14, hudHeight),
-        new Phaser.Geom.Point(0, hudHeight - 14),
-        new Phaser.Geom.Point(0, 15),
-      ],
-      true,
-    );
+    panelBg.strokePoints(shape, true);
     panelBg.lineStyle(1, 0x9cf8ff, 0.25);
-    panelBg.strokeRect(10, 9, hudWidth - 70, hudHeight - 18);
+    panelBg.strokeRect(10, 9, hudWidth - 20, hudHeight - 18);
     panelBg.fillStyle(0x54e8ff, 0.32);
     panelBg.fillRect(28, 4, 76, 2);
     panelBg.fillRect(222, 4, 112, 2);
     panelBg.fillRect(22, hudHeight - 6, 118, 2);
     panelBg.fillRect(250, hudHeight - 6, 82, 2);
+    // 區段分隔線（score | life | bomb | power | pause）
     panelBg.lineStyle(1, 0x54e8ff, 0.28);
-    [86, 176, 276].forEach((x) => {
+    [86, 176, 276, 358].forEach((x) => {
       panelBg.beginPath();
       panelBg.moveTo(x, 11);
       panelBg.lineTo(x + 10, hudHeight - 12);
@@ -421,34 +598,38 @@ export class GameScene extends Phaser.Scene {
       fontStyle: 'bold',
       shadow: { offsetX: 0, offsetY: 0, color: '#ffe184', blur: 8, fill: true },
     });
-    this.lifeLabel = this.add.text(96, 6, 'L', {
+    // Lives：飛機圖示 + ×N
+    this.lifeIcon = this.add
+      .image(112, 32, 'player-ship')
+      .setScale(0.18)
+      .setAngle(0);
+    this.lifeCountText = this.add.text(132, 22, '×3', {
       fontFamily: 'Arial, sans-serif',
-      fontSize: '12px',
+      fontSize: '20px',
       color: '#9eeeff',
       fontStyle: 'bold',
     });
-    this.lifeIcons = Array.from({ length: 5 }, (_, index) =>
-      this.add.image(112 + index * 16, 32, 'player-ship').setScale(0.13).setAngle(0),
-    );
-    this.bombLabel = this.add.text(196, 6, 'B', {
+
+    // Bombs：炸彈圖示 + ×N
+    this.bombIcon = this.add.image(202, 32, 'bomb-button').setScale(0.26);
+    this.bombCountText = this.add.text(220, 22, '×3', {
       fontFamily: 'Arial, sans-serif',
-      fontSize: '12px',
+      fontSize: '20px',
       color: '#ffe184',
       fontStyle: 'bold',
     });
-    // 炸彈最多 3 顆
-    this.bombIcons = Array.from({ length: 3 }, (_, index) =>
-      this.add.image(214 + index * 22, 32, 'bomb-button').setScale(0.22),
-    );
-    this.powerLabel = this.add.text(286, 6, 'P', {
+
+    // Power：保留 6 個 pip 視覺進度條
+    this.powerLabel = this.add.text(282, 6, 'P', {
       fontFamily: 'Arial, sans-serif',
       fontSize: '12px',
       color: '#66f7ff',
       fontStyle: 'bold',
     });
     this.powerPips = Array.from({ length: 6 }, (_, index) =>
-      this.add.rectangle(304 + index * 11, 32, 8, 28, 0x66f7ff, 0.95).setOrigin(0.5),
+      this.add.rectangle(298 + index * 11, 32, 8, 28, 0x66f7ff, 0.95).setOrigin(0.5),
     );
+
     // 武器名稱顯示已移除
     this.weaponText = this.add.text(0, 0, '', { fontSize: '1px' }).setVisible(false);
     this.add
@@ -456,10 +637,10 @@ export class GameScene extends Phaser.Scene {
         panelBg,
         scoreIcon,
         this.scoreText,
-        this.lifeLabel,
-        ...this.lifeIcons,
-        this.bombLabel,
-        ...this.bombIcons,
+        this.lifeIcon,
+        this.lifeCountText,
+        this.bombIcon,
+        this.bombCountText,
         this.powerLabel,
         ...this.powerPips,
         this.weaponText,
@@ -495,12 +676,14 @@ export class GameScene extends Phaser.Scene {
   }
 
   private createPauseUi(): void {
-    const pauseBack = this.add.circle(0, 0, 19, 0x061229, 0.78).setStrokeStyle(1, 0x73eeff, 0.56);
-    const barLeft = this.add.rectangle(-5, 0, 4, 16, 0xd9fbff, 0.95);
-    const barRight = this.add.rectangle(5, 0, 4, 16, 0xd9fbff, 0.95);
+    // 暫停按鈕嵌入 HUD 面板右側
+    const pauseBack = this.add.circle(0, 0, 16, 0x041027, 0.85).setStrokeStyle(1.5, 0x73eeff, 0.7);
+    const barLeft = this.add.rectangle(-4, 0, 3, 14, 0xd9fbff, 0.95);
+    const barRight = this.add.rectangle(4, 0, 3, 14, 0xd9fbff, 0.95);
+    // HUD container 在 (10, 16)，所以 local (382, 32) 對應全域 (392, 48)
     this.pauseButton = this.add
-      .container(GAME_WIDTH - 32, 38, [pauseBack, barLeft, barRight])
-      .setSize(42, 42)
+      .container(392, 48, [pauseBack, barLeft, barRight])
+      .setSize(36, 36)
       .setDepth(DEPTH.ui + 2)
       .setInteractive({ useHandCursor: true });
     this.pauseButton.on('pointerdown', () => this.togglePause());
@@ -599,7 +782,7 @@ export class GameScene extends Phaser.Scene {
       this.audioSystem.shoot(this.stats.weapon, time);
     }
     for (const shot of shots) {
-      this.playerBullets.acquire(
+      const b = this.playerBullets.acquire(
         shot.x,
         shot.y,
         shot.vx,
@@ -609,16 +792,19 @@ export class GameScene extends Phaser.Scene {
         shot.texture,
         shot.radius,
       );
+      // 清除前一次可能殘留的 tracker 標記
+      (b as unknown as { tracker?: boolean }).tracker = false;
     }
   }
 
+  // 雷電系 Plasma：全等級皆為彎曲追蹤閃電。
+  // Lv 越高 → 同時鎖定目標越多、光束越粗、分支越多
   private updatePlasmaLaser(time: number): void {
     this.plasmaGraphics.clear();
     if (this.stats.weapon !== 'plasma' || this.stageCleared) return;
 
     const targets = this.getPlasmaTargets();
     if (targets.length === 0) return;
-    this.audioSystem.shoot('plasma', time);
 
     const shouldDamage = time >= this.plasmaNextDamageAt;
     if (shouldDamage) {
@@ -636,8 +822,75 @@ export class GameScene extends Phaser.Scene {
     });
   }
 
+  // 副武器：power >= 3 時每 700ms 自動射出 1 顆追蹤導彈
+  private fireTrackerSubweapon(time: number): void {
+    if (this.stats.power < 3 || this.stageCleared) return;
+    const interval = this.stats.power >= 5 ? 500 : 700;
+    if (time - this.trackerLastFireAt < interval) return;
+    this.trackerLastFireAt = time;
+    const target = this.findNearestEnemy();
+    if (!target) return;
+    const dx = target.x - this.player.x;
+    const dy = target.y - this.player.y;
+    const length = Math.max(1, Math.hypot(dx, dy));
+    const speed = 360;
+    // 用 bullet-laser 紋理當追蹤導彈視覺
+    const bullet = this.playerBullets.acquire(
+      this.player.x,
+      this.player.y - 18,
+      (dx / length) * speed,
+      (dy / length) * speed,
+      'player',
+      28 + this.stats.power * 4,
+      'bullet-laser',
+      6,
+    );
+    // 標記為追蹤型，updateTrackerBullets 會持續調整方向
+    (bullet as unknown as { tracker?: boolean }).tracker = true;
+  }
+
+  // 追蹤型子彈每 frame 微幅修正方向以朝最近敵人飛行
+  private updateTrackerBullets(delta: number): void {
+    const turnRate = 0.012 * delta; // 每幀偏轉量
+    this.playerBullets.values().forEach((bullet) => {
+      if (!bullet.active) return;
+      const tagged = bullet as unknown as { tracker?: boolean };
+      if (!tagged.tracker) return;
+      const target = this.findNearestEnemy(bullet.x, bullet.y);
+      if (!target || !bullet.body) return;
+      const body = bullet.body as Phaser.Physics.Arcade.Body;
+      const dx = target.x - bullet.x;
+      const dy = target.y - bullet.y;
+      const targetAngle = Math.atan2(dy, dx);
+      const currentAngle = Math.atan2(body.velocity.y, body.velocity.x);
+      let diff = targetAngle - currentAngle;
+      while (diff > Math.PI) diff -= Math.PI * 2;
+      while (diff < -Math.PI) diff += Math.PI * 2;
+      const newAngle = currentAngle + Phaser.Math.Clamp(diff, -turnRate, turnRate);
+      const speed = Math.hypot(body.velocity.x, body.velocity.y);
+      body.setVelocity(Math.cos(newAngle) * speed, Math.sin(newAngle) * speed);
+      bullet.setRotation(newAngle + Math.PI / 2);
+    });
+  }
+
+  private findNearestEnemy(fromX = this.player.x, fromY = this.player.y): Enemy | null {
+    let best: Enemy | null = null;
+    let bestDist = Infinity;
+    this.enemies.values().forEach((enemy) => {
+      if (!enemy.active || !this.isEnemyDamageable(enemy)) return;
+      const d = Phaser.Math.Distance.Between(fromX, fromY, enemy.x, enemy.y);
+      if (d < bestDist) {
+        bestDist = d;
+        best = enemy;
+      }
+    });
+    return best;
+  }
+
   private getPlasmaTargets(): Enemy[] {
-    const targetCount = this.stats.power >= 6 ? 4 : this.stats.power >= 5 ? 3 : this.stats.power >= 3 ? 2 : 1;
+    // 雷電風格：lv1=1、lv2=1（更粗）、lv3=2、lv4=3、lv5=4、lv6=5
+    const lv = this.stats.power;
+    const targetCount = lv >= 6 ? 5 : lv >= 5 ? 4 : lv >= 4 ? 3 : lv >= 3 ? 2 : 1;
     return this.enemies
       .values()
       .filter((enemy) => {
@@ -653,7 +906,8 @@ export class GameScene extends Phaser.Scene {
   }
 
   private getPlasmaRange(): number {
-    return 620 + this.stats.power * 100;
+    // 射程加長：基底 820，每級 +130
+    return 820 + this.stats.power * 130;
   }
 
   private getPlasmaDamage(): number {
@@ -888,6 +1142,11 @@ export class GameScene extends Phaser.Scene {
   }
 
   private canEnemyFire(enemy: Enemy): boolean {
+    // scout / drone：偶爾射擊（每次冷卻到時 ~22% 機率才開火），不打太頻繁
+    if (enemy.kind === 'scout' || enemy.kind === 'drone') {
+      if (enemy.y < 42 || enemy.y > GAME_HEIGHT - 64) return false;
+      return Math.random() < 0.22;
+    }
     if (enemy.kind === 'boss') return enemy.y >= 88 && enemy.y <= GAME_HEIGHT - 40;
     if (enemy.kind === 'midboss') return enemy.y >= 96 && enemy.y <= GAME_HEIGHT - 40;
     return enemy.y >= 42 && enemy.y <= GAME_HEIGHT - 64;
@@ -1158,8 +1417,13 @@ export class GameScene extends Phaser.Scene {
 
   private updateHud(time: number): void {
     this.scoreText.setText(String(this.stats.score));
-    this.lifeIcons.forEach((icon, index) => icon.setVisible(index < Math.max(0, this.stats.lives)));
-    this.bombIcons.forEach((icon, index) => icon.setVisible(index < this.stats.bombs));
+    const lives = Math.max(0, this.stats.lives);
+    const bombs = Math.max(0, this.stats.bombs);
+    this.lifeCountText.setText(`×${lives}`);
+    this.bombCountText.setText(`×${bombs}`);
+    // 沒有炸彈/生命時圖示半透明
+    this.lifeIcon.setAlpha(lives > 0 ? 1 : 0.3);
+    this.bombIcon.setAlpha(bombs > 0 ? 1 : 0.3);
     this.powerPips.forEach((pip, index) => {
       const levelColors = [0x66f7ff, 0x5dffb0, 0xfff06a, 0xffb35c, 0xff68d8, 0xffffff];
       pip.setFillStyle(

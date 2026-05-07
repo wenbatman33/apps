@@ -34,8 +34,11 @@ export class AudioSystem {
   }
 
   enemyHit(now: number): void {
-    if (!this.canPlay('enemy-hit', now, 42)) return;
-    this.tone(620, 420, 0.045, 'triangle', 0.018);
+    if (!this.canPlay('enemy-hit', now, 38)) return;
+    // 兩段式打擊聲：高頻短促 click + 中頻 zap
+    this.tone(1500, 900, 0.03, 'square', 0.06);
+    this.tone(620, 360, 0.06, 'triangle', 0.05, 0.005);
+    this.noise(0.04, 0.03, 4200, 0);
   }
 
   explosion(kind: EnemyKind): void {

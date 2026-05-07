@@ -10,12 +10,23 @@ const weapons: Array<{ id: WeaponType; label: string; image: string }> = [
 export function setupDevPanel(): void {
   const stageButtons = document.querySelector<HTMLDivElement>('#stage-buttons');
   const weaponButtons = document.querySelector<HTMLDivElement>('#weapon-buttons');
+  const powerButtons = document.querySelector<HTMLDivElement>('#power-buttons');
   const continueToggle = document.querySelector<HTMLInputElement>('#continue-toggle');
-  const tileStageSelect = document.querySelector<HTMLSelectElement>('#tile-stage-select');
-  const tilePreview = document.querySelector<HTMLDivElement>('#tile-preview');
 
-  if (!stageButtons || !weaponButtons || !continueToggle || !tileStageSelect || !tilePreview) {
+  if (!stageButtons || !weaponButtons || !powerButtons || !continueToggle) {
     return;
+  }
+
+  for (let level = 1; level <= 6; level += 1) {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.textContent = `P${level}`;
+    button.addEventListener('click', () => {
+      window.dispatchEvent(
+        new CustomEvent('skyraider:set-power', { detail: { power: level } }),
+      );
+    });
+    powerButtons.append(button);
   }
 
   for (let stageId = 1; stageId <= 8; stageId += 1) {
@@ -24,15 +35,8 @@ export function setupDevPanel(): void {
     button.textContent = `S${stageId}`;
     button.addEventListener('click', () => {
       window.dispatchEvent(new CustomEvent('skyraider:set-stage', { detail: { stageId } }));
-      tileStageSelect.value = String(stageId);
-      renderTiles(tilePreview, stageId);
     });
     stageButtons.append(button);
-
-    const option = document.createElement('option');
-    option.value = String(stageId);
-    option.textContent = `Stage ${stageId}`;
-    tileStageSelect.append(option);
   }
 
   for (const weapon of weapons) {
@@ -57,31 +61,21 @@ export function setupDevPanel(): void {
       }),
     );
   });
-
-  tileStageSelect.addEventListener('change', () => {
-    renderTiles(tilePreview, Number(tileStageSelect.value));
-  });
+  // 啟動時先依照 checkbox 當前狀態同步一次（避免 HTML 預設與 JS 預設不一致）
+  window.dispatchEvent(
+    new CustomEvent('skyraider:set-continue-mode', {
+      detail: { enabled: continueToggle.checked },
+    }),
+  );
 
   const savedWeapon = readSavedWeapon();
   setActiveWeaponButton(weaponButtons, savedWeapon);
-  tileStageSelect.value = '1';
-  renderTiles(tilePreview, 1);
 }
 
 function setActiveWeaponButton(container: HTMLDivElement, weapon: WeaponType): void {
   container.querySelectorAll('button').forEach((button) => {
     button.classList.toggle('active', button.getAttribute('data-weapon') === weapon);
   });
-}
-
-function renderTiles(container: HTMLDivElement, stageId: number): void {
-  container.replaceChildren();
-  for (let index = 1; index <= 3; index += 1) {
-    const image = document.createElement('img');
-    image.src = `assets/ai/gpt2_tiles/stage-${stageId}-tile-${index}.png`;
-    image.alt = `Stage ${stageId} background tile ${index}`;
-    container.append(image);
-  }
 }
 
 function readSavedWeapon(): WeaponType {
