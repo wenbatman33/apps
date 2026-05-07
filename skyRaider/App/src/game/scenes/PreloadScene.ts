@@ -55,7 +55,7 @@ export class PreloadScene extends Phaser.Scene {
       this.load.audio(`bgm-stage-${stageId}`, `assets/sound/BGM/stage_${stageId}.mp3`);
       this.load.image(
         `stage-${stageId}-gpt2-long`,
-        `assets/ai/gpt2_long_v6/stage-${stageId}-gpt2-long-v6.png`,
+        `assets/ai/gpt2_long_v6/stage-${stageId}-gpt2-long-v6.webp`,
       );
     }
 

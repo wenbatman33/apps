@@ -22,7 +22,7 @@ const DEV_WEAPON_KEY = 'skyraider:dev-weapon';
 const PICKUP_COLLECT_RADIUS = 38;
 
 export class GameScene extends Phaser.Scene {
-  private static devContinueEnabled = true;
+  private static devContinueEnabled = false;
 
   private loaderSystem = new LevelLoader();
   private stage!: StageConfig;
@@ -100,7 +100,7 @@ export class GameScene extends Phaser.Scene {
   };
   private handleSetContinueMode = (event: Event): void => {
     const enabled = (event as CustomEvent<{ enabled: boolean }>).detail?.enabled;
-    GameScene.devContinueEnabled = enabled ?? true;
+    GameScene.devContinueEnabled = enabled ?? false;
   };
   private handleAudioUnlock = (): void => this.audioSystem.unlock();
   private handlePauseKey = (event: KeyboardEvent): void => {
