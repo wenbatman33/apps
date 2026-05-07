@@ -1,0 +1,49 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="432" height="936" viewBox="0 0 432 936">
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop stop-color="#061229"/>
+      <stop offset=".28" stop-color="#112f63"/>
+      <stop offset=".58" stop-color="#823a9c"/>
+      <stop offset=".82" stop-color="#ff8a5c"/>
+      <stop offset="1" stop-color="#160c2e"/>
+    </linearGradient>
+    <linearGradient id="glass" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="#38f5ff" stop-opacity=".72"/>
+      <stop offset=".48" stop-color="#365cff" stop-opacity=".45"/>
+      <stop offset="1" stop-color="#ff4fd8" stop-opacity=".62"/>
+    </linearGradient>
+    <filter id="glow" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur stdDeviation="3" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+  <rect width="432" height="936" fill="url(#sky)"/>
+  <g opacity=".28">
+    <ellipse cx="214" cy="250" rx="260" ry="68" fill="#53e8ff"/>
+    <ellipse cx="214" cy="276" rx="220" ry="42" fill="#ff6ccf"/>
+  </g>
+  <g stroke="#8ff6ff" stroke-opacity=".18" stroke-width="1">
+    <path d="M-70 162 520 236M-40 328 490 402M-120 530 520 628M-80 764 500 894"/>
+    <path d="M36 0 104 936M210 0 196 936M366 0 294 936"/>
+  </g>
+  <g fill="#071022" opacity=".82">
+    <path d="M0 626h38v310H0zM46 548h44v388H46zM104 682h54v254h-54zM176 514h70v422h-70zM266 642h52v294h-52zM334 474h98v462h-98z"/>
+  </g>
+  <g fill="url(#glass)" opacity=".92">
+    <path d="M50 548h34v388H50zM180 514h62v422h-62zM340 474h84v462h-84z"/>
+  </g>
+  <g filter="url(#glow)" stroke-linecap="round">
+    <path d="M36 724h58M112 760h42M182 610h58M270 698h42M344 560h78" stroke="#66f7ff" stroke-width="3"/>
+    <path d="M52 804h32M184 708h54M346 684h74" stroke="#ff59cc" stroke-width="3"/>
+    <path d="M20 398c88-44 172-44 252 0 52 28 100 30 144 6" fill="none" stroke="#ffe184" stroke-opacity=".64" stroke-width="2"/>
+  </g>
+  <g opacity=".78">
+    <path d="M216 90 244 152h-56Z" fill="#fff8c7"/>
+    <path d="M216 102 235 148h-38Z" fill="#ff8a5c"/>
+  </g>
+  <g opacity=".35" fill="#d8fbff">
+    <ellipse cx="86" cy="202" rx="80" ry="16"/>
+    <ellipse cx="344" cy="338" rx="96" ry="20"/>
+    <ellipse cx="168" cy="430" rx="120" ry="18"/>
+  </g>
+</svg>

@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="12" height="18" viewBox="0 0 12 18">
+  <defs>
+    <radialGradient id="g" cx="45%" cy="28%">
+      <stop offset="0" stop-color="#ffffff"/>
+      <stop offset=".3" stop-color="#fff2a6"/>
+      <stop offset=".62" stop-color="#ffb22e"/>
+      <stop offset=".9" stop-color="#ff6b1e"/>
+      <stop offset="1" stop-color="#7a220e" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="tail" x1="0" x2="0" y1="0" y2="1">
+      <stop offset="0" stop-color="#fff7cc" stop-opacity=".95"/>
+      <stop offset=".42" stop-color="#ffc145" stop-opacity=".72"/>
+      <stop offset="1" stop-color="#ff7a1f" stop-opacity="0"/>
+    </linearGradient>
+    <filter id="glow" x="-70%" y="-70%" width="240%" height="240%">
+      <feGaussianBlur stdDeviation=".82" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+  <path d="M6 1.4 C8.8 4.8 8.3 11.6 6 16.6 C3.7 11.6 3.2 4.8 6 1.4Z" fill="url(#tail)" filter="url(#glow)"/>
+  <ellipse cx="6" cy="6.4" rx="3.15" ry="4.35" fill="url(#g)" filter="url(#glow)"/>
+  <path d="M6 1.4 8.1 6.1H3.9Z" fill="#fffbe0"/>
+</svg>
