@@ -627,8 +627,11 @@ export class GameScene extends Phaser.Scene {
 
     targets.forEach((enemy, index) => {
       this.drawPlasmaArc(enemy, time, index);
-      if (shouldDamage && enemy.active && enemy.applyDamage(this.getPlasmaDamage())) {
-        this.killEnemy(enemy);
+      if (shouldDamage && enemy.active) {
+        enemy.hitFlash();
+        if (enemy.applyDamage(this.getPlasmaDamage())) {
+          this.killEnemy(enemy);
+        }
       }
     });
   }
@@ -919,6 +922,7 @@ export class GameScene extends Phaser.Scene {
     void Haptics.impact({ style: ImpactStyle.Heavy }).catch(() => undefined);
     for (const enemy of this.enemies.values()) {
       if (!enemy.active || !this.isEnemyDamageable(enemy)) continue;
+      enemy.hitFlash();
       if (enemy.applyDamage(this.getBombDamage(enemy))) {
         this.killEnemy(enemy);
       }
@@ -942,6 +946,7 @@ export class GameScene extends Phaser.Scene {
     if (!this.isEnemyDamageable(enemy)) return;
     bullet.deactivatePoolItem();
     this.audioSystem.enemyHit(this.time.now);
+    enemy.hitFlash();
     if (enemy.applyDamage(bullet.damage)) {
       this.killEnemy(enemy);
     }
@@ -951,9 +956,23 @@ export class GameScene extends Phaser.Scene {
     const size = enemy.kind === 'boss' || enemy.kind === 'midboss' ? 'large' : 'medium';
     this.explosionSystem.burst(enemy.x, enemy.y, size);
     this.audioSystem.explosion(enemy.kind);
-    this.stats.score += enemy.score + this.stats.combo * 5;
+    const gainedScore = enemy.score + this.stats.combo * 5;
+    this.stats.score += gainedScore;
     this.stats.combo += 1;
     this.maxCombo = Math.max(this.maxCombo, this.stats.combo);
+
+    // 擊殺螢幕震動：boss > midboss > 一般
+    if (enemy.kind === 'boss') {
+      this.cameras.main.shake(360, 0.014);
+    } else if (enemy.kind === 'midboss') {
+      this.cameras.main.shake(220, 0.008);
+    } else {
+      this.cameras.main.shake(70, 0.0028);
+    }
+
+    // 分數浮字
+    this.spawnScorePopup(enemy.x, enemy.y, gainedScore, enemy.kind);
+
     this.maybeDropPickup(enemy.x, enemy.y, enemy.kind);
     EventBus.emit(EVENTS.enemyKilled, enemy.kind);
     if (enemy.kind === 'boss') {
@@ -962,6 +981,43 @@ export class GameScene extends Phaser.Scene {
     }
     enemy.deactivatePoolItem();
     this.emitStats();
+  }
+
+  // 分數浮字：擊殺時往上飄、漸隱、自動銷毀
+  private spawnScorePopup(x: number, y: number, score: number, kind: EnemyKind): void {
+    const isLarge = kind === 'boss' || kind === 'midboss';
+    const fontSize = isLarge ? 26 : this.stats.combo >= 30 ? 22 : this.stats.combo >= 10 ? 18 : 15;
+    const color = isLarge ? '#ffd166' : this.stats.combo >= 30 ? '#ff8a4f' : this.stats.combo >= 10 ? '#ffe184' : '#ffffff';
+    const text = this.add
+      .text(x, y - 12, `+${score}`, {
+        fontFamily: 'Arial, sans-serif',
+        fontSize: `${fontSize}px`,
+        color,
+        fontStyle: 'bold',
+        stroke: '#000000',
+        strokeThickness: 3,
+        shadow: { offsetX: 0, offsetY: 0, color: '#000', blur: 4, fill: true },
+      })
+      .setOrigin(0.5)
+      .setDepth(DEPTH.vfx + 5);
+    this.tweens.add({
+      targets: text,
+      y: y - 64,
+      alpha: 0,
+      duration: 720,
+      ease: 'Cubic.easeOut',
+      onComplete: () => text.destroy(),
+    });
+    // 大型敵人額外彈跳
+    if (isLarge) {
+      this.tweens.add({
+        targets: text,
+        scale: 1.4,
+        duration: 180,
+        yoyo: true,
+        ease: 'Quad.easeOut',
+      });
+    }
   }
 
   private isEnemyDamageable(enemy: Enemy): boolean {

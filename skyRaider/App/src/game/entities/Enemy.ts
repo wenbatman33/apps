@@ -63,6 +63,25 @@ export class Enemy extends Phaser.Physics.Arcade.Image implements Poolable {
     return this.hp <= 0;
   }
 
+  // 命中閃白回饋（保留並還原原本 tint）
+  hitFlash(): void {
+    if (!this.active) return;
+    const prevTopLeft = this.tintTopLeft;
+    const prevTopRight = this.tintTopRight;
+    const prevBottomLeft = this.tintBottomLeft;
+    const prevBottomRight = this.tintBottomRight;
+    const wasTinted = this.isTinted;
+    this.setTintFill(0xffffff);
+    this.scene.time.delayedCall(70, () => {
+      if (!this.active) return;
+      if (wasTinted) {
+        this.setTint(prevTopLeft, prevTopRight, prevBottomLeft, prevBottomRight);
+      } else {
+        this.clearTint();
+      }
+    });
+  }
+
   preUpdate(time: number, _delta: number): void {
     if (!this.active) return;
 
