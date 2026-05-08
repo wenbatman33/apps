@@ -1152,6 +1152,20 @@ class GameScene extends Phaser.Scene {
   createAudio() {
     let actx = null;
     const ensure = () => actx || (actx = new (window.AudioContext || window.webkitAudioContext)());
+    // 手機需要 user gesture 才能解鎖 audio context
+    const unlock = () => {
+      const ac = ensure();
+      if (ac.state === "suspended") ac.resume();
+      const b = ac.createBuffer(1, 1, 22050);
+      const s = ac.createBufferSource();
+      s.buffer = b;
+      s.connect(ac.destination);
+      s.start(0);
+    };
+    document.addEventListener("touchstart", unlock, { once: true });
+    document.addEventListener("touchend", unlock, { once: true });
+    document.addEventListener("click", unlock, { once: true });
+    document.addEventListener("pointerdown", unlock, { once: true });
     const tone = (f, dur = 0.08, type = "sine", vol = 0.18, slide = 0) => {
       const ac = ensure();
       if (ac.state === "suspended") ac.resume();
