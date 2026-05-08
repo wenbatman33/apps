@@ -1,7 +1,7 @@
 export type EnemyKind = 'scout' | 'drone' | 'gunship' | 'midboss' | 'boss';
 export type BulletOwner = 'player' | 'enemy';
 export type WeaponType = 'vulcan' | 'laser' | 'plasma';
-export type PickupKind = 'power' | 'bomb' | `weapon-${WeaponType}`;
+export type PickupKind = 'power' | 'bomb' | 'one-up' | `weapon-${WeaponType}`;
 export type ExplosionSize = 'small' | 'medium' | 'large';
 
 export interface WaveConfig {

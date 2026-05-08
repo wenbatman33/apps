@@ -598,10 +598,10 @@ export class GameScene extends Phaser.Scene {
       fontStyle: 'bold',
       shadow: { offsetX: 0, offsetY: 0, color: '#ffe184', blur: 8, fill: true },
     });
-    // Lives：飛機圖示 + ×N
+    // Lives：飛機圖示 + ×N（sprite 已縮成 236×256，HUD 用更小 scale）
     this.lifeIcon = this.add
       .image(112, 32, 'player-ship')
-      .setScale(0.18)
+      .setScale(0.11)
       .setAngle(0);
     this.lifeCountText = this.add.text(132, 22, '×3', {
       fontFamily: 'Arial, sans-serif',
@@ -610,8 +610,8 @@ export class GameScene extends Phaser.Scene {
       fontStyle: 'bold',
     });
 
-    // Bombs：炸彈圖示 + ×N
-    this.bombIcon = this.add.image(202, 32, 'bomb-button').setScale(0.26);
+    // Bombs：炸彈圖示 + ×N（sprite 已預縮成 192px）
+    this.bombIcon = this.add.image(202, 32, 'bomb-button').setScale(0.16);
     this.bombCountText = this.add.text(220, 22, '×3', {
       fontFamily: 'Arial, sans-serif',
       fontSize: '20px',
@@ -659,7 +659,7 @@ export class GameScene extends Phaser.Scene {
       .setDepth(DEPTH.ui + 1)
       .setVisible(false);
 
-    const bombArt = this.add.image(0, 0, 'bomb-button').setScale(0.78);
+    const bombArt = this.add.image(0, 0, 'bomb-button').setScale(0.31);
     const label = this.add
       .text(0, 33, 'B KEY', {
         fontFamily: 'Arial, sans-serif',
@@ -834,7 +834,7 @@ export class GameScene extends Phaser.Scene {
     const dy = target.y - this.player.y;
     const length = Math.max(1, Math.hypot(dx, dy));
     const speed = 360;
-    // 用 bullet-laser 紋理當追蹤導彈視覺
+    // 追蹤導彈專用紋理
     const bullet = this.playerBullets.acquire(
       this.player.x,
       this.player.y - 18,
@@ -842,7 +842,7 @@ export class GameScene extends Phaser.Scene {
       (dy / length) * speed,
       'player',
       28 + this.stats.power * 4,
-      'bullet-laser',
+      'tracking-missile',
       6,
     );
     // 標記為追蹤型，updateTrackerBullets 會持續調整方向
@@ -889,9 +889,10 @@ export class GameScene extends Phaser.Scene {
 
   private getPlasmaTargets(): Enemy[] {
     // 雷電風格：lv1=1、lv2=1（更粗）、lv3=2、lv4=3、lv5=4、lv6=5
+    // 小飛機（scout/drone）最多只 1 道光束鎖定，其餘額度給重型敵人
     const lv = this.stats.power;
     const targetCount = lv >= 6 ? 5 : lv >= 5 ? 4 : lv >= 4 ? 3 : lv >= 3 ? 2 : 1;
-    return this.enemies
+    const inRange = this.enemies
       .values()
       .filter((enemy) => {
         if (!enemy.active || !this.isEnemyDamageable(enemy)) return false;
@@ -901,8 +902,23 @@ export class GameScene extends Phaser.Scene {
         const aDistance = Phaser.Math.Distance.Between(this.player.x, this.player.y, a.x, a.y);
         const bDistance = Phaser.Math.Distance.Between(this.player.x, this.player.y, b.x, b.y);
         return aDistance - bDistance;
-      })
-      .slice(0, targetCount);
+      });
+
+    const isSmall = (e: Enemy): boolean => e.kind === 'scout' || e.kind === 'drone';
+    const heavies = inRange.filter((e) => !isSmall(e));
+    const smalls = inRange.filter(isSmall);
+
+    const picked: Enemy[] = [];
+    // 重型敵人優先填滿
+    for (const h of heavies) {
+      if (picked.length >= targetCount) break;
+      picked.push(h);
+    }
+    // 還有額度且尚未鎖過小飛機 → 加 1 個小飛機
+    if (picked.length < targetCount && smalls.length > 0) {
+      picked.push(smalls[0]);
+    }
+    return picked;
   }
 
   private getPlasmaRange(): number {
@@ -1292,12 +1308,20 @@ export class GameScene extends Phaser.Scene {
     const roll = Math.random();
     let pickupKind: PickupKind;
     if (kind === 'boss' || kind === 'midboss') {
-      pickupKind = `weapon-${this.getNextWeapon(this.stats.weapon)}`;
-    } else if (roll < 0.20) {
-      // 20%：power（寶物）
+      // boss / midboss：90% 武器升級、10% 1UP（稀有福利）
+      if (Math.random() < 0.1) {
+        pickupKind = 'one-up';
+      } else {
+        pickupKind = `weapon-${this.getNextWeapon(this.stats.weapon)}`;
+      }
+    } else if (roll < 0.03) {
+      // 3%：1UP（極稀有）
+      pickupKind = 'one-up';
+    } else if (roll < 0.22) {
+      // ~19%：power
       pickupKind = 'power';
     } else if (roll < 0.55) {
-      // 35%：weapon
+      // ~33%：weapon
       pickupKind = `weapon-${WEAPON_ORDER[Math.floor(Math.random() * WEAPON_ORDER.length)]}`;
     } else {
       // 45%：bomb
@@ -1332,6 +1356,7 @@ export class GameScene extends Phaser.Scene {
     if (!pickup.active) return;
     if (pickup.kind === 'power') this.stats.power = Math.min(6, this.stats.power + 1);
     if (pickup.kind === 'bomb') this.stats.bombs = Math.min(3, this.stats.bombs + 1);
+    if (pickup.kind === 'one-up') this.stats.lives += 1; // 1UP 無上限
     if (pickup.kind.startsWith('weapon-')) {
       this.stats.weapon = pickup.kind.replace('weapon-', '') as WeaponType;
     }

@@ -6,6 +6,7 @@ import type { Poolable } from '../systems/ObjectPool';
 const PICKUP_TEXTURES: Record<PickupKind, string> = {
   power: 'pickup-power',
   bomb: 'pickup-bomb',
+  'one-up': 'pickup-1up',
   'weapon-vulcan': 'pickup-weapon-vulcan',
   'weapon-laser': 'pickup-weapon-laser',
   'weapon-plasma': 'pickup-weapon-plasma',
@@ -37,11 +38,13 @@ export class Pickup extends Phaser.Physics.Arcade.Image implements Poolable {
     this.kind = kind;
     this.setTexture(PICKUP_TEXTURES[kind]);
     this.setPosition(x, y);
-    this.setScale(0.52);
-    this.setCircle(28, this.width / 2 - 28, this.height / 2 - 28);
+    // sprite 已預縮成 ~192px，再縮成約 55px 顯示
+    this.setScale(0.30);
+    this.setCircle(80, this.width / 2 - 80, this.height / 2 - 80);
     this.setVelocity(0, 86);
     this.label.setText(this.getLabelText(kind));
-    this.label.setPosition(x, y + 25);
+    // label 對齊在圖示正下方（依顯示高度計算偏移）
+    this.label.setPosition(x, y + this.displayHeight / 2 + 8);
     this.label.setVisible(true);
     this.label.setActive(true);
     this.setActive(true);
@@ -65,9 +68,9 @@ export class Pickup extends Phaser.Physics.Arcade.Image implements Poolable {
     }
   }
 
-  preUpdate(_time: number, delta: number): void {
-    this.rotation += delta * 0.004;
-    this.label.setPosition(this.x, this.y + 25);
+  preUpdate(_time: number, _delta: number): void {
+    // 寶物不旋轉，label 持續跟在圖示正下方
+    this.label.setPosition(this.x, this.y + this.displayHeight / 2 + 8);
     if (this.y > GAME_HEIGHT + 50) {
       this.deactivatePoolItem();
     }
@@ -76,6 +79,7 @@ export class Pickup extends Phaser.Physics.Arcade.Image implements Poolable {
   private getLabelText(kind: PickupKind): string {
     if (kind === 'power') return 'POWER';
     if (kind === 'bomb') return 'BOMB';
+    if (kind === 'one-up') return '1UP';
     if (kind === 'weapon-laser') return 'LASER';
     if (kind === 'weapon-plasma') return 'PLASMA';
     return 'VULCAN';

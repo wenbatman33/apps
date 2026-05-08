@@ -26,10 +26,18 @@ export class Bullet extends Phaser.Physics.Arcade.Image implements Poolable {
   ): void {
     this.owner = owner;
     this.damage = damage;
-    this.setTexture(owner === 'player' ? (texture ?? 'bullet-vulcan') : (texture ?? 'bullet-enemy'));
+    const tex = owner === 'player' ? (texture ?? 'bullet-vulcan') : (texture ?? 'bullet-enemy');
+    this.setTexture(tex);
     this.setPosition(x, y);
+    // 預設 scale 1.0；只有大圖紋理才縮小（tracking-missile 預縮為 55×256）
+    const scaleMap: Record<string, number> = {
+      'tracking-missile': 0.18,
+    };
+    const sc = scaleMap[tex] ?? 1;
+    this.setScale(sc);
     const hitRadius = owner === 'enemy' ? 5 : radius;
-    this.setCircle(hitRadius, this.width / 2 - hitRadius, this.height / 2 - hitRadius);
+    const collRadius = sc < 1 ? Math.max(hitRadius / sc, hitRadius) : hitRadius;
+    this.setCircle(collRadius, this.width / 2 - collRadius, this.height / 2 - collRadius);
     this.setActive(true);
     this.setVisible(true);
     if (this.body) {
@@ -37,8 +45,9 @@ export class Bullet extends Phaser.Physics.Arcade.Image implements Poolable {
     }
     this.setVelocity(vx, vy);
     this.setDepth(owner === 'player' ? 20 : 21);
-    this.setBlendMode(Phaser.BlendModes.ADD);
-    // 預設不旋轉（避免上一次池複用時殘留旋轉，例如追蹤導彈用過後）
+    // 全部子彈用 NORMAL blend（SVG 已自帶光暈漸層；避免 ADD 在 SVG 抗鋸齒邊緣產生白框）
+    this.setBlendMode(Phaser.BlendModes.NORMAL);
+    // 預設不旋轉（避免上一次池複用時殘留旋轉）
     this.setRotation(0);
   }
 

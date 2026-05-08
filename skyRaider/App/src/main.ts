@@ -19,6 +19,16 @@ const config: Phaser.Types.Core.GameConfig = {
   backgroundColor: '#050816',
   pixelArt: false,
   roundPixels: false,
+  // 反鋸齒 + mipmap，降低高解析度紋理大幅縮小時的閃爍/鋸齒
+  antialias: true,
+  antialiasGL: true,
+  mipmapFilter: 'LINEAR_MIPMAP_LINEAR',
+  render: {
+    antialias: true,
+    antialiasGL: true,
+    mipmapFilter: 'LINEAR_MIPMAP_LINEAR',
+    powerPreference: 'high-performance',
+  },
   fps: {
     target: 60,
     forceSetTimeOut: false,

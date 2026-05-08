@@ -11,8 +11,9 @@ export class Player extends Phaser.Physics.Arcade.Image {
     scene.add.existing(this);
     scene.physics.add.existing(this);
     this.setDepth(DEPTH.player);
-    this.setScale(0.55);
-    this.setCircle(22, this.width / 2 - 22, this.height / 2 - 18);
+    // sprite 已預縮成 236×256，再縮成 ~55px 顯示
+    this.setScale(0.22);
+    this.setCircle(60, this.width / 2 - 60, this.height / 2 - 55);
   }
 
   respawn(): void {

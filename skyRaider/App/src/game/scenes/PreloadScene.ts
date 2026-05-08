@@ -32,8 +32,11 @@ export class PreloadScene extends Phaser.Scene {
       this.load.image(`midboss-stage-${stageId}`, `assets/images/generated/enemies/midboss-stage-${stageId}.png`);
     }
     this.load.svg('bullet-player', 'assets/images/bullet-player.svg', { width: 16, height: 28 });
+    // 子彈用 SVG（精準尺寸、不帶大光暈）
     this.load.svg('bullet-vulcan', 'assets/images/bullet-vulcan-v2.svg', { width: 12, height: 18 });
     this.load.svg('bullet-laser', 'assets/images/bullet-laser.svg', { width: 24, height: 72 });
+    // 追蹤導彈：新版精緻 sprite
+    this.load.image('tracking-missile', 'assets/images/generated/tracking-missile.png');
     this.load.svg('bullet-plasma', 'assets/images/bullet-plasma.svg', { width: 52, height: 88 });
     this.load.svg('bullet-enemy', 'assets/images/bullet-enemy.svg', { width: 18, height: 18 });
     this.load.svg('bullet-enemy-scout', 'assets/images/bullet-enemy-scout.svg', { width: 16, height: 16 });
@@ -42,12 +45,14 @@ export class PreloadScene extends Phaser.Scene {
     this.load.svg('bullet-enemy-midboss', 'assets/images/bullet-enemy-midboss.svg', { width: 22, height: 22 });
     this.load.svg('bullet-enemy-boss', 'assets/images/bullet-enemy-boss.svg', { width: 24, height: 24 });
     this.load.svg('fragment', 'assets/images/fragment.svg', { width: 8, height: 8 });
-    this.load.image('pickup-power', 'assets/images/generated/pickups/pickup-power-gpt2.png');
-    this.load.image('pickup-bomb', 'assets/images/generated/pickups/pickup-bomb-gpt2.png');
-    this.load.image('pickup-weapon-vulcan', 'assets/images/generated/pickups/pickup-weapon-vulcan-gpt2.png');
-    this.load.image('pickup-weapon-laser', 'assets/images/generated/pickups/pickup-weapon-laser-gpt2.png');
-    this.load.image('pickup-weapon-plasma', 'assets/images/generated/pickups/pickup-weapon-missile-gpt2.png');
-    this.load.image('bomb-button', 'assets/images/generated/pickups/bomb-button-gpt2.png');
+    this.load.image('pickup-power', 'assets/images/generated/pickups/pickup-power-premium.png');
+    this.load.image('pickup-bomb', 'assets/images/generated/pickups/pickup-bomb-premium.png');
+    this.load.image('pickup-weapon-vulcan', 'assets/images/generated/pickups/pickup-weapon-vulcan-premium.png');
+    this.load.image('pickup-weapon-laser', 'assets/images/generated/pickups/pickup-weapon-laser-premium.png');
+    this.load.image('pickup-weapon-plasma', 'assets/images/generated/pickups/pickup-weapon-plasma-premium.png');
+    this.load.image('pickup-1up', 'assets/images/generated/pickups/pickup-1up-premium.png');
+    // bomb-button 與 pickup-bomb 用同一新版圖示（HUD / 觸控鈕 / 撿寶外觀統一）
+    this.load.image('bomb-button', 'assets/images/generated/pickups/pickup-bomb-premium.png');
     this.load.svg('bg-dawn', 'assets/images/bg-dawn.svg', { width: GAME_WIDTH, height: GAME_HEIGHT });
     this.load.svg('bg-orbit', 'assets/images/bg-orbit.svg', { width: GAME_WIDTH, height: GAME_HEIGHT });
 
