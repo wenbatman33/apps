@@ -11,6 +11,11 @@ import { ResultScene } from './game/scenes/ResultScene';
 const devModeEnabled = new URLSearchParams(window.location.search).get('dev') === '1';
 document.documentElement.classList.toggle('dev-mode', devModeEnabled);
 
+// 判定是否為手機直立 ENVELOP 模式（給 GameScene 調整 HUD 位置用）
+const fillMode =
+  window.innerWidth < window.innerHeight && window.innerWidth < 700;
+(window as unknown as { __SR_FILL_MODE__: boolean }).__SR_FILL_MODE__ = fillMode;
+
 const config: Phaser.Types.Core.GameConfig = {
   type: Phaser.AUTO,
   parent: 'app',
@@ -34,8 +39,13 @@ const config: Phaser.Types.Core.GameConfig = {
     forceSetTimeOut: false,
   },
   scale: {
-    // FIT 維持完整畫面（HUD 不會被裁掉），靠 CSS 100dvh 讓手機 chrome 收合時補滿
-    mode: Phaser.Scale.FIT,
+    // 手機直立（窄寬 + 高 > 寬）用 ENVELOP 填滿；PC / 寬螢幕用 FIT
+    mode:
+      typeof window !== 'undefined' &&
+      window.innerWidth < window.innerHeight &&
+      window.innerWidth < 700
+        ? Phaser.Scale.ENVELOP
+        : Phaser.Scale.FIT,
     autoCenter: Phaser.Scale.CENTER_BOTH,
     width: GAME_WIDTH,
     height: GAME_HEIGHT,

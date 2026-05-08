@@ -60,7 +60,6 @@ export class GameScene extends Phaser.Scene {
   private powerPips: Phaser.GameObjects.Rectangle[] = [];
   private powerLabel!: Phaser.GameObjects.Text;
   private bombButton!: Phaser.GameObjects.Container;
-  private pauseButton!: Phaser.GameObjects.Container;
   private pauseOverlay!: Phaser.GameObjects.Container;
   private scrollingBg!: Phaser.GameObjects.Image;
   // 多層 parallax（如該關卡有 parallax 素材時啟用）
@@ -126,10 +125,12 @@ export class GameScene extends Phaser.Scene {
   };
   private handleVisibilityChange = (): void => {
     if (document.hidden) {
+      // 離開分頁/視窗 → 自動暫停（玩家回來後需點擊畫面繼續）
       this.hiddenAt = this.time.now;
+      this.togglePause(true);
       return;
     }
-
+    // 回到分頁時保持暫停狀態，讓玩家點擊 overlay 繼續
     if (this.hiddenAt > 0) {
       const pausedFor = Math.max(0, this.time.now - this.hiddenAt);
       this.stageStartedAt += pausedFor;
@@ -632,8 +633,20 @@ export class GameScene extends Phaser.Scene {
 
     // 武器名稱顯示已移除
     this.weaponText = this.add.text(0, 0, '', { fontSize: '1px' }).setVisible(false);
+    // 手機 ENVELOP 模式：依當前視窗比例算出實際上邊裁切量，HUD 緊貼裁切下緣
+    const fillMode = (window as unknown as { __SR_FILL_MODE__?: boolean }).__SR_FILL_MODE__ === true;
+    let hudY = 16;
+    if (fillMode) {
+      const vpW = window.innerWidth;
+      const vpH = window.innerHeight;
+      const gameRatio = GAME_HEIGHT / GAME_WIDTH;
+      const canvasDisplayH = vpW * gameRatio;
+      const overflow = Math.max(0, canvasDisplayH - vpH);
+      const cropTopInGame = (overflow / 2) * (GAME_WIDTH / vpW);
+      hudY = Math.max(8, Math.round(cropTopInGame + 6));
+    }
     this.add
-      .container(10, 16, [
+      .container(10, hudY, [
         panelBg,
         scoreIcon,
         this.scoreText,
@@ -668,7 +681,19 @@ export class GameScene extends Phaser.Scene {
         fontStyle: 'bold',
       })
       .setOrigin(0.5);
-    this.bombButton = this.add.container(GAME_WIDTH - 64, GAME_HEIGHT - 82, [bombArt, label]);
+    // 手機 ENVELOP 模式：依視窗比例算出實際下邊裁切，炸彈鈕緊貼裁切上緣
+    const fillMode2 = (window as unknown as { __SR_FILL_MODE__?: boolean }).__SR_FILL_MODE__ === true;
+    let bombY = GAME_HEIGHT - 82;
+    if (fillMode2) {
+      const vpW = window.innerWidth;
+      const vpH = window.innerHeight;
+      const gameRatio = GAME_HEIGHT / GAME_WIDTH;
+      const canvasDisplayH = vpW * gameRatio;
+      const overflow = Math.max(0, canvasDisplayH - vpH);
+      const cropBottomInGame = (overflow / 2) * (GAME_WIDTH / vpW);
+      bombY = Math.round(GAME_HEIGHT - cropBottomInGame - 50);
+    }
+    this.bombButton = this.add.container(GAME_WIDTH - 64, bombY, [bombArt, label]);
     this.bombButton.setSize(74, 74).setDepth(DEPTH.ui).setInteractive({ useHandCursor: true });
     this.bombButton.on('pointerdown', () => this.inputController.queueBomb());
 
@@ -676,17 +701,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   private createPauseUi(): void {
-    // 暫停按鈕嵌入 HUD 面板右側
-    const pauseBack = this.add.circle(0, 0, 16, 0x041027, 0.85).setStrokeStyle(1.5, 0x73eeff, 0.7);
-    const barLeft = this.add.rectangle(-4, 0, 3, 14, 0xd9fbff, 0.95);
-    const barRight = this.add.rectangle(4, 0, 3, 14, 0xd9fbff, 0.95);
-    // HUD container 在 (10, 16)，所以 local (382, 32) 對應全域 (392, 48)
-    this.pauseButton = this.add
-      .container(392, 48, [pauseBack, barLeft, barRight])
-      .setSize(36, 36)
-      .setDepth(DEPTH.ui + 2)
-      .setInteractive({ useHandCursor: true });
-    this.pauseButton.on('pointerdown', () => this.togglePause());
+    // 暫停按鈕已移除（離開視窗自動暫停、回來點擊 overlay 繼續）
 
     const overlayBg = this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, 0x020611, 0.58);
     const panel = this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, 280, 142, 0x061229, 0.92);
@@ -700,9 +715,9 @@ export class GameScene extends Phaser.Scene {
       })
       .setOrigin(0.5);
     const hint = this.add
-      .text(GAME_WIDTH / 2, GAME_HEIGHT / 2 + 18, 'Tap pause or press P to resume', {
+      .text(GAME_WIDTH / 2, GAME_HEIGHT / 2 + 18, 'Tap to resume', {
         fontFamily: 'Arial, sans-serif',
-        fontSize: '14px',
+        fontSize: '16px',
         color: '#bfefff',
       })
       .setOrigin(0.5);
