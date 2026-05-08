@@ -162,11 +162,14 @@ export class GameScene extends Phaser.Scene {
     this.hiddenAt = 0;
     this.paused = false;
     this.pausedAt = 0;
+    // 預設武器：dev 模式才讀 localStorage 設定，正式模式一律 vulcan
+    const isDevMode = document.documentElement.classList.contains('dev-mode');
+    const defaultWeapon: WeaponType = isDevMode ? this.readDevWeapon() : 'vulcan';
     this.stats = {
       lives: data?.lives ?? 3,
       bombs: data?.bombs ?? 3,
       power: data?.power ?? 1,
-      weapon: data?.weapon ?? this.readDevWeapon(),
+      weapon: data?.weapon ?? defaultWeapon,
       score: data?.score ?? 0,
       combo: 0,
     };
@@ -335,6 +338,7 @@ export class GameScene extends Phaser.Scene {
     window.removeEventListener('pointerdown', this.handleAudioUnlock);
     window.removeEventListener('keydown', this.handleAudioUnlock);
     window.removeEventListener('keydown', this.handlePauseKey);
+    this.detachResumeListener();
   }
 
   private playStageBgm(): void {
@@ -742,8 +746,12 @@ export class GameScene extends Phaser.Scene {
       this.tweens.pauseAll();
       this.stageBgm?.pause();
       this.plasmaGraphics.clear();
+      // DOM 級別備援：直接掛 pointerdown / touchstart 在 canvas，
+      // 確保即使 Phaser 輸入系統異常（如 iOS 切換分頁後）仍能取消暫停
+      this.attachResumeListener();
       return;
     }
+    this.detachResumeListener();
     if (this.pausedAt > 0) {
       const pausedFor = Math.max(0, this.time.now - this.pausedAt);
       this.stageStartedAt += pausedFor;
@@ -754,6 +762,25 @@ export class GameScene extends Phaser.Scene {
     }
     this.tweens.resumeAll();
     this.stageBgm?.resume();
+  }
+
+  private resumeDomListener?: (e: Event) => void;
+  private attachResumeListener(): void {
+    if (this.resumeDomListener) return;
+    this.resumeDomListener = (e: Event) => {
+      e.preventDefault?.();
+      this.togglePause(false);
+    };
+    const canvas = this.game.canvas;
+    canvas.addEventListener('pointerdown', this.resumeDomListener, { passive: false, capture: true });
+    canvas.addEventListener('touchstart', this.resumeDomListener, { passive: false, capture: true });
+  }
+  private detachResumeListener(): void {
+    if (!this.resumeDomListener) return;
+    const canvas = this.game.canvas;
+    canvas.removeEventListener('pointerdown', this.resumeDomListener, { capture: true });
+    canvas.removeEventListener('touchstart', this.resumeDomListener, { capture: true });
+    this.resumeDomListener = undefined;
   }
 
   private createColliders(): void {

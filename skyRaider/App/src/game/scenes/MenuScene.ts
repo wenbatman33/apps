@@ -91,7 +91,8 @@ export class MenuScene extends Phaser.Scene {
     if (!this.startHandlersBound) return;
     const target = (pointer?.event?.target ?? null) as HTMLElement | null;
     if (target && target.tagName === 'INPUT') return;
-    this.scene.start('GameScene');
+    // 明確從第一關開始（避免 Phaser scene data 殘留）
+    this.scene.start('GameScene', { stageId: 1 });
   };
 
   private createNicknameButton(): void {
