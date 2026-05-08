@@ -34,7 +34,13 @@ const config: Phaser.Types.Core.GameConfig = {
     forceSetTimeOut: false,
   },
   scale: {
-    mode: Phaser.Scale.FIT,
+    // 手機（觸控裝置 + 視窗寬度小）用 ENVELOP 填滿螢幕；PC 用 FIT 保持邊框
+    mode:
+      typeof window !== 'undefined' &&
+      ('ontouchstart' in window) &&
+      window.innerWidth < 900
+        ? Phaser.Scale.ENVELOP
+        : Phaser.Scale.FIT,
     autoCenter: Phaser.Scale.CENTER_BOTH,
     width: GAME_WIDTH,
     height: GAME_HEIGHT,
