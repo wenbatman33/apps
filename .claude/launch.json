@@ -63,6 +63,14 @@
       "port": 8772,
       "autoPort": false,
       "cwd": "skyRaider"
+    },
+    {
+      "name": "pachinko",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": ["-m", "http.server", "8773"],
+      "port": 8773,
+      "autoPort": false,
+      "cwd": "pachinko"
     }
   ]
 }

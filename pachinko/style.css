@@ -1,0 +1,23 @@
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body {
+  height: 100%;
+  background:
+    radial-gradient(circle at 20% 10%, #2a0633 0%, transparent 60%),
+    radial-gradient(circle at 80% 90%, #330a1a 0%, transparent 55%),
+    #0a0014;
+  color: #fff;
+  font-family: "RocknRoll One", "DotGothic16", system-ui, sans-serif;
+  overflow: hidden;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+}
+#app {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100dvh;
+}
+canvas {
+  display: block;
+  touch-action: none;
+}
