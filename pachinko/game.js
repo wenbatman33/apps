@@ -96,6 +96,29 @@ class GameScene extends Phaser.Scene {
   constructor() { super("game"); }
 
   preload() {
+    // ===== Loading UI =====
+    const cx = W / 2, cy = H / 2;
+    const loadingTitle = this.add.text(cx, cy - 60, "パチンコ", {
+      fontFamily: "RocknRoll One, sans-serif", fontSize: "60px", color: "#ffd166",
+      stroke: "#000", strokeThickness: 6,
+    }).setOrigin(0.5);
+    const loadText = this.add.text(cx, cy + 70, "ロード中...", {
+      fontFamily: "DotGothic16, sans-serif", fontSize: "24px", color: "#fff",
+    }).setOrigin(0.5);
+    const barBg = this.add.graphics();
+    barBg.fillStyle(0x000000, 0.7).fillRoundedRect(cx - 220, cy + 110, 440, 28, 14);
+    barBg.lineStyle(2, 0xffd166, 1).strokeRoundedRect(cx - 220, cy + 110, 440, 28, 14);
+    const barFill = this.add.graphics();
+    const pctText = this.add.text(cx, cy + 124, "0%", {
+      fontFamily: "DotGothic16, sans-serif", fontSize: "16px", color: "#fff", fontStyle: "bold",
+    }).setOrigin(0.5);
+    this.load.on("progress", (v) => {
+      barFill.clear();
+      barFill.fillStyle(0xff3da6, 1).fillRoundedRect(cx - 216, cy + 114, 432 * v, 20, 10);
+      pctText.setText(Math.round(v * 100) + "%");
+    });
+    this._loadingUI = [loadingTitle, loadText, barBg, barFill, pctText];
+
     // 機台 + UI
     this.load.image("cabinet", "assets/cabinet_clean.png");
     this.load.image("led_l",   "assets/led_strip_left.png");
@@ -134,6 +157,12 @@ class GameScene extends Phaser.Scene {
   }
 
   create() {
+    // 清掉 loading UI
+    if (this._loadingUI) {
+      this._loadingUI.forEach(o => o.destroy());
+      this._loadingUI = null;
+    }
+    this.gameReady = false;
     this.state = {
       balls: 1000, spins: 0, jackpots: 0,
       mode: "通常", spinning: false, fever: false, feverRounds: 0,
@@ -206,6 +235,50 @@ class GameScene extends Phaser.Scene {
     this.createAudio();
 
     this.matter.world.on("collisionstart", this.onCollision, this);
+
+    // 顯示「タップしてスタート」遮罩，使用者點擊後才解鎖音效並開始遊戲
+    this.showStartOverlay();
+  }
+
+  showStartOverlay() {
+    const overlay = this.add.container(0, 0).setDepth(500);
+    const dim = this.add.rectangle(W / 2, H / 2, W, H, 0x000000, 0.92).setInteractive();
+    // 看板娘為主角
+    const mascot = this.add.image(W / 2, H * 0.4, "mascot_idle").setOrigin(0.5);
+    const mScale = Math.min((W * 0.62) / mascot.width, (H * 0.45) / mascot.height);
+    mascot.setScale(mScale);
+    // 看板娘呼吸動畫
+    this.tweens.add({
+      targets: mascot, scale: { from: mScale, to: mScale * 1.04 },
+      duration: 1200, yoyo: true, repeat: -1, ease: "Sine.easeInOut",
+    });
+
+    const title = this.add.text(W / 2, H * 0.72, "パチンコ", {
+      fontFamily: "RocknRoll One, sans-serif", fontSize: "72px", color: "#ffd166",
+      stroke: "#000", strokeThickness: 8, fontStyle: "bold",
+    }).setOrigin(0.5);
+
+    const tap = this.add.text(W / 2, H * 0.84, "タップしてスタート", {
+      fontFamily: "DotGothic16, sans-serif", fontSize: "30px", color: "#fff",
+      backgroundColor: "rgba(255,61,166,0.9)", padding: { x: 28, y: 14 },
+      stroke: "#000", strokeThickness: 4,
+    }).setOrigin(0.5);
+    this.tweens.add({
+      targets: tap, alpha: { from: 1, to: 0.55 },
+      duration: 700, yoyo: true, repeat: -1,
+    });
+
+    overlay.add([dim, mascot, title, tap]);
+
+    dim.once("pointerdown", () => {
+      // 解鎖 audio context（必須在 user gesture 內）
+      if (this._unlockAudio) this._unlockAudio();
+      this.gameReady = true;
+      this.tweens.add({
+        targets: overlay, alpha: 0, duration: 400,
+        onComplete: () => overlay.destroy(),
+      });
+    });
   }
 
   // ==================== 機台外殼 + 燈條 ====================
@@ -493,6 +566,7 @@ class GameScene extends Phaser.Scene {
     this.fireLoop = null;
 
     this.dial.on("pointerdown", (pointer) => {
+      if (!this.gameReady) return;
       this.dialDragging = true;
       this._dragStartAbs = Math.atan2(pointer.y - dialY, pointer.x - dialX);
       this._dragStartDial = this.dialAngle;
@@ -833,10 +907,11 @@ class GameScene extends Phaser.Scene {
       // 底部開口：略過接近最底部的牆段
       if (my > bottomGapY) continue;
       const ang = Math.atan2(p2.y - p1.y, p2.x - p1.x);
-      const wall = this.matter.add.rectangle(mx, my, len + 8, 14, {
+      // 加厚至 28px 並重疊段（len + 16）以避免高速穿透
+      const wall = this.matter.add.rectangle(mx, my, len + 16, 28, {
         isStatic: true, angle: ang, friction: 0.05, restitution: 0.45,
         label: "green-edge", render: { visible: false },
-        slop: 0.01,
+        slop: 0.005,
       });
       this.greenEdges.push(wall);
     }
@@ -1293,7 +1368,7 @@ class GameScene extends Phaser.Scene {
   createAudio() {
     let actx = null;
     const ensure = () => actx || (actx = new (window.AudioContext || window.webkitAudioContext)());
-    // 手機需要 user gesture 才能解鎖 audio context
+    // 手機需要 user gesture 才能解鎖 audio context — 改由開始按鈕觸發
     const unlock = () => {
       const ac = ensure();
       if (ac.state === "suspended") ac.resume();
@@ -1303,10 +1378,7 @@ class GameScene extends Phaser.Scene {
       s.connect(ac.destination);
       s.start(0);
     };
-    document.addEventListener("touchstart", unlock, { once: true });
-    document.addEventListener("touchend", unlock, { once: true });
-    document.addEventListener("click", unlock, { once: true });
-    document.addEventListener("pointerdown", unlock, { once: true });
+    this._unlockAudio = unlock;
     const tone = (f, dur = 0.08, type = "sine", vol = 0.18, slide = 0) => {
       const ac = ensure();
       if (ac.state === "suspended") ac.resume();
@@ -1508,6 +1580,14 @@ class GameScene extends Phaser.Scene {
       if (b.y > OUT_Y || b.x < -30 || b.x > W + 30) {
         b.destroy();
         this.balls.splice(i, 1);
+        continue;
+      }
+      // 防止球穿出綠色範圍（物理穿透時的保險）— 跑出多邊形視同 アウト
+      if (this.customGreenPoly && this.customGreenPoly.length >= 3) {
+        if (!pointInPolygon(b.x, b.y, this.customGreenPoly)) {
+          b.destroy();
+          this.balls.splice(i, 1);
+        }
       }
     }
   }
