@@ -84,6 +84,10 @@ const POCKETS = {
   sideL: { x: 307, y: 755, w: 56, h: 36 },
   sideR: { x: 479, y: 752, w: 56, h: 36 },
 };
+// 大入賞口（アタッカー）— 中大賞期間開啟 30 秒，球進入即大量回饋
+const ATTACKER = { x: 400, y: 788, w: 320, h: 24 };
+const ATTACKER_DURATION_MS = 30000;
+const ATTACKER_PAYOUT = 15;
 const WINDMILL = { x: 400, y: 653, r: 38 };
 // アウト：綠色橢圓底部內側（球到達此 y 即吞掉）
 const OUT_Y = 810;
@@ -153,6 +157,27 @@ class GameScene extends Phaser.Scene {
       g.fillStyle(0xffffff, 0.85);
       g.fillCircle(7, 7, 2.5);
       g.generateTexture("whiteball", 20, 20);
+      g.destroy();
+    }
+    // 動態產生釘子 texture — 金色，視覺尺寸與物理碰撞半徑一致
+    {
+      const g = this.make.graphics({ x: 0, y: 0, add: false });
+      // 暗金邊
+      g.fillStyle(0x6b4a00, 1);
+      g.fillCircle(9, 9, 8);
+      // 金色主體
+      g.fillStyle(0xf5c542, 1);
+      g.fillCircle(9, 9, 7);
+      // 亮金內圈
+      g.fillStyle(0xffe066, 1);
+      g.fillCircle(9, 9, 5);
+      // 高光
+      g.fillStyle(0xffffff, 0.9);
+      g.fillCircle(7, 7, 2.5);
+      // 外緣描邊
+      g.lineStyle(1, 0x3d2900, 0.9);
+      g.strokeCircle(9, 9, 7.5);
+      g.generateTexture("naildot", 18, 18);
       g.destroy();
     }
 
@@ -273,6 +298,61 @@ class GameScene extends Phaser.Scene {
       .setDisplaySize(POCKETS.sideR.w * 1.4, POCKETS.sideR.h * 1.2);
     sR._baseScaleX = sR.scaleX; sR._baseScaleY = sR.scaleY;
     this.pocketSprites.sideR = sR;
+
+    // 大入賞口（アタッカー）— 預設關閉，中大賞時打開
+    this.attackerOpen = false;
+    this.attackerEndsAt = 0;
+    this.attackerGfx = this.add.graphics().setDepth(35);
+    this.attackerLabel = this.add.text(ATTACKER.x, ATTACKER.y - 24, "", {
+      fontFamily: "DotGothic16", fontSize: "14px", color: "#ffd166",
+      stroke: "#000", strokeThickness: 4, fontStyle: "bold",
+    }).setOrigin(0.5).setDepth(36).setVisible(false);
+    this.drawAttacker();
+  }
+
+  // 中獎後從機台下方托盤平順流下的視覺效果
+  dropPayoutBalls(count) {
+    // 出口：紅色橫條中央（球從這裡順順掉入下方黑色凹槽）
+    const exitX = 380;
+    const exitY = 935;
+    // 托盤落點範圍（內部黑色凹槽，避開右側控制器）
+    const trayMinX = 280, trayMaxX = 480, trayBottomY = 985;
+    for (let i = 0; i < count; i++) {
+      this.time.delayedCall(i * 50, () => {
+        const startX = exitX + (Math.random() - 0.5) * 24;
+        const ball = this.add.image(startX, exitY, "whiteball")
+          .setDisplaySize(26, 26).setDepth(45);
+        const targetX = trayMinX + Math.random() * (trayMaxX - trayMinX);
+        const targetY = trayBottomY - Math.random() * 10;
+        const dur = 500 + Math.random() * 200;
+        // 平順下落（重力感曲線）
+        this.tweens.add({
+          targets: ball, x: targetX, y: targetY,
+          duration: dur, ease: "Quad.easeIn",
+          onComplete: () => {
+            this.tweens.add({
+              targets: ball, alpha: 0, duration: 500, delay: 600,
+              onComplete: () => ball.destroy(),
+            });
+          },
+        });
+      });
+    }
+  }
+
+  drawAttacker() {
+    const g = this.attackerGfx;
+    g.clear();
+    if (!this.attackerOpen) return;
+    const r = ATTACKER;
+    // 紅金閃爍底
+    const pulse = 0.6 + 0.4 * Math.sin(this.time.now / 80);
+    g.fillStyle(0xff2200, 0.55 * pulse);
+    g.fillRoundedRect(r.x - r.w / 2, r.y - r.h / 2, r.w, r.h, 8);
+    g.lineStyle(3, 0xffd166, 1);
+    g.strokeRoundedRect(r.x - r.w / 2, r.y - r.h / 2, r.w, r.h, 8);
+    g.lineStyle(2, 0xffffff, 0.8 * pulse);
+    g.strokeRoundedRect(r.x - r.w / 2 + 4, r.y - r.h / 2 + 4, r.w - 8, r.h - 8, 6);
   }
 
   inGreen(x, y) {
@@ -289,11 +369,12 @@ class GameScene extends Phaser.Scene {
         && y > LCD.y - LCD.h/2 - 10 && y < LCD.y + LCD.h/2 + 10;
   }
   addNail(x, y) {
-    const body = this.matter.add.circle(x, y, 6, {
-      isStatic: true, restitution: 0.55, friction: 0.02, label: "nail",
+    // 物理半徑 8、視覺直徑 16 — 完全對齊，球碰到看到的邊緣就會反彈
+    const body = this.matter.add.circle(x, y, 8, {
+      isStatic: true, restitution: 0.6, friction: 0.02, label: "nail",
       render: { visible: false },
     });
-    const sprite = this.add.image(x, y, "nail").setDisplaySize(16, 16);
+    const sprite = this.add.image(x, y, "naildot").setDisplaySize(16, 16);
     this.nails.push({ body, sprite });
   }
 
@@ -345,9 +426,15 @@ class GameScene extends Phaser.Scene {
       });
     } else if (mood === "jackpot") {
       this.tweens.killTweensOf(this.mascot);
+      // 持續放大縮小（整個大賞期間）
       this.tweens.add({
-        targets: this.mascot, angle: { from: -3, to: 3 }, scale: { from: 1, to: 1.08 },
-        duration: 250, yoyo: true, repeat: 8,
+        targets: this.mascot, scale: { from: 1, to: 1.15 },
+        duration: 380, yoyo: true, repeat: -1, ease: "Sine.easeInOut",
+      });
+      // 輕微左右搖擺
+      this.tweens.add({
+        targets: this.mascot, angle: { from: -2.5, to: 2.5 },
+        duration: 280, yoyo: true, repeat: -1, ease: "Sine.easeInOut",
       });
     } else {
       this.tweens.killTweensOf(this.mascot);
@@ -1156,7 +1243,7 @@ class GameScene extends Phaser.Scene {
   createWinRateUI() {
     if (!DEV_MODE) return;
     const fmt = () =>
-      `中獎率  通常 ${Math.round(this.normalProb * 100)}%  確変 ${Math.round(this.feverProb * 100)}%   [Q/W 通常 ±5%  A/S 確変 ±5%  Z 重設]`;
+      `中獎率  通常 ${Math.round(this.normalProb * 100)}%  確変 ${Math.round(this.feverProb * 100)}%   [Q/W ±5% 通常  A/S ±5% 確変  Z 重設  J 大賞演示]`;
     this.winRateLabel = this.add.text(W / 2, 160, fmt(), {
       fontFamily: "DotGothic16", fontSize: "13px", color: "#ffd166",
       backgroundColor: "rgba(0,0,0,0.6)", padding: { x: 10, y: 4 },
@@ -1171,6 +1258,34 @@ class GameScene extends Phaser.Scene {
     this.input.keyboard.on("keydown-S", () => { this.feverProb = clamp(this.feverProb + 0.05); refresh(); });
     this.input.keyboard.on("keydown-Z", () => {
       this.normalProb = 0.4; this.feverProb = 0.6; refresh();
+    });
+    // J：大賞演示 — 直接觸發大賞，並自動撒球進大入賞口
+    this.input.keyboard.on("keydown-J", () => {
+      if (this.state.spinning) return;
+      this.state.spinning = true;
+      this.onJackpot();
+      // 等大入賞口開啟後開始撒球
+      this.time.delayedCall(1700, () => this.startDemoBallRain());
+    });
+  }
+
+  startDemoBallRain() {
+    if (this._demoRainTimer) this._demoRainTimer.remove();
+    // 每 220ms 在大入賞口正上方丟一顆球，物理自然落入
+    this._demoRainTimer = this.time.addEvent({
+      delay: 220, loop: true,
+      callback: () => {
+        if (!this.attackerOpen) {
+          this._demoRainTimer.remove();
+          this._demoRainTimer = null;
+          return;
+        }
+        const r = ATTACKER;
+        const x = r.x + (Math.random() - 0.5) * (r.w - 40);
+        const y = r.y - 120; // 上方 120px 處掉下
+        const vx = (Math.random() - 0.5) * 1.5;
+        this.createBallBody(x, y, vx, 0);
+      },
     });
   }
 
@@ -1313,6 +1428,13 @@ class GameScene extends Phaser.Scene {
     // 風車旋轉
     if (this.windmillSprite) this.windmillSprite.rotation += 0.04;
 
+    // 大入賞口閃爍 + 倒數
+    if (this.attackerOpen) {
+      this.drawAttacker();
+      const remain = Math.max(0, Math.ceil((this.attackerEndsAt - this.time.now) / 1000));
+      this.attackerLabel.setText(`大入賞口 OPEN  ${remain}s   進球 ${this.attackerCount || 0}`);
+    }
+
     // 燈條閃爍 (tween 自動)
 
     // 發射動畫
@@ -1396,6 +1518,14 @@ class GameScene extends Phaser.Scene {
       { name: "sideL", rect: POCKETS.sideL, type: "side" },
       { name: "sideR", rect: POCKETS.sideR, type: "side" },
     ];
+    // 大入賞口優先檢查（只在開啟期間有效）
+    if (this.attackerOpen) {
+      const r = ATTACKER;
+      if (x > r.x - r.w / 2 && x < r.x + r.w / 2 &&
+          y > r.y - r.h / 2 && y < r.y + r.h / 2) {
+        return { name: "attacker", rect: r, type: "attacker" };
+      }
+    }
     for (const t of tests) {
       const r = t.rect;
       if (x > r.x - r.w / 2 && x < r.x + r.w / 2 &&
@@ -1411,12 +1541,21 @@ class GameScene extends Phaser.Scene {
       this.state.balls += 3;
       if (this.audio) this.audio.start();
       this.doSpin(false);
+      this.dropPayoutBalls(3);
     } else if (pk.type === "side") {
       this.state.balls += 5;
       if (this.audio) this.audio.start();
       this.doSpin(false);
+      this.dropPayoutBalls(5);
+    } else if (pk.type === "attacker") {
+      this.state.balls += ATTACKER_PAYOUT;
+      this.attackerCount = (this.attackerCount || 0) + 1;
+      if (this.audio) { this.audio.pocket(); this.audio.start(); }
+      // 進球閃光
+      this.cameras.main.flash(120, 255, 220, 80);
+      this.dropPayoutBalls(ATTACKER_PAYOUT);
     }
-    if (this.audio) this.audio.pocket();
+    if (pk.type !== "attacker" && this.audio) this.audio.pocket();
     this.syncHud();
     // 入賞口閃光（以記錄的 base scale 為基準，避免累積放大）
     const sprite = this.pocketSprites[pk.name];
@@ -1498,7 +1637,6 @@ class GameScene extends Phaser.Scene {
 
   onJackpot() {
     this.state.jackpots++;
-    this.state.balls += 100;
     this.state.fever = true;
     this.state.feverRounds = 10;
     this.state.mode = "大当!!";
@@ -1521,13 +1659,36 @@ class GameScene extends Phaser.Scene {
     }).explode(60);
 
     this.syncHud();
-    this.time.delayedCall(3000, () => {
-      this.state.spinning = false;
-      this.state.mode = "確変 RUSH";
-      this.setMood("idle");
-      this.syncHud();
-      this.consumeHold();
+
+    // 1.5 秒演出後，開啟大入賞口 30 秒
+    this.time.delayedCall(1500, () => {
+      this.openAttacker();
     });
+  }
+
+  openAttacker() {
+    this.attackerOpen = true;
+    this.attackerCount = 0;
+    this.attackerEndsAt = this.time.now + ATTACKER_DURATION_MS;
+    this.attackerLabel.setVisible(true);
+    this.state.mode = "大当 ROUND";
+    this.syncHud();
+    // 倒數結束自動關閉
+    this.time.delayedCall(ATTACKER_DURATION_MS, () => this.closeAttacker());
+  }
+
+  closeAttacker() {
+    if (!this.attackerOpen) return;
+    this.attackerOpen = false;
+    this.attackerLabel.setVisible(false);
+    this.attackerGfx.clear();
+    this.cameras.main.flash(300, 255, 255, 255);
+    // 進入確変 RUSH
+    this.state.spinning = false;
+    this.state.mode = "確変 RUSH";
+    this.setMood("idle");
+    this.syncHud();
+    this.consumeHold();
   }
 
   consumeHold() {
@@ -1562,6 +1723,11 @@ class GameScene extends Phaser.Scene {
     this.lcdMessage.setAlpha(0);
     this.digits.forEach(d => d.setFrame(7));
     this.setMood("idle");
+    // 關閉大入賞口
+    this.attackerOpen = false;
+    this.attackerCount = 0;
+    if (this.attackerLabel) this.attackerLabel.setVisible(false);
+    if (this.attackerGfx) this.attackerGfx.clear();
     this.syncHud();
   }
 
