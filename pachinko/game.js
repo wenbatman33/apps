@@ -135,6 +135,9 @@ class GameScene extends Phaser.Scene {
       mode: "通常", spinning: false, fever: false, feverRounds: 0,
       holds: [],
     };
+    // 中獎機率（展示用）— 通常 40%、確変 60%
+    this.normalProb = 0.4;
+    this.feverProb = 0.6;
     this.balls = [];
     this.launching = [];
     this.ballTrails = new WeakMap();
@@ -174,6 +177,7 @@ class GameScene extends Phaser.Scene {
     this.createPaintGreenMode();
     this.createDrawPathMode();
     this.createEditMode();
+    this.createWinRateUI();
     this.createAudio();
 
     this.matter.world.on("collisionstart", this.onCollision, this);
@@ -1148,6 +1152,28 @@ class GameScene extends Phaser.Scene {
     });
   }
 
+  // ==================== 中獎機率 dev UI（按 Q/W/A/S 調整）====================
+  createWinRateUI() {
+    if (!DEV_MODE) return;
+    const fmt = () =>
+      `中獎率  通常 ${Math.round(this.normalProb * 100)}%  確変 ${Math.round(this.feverProb * 100)}%   [Q/W 通常 ±5%  A/S 確変 ±5%  Z 重設]`;
+    this.winRateLabel = this.add.text(W / 2, 160, fmt(), {
+      fontFamily: "DotGothic16", fontSize: "13px", color: "#ffd166",
+      backgroundColor: "rgba(0,0,0,0.6)", padding: { x: 10, y: 4 },
+    }).setOrigin(0.5).setDepth(80);
+
+    const refresh = () => this.winRateLabel.setText(fmt());
+    const clamp = (v) => Math.max(0.01, Math.min(1, v));
+    // Q/W：通常 -5% / +5%
+    this.input.keyboard.on("keydown-Q", () => { this.normalProb = clamp(this.normalProb - 0.05); refresh(); });
+    this.input.keyboard.on("keydown-W", () => { this.normalProb = clamp(this.normalProb + 0.05); refresh(); });
+    this.input.keyboard.on("keydown-A", () => { this.feverProb = clamp(this.feverProb - 0.05); refresh(); });
+    this.input.keyboard.on("keydown-S", () => { this.feverProb = clamp(this.feverProb + 0.05); refresh(); });
+    this.input.keyboard.on("keydown-Z", () => {
+      this.normalProb = 0.4; this.feverProb = 0.6; refresh();
+    });
+  }
+
   // ==================== 音效（Web Audio 合成）====================
   createAudio() {
     let actx = null;
@@ -1419,7 +1445,7 @@ class GameScene extends Phaser.Scene {
     this.state.spins++;
     this.syncHud();
 
-    const baseProb = this.state.fever ? 1 / 30 : 1 / 100;
+    const baseProb = this.state.fever ? this.feverProb : this.normalProb;
     const win = forceJackpot || Math.random() < baseProb;
 
     this.setMood("spin");
