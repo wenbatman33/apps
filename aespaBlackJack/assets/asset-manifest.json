@@ -1,0 +1,215 @@
+{
+  "backgrounds": {
+    "loading": "assets/generated/loading_screen.png",
+    "mainMenu": "assets/generated/main_menu_bg.png",
+    "gameTable": "assets/generated/game_table_bg.png"
+  },
+  "cards": {
+    "back": "assets/cards/card_back.png",
+    "ranks": [
+      "A",
+      "2",
+      "3",
+      "4",
+      "5",
+      "6",
+      "7",
+      "8",
+      "9",
+      "10",
+      "J",
+      "Q",
+      "K"
+    ],
+    "suits": [
+      "S",
+      "H",
+      "D",
+      "C"
+    ],
+    "pattern": "assets/cards/{rank}_{suit}.png"
+  },
+  "ui": [
+    "assets/ui/btn_deal.png",
+    "assets/ui/btn_double.png",
+    "assets/ui/btn_hit.png",
+    "assets/ui/btn_play.png",
+    "assets/ui/btn_rebet.png",
+    "assets/ui/btn_split.png",
+    "assets/ui/btn_stand.png",
+    "assets/ui/chip_100.png",
+    "assets/ui/chip_1000.png",
+    "assets/ui/chip_500.png",
+    "assets/ui/chip_5000.png",
+    "assets/ui/chip_stack_large.png",
+    "assets/ui/chip_stack_small.png",
+    "assets/ui/panel_bet.png",
+    "assets/ui/panel_result.png",
+    "assets/ui/panel_status.png",
+    "assets/ui/push_chips.png"
+  ],
+  "flow": [
+    "assets/flow/flow_01_loading.png",
+    "assets/flow/flow_02_lobby.png",
+    "assets/flow/flow_03_betting.png",
+    "assets/flow/flow_04_dealing.png",
+    "assets/flow/flow_05_player_turn.png",
+    "assets/flow/flow_06_result.png"
+  ],
+  "sfx": {
+    "card_deal": "assets/sfx/card_deal.wav",
+    "card_flip": "assets/sfx/card_flip.wav",
+    "card_shuffle": "assets/sfx/card_shuffle.wav",
+    "chip_click": "assets/sfx/chip_click.wav",
+    "chip_stack": "assets/sfx/chip_stack.wav",
+    "chip_push": "assets/sfx/chip_push.wav",
+    "bet_confirm": "assets/sfx/bet_confirm.wav",
+    "blackjack_win": "assets/sfx/blackjack_win.wav",
+    "round_lose": "assets/sfx/round_lose.wav",
+    "button_tap": "assets/sfx/button_tap.wav"
+  },
+  "sprites": {
+    "idolOpponentsSheet": {
+      "path": "assets/sprites/idol_opponents_sheet.png",
+      "frameWidth": 1024,
+      "frameHeight": 1024,
+      "frames": 4
+    },
+    "idolPortraits": [
+      "assets/sprites/idol_ice_blue.png",
+      "assets/sprites/idol_ruby_magenta.png",
+      "assets/sprites/idol_violet_chrome.png",
+      "assets/sprites/idol_pearl_gold.png"
+    ],
+    "reactionAnimations": {
+      "idol_ice_blue": {
+        "win": {
+          "sheet": "assets/sprites/animations/idol_ice_blue/win_sheet.png",
+          "frames": [
+            "assets/sprites/animations/idol_ice_blue/win_00.png",
+            "assets/sprites/animations/idol_ice_blue/win_01.png",
+            "assets/sprites/animations/idol_ice_blue/win_02.png",
+            "assets/sprites/animations/idol_ice_blue/win_03.png",
+            "assets/sprites/animations/idol_ice_blue/win_04.png",
+            "assets/sprites/animations/idol_ice_blue/win_05.png"
+          ],
+          "frameWidth": 512,
+          "frameHeight": 512,
+          "frameCount": 6,
+          "frameRate": 10
+        },
+        "lose": {
+          "sheet": "assets/sprites/animations/idol_ice_blue/lose_sheet.png",
+          "frames": [
+            "assets/sprites/animations/idol_ice_blue/lose_00.png",
+            "assets/sprites/animations/idol_ice_blue/lose_01.png",
+            "assets/sprites/animations/idol_ice_blue/lose_02.png",
+            "assets/sprites/animations/idol_ice_blue/lose_03.png",
+            "assets/sprites/animations/idol_ice_blue/lose_04.png",
+            "assets/sprites/animations/idol_ice_blue/lose_05.png"
+          ],
+          "frameWidth": 512,
+          "frameHeight": 512,
+          "frameCount": 6,
+          "frameRate": 8
+        }
+      },
+      "idol_ruby_magenta": {
+        "win": {
+          "sheet": "assets/sprites/animations/idol_ruby_magenta/win_sheet.png",
+          "frames": [
+            "assets/sprites/animations/idol_ruby_magenta/win_00.png",
+            "assets/sprites/animations/idol_ruby_magenta/win_01.png",
+            "assets/sprites/animations/idol_ruby_magenta/win_02.png",
+            "assets/sprites/animations/idol_ruby_magenta/win_03.png",
+            "assets/sprites/animations/idol_ruby_magenta/win_04.png",
+            "assets/sprites/animations/idol_ruby_magenta/win_05.png"
+          ],
+          "frameWidth": 512,
+          "frameHeight": 512,
+          "frameCount": 6,
+          "frameRate": 10
+        },
+        "lose": {
+          "sheet": "assets/sprites/animations/idol_ruby_magenta/lose_sheet.png",
+          "frames": [
+            "assets/sprites/animations/idol_ruby_magenta/lose_00.png",
+            "assets/sprites/animations/idol_ruby_magenta/lose_01.png",
+            "assets/sprites/animations/idol_ruby_magenta/lose_02.png",
+            "assets/sprites/animations/idol_ruby_magenta/lose_03.png",
+            "assets/sprites/animations/idol_ruby_magenta/lose_04.png",
+            "assets/sprites/animations/idol_ruby_magenta/lose_05.png"
+          ],
+          "frameWidth": 512,
+          "frameHeight": 512,
+          "frameCount": 6,
+          "frameRate": 8
+        }
+      },
+      "idol_violet_chrome": {
+        "win": {
+          "sheet": "assets/sprites/animations/idol_violet_chrome/win_sheet.png",
+          "frames": [
+            "assets/sprites/animations/idol_violet_chrome/win_00.png",
+            "assets/sprites/animations/idol_violet_chrome/win_01.png",
+            "assets/sprites/animations/idol_violet_chrome/win_02.png",
+            "assets/sprites/animations/idol_violet_chrome/win_03.png",
+            "assets/sprites/animations/idol_violet_chrome/win_04.png",
+            "assets/sprites/animations/idol_violet_chrome/win_05.png"
+          ],
+          "frameWidth": 512,
+          "frameHeight": 512,
+          "frameCount": 6,
+          "frameRate": 10
+        },
+        "lose": {
+          "sheet": "assets/sprites/animations/idol_violet_chrome/lose_sheet.png",
+          "frames": [
+            "assets/sprites/animations/idol_violet_chrome/lose_00.png",
+            "assets/sprites/animations/idol_violet_chrome/lose_01.png",
+            "assets/sprites/animations/idol_violet_chrome/lose_02.png",
+            "assets/sprites/animations/idol_violet_chrome/lose_03.png",
+            "assets/sprites/animations/idol_violet_chrome/lose_04.png",
+            "assets/sprites/animations/idol_violet_chrome/lose_05.png"
+          ],
+          "frameWidth": 512,
+          "frameHeight": 512,
+          "frameCount": 6,
+          "frameRate": 8
+        }
+      },
+      "idol_pearl_gold": {
+        "win": {
+          "sheet": "assets/sprites/animations/idol_pearl_gold/win_sheet.png",
+          "frames": [
+            "assets/sprites/animations/idol_pearl_gold/win_00.png",
+            "assets/sprites/animations/idol_pearl_gold/win_01.png",
+            "assets/sprites/animations/idol_pearl_gold/win_02.png",
+            "assets/sprites/animations/idol_pearl_gold/win_03.png",
+            "assets/sprites/animations/idol_pearl_gold/win_04.png",
+            "assets/sprites/animations/idol_pearl_gold/win_05.png"
+          ],
+          "frameWidth": 512,
+          "frameHeight": 512,
+          "frameCount": 6,
+          "frameRate": 10
+        },
+        "lose": {
+          "sheet": "assets/sprites/animations/idol_pearl_gold/lose_sheet.png",
+          "frames": [
+            "assets/sprites/animations/idol_pearl_gold/lose_00.png",
+            "assets/sprites/animations/idol_pearl_gold/lose_01.png",
+            "assets/sprites/animations/idol_pearl_gold/lose_02.png",
+            "assets/sprites/animations/idol_pearl_gold/lose_03.png",
+            "assets/sprites/animations/idol_pearl_gold/lose_04.png",
+            "assets/sprites/animations/idol_pearl_gold/lose_05.png"
+          ],
+          "frameWidth": 512,
+          "frameHeight": 512,
+          "frameCount": 6,
+          "frameRate": 8
+        }
+      }
+    }
+  }
+}
