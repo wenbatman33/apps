@@ -63,6 +63,48 @@
     },
   };
 
+  // ===== 滑鼠/手指 華麗亮點軌跡 =====
+  function attachSparkleTrail(scene) {
+    const COLORS = [0x6FE0FF, 0xFF53C7, 0xB388FF, 0xFFE57F, 0xffffff];
+    let lastEmit = 0;
+    const minIntervalMs = 14;
+    scene.input.on('pointermove', (p) => {
+      const now = scene.time.now;
+      if (now - lastEmit < minIntervalMs) return;
+      lastEmit = now;
+      const px = (p.worldX != null) ? p.worldX : p.x;
+      const py = (p.worldY != null) ? p.worldY : p.y;
+      const n = 3; // 每次發射多顆
+      for (let i = 0; i < n; i++) {
+        const color = COLORS[Phaser.Math.Between(0, COLORS.length - 1)];
+        const size = Phaser.Math.Between(12, 22);
+        const ox = Phaser.Math.Between(-40, 40);
+        const oy = Phaser.Math.Between(-40, 40);
+        // 外光暈 (淡)
+        const halo = scene.add.circle(px + ox, py + oy, size * 1.6, color, 0.18).setDepth(498);
+        halo.setBlendMode(Phaser.BlendModes.ADD);
+        // 主光點
+        const dot = scene.add.circle(px + ox, py + oy, size * 0.4, color, 0.55).setDepth(500);
+        dot.setBlendMode(Phaser.BlendModes.ADD);
+        // 白色高光
+        const core = scene.add.circle(px + ox, py + oy, size * 0.18, 0xffffff, 0.7).setDepth(501);
+        core.setBlendMode(Phaser.BlendModes.ADD);
+        const driftX = Phaser.Math.Between(-100, 100);
+        const driftY = Phaser.Math.Between(-110, -20);
+        scene.tweens.add({
+          targets: [halo, dot, core],
+          x: '+=' + driftX,
+          y: '+=' + driftY,
+          alpha: 0,
+          scale: 0.25,
+          duration: 800 + Phaser.Math.Between(0, 400),
+          ease: 'Cubic.easeOut',
+          onComplete: () => { halo.destroy(); dot.destroy(); core.destroy(); },
+        });
+      }
+    });
+  }
+
   // ===== Boot / Preload =====
   class BootScene extends Phaser.Scene {
     constructor() { super('Boot'); }
@@ -232,6 +274,7 @@
       saveProfile(this.profile);
 
       this.add.image(W/2, H/2, 'bg_menu').setDisplaySize(W, H);
+      attachSparkleTrail(this);
       // 仅在顶部与底部加轻微渐变, 中段完整露出 4 位偶像
       const topMask = this.add.graphics();
       topMask.fillGradientStyle(0x05030d, 0x05030d, 0x05030d, 0x05030d, 0.7, 0.7, 0, 0);
@@ -366,6 +409,7 @@
     create() {
       this.add.image(W/2, H/2, 'bg_table').setDisplaySize(W, H);
       this.add.rectangle(W/2, H/2, W, H, 0x05030d, 0.30);
+      attachSparkleTrail(this);
 
       // 庄家立绘 / 反应动画 (大头像, 下移)
       const portraitY = 360;
@@ -399,9 +443,15 @@
         color: '#6FE0FF', stroke: '#0a0420', strokeThickness: 3,
       }).setOrigin(0.5).setAlpha(0.95);
 
-      // 黃色分数不再显示 (依用户要求隐藏)
-      this.dealerScoreText = { setText: () => {} };
-      this.playerScoreText = { setText: () => {} };
+      // 总点数: 庄家在牌下方, 玩家在牌上方
+      this.dealerScoreText = this.add.text(W/2, 940, '', {
+        fontFamily: FONT_TITLE, fontSize: '40px', fontStyle: '900',
+        color: '#FFE57F', stroke: '#0a0420', strokeThickness: 3,
+      }).setOrigin(0.5);
+      this.playerScoreText = this.add.text(W/2, 1080, '', {
+        fontFamily: FONT_TITLE, fontSize: '40px', fontStyle: '900',
+        color: '#FFE57F', stroke: '#0a0420', strokeThickness: 3,
+      }).setOrigin(0.5);
 
       // 顶部状态条
       this.add.image(W/2, 80, 'panel_status').setDisplaySize(940, 130);
@@ -470,6 +520,7 @@
         this.chips += this.bet; this.bet = 0; this.updateHud();
         SfxMgr.play(this,'sfx_chip_push',0.5);
         this.clearStackChips(true);
+        this.updateBetButtons();
       }});
       this.btnDeal = this.add.image(W/2 + 260, 1730, 'btn_deal').setDisplaySize(420, 120)
         .setInteractive({useHandCursor:true});
@@ -506,6 +557,13 @@
       this.chips -= v; this.bet += v; this.updateHud();
       SfxMgr.play(this, 'sfx_chip_click', 0.6);
       this.spawnStackChip(v);
+      this.updateBetButtons();
+    }
+
+    updateBetButtons() {
+      const show = this.phase === 'bet' && this.bet > 0;
+      this.btnClear.setVisible(show);
+      this.btnDeal.setVisible(show);
     }
 
     spawnStackChip(v) {
@@ -594,8 +652,8 @@
       this.phase = p;
       if (p === 'bet') {
         this.chipRow.setVisible(true);
-        this.btnClear.setVisible(true);
-        this.btnDeal.setVisible(true);
+        this.btnClear.setVisible(this.bet > 0);
+        this.btnDeal.setVisible(this.bet > 0);
         this.betHint.setVisible(true);
         this.actionRow.setVisible(false);
         this.dealerScoreText.setText('');
@@ -944,6 +1002,7 @@
     create() {
       this.profile = loadProfile() || defaultProfile();
       this.add.image(W/2, H/2, 'bg_menu').setDisplaySize(W, H);
+      attachSparkleTrail(this);
       this.add.rectangle(W/2, H/2, W, H, 0x05030d, 0.65);
 
       this.add.text(W/2, 180, '排行榜', {
