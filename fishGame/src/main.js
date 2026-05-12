@@ -10,7 +10,7 @@ const CANNON_ORIGIN = new Phaser.Math.Vector2(880, 1750);
 const BULLET_SPEED = 1700;          // 子彈速度 px/s
 const BULLET_COOLDOWN = 140;        // 連射間隔 ms
 const BULLET_LIFETIME = 1600;       // 子彈存活 ms
-const RTP = 0.92;                   // 抽水率（理論回報率）
+const RTP = 0.96;                   // 抽水率（理論回報率）— 1000 金幣長期剩 960
 
 // odds = 魚倍率；擊殺後 reward = bet × odds（市售捕魚機標準公式）
 // 12 張獨立 PNG（已用 PIL 裁掉透明 padding），texKey 對應檔名
@@ -263,7 +263,7 @@ class GameScene extends Phaser.Scene {
     // 預建每張魚圖的 alpha bitmap，做像素級命中判定（避免空氣牆）
     this.cacheFishAlphaMaps();
 
-    this.coins = 1500;
+    this.coins = 3000;
     this.score = 0;
     this.combo = 0;
     this.bet = 1;
@@ -500,13 +500,14 @@ class GameScene extends Phaser.Scene {
   }
 
   // 大魚 / Boss 進場警告：橫幅 + 螢幕邊框閃紅 + 震動
-  showBigFishWarning(data, isBoss) {
+  showBigFishWarning(data, isBoss, effectiveOdds) {
     const color = isBoss ? '#ff3344' : '#ffa040';
     const borderColor = isBoss ? 0xff2233 : 0xff9933;
+    const odds = effectiveOdds || data.odds;
     const title = isBoss ? '⚠ BOSS 來襲 ⚠' : '⚠ 大魚來襲';
     const subtitle = isBoss
-      ? `${data.name}　x${data.odds}　強力倍率`
-      : `${data.name}　x${data.odds}`;
+      ? `${data.name}　x${odds}　強力倍率`
+      : `${data.name}　x${odds}`;
 
     // 螢幕邊框閃紅（4 條邊）
     const W = 22;
@@ -651,9 +652,11 @@ class GameScene extends Phaser.Scene {
       const perpDist = Math.abs(fdx * (-sin) + fdy * cos);
       const fishR = Math.min(fish.displayWidth, fish.displayHeight) / 2;
       if (perpDist > 60 + fishR * 0.6) return;
-      // 光束擊殺機率：每 tick (bet / odds) × 0.92 × 1.6
+      // 光束擊殺機率：每 tick (bet / odds) × RTP × 1.5
+      // EV = (bet/odds × RTP × 1.5) × (bet × odds × 2) = bet² × RTP × 3 = 0.96×3×bet（per fish per tick）
+      // Cost per tick = bet × 3，故每隻魚 EV 約 = 0.96×cost；掃中越多魚越賺
       const odds = fish.getData('odds');
-      const chance = Phaser.Math.Clamp((bet / odds) * 0.92 * 1.6, 0.01, 0.95);
+      const chance = Phaser.Math.Clamp((bet / odds) * RTP * 1.5, 0.01, 0.95);
       if (Math.random() < chance) {
         const reward = bet * odds * 2;  // 光束擊殺 2 倍獎金
         totalReward += reward;
@@ -999,7 +1002,9 @@ class GameScene extends Phaser.Scene {
     const scale = data.scale * scaleBoost;
 
     fish.setScale(scale);
-    fish.setData('odds', data.odds);
+    // 動態 odds：魚越大越難打、獎金越高（scaleBoost 1 不變、2.4 翻 2.4 倍、3.2 翻 3.2 倍）
+    const effectiveOdds = Math.round(data.odds * scaleBoost);
+    fish.setData('odds', effectiveOdds);
     fish.setData('name', data.name);
     fish.setData('class', data.class);
     fish.setData('baseScale', scale);
@@ -1033,12 +1038,11 @@ class GameScene extends Phaser.Scene {
 
     if (data.class === 'boss') {
       fish.setTint(0xffe0a5);
-      this.showBigFishWarning(data, true);
+      this.showBigFishWarning(data, true, effectiveOdds);
     } else if (data.class === 'bonus') {
       fish.setTint(0xfff19a);
     } else if (isLargeVariant) {
-      // 大型 large 魚也有警告
-      this.showBigFishWarning(data, false);
+      this.showBigFishWarning(data, false, effectiveOdds);
     }
 
     fish.setData('wakeTimer', 0);
@@ -1310,10 +1314,10 @@ class GameScene extends Phaser.Scene {
       onComplete: () => impactRing.destroy()
     });
 
-    // 擊殺機率 = (下注 / 魚倍率) * RTP，強力砲彈 ×2.5
+    // 擊殺機率 = (下注 / 魚倍率) * RTP
+    // 強力砲：消耗 ×3，但僅給 1×擊殺率 + 3×獎金（EV = 標準 RTP，不破壞數學）
     const isPower = bullet.getData('powerMode');
-    const powerMult = isPower ? 2.5 : 1;
-    const chance = Phaser.Math.Clamp((bet / odds) * RTP * powerMult, 0.005, 0.98);
+    const chance = Phaser.Math.Clamp((bet / odds) * RTP, 0.005, 0.98);
     if (Math.random() < chance) {
       this.catchFish(fish, isPower ? bet * 3 : bet);
     } else {
@@ -1350,6 +1354,31 @@ class GameScene extends Phaser.Scene {
       duration: 380,
       ease: 'Sine.easeOut',
       onComplete: () => burst.destroy()
+    });
+
+    // 捕魚網：罩住魚身，明確表示「抓到了！」
+    const fishSize = Math.max(fish.displayWidth, fish.displayHeight);
+    const netTargetScale = (fishSize / 320) * 1.25;  // 網子素材 320px，放大 1.25 倍包住魚
+    const net = this.add.sprite(fish.x, fish.y, 'cannonEffects', 9)
+      .setScale(0.1)
+      .setAlpha(0)
+      .setAngle(Phaser.Math.Between(-25, 25))
+      .setDepth(5200);
+    this.tweens.add({
+      targets: net,
+      scale: netTargetScale,
+      alpha: 1,
+      duration: 180,
+      ease: 'Back.easeOut'
+    });
+    this.tweens.add({
+      targets: net,
+      alpha: 0,
+      scale: netTargetScale * 0.85,
+      delay: 480,
+      duration: 320,
+      ease: 'Sine.easeIn',
+      onComplete: () => net.destroy()
     });
 
     this.flashFloatingText(fish.x, fish.y - 42, `+${reward}`, '#fff1a5');
