@@ -10,7 +10,7 @@ const CANNON_ORIGIN = new Phaser.Math.Vector2(880, 1750);
 const BULLET_SPEED = 1700;          // 子彈速度 px/s
 const BULLET_COOLDOWN = 140;        // 連射間隔 ms
 const BULLET_LIFETIME = 1600;       // 子彈存活 ms
-const RTP = 0.96;                   // 抽水率（理論回報率）— 1000 金幣長期剩 960
+const RTP = 0.65;                   // 抽水率：莊家抽 35%（1000 金幣長期剩 650）— 高難度
 
 // odds = 魚倍率；擊殺後 reward = bet × odds（市售捕魚機標準公式）
 // 12 張獨立 PNG（已用 PIL 裁掉透明 padding），texKey 對應檔名
@@ -652,13 +652,11 @@ class GameScene extends Phaser.Scene {
       const perpDist = Math.abs(fdx * (-sin) + fdy * cos);
       const fishR = Math.min(fish.displayWidth, fish.displayHeight) / 2;
       if (perpDist > 60 + fishR * 0.6) return;
-      // 光束擊殺機率：每 tick (bet / odds) × RTP × 1.5
-      // EV = (bet/odds × RTP × 1.5) × (bet × odds × 2) = bet² × RTP × 3 = 0.96×3×bet（per fish per tick）
-      // Cost per tick = bet × 3，故每隻魚 EV 約 = 0.96×cost；掃中越多魚越賺
+      // 光束擊殺：標準擊殺率（恆定 1/odds × RTP）+ 標準獎金。價值在於同時掃多魚。
       const odds = fish.getData('odds');
-      const chance = Phaser.Math.Clamp((bet / odds) * RTP * 1.5, 0.01, 0.95);
+      const chance = Phaser.Math.Clamp((1 / odds) * RTP, 0.01, 0.95);
       if (Math.random() < chance) {
-        const reward = bet * odds * 2;  // 光束擊殺 2 倍獎金
+        const reward = bet * odds;
         totalReward += reward;
         killCount += 1;
         const burst = this.add.sprite(fish.x, fish.y, 'cannonEffects', 10)
@@ -812,10 +810,10 @@ class GameScene extends Phaser.Scene {
       const perpDist = Math.abs(dx * (-sin) + dy * cos);  // 垂直光柱距離
       const hitWidth = 80 + Math.min(fish.displayWidth, fish.displayHeight) / 2;
       if (perpDist > hitWidth) return;
-      // 雷射 90% 機率擊殺
-      if (Math.random() < 0.9) {
+      // 雷射道具 50% 擊殺率；獎金維持標準（不再 ×2）
+      if (Math.random() < 0.5) {
         const odds = fish.getData('odds');
-        const reward = bet * odds * 2;  // 雷射雙倍獎金
+        const reward = bet * odds;
         totalReward += reward;
         killCount += 1;
         // 連續爆炸
@@ -994,11 +992,15 @@ class GameScene extends Phaser.Scene {
     let scaleBoost = 1;
     if (isLargeVariant) {
       if (data.class === 'boss') {
-        scaleBoost = Phaser.Math.FloatBetween(2.4, 3.2);  // 巨型 Boss
+        scaleBoost = Phaser.Math.FloatBetween(3.0, 4.5);  // 超巨型 Boss（可超螢幕寬）
       } else {
-        scaleBoost = Phaser.Math.FloatBetween(1.7, 2.3);
+        scaleBoost = Phaser.Math.FloatBetween(2.0, 2.8);
       }
     }
+    // 下注越高，魚越大隻越難打（effectiveOdds 同步放大）
+    // bet 1 = ×1.00、bet 4 = ×1.15、bet 7 = ×1.30
+    const betScaleBoost = 1 + (this.bet - 1) * 0.05;
+    scaleBoost *= betScaleBoost;
     const scale = data.scale * scaleBoost;
 
     fish.setScale(scale);
@@ -1314,10 +1316,10 @@ class GameScene extends Phaser.Scene {
       onComplete: () => impactRing.destroy()
     });
 
-    // 擊殺機率 = (下注 / 魚倍率) * RTP
-    // 強力砲：消耗 ×3，但僅給 1×擊殺率 + 3×獎金（EV = 標準 RTP，不破壞數學）
+    // 擊殺機率 = (1 / 魚倍率) * RTP（恆定，不隨 bet 變化）
+    // 這樣 EV = chance × reward = (1/odds × RTP) × (bet × odds) = bet × RTP，cost = bet，比例 = RTP
     const isPower = bullet.getData('powerMode');
-    const chance = Phaser.Math.Clamp((bet / odds) * RTP, 0.005, 0.98);
+    const chance = Phaser.Math.Clamp((1 / odds) * RTP, 0.005, 0.98);
     if (Math.random() < chance) {
       this.catchFish(fish, isPower ? bet * 3 : bet);
     } else {
@@ -1337,7 +1339,8 @@ class GameScene extends Phaser.Scene {
     const baseReward = bet * odds;
     this.combo += 1;
     this.lastCatchAt = this.time.now;
-    const comboBonus = Math.floor(baseReward * Math.min(this.combo, 8) * 0.05);
+    // combo 加成壓低，不破壞 RTP（最高 +3% 在 combo 3+）
+    const comboBonus = Math.floor(baseReward * Math.min(this.combo, 3) * 0.01);
     const reward = baseReward + comboBonus;
     const previousCoins = this.coins;
     const previousScore = this.score;
@@ -1384,11 +1387,11 @@ class GameScene extends Phaser.Scene {
     this.flashFloatingText(fish.x, fish.y - 42, `+${reward}`, '#fff1a5');
     this.flashFloatingText(fish.x, fish.y + 14, `x${odds}`, '#86f1ff');
 
-    // 雷射道具掉落：Gold 50% / Boss 100% / 其他 large 大魚 15%
+    // 雷射道具掉落（極罕見彩蛋）：Boss 5% / Gold 3% / Large 0.5%
     let dropChance = 0;
-    if (cls === 'boss') dropChance = 1.0;
-    else if (cls === 'bonus') dropChance = 0.5;
-    else if (cls === 'large') dropChance = 0.15;
+    if (cls === 'boss') dropChance = 0.05;
+    else if (cls === 'bonus') dropChance = 0.03;
+    else if (cls === 'large') dropChance = 0.005;
     if (Math.random() < dropChance) {
       this.spawnLaserOrb(fish.x, fish.y);
     }
