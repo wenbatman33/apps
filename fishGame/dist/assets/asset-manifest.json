@@ -1,0 +1,72 @@
+{
+  "project": "fishGame",
+  "engine": "Phaser 3",
+  "orientation": "portrait",
+  "recommendedCanvas": {
+    "width": 1080,
+    "height": 1920
+  },
+  "images": {
+    "loadingScreen": {
+      "path": "assets/ui/loading_screen.png",
+      "width": 1080,
+      "height": 1920,
+      "usage": "Loading scene background. Bottom area is intentionally quieter for a custom progress bar overlay."
+    },
+    "mainMenu": {
+      "path": "assets/ui/main_menu.png",
+      "width": 1080,
+      "height": 1920,
+      "usage": "Main menu background with blank title and button zones for game text/UI overlays."
+    },
+    "gameplayBackground": {
+      "path": "assets/backgrounds/gameplay_bg.png",
+      "width": 1080,
+      "height": 1920,
+      "usage": "Top-down gameplay scene background. Center is kept readable for four-direction fish movement and net effects."
+    }
+  },
+  "spritesheets": {
+    "fish": {
+      "path": "assets/sprites/fish_sheet.png",
+      "width": 1448,
+      "height": 1086,
+      "columns": 4,
+      "rows": 3,
+      "frameWidth": 362,
+      "frameHeight": 362,
+      "transparent": true,
+      "usage": "12 top-down fish/enemy/bonus sprites, facing right for runtime rotation. Use frame indexes 0-11."
+    },
+    "cannonEffects": {
+      "path": "assets/sprites/cannon_effects_sheet.png",
+      "width": 1448,
+      "height": 1086,
+      "columns": 4,
+      "rows": 3,
+      "frameWidth": 362,
+      "frameHeight": 362,
+      "transparent": true,
+      "usage": "Cannon upgrades, bullets, nets, coin burst, and splash impact effects. Use frame indexes 0-11."
+    },
+    "ui": {
+      "path": "assets/ui/ui_sheet.png",
+      "width": 1280,
+      "height": 1280,
+      "columns": 4,
+      "rows": 4,
+      "frameWidth": 320,
+      "frameHeight": 320,
+      "transparent": true,
+      "usage": "16 blank UI widgets and icons. Use frame indexes 0-15."
+    }
+  },
+  "phaserPreloadExample": [
+    "this.load.image('loadingScreen', 'assets/ui/loading_screen.png');",
+    "this.load.image('mainMenu', 'assets/ui/main_menu.png');",
+    "this.load.image('gameplayBg', 'assets/backgrounds/gameplay_bg.png');",
+    "this.load.spritesheet('fish', 'assets/sprites/fish_sheet.png', { frameWidth: 362, frameHeight: 362 });",
+    "this.load.spritesheet('cannonEffects', 'assets/sprites/cannon_effects_sheet.png', { frameWidth: 362, frameHeight: 362 });",
+    "this.load.spritesheet('gameUi', 'assets/ui/ui_sheet.png', { frameWidth: 320, frameHeight: 320 });"
+  ]
+}
