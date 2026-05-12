@@ -5,7 +5,8 @@ const GAME_WIDTH = 1080;
 const GAME_HEIGHT = 1920;
 const CENTER_X = GAME_WIDTH / 2;
 const CENTER_Y = GAME_HEIGHT / 2;
-const CANNON_ORIGIN = new Phaser.Math.Vector2(CENTER_X, 1750);
+// 砲台改放右下角
+const CANNON_ORIGIN = new Phaser.Math.Vector2(880, 1750);
 const BULLET_SPEED = 1700;          // 子彈速度 px/s
 const BULLET_COOLDOWN = 140;        // 連射間隔 ms
 const BULLET_LIFETIME = 1600;       // 子彈存活 ms
@@ -31,6 +32,23 @@ const MIN_BET = 1;
 const MAX_BET = 7;
 
 const asset = (path) => path;
+
+// 把 spritesheet 中每個 frame 的取樣矩形往內縮 `inset` 像素，避免鄰格殘影
+function insetTextureFrames(texture, inset) {
+  if (!texture || !texture.frames) return;
+  Object.keys(texture.frames).forEach((key) => {
+    const frame = texture.frames[key];
+    if (!frame || key === '__BASE') return;
+    if (frame.cutWidth <= inset * 2 || frame.cutHeight <= inset * 2) return;
+    frame.cutX += inset;
+    frame.cutY += inset;
+    frame.cutWidth -= inset * 2;
+    frame.cutHeight -= inset * 2;
+    frame.width = frame.cutWidth;
+    frame.height = frame.cutHeight;
+    frame.updateUVs();
+  });
+}
 
 class LoadingScene extends Phaser.Scene {
   constructor() { super('LoadingScene'); }
@@ -78,6 +96,11 @@ class MenuScene extends Phaser.Scene {
   constructor() { super('MenuScene'); }
 
   create() {
+    // sprite sheet 沒有預留 padding，雙線性過濾會把鄰格像素拉進來造成殘影。
+    // 把每個 frame 往內縮 1px（左/上/右/下各 1），裁掉邊緣的鄰格殘像但保留平滑過濾。
+    insetTextureFrames(this.textures.get('fish'), 1);
+    insetTextureFrames(this.textures.get('cannonEffects'), 1);
+
     this.add.image(CENTER_X, CENTER_Y, 'mainMenu').setDisplaySize(GAME_WIDTH, GAME_HEIGHT);
     this.createMenuAmbience();
 
@@ -228,6 +251,8 @@ class GameScene extends Phaser.Scene {
     this.displayScore = this.score;
     this.isDevMode = new URLSearchParams(window.location.search).get('dev') === '1';
 
+    this.createBulletTexture();
+
     this.fishGroup = this.physics.add.group();
     this.bulletGroup = this.physics.add.group();
 
@@ -264,18 +289,16 @@ class GameScene extends Phaser.Scene {
   }
 
   createBetSelector() {
-    this.minusButton = this.createBetButton(92, 1810, '-', () => this.changeBet(-1));
-    this.plusButton = this.createBetButton(988, 1810, '+', () => this.changeBet(1));
-    this.betBack = this.add.rectangle(CENTER_X, 1810, 456, 104, 0x031a2c, 0.72)
-      .setStrokeStyle(4, 0xf0cf72, 0.76)
+    // 倍率介面改放左下角：− [下注] +
+    const BET_CENTER_X = 230;
+    this.minusButton = this.createBetButton(80, 1810, '-', () => this.changeBet(-1));
+    this.plusButton = this.createBetButton(380, 1810, '+', () => this.changeBet(1));
+    this.betBack = this.add.rectangle(BET_CENTER_X, 1810, 220, 74, 0x031a2c, 0.72)
+      .setStrokeStyle(3, 0xf0cf72, 0.76)
       .setDepth(2400);
-    this.betText = this.add.text(CENTER_X, 1788, '', {
-      fontFamily: 'Arial', fontSize: '38px', fontStyle: 'bold',
-      color: '#fff3b0', stroke: '#09243d', strokeThickness: 6
-    }).setOrigin(0.5).setDepth(2500);
-    this.betHintText = this.add.text(CENTER_X, 1834, '', {
-      fontFamily: 'Arial', fontSize: '26px', fontStyle: 'bold',
-      color: '#aef6ff', stroke: '#09243d', strokeThickness: 4
+    this.betText = this.add.text(BET_CENTER_X, 1810, '', {
+      fontFamily: 'Arial', fontSize: '28px', fontStyle: 'bold',
+      color: '#fff3b0', stroke: '#09243d', strokeThickness: 5
     }).setOrigin(0.5).setDepth(2500);
   }
 
@@ -341,13 +364,33 @@ class GameScene extends Phaser.Scene {
   }
 
   // -------------------- 砲台 / 輸入 --------------------
+  // 程式繪製明亮砲彈貼圖（取代原本半透明的網狀 cannonEffects 第 8/9 frame）
+  createBulletTexture() {
+    const size = 48;
+    const g = this.add.graphics();
+    // 外層光暈
+    g.fillStyle(0xfff1a5, 0.35);
+    g.fillCircle(size / 2, size / 2, size / 2);
+    // 中層金色
+    g.fillStyle(0xffd447, 1);
+    g.fillCircle(size / 2, size / 2, size / 2 - 6);
+    // 內核白熱
+    g.fillStyle(0xffffff, 1);
+    g.fillCircle(size / 2 - 3, size / 2 - 3, 6);
+    // 金色描邊
+    g.lineStyle(2, 0xffb830, 1);
+    g.strokeCircle(size / 2, size / 2, size / 2 - 6);
+    g.generateTexture('bulletTex', size, size);
+    g.destroy();
+  }
+
   createCannon() {
     // 瞄準線在魚之上、HUD 之下
-    this.aimLine = this.add.line(0, 0, CANNON_ORIGIN.x, CANNON_ORIGIN.y, CENTER_X, 1080, 0x7ee9ff, 0.25)
+    this.aimLine = this.add.line(0, 0, CANNON_ORIGIN.x, CANNON_ORIGIN.y, CANNON_ORIGIN.x, 1080, 0x7ee9ff, 0.25)
       .setLineWidth(3, 1)
       .setDepth(2200);
     // 砲台拉到最上層，避免畫面下半部的魚游過時遮住砲台
-    this.cannonBase = this.add.circle(CANNON_ORIGIN.x, 1782, 132, 0x072a43, 0.82)
+    this.cannonBase = this.add.circle(CANNON_ORIGIN.x, CANNON_ORIGIN.y + 32, 132, 0x072a43, 0.82)
       .setStrokeStyle(8, 0xf3cc62)
       .setDepth(3400);
     this.cannon = this.add.sprite(CANNON_ORIGIN.x, CANNON_ORIGIN.y, 'cannonEffects', 0)
@@ -411,7 +454,12 @@ class GameScene extends Phaser.Scene {
     fish.setData('swimPhase', Phaser.Math.FloatBetween(0, Math.PI * 2));
     fish.setData('swimAmp', isLargeVariant ? Phaser.Math.FloatBetween(0.025, 0.045) : Phaser.Math.FloatBetween(0.035, 0.07));
     fish.setData('swimRate', Phaser.Math.FloatBetween(0.004, 0.0075));
-    fish.body.setCircle(138, 43, 43);
+    // body 半徑須隨視覺縮放（Phaser arcade body radius 不會跟 sprite scale 自動縮）
+    // 取視覺半徑的 0.7 倍當碰撞圈，留一點寬鬆但不會像空氣牆那麼大
+    const visualHalf = (362 * scale) / 2;
+    const bodyRadius = visualHalf * 0.7;
+    const bodyOffset = 181 - bodyRadius / scale;
+    fish.body.setCircle(bodyRadius, bodyOffset, bodyOffset);
 
     const routeAngle = Phaser.Math.Angle.Between(route.x, route.y, route.targetX, route.targetY);
     const speedPenalty = isLargeVariant ? 0.7 : 1;
@@ -439,29 +487,30 @@ class GameScene extends Phaser.Scene {
 
   getFishRoute(isLargeVariant) {
     const margin = isLargeVariant ? 280 : 190;
-    const edge = Phaser.Math.Between(0, 3);
+    // 砲台在畫面下方（CANNON_ORIGIN.y = 1750），魚的活動上限抓 1450 避免穿過砲台
+    const FISH_AREA_BOTTOM = 1450;
+    // 只用三條路徑：頂部下游、左→右、右→左；不再從畫面底部生成
+    const edge = Phaser.Math.Between(0, 2);
     const route = { x: 0, y: 0, targetX: 0, targetY: 0 };
 
     if (edge === 0) {
+      // 從上方游進，目標在砲台之上消失
       route.x = Phaser.Math.Between(120, GAME_WIDTH - 120);
       route.y = -margin;
       route.targetX = Phaser.Math.Between(90, GAME_WIDTH - 90);
-      route.targetY = GAME_HEIGHT + margin;
+      route.targetY = FISH_AREA_BOTTOM + margin;
     } else if (edge === 1) {
+      // 右側進入，往左游出
       route.x = GAME_WIDTH + margin;
-      route.y = Phaser.Math.Between(180, 1500);
+      route.y = Phaser.Math.Between(180, FISH_AREA_BOTTOM);
       route.targetX = -margin;
-      route.targetY = Phaser.Math.Between(180, 1500);
-    } else if (edge === 2) {
-      route.x = Phaser.Math.Between(120, GAME_WIDTH - 120);
-      route.y = GAME_HEIGHT + margin;
-      route.targetX = Phaser.Math.Between(90, GAME_WIDTH - 90);
-      route.targetY = -margin;
+      route.targetY = Phaser.Math.Between(180, FISH_AREA_BOTTOM);
     } else {
+      // 左側進入，往右游出
       route.x = -margin;
-      route.y = Phaser.Math.Between(180, 1500);
+      route.y = Phaser.Math.Between(180, FISH_AREA_BOTTOM);
       route.targetX = GAME_WIDTH + margin;
-      route.targetY = Phaser.Math.Between(180, 1500);
+      route.targetY = Phaser.Math.Between(180, FISH_AREA_BOTTOM);
     }
 
     return route;
@@ -548,6 +597,7 @@ class GameScene extends Phaser.Scene {
 
   // -------------------- 開火 --------------------
   fireBullet() {
+    if (this.bigWinLock) return;
     if (this.coins < this.bet) {
       this.flashFloatingText(CENTER_X, 1620, '金幣不足', '#ff7777');
       this.isFiring = false;
@@ -562,13 +612,26 @@ class GameScene extends Phaser.Scene {
     const muzzleX = CANNON_ORIGIN.x + Math.cos(angle) * 110;
     const muzzleY = CANNON_ORIGIN.y + Math.sin(angle) * 110;
 
-    const bullet = this.bulletGroup.create(muzzleX, muzzleY, 'cannonEffects', this.bet >= 5 ? 9 : 8);
-    bullet.setScale(0.18 + this.bet * 0.014)
-      .setRotation(angle + Math.PI / 2)
-      .setAlpha(0.95)
+    const bullet = this.bulletGroup.create(muzzleX, muzzleY, 'bulletTex');
+    const bulletScale = 0.9 + this.bet * 0.12;  // 下注越高砲彈越大顆
+    bullet.setScale(bulletScale)
       .setDepth(3200);
-    bullet.body.setCircle(70, 110, 110);
+    // bulletTex 是 48px 圓形，body 對齊紋理中心
+    const bodyRadius = 16;
+    bullet.body.setCircle(bodyRadius, 24 - bodyRadius, 24 - bodyRadius);
     bullet.setVelocity(Math.cos(angle) * BULLET_SPEED, Math.sin(angle) * BULLET_SPEED);
+
+    // 拖尾效果，讓子彈軌跡更明顯
+    const trail = this.add.circle(muzzleX, muzzleY, 18 * bulletScale, 0xffd447, 0.45)
+      .setDepth(3150);
+    this.tweens.add({
+      targets: trail,
+      alpha: 0,
+      scale: 0.4,
+      duration: 240,
+      ease: 'Sine.easeOut',
+      onComplete: () => trail.destroy()
+    });
     bullet.setData('bet', this.bet);
     bullet.setData('life', BULLET_LIFETIME);
 
@@ -691,8 +754,13 @@ class GameScene extends Phaser.Scene {
     const color = tier === 'JACKPOT' ? '#fff6ba' : tier === 'MEGA WIN' ? '#ffe071' : '#ffd04f';
     const coinCount = tier === 'JACKPOT' ? 150 : tier === 'MEGA WIN' ? 110 : 72;
 
+    // 慢動作期間鎖住開火，避免子彈被 timeScale 拖慢看起來像撞到空氣牆
     this.physics.world.timeScale = 0.45;
-    this.time.delayedCall(580, () => { this.physics.world.timeScale = 1; });
+    this.bigWinLock = true;
+    this.time.delayedCall(580, () => {
+      this.physics.world.timeScale = 1;
+      this.bigWinLock = false;
+    });
 
     this.cameras.main.flash(260, 255, 224, 96);
     this.cameras.main.shake(420, tier === 'JACKPOT' ? 0.012 : 0.007);
@@ -808,8 +876,7 @@ class GameScene extends Phaser.Scene {
     this.coinText.setText(`金幣 ${this.displayCoins}`);
     this.scoreText.setText(`分數 ${this.displayScore}`);
     this.comboText.setText(`COMBO ${this.combo}`);
-    this.betText.setText(`下注 x${this.bet}`);
-    this.betHintText.setText(`每發 ${this.bet} 金幣`);
+    this.betText.setText(`x${this.bet} ・ ${this.bet}金/發`);
   }
 }
 
