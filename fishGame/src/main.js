@@ -13,6 +13,19 @@ const BULLET_LIFETIME = 1600;       // 子彈存活 ms
 const RTP = 0.92;                   // 抽水率（理論回報率）
 
 // odds = 魚倍率；擊殺後 reward = bet × odds（市售捕魚機標準公式）
+// 12 張獨立 PNG（已用 PIL 裁掉透明 padding），texKey 對應檔名
+// 拆分後每隻魚的 displayWidth/Height 就是實際魚身範圍，不再有 frame 中心 vs 視覺中心錯位
+const FISH_TEX_KEYS = [
+  'fish_clown', 'fish_tang', 'fish_stripe', 'fish_bubble',
+  'fish_puffer', 'fish_ray', 'fish_shark', 'fish_gold',
+  'fish_jelly', 'fish_angler', 'fish_crab', 'fish_turtle'
+];
+const FISH_TEX_FILES = [
+  '00_clown', '01_tang', '02_stripe', '03_bubble',
+  '04_puffer', '05_ray', '06_shark', '07_gold',
+  '08_jelly', '09_angler', '10_crab', '11_turtle'
+];
+
 const fishData = [
   { frame: 0,  name: '小丑魚', odds: 2,   speed: 80,  scale: 0.38, class: 'small'  },
   { frame: 1,  name: '神仙魚', odds: 3,   speed: 105, scale: 0.36, class: 'small'  },
@@ -57,8 +70,9 @@ class LoadingScene extends Phaser.Scene {
     this.load.image('loadingScreen', asset('assets/ui/loading_screen.png'));
     this.load.image('mainMenu', asset('assets/ui/main_menu.png'));
     this.load.image('gameplayBg', asset('assets/backgrounds/gameplay_bg.png'));
-    this.load.spritesheet('fish', asset('assets/sprites/fish_sheet.png'), {
-      frameWidth: 362, frameHeight: 362
+    // 12 隻魚改用獨立 PNG（已自動裁切透明 padding），徹底解決 sprite frame 中心 vs 視覺中心錯位問題
+    FISH_TEX_KEYS.forEach((key, i) => {
+      this.load.image(key, asset(`assets/sprites/fish/${FISH_TEX_FILES[i]}.png`));
     });
     this.load.spritesheet('cannonEffects', asset('assets/sprites/cannon_effects_sheet.png'), {
       frameWidth: 362, frameHeight: 362
@@ -66,6 +80,15 @@ class LoadingScene extends Phaser.Scene {
     this.load.spritesheet('gameUi', asset('assets/ui/ui_sheet.png'), {
       frameWidth: 320, frameHeight: 320
     });
+    // 音效
+    this.load.audio('sfx_fish_kill', asset('assets/sound/sfx/fish_kill.mp3'));
+    this.load.audio('sfx_fish_kill2', asset('assets/sound/sfx/fish_kill2.mp3'));
+    this.load.audio('sfx_boss_kill', asset('assets/sound/sfx/boss_kill.mp3'));
+    this.load.audio('sfx_hit_no_kill', asset('assets/sound/sfx/hit_no_kill.mp3'));
+    this.load.audio('sfx_big_win', asset('assets/sound/sfx/big_win.mp3'));
+    this.load.audio('sfx_coin', asset('assets/sound/sfx/coin.wav'));
+    this.load.audio('sfx_big_fish_warning', asset('assets/sound/sfx/大魚警告音.mp3'));
+    this.load.audio('sfx_laser', asset('assets/sound/sfx/雷射炮聲音.mp3'));
   }
 
   create() {
@@ -96,9 +119,7 @@ class MenuScene extends Phaser.Scene {
   constructor() { super('MenuScene'); }
 
   create() {
-    // sprite sheet 沒有預留 padding，雙線性過濾會把鄰格像素拉進來造成殘影。
-    // 把每個 frame 往內縮 1px（左/上/右/下各 1），裁掉邊緣的鄰格殘像但保留平滑過濾。
-    insetTextureFrames(this.textures.get('fish'), 1);
+    // 魚已改用獨立 PNG，無 spritesheet 鄰格殘影問題。cannonEffects 仍是 sheet，需內縮。
     insetTextureFrames(this.textures.get('cannonEffects'), 1);
 
     this.add.image(CENTER_X, CENTER_Y, 'mainMenu').setDisplaySize(GAME_WIDTH, GAME_HEIGHT);
@@ -239,10 +260,14 @@ class GameScene extends Phaser.Scene {
   create() {
     this.add.image(CENTER_X, CENTER_Y, 'gameplayBg').setDisplaySize(GAME_WIDTH, GAME_HEIGHT);
 
+    // 預建每張魚圖的 alpha bitmap，做像素級命中判定（避免空氣牆）
+    this.cacheFishAlphaMaps();
+
     this.coins = 1500;
     this.score = 0;
     this.combo = 0;
     this.bet = 1;
+    this.powerMode = false;       // 強力砲模式：消耗高、發射慢、傷害大
     this.fireCooldown = 0;
     this.isFiring = false;
     this.aimPoint = new Phaser.Math.Vector2(CENTER_X, 760);
@@ -250,21 +275,27 @@ class GameScene extends Phaser.Scene {
     this.displayCoins = this.coins;
     this.displayScore = this.score;
     this.isDevMode = new URLSearchParams(window.location.search).get('dev') === '1';
+    // ?debug=1 開啟物理 body 可視化（驗證碰撞圈是否對齊魚／子彈視覺中心）
+    if (new URLSearchParams(window.location.search).get('debug') === '1') {
+      this.physics.world.createDebugGraphic();
+      this.physics.world.drawDebug = true;
+    }
 
     this.createBulletTexture();
 
     this.fishGroup = this.physics.add.group();
     this.bulletGroup = this.physics.add.group();
+    this.laserOrbGroup = this.add.group();  // 雷射道具掉落容器
 
-    this.physics.add.overlap(this.bulletGroup, this.fishGroup, this.onBulletHitFish, null, this);
+    // 不用 physics.add.overlap — body offset 算錯時會造成空氣牆。
+    // 改成每幀手動以「視覺中心 + 視覺半徑」做距離判定，徹底繞過 Phaser body 計算。
 
     this.createHud();
     if (this.isDevMode) this.createDevPanel();
     this.createCannon();
     this.createInput();
     this.createFishWaves();
-
-    this.spawnLargeFish(true);
+    this.scheduleNextBigFishWave(12000); // 第一波 12 秒後，讓玩家先暖機
   }
 
   // -------------------- HUD --------------------
@@ -285,7 +316,50 @@ class GameScene extends Phaser.Scene {
     });
 
     this.createBetSelector();
+    this.createPowerButton();
     this.updateHud();
+  }
+
+  createPowerButton() {
+    const x = CENTER_X;
+    const y = 1810;
+    this.powerButton = this.add.container(x, y).setDepth(2500);
+    this.powerButtonBg = this.add.circle(0, 0, 52, 0x1a0a3a, 0.9).setStrokeStyle(4, 0x9966ff);
+    this.powerButtonIcon = this.add.text(0, -2, '⚡', {
+      fontSize: '38px', color: '#cc99ff', stroke: '#3a1a6a', strokeThickness: 4
+    }).setOrigin(0.5);
+    this.powerButtonLabel = this.add.text(0, 36, '強力', {
+      fontFamily: 'Arial', fontSize: '20px', fontStyle: 'bold',
+      color: '#cc99ff', stroke: '#000', strokeThickness: 3
+    }).setOrigin(0.5);
+    this.powerButton.add([this.powerButtonBg, this.powerButtonIcon, this.powerButtonLabel]);
+    this.powerButton.setSize(104, 104).setInteractive({ useHandCursor: true });
+    this.powerButton.on('pointerdown', (pointer) => {
+      pointer.event.stopPropagation();
+      this.togglePowerMode();
+    });
+  }
+
+  togglePowerMode() {
+    this.powerMode = !this.powerMode;
+    // 確保有 graphics 物件可畫光束
+    if (!this.beamGraphics) {
+      this.beamGraphics = this.add.graphics().setDepth(4500);
+      this.beamDamageTimer = 0;
+    }
+    if (!this.powerMode) {
+      this.beamGraphics.clear();
+      this.beamActive = false;
+    }
+    if (this.powerMode) {
+      this.powerButtonBg.setFillStyle(0x9966ff, 1).setStrokeStyle(4, 0xfff1a5);
+      this.powerButtonIcon.setColor('#ffffff');
+      this.powerButtonLabel.setColor('#fff1a5').setText('強力 ON');
+    } else {
+      this.powerButtonBg.setFillStyle(0x1a0a3a, 0.9).setStrokeStyle(4, 0x9966ff);
+      this.powerButtonIcon.setColor('#cc99ff');
+      this.powerButtonLabel.setColor('#cc99ff').setText('強力');
+    }
   }
 
   createBetSelector() {
@@ -364,7 +438,452 @@ class GameScene extends Phaser.Scene {
   }
 
   // -------------------- 砲台 / 輸入 --------------------
-  // 程式繪製明亮砲彈貼圖（取代原本半透明的網狀 cannonEffects 第 8/9 frame）
+  // 把每張魚 PNG 的 alpha 通道抽出來，做成 Uint8Array 表（1=不透明、0=透明）
+  // 命中判定時直接 O(1) 查表，徹底避免「視覺上沒魚卻被判命中」
+  cacheFishAlphaMaps() {
+    this.fishAlphaMaps = {};
+    FISH_TEX_KEYS.forEach((key) => {
+      const tex = this.textures.get(key);
+      const src = tex && tex.getSourceImage();
+      if (!src) return;
+      const w = src.width;
+      const h = src.height;
+      const canvas = document.createElement('canvas');
+      canvas.width = w; canvas.height = h;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(src, 0, 0);
+      const data = ctx.getImageData(0, 0, w, h).data;
+      const alpha = new Uint8Array(w * h);
+      for (let i = 0, p = 0; i < data.length; i += 4, p += 1) {
+        alpha[p] = data[i + 3] > 24 ? 1 : 0;  // alpha > 24 算實體
+      }
+      this.fishAlphaMaps[key] = { w, h, alpha };
+    });
+  }
+
+  // 把世界座標 (wx, wy) 換算回魚的紋理像素位置，查 alpha 是否不透明
+  pixelHitsFish(fish, wx, wy) {
+    const map = this.fishAlphaMaps && this.fishAlphaMaps[fish.texture.key];
+    if (!map) return false;
+    // 反向魚的旋轉，把 (wx, wy) 轉到魚的本地座標
+    const cos = Math.cos(-fish.rotation);
+    const sin = Math.sin(-fish.rotation);
+    const dx = wx - fish.x;
+    const dy = wy - fish.y;
+    const localX = dx * cos - dy * sin;
+    const localY = dx * sin + dy * cos;
+    // 反向 scale + origin(0.5)，轉到紋理像素座標
+    const px = Math.floor(localX / fish.scaleX + map.w / 2);
+    const py = Math.floor(localY / fish.scaleY + map.h / 2);
+    if (px < 0 || px >= map.w || py < 0 || py >= map.h) return false;
+    return map.alpha[py * map.w + px] === 1;
+  }
+
+  // 在子彈中心 + 周邊 8 個取樣點檢查像素命中（容許子彈半徑容差）
+  // 回傳實際觸發命中的世界座標（用於 debug 標記）；沒命中回傳 null
+  bulletHitsFish(bullet, fish) {
+    const br = bullet.getData('hitRadius');
+    const r = br * 0.7;
+    const offsets = [
+      [0, 0],
+      [br, 0], [-br, 0], [0, br], [0, -br],
+      [r, r], [r, -r], [-r, r], [-r, -r]
+    ];
+    for (let i = 0; i < offsets.length; i += 1) {
+      const wx = bullet.x + offsets[i][0];
+      const wy = bullet.y + offsets[i][1];
+      if (this.pixelHitsFish(fish, wx, wy)) {
+        return { x: wx, y: wy };
+      }
+    }
+    return null;
+  }
+
+  // 大魚 / Boss 進場警告：橫幅 + 螢幕邊框閃紅 + 震動
+  showBigFishWarning(data, isBoss) {
+    const color = isBoss ? '#ff3344' : '#ffa040';
+    const borderColor = isBoss ? 0xff2233 : 0xff9933;
+    const title = isBoss ? '⚠ BOSS 來襲 ⚠' : '⚠ 大魚來襲';
+    const subtitle = isBoss
+      ? `${data.name}　x${data.odds}　強力倍率`
+      : `${data.name}　x${data.odds}`;
+
+    // 螢幕邊框閃紅（4 條邊）
+    const W = 22;
+    const top = this.add.rectangle(CENTER_X, W / 2, GAME_WIDTH, W, borderColor, 0.85).setDepth(9000);
+    const bottom = this.add.rectangle(CENTER_X, GAME_HEIGHT - W / 2, GAME_WIDTH, W, borderColor, 0.85).setDepth(9000);
+    const left = this.add.rectangle(W / 2, CENTER_Y, W, GAME_HEIGHT, borderColor, 0.85).setDepth(9000);
+    const right = this.add.rectangle(GAME_WIDTH - W / 2, CENTER_Y, W, GAME_HEIGHT, borderColor, 0.85).setDepth(9000);
+    [top, bottom, left, right].forEach((b) => {
+      this.tweens.add({
+        targets: b, alpha: { from: 0.85, to: 0 },
+        duration: 1800, repeat: 0, ease: 'Sine.easeOut',
+        onComplete: () => b.destroy()
+      });
+      // 閃爍
+      this.tweens.add({
+        targets: b, alpha: 0.2,
+        duration: 280, yoyo: true, repeat: 3
+      });
+    });
+
+    // 中央橫幅背板
+    const bannerBg = this.add.rectangle(CENTER_X, 340, 880, 200, 0x1a0500, 0.85)
+      .setStrokeStyle(6, borderColor)
+      .setDepth(9100)
+      .setScale(0.4)
+      .setAlpha(0);
+    const titleText = this.add.text(CENTER_X, 300, title, {
+      fontFamily: 'Arial', fontSize: isBoss ? '76px' : '64px', fontStyle: 'bold',
+      color, stroke: '#000', strokeThickness: 10,
+      shadow: { offsetY: 4, color: '#400', blur: 6, fill: true }
+    }).setOrigin(0.5).setDepth(9200).setScale(0.4).setAlpha(0);
+    const subText = this.add.text(CENTER_X, 376, subtitle, {
+      fontFamily: 'Arial', fontSize: '36px', fontStyle: 'bold',
+      color: '#ffe0a5', stroke: '#000', strokeThickness: 6
+    }).setOrigin(0.5).setDepth(9200).setScale(0.4).setAlpha(0);
+
+    this.tweens.add({
+      targets: [bannerBg, titleText, subText],
+      scale: 1, alpha: 1,
+      duration: 260, ease: 'Back.easeOut'
+    });
+    this.tweens.add({
+      targets: [bannerBg, titleText, subText],
+      alpha: 0, y: '-=40',
+      delay: 1200, duration: 480, ease: 'Sine.easeIn',
+      onComplete: () => {
+        bannerBg.destroy(); titleText.destroy(); subText.destroy();
+      }
+    });
+
+    // 螢幕震動 + 微閃
+    this.cameras.main.shake(isBoss ? 260 : 160, isBoss ? 0.008 : 0.005);
+    if (isBoss) this.cameras.main.flash(220, 255, 80, 80);
+    this.playSfx('sfx_big_fish_warning', { volume: isBoss ? 0.9 : 0.55 });
+  }
+
+  // 強力模式持續光束：每幀更新閃電視覺 + 每 BEAM_TICK 結算消耗 / 命中
+  updateBeam(delta) {
+    const BEAM_TICK = 90;  // ms，每 90ms 一次結算
+    const startX = CANNON_ORIGIN.x;
+    const startY = CANNON_ORIGIN.y - 40;
+    const endX = this.aimPoint.x;
+    const endY = this.aimPoint.y;
+    const dx = endX - startX;
+    const dy = endY - startY;
+    const len = Math.hypot(dx, dy);
+    const ux = dx / len;
+    const uy = dy / len;
+    // 延長到螢幕外
+    const farX = startX + ux * 2400;
+    const farY = startY + uy * 2400;
+
+    // 閃電視覺：折線 + 隨機抖動
+    const g = this.beamGraphics;
+    g.clear();
+    const segments = 18;
+    const segLen = 2400 / segments;
+    const points = [];
+    for (let i = 0; i <= segments; i += 1) {
+      const t = i / segments;
+      const cx = startX + ux * (segLen * i);
+      const cy = startY + uy * (segLen * i);
+      // 垂直方向抖動，靠近砲口和遠端抖動較小
+      const fade = Math.sin(t * Math.PI);
+      const jitter = (Math.random() - 0.5) * 60 * fade;
+      points.push({ x: cx + (-uy) * jitter, y: cy + ux * jitter });
+    }
+    // 外層橙黃光暈
+    g.lineStyle(46, 0xff9933, 0.35);
+    g.beginPath();
+    g.moveTo(points[0].x, points[0].y);
+    for (let i = 1; i < points.length; i += 1) g.lineTo(points[i].x, points[i].y);
+    g.strokePath();
+    // 中層金黃
+    g.lineStyle(24, 0xffd040, 0.85);
+    g.beginPath();
+    g.moveTo(points[0].x, points[0].y);
+    for (let i = 1; i < points.length; i += 1) g.lineTo(points[i].x, points[i].y);
+    g.strokePath();
+    // 內層白熱
+    g.lineStyle(8, 0xffffff, 1);
+    g.beginPath();
+    g.moveTo(points[0].x, points[0].y);
+    for (let i = 1; i < points.length; i += 1) g.lineTo(points[i].x, points[i].y);
+    g.strokePath();
+
+    // 起點爆閃 + 雷射音效（只在 beam 啟動瞬間播一次）
+    if (!this.beamActive) {
+      this.cameras.main.shake(80, 0.003);
+      this.beamActive = true;
+      this.playSfx('sfx_laser', { volume: 0.8 });
+    }
+
+    // 結算
+    this.beamDamageTimer -= delta;
+    if (this.beamDamageTimer > 0) return;
+    this.beamDamageTimer = BEAM_TICK;
+
+    const cost = this.bet * 3;  // 每 tick 消耗 bet × 3
+    if (this.coins < cost) {
+      this.flashFloatingText(CENTER_X, 1620, '金幣不足', '#ff7777');
+      this.isFiring = false;
+      return;
+    }
+    this.coins -= cost;
+    this.displayCoins = this.coins;
+
+    // 對光柱範圍內的魚做命中判定
+    const cos = ux;
+    const sin = uy;
+    const previousCoins = this.coins + cost;
+    const previousScore = this.score;
+    const bet = this.bet;
+    let killCount = 0;
+    let totalReward = 0;
+    this.fishGroup.children.each((fish) => {
+      if (!fish.active) return;
+      const fdx = fish.x - startX;
+      const fdy = fish.y - startY;
+      const along = fdx * cos + fdy * sin;
+      if (along < 0) return;
+      const perpDist = Math.abs(fdx * (-sin) + fdy * cos);
+      const fishR = Math.min(fish.displayWidth, fish.displayHeight) / 2;
+      if (perpDist > 60 + fishR * 0.6) return;
+      // 光束擊殺機率：每 tick (bet / odds) × 0.92 × 1.6
+      const odds = fish.getData('odds');
+      const chance = Phaser.Math.Clamp((bet / odds) * 0.92 * 1.6, 0.01, 0.95);
+      if (Math.random() < chance) {
+        const reward = bet * odds * 2;  // 光束擊殺 2 倍獎金
+        totalReward += reward;
+        killCount += 1;
+        const burst = this.add.sprite(fish.x, fish.y, 'cannonEffects', 10)
+          .setScale(0.36).setDepth(5000);
+        this.tweens.add({
+          targets: burst, scale: 0.9, alpha: 0, duration: 320,
+          onComplete: () => burst.destroy()
+        });
+        this.flashFloatingText(fish.x, fish.y - 38, `+${reward}`, '#ffe071');
+        fish.setActive(false);
+        if (fish.body) fish.body.enable = false;
+        this.tweens.add({
+          targets: fish,
+          scale: fish.getData('baseScale') * 1.5,
+          alpha: 0, duration: 260, ease: 'Back.easeIn',
+          onComplete: () => fish.destroy()
+        });
+      } else {
+        // 沒擊殺也閃白光
+        fish.setTintFill(0xffffff);
+        this.time.delayedCall(60, () => { if (fish.active) fish.clearTint(); });
+      }
+    });
+
+    if (totalReward > 0) {
+      this.score += totalReward;
+      this.combo += killCount;
+      this.lastCatchAt = this.time.now;
+      if (totalReward >= bet * 200) {
+        this.playBigWin(CENTER_X, 760, totalReward, previousCoins, previousScore, null, bet);
+      } else {
+        this.displayCoins = this.coins;
+        this.displayScore = this.score;
+      }
+    }
+    this.updateHud();
+  }
+
+  // 雷射道具：從 Gold/Boss 掉落，玩家點擊後從砲台射出穿透光束
+  spawnLaserOrb(x, y) {
+    const orb = this.add.container(x, y).setDepth(6000);
+    // 外層脈動光暈
+    const aura = this.add.circle(0, 0, 38, 0xff4477, 0.4).setStrokeStyle(3, 0xffaadd, 0.8);
+    // 內核
+    const core = this.add.circle(0, 0, 22, 0xffffff, 1).setStrokeStyle(3, 0xff77aa, 1);
+    // 雷電圖示文字
+    const icon = this.add.text(0, 0, '⚡', {
+      fontSize: '28px', color: '#ff2266', stroke: '#fff', strokeThickness: 4
+    }).setOrigin(0.5);
+    orb.add([aura, core, icon]);
+    orb.setSize(80, 80).setInteractive({ useHandCursor: true });
+    this.laserOrbGroup.add(orb);
+
+    // 脈動動畫
+    this.tweens.add({
+      targets: aura,
+      scale: { from: 1, to: 1.5 },
+      alpha: { from: 0.6, to: 0.2 },
+      duration: 600,
+      yoyo: true,
+      repeat: -1,
+      ease: 'Sine.easeInOut'
+    });
+    // 慢慢上浮
+    this.tweens.add({
+      targets: orb,
+      y: y - 60,
+      duration: 4000,
+      ease: 'Sine.easeOut'
+    });
+
+    // 8 秒後消失
+    const expireTimer = this.time.delayedCall(8000, () => {
+      this.tweens.add({
+        targets: orb,
+        alpha: 0, scale: 0.5, duration: 320,
+        onComplete: () => orb.destroy()
+      });
+    });
+
+    orb.on('pointerdown', (pointer) => {
+      pointer.event.stopPropagation();
+      expireTimer.remove();
+      const targetX = orb.x;
+      const targetY = orb.y;
+      // 道具被吸收動畫
+      this.tweens.add({
+        targets: orb,
+        scale: 1.6, alpha: 0,
+        duration: 180,
+        onComplete: () => orb.destroy()
+      });
+      this.fireLaser(targetX, targetY);
+    });
+
+    this.flashFloatingText(x, y - 60, '⚡ 雷射道具', '#ff77aa');
+  }
+
+  // 雷射發射：從砲台沿著「砲台→目標點」方向射出穿透光柱，路徑上的魚全部高機率擊殺
+  fireLaser(targetX, targetY) {
+    const cannonX = CANNON_ORIGIN.x;
+    const cannonY = CANNON_ORIGIN.y - 40;
+    const angle = Phaser.Math.Angle.Between(cannonX, cannonY, targetX, targetY);
+    // 光柱終點：延長到螢幕外
+    const farX = cannonX + Math.cos(angle) * 2600;
+    const farY = cannonY + Math.sin(angle) * 2600;
+
+    // 視覺：寬光柱 + 中心白熱 + 外層青粉
+    const beamBg = this.add.line(0, 0, cannonX, cannonY, farX, farY, 0xff77aa, 0.45)
+      .setLineWidth(54).setDepth(4500).setOrigin(0, 0);
+    const beamMid = this.add.line(0, 0, cannonX, cannonY, farX, farY, 0xff2266, 0.85)
+      .setLineWidth(28).setDepth(4501).setOrigin(0, 0);
+    const beamCore = this.add.line(0, 0, cannonX, cannonY, farX, farY, 0xffffff, 1)
+      .setLineWidth(12).setDepth(4502).setOrigin(0, 0);
+    // 砲口大爆閃
+    const flash = this.add.circle(cannonX, cannonY, 90, 0xffaadd, 0.9).setDepth(4600);
+    this.tweens.add({
+      targets: flash,
+      scale: 2.4, alpha: 0,
+      duration: 380, ease: 'Sine.easeOut',
+      onComplete: () => flash.destroy()
+    });
+
+    // 螢幕震動 + 閃白 + 雷射音
+    this.cameras.main.shake(420, 0.018);
+    this.cameras.main.flash(180, 255, 200, 230);
+    this.playSfx('sfx_laser', { volume: 1 });
+
+    // 光柱淡出
+    this.tweens.add({
+      targets: [beamBg, beamMid, beamCore],
+      alpha: 0, duration: 420, delay: 180, ease: 'Cubic.easeIn',
+      onComplete: () => { beamBg.destroy(); beamMid.destroy(); beamCore.destroy(); }
+    });
+
+    // 命中判定：光柱沿 angle 方向，寬度 ~80 game px。逐魚檢查「魚中心到光柱直線」距離
+    const previousCoins = this.coins;
+    const previousScore = this.score;
+    const bet = this.bet;
+    let killCount = 0;
+    let totalReward = 0;
+    const cos = Math.cos(angle);
+    const sin = Math.sin(angle);
+    this.fishGroup.children.each((fish) => {
+      if (!fish.active) return;
+      // 投影到光柱方向
+      const dx = fish.x - cannonX;
+      const dy = fish.y - cannonY;
+      const along = dx * cos + dy * sin;   // 沿光柱方向的距離
+      if (along < 0) return;                // 在砲台後方
+      const perpDist = Math.abs(dx * (-sin) + dy * cos);  // 垂直光柱距離
+      const hitWidth = 80 + Math.min(fish.displayWidth, fish.displayHeight) / 2;
+      if (perpDist > hitWidth) return;
+      // 雷射 90% 機率擊殺
+      if (Math.random() < 0.9) {
+        const odds = fish.getData('odds');
+        const reward = bet * odds * 2;  // 雷射雙倍獎金
+        totalReward += reward;
+        killCount += 1;
+        // 連續爆炸
+        this.time.delayedCall(killCount * 40, () => {
+          if (!fish.active) return;
+          const burst = this.add.sprite(fish.x, fish.y, 'cannonEffects', 10)
+            .setScale(0.42).setDepth(5000);
+          this.tweens.add({
+            targets: burst, scale: 1.2, alpha: 0, duration: 360,
+            onComplete: () => burst.destroy()
+          });
+          this.flashFloatingText(fish.x, fish.y - 38, `+${reward}`, '#ffe071');
+          fish.setActive(false);
+          if (fish.body) fish.body.enable = false;
+          this.tweens.add({
+            targets: fish,
+            scale: fish.getData('baseScale') * 1.6,
+            alpha: 0,
+            duration: 280,
+            ease: 'Back.easeIn',
+            onComplete: () => fish.destroy()
+          });
+        });
+      }
+    });
+
+    // 結算
+    if (totalReward > 0) {
+      this.coins += totalReward;
+      this.score += totalReward;
+      this.combo += killCount;
+      this.lastCatchAt = this.time.now;
+      this.flashFloatingText(CENTER_X, 460, `雷射 ${killCount} 連殺 +${totalReward}`, '#ff77aa');
+      if (totalReward >= bet * 150) {
+        this.playBigWin(CENTER_X, 760, totalReward, previousCoins, previousScore, null, bet);
+      } else {
+        this.tweenPrizeCounters(previousCoins, previousScore);
+      }
+      this.updateHud();
+    }
+  }
+
+  // 子彈飛出螢幕時的小水花，明確表示「離場」(不是停住)
+  spawnExitSplash(x, y) {
+    // 把座標夾在螢幕邊緣，水花顯示在邊界上
+    const cx = Phaser.Math.Clamp(x, 8, GAME_WIDTH - 8);
+    const cy = Phaser.Math.Clamp(y, 8, GAME_HEIGHT - 8);
+    const splash = this.add.circle(cx, cy, 18, 0xaff3ff, 0.7)
+      .setStrokeStyle(3, 0xffffff, 0.9)
+      .setDepth(4000);
+    this.tweens.add({
+      targets: splash,
+      scale: 2,
+      alpha: 0,
+      duration: 360,
+      ease: 'Cubic.easeOut',
+      onComplete: () => splash.destroy()
+    });
+  }
+
+  // Debug：在 HIT 觸發的「實際像素位置」畫綠色實心圓，停留 3 秒
+  // 綠點在魚身 = 正確；綠點在空水 = bug
+  markHitPoint(x, y) {
+    const dot = this.add.circle(x, y, 6, 0x00ff44, 1).setStrokeStyle(2, 0xffffff).setDepth(9600);
+    this.time.delayedCall(3000, () => dot.destroy());
+  }
+
+  // (已移除) 紅色 HIT debug 標記
+  markBulletDeath() {}
+
+  // 程式繪製金色砲彈貼圖
   createBulletTexture() {
     const size = 48;
     const g = this.add.graphics();
@@ -423,11 +942,35 @@ class GameScene extends Phaser.Scene {
   // -------------------- 魚波次 --------------------
   createFishWaves() {
     this.time.addEvent({ delay: 720, loop: true, callback: () => this.spawnFish() });
-    this.time.addEvent({ delay: 5600, loop: true, callback: () => this.spawnLargeFish() });
     for (let i = 0; i < 8; i += 1) {
       this.time.delayedCall(i * 180, () => this.spawnFish());
     }
   }
+
+  // 波次大魚進場：每 25~40 秒一波，一波出 3~6 隻（含 1~2 Boss/large 混合）
+  scheduleNextBigFishWave(delayMs) {
+    this.time.delayedCall(delayMs, () => this.runBigFishWave());
+  }
+
+  runBigFishWave() {
+    const count = Phaser.Math.Between(2, 4);          // 一波 2~4 隻
+    const includeBoss = Phaser.Math.Between(0, 100) < 45; // 45% 波次有 Boss
+    const pool = fishData.filter((f) => f.class === 'large' || (includeBoss && f.class === 'boss'));
+    for (let i = 0; i < count; i += 1) {
+      this.time.delayedCall(i * Phaser.Math.Between(700, 1400), () => {
+        const data = Phaser.Utils.Array.GetRandom(pool);
+        this.createFish(data, true);
+      });
+    }
+    // 下一波 50~80 秒後
+    this.scheduleNextBigFishWave(Phaser.Math.Between(50000, 80000));
+  }
+
+  // 播放音效（用 try/catch 避免某些瀏覽器沒解鎖前報錯）
+  playSfx(key, config = {}) {
+    try { this.sound.play(key, { volume: 0.7, ...config }); } catch (e) {}
+  }
+
 
   spawnFish() {
     const data = Phaser.Utils.Array.GetRandom(fishData.filter((f) => f.class !== 'boss' && f.class !== 'large'));
@@ -435,15 +978,24 @@ class GameScene extends Phaser.Scene {
   }
 
   spawnLargeFish(force = false) {
-    if (!force && Phaser.Math.Between(0, 100) > 68) return;
+    if (!force && Phaser.Math.Between(0, 100) > 80) return;  // 80% 機率出現
     const data = Phaser.Utils.Array.GetRandom(fishData.filter((f) => f.class === 'large' || f.class === 'boss'));
     this.createFish(data, true);
   }
 
   createFish(data, isLargeVariant) {
     const route = this.getFishRoute(isLargeVariant);
-    const fish = this.fishGroup.create(route.x, route.y, 'fish', data.frame);
-    const scaleBoost = isLargeVariant ? Phaser.Math.FloatBetween(1.2, 1.5) : 1;
+    // 使用獨立 PNG（已裁切，sprite 中心 = 視覺中心）
+    const fish = this.fishGroup.create(route.x, route.y, FISH_TEX_KEYS[data.frame]);
+    // Boss 偶爾巨大化（占畫面 1/2 以上），large 中型大魚正常加成
+    let scaleBoost = 1;
+    if (isLargeVariant) {
+      if (data.class === 'boss') {
+        scaleBoost = Phaser.Math.FloatBetween(2.4, 3.2);  // 巨型 Boss
+      } else {
+        scaleBoost = Phaser.Math.FloatBetween(1.7, 2.3);
+      }
+    }
     const scale = data.scale * scaleBoost;
 
     fish.setScale(scale);
@@ -454,12 +1006,15 @@ class GameScene extends Phaser.Scene {
     fish.setData('swimPhase', Phaser.Math.FloatBetween(0, Math.PI * 2));
     fish.setData('swimAmp', isLargeVariant ? Phaser.Math.FloatBetween(0.025, 0.045) : Phaser.Math.FloatBetween(0.035, 0.07));
     fish.setData('swimRate', Phaser.Math.FloatBetween(0.004, 0.0075));
-    // body 半徑須隨視覺縮放（Phaser arcade body radius 不會跟 sprite scale 自動縮）
-    // 取視覺半徑的 0.7 倍當碰撞圈，留一點寬鬆但不會像空氣牆那麼大
-    const visualHalf = (362 * scale) / 2;
-    const bodyRadius = visualHalf * 0.7;
-    const bodyOffset = 181 - bodyRadius / scale;
-    fish.body.setCircle(bodyRadius, bodyOffset, bodyOffset);
+    // 拆分後每張 PNG 已是裁切過的魚身範圍，sprite 中心 = 視覺中心
+    // 用橢圓而非圓形做碰撞：長條魚（鯊魚、烏龜）才能完整罩到頭尾
+    fish.setData('visOffsetX', 0);
+    fish.setData('visOffsetY', 0);
+    fish.setData('hitHalfW', fish.displayWidth / 2 * 0.85);
+    fish.setData('hitHalfH', fish.displayHeight / 2 * 0.85);
+    // 仍保留 hitRadius（用大邊）給衝擊環視覺尺寸用
+    fish.setData('hitRadius', Math.max(fish.displayWidth, fish.displayHeight) / 2 * 0.5);
+    fish.body.setCircle(2); // body 縮極小、僅留物理 velocity 用
 
     const routeAngle = Phaser.Math.Angle.Between(route.x, route.y, route.targetX, route.targetY);
     const speedPenalty = isLargeVariant ? 0.7 : 1;
@@ -473,13 +1028,17 @@ class GameScene extends Phaser.Scene {
     fish.setData('baseVelocityY', velocityY);
     fish.setData('baseAngle', routeAngle);
     fish.rotation = routeAngle;
-    fish.setDepth(10 + route.y);
+    // depth 跟著當前 y 走、最低 10，避免「上方生成」的魚 depth 為負而被背景遮住
+    fish.setDepth(Math.max(10, route.y));
 
     if (data.class === 'boss') {
       fish.setTint(0xffe0a5);
-      this.flashFloatingText(CENTER_X, 250, `Boss x${data.odds} 出現`, '#fff1a5');
+      this.showBigFishWarning(data, true);
     } else if (data.class === 'bonus') {
       fish.setTint(0xfff19a);
+    } else if (isLargeVariant) {
+      // 大型 large 魚也有警告
+      this.showBigFishWarning(data, false);
     }
 
     fish.setData('wakeTimer', 0);
@@ -487,8 +1046,8 @@ class GameScene extends Phaser.Scene {
 
   getFishRoute(isLargeVariant) {
     const margin = isLargeVariant ? 280 : 190;
-    // 砲台在畫面下方（CANNON_ORIGIN.y = 1750），魚的活動上限抓 1450 避免穿過砲台
-    const FISH_AREA_BOTTOM = 1450;
+    // 魚的活動範圍下限：留出砲台底座的空間（砲台中心 1750、半徑 132）
+    const FISH_AREA_BOTTOM = 1580;
     // 只用三條路徑：頂部下游、左→右、右→左；不再從畫面底部生成
     const edge = Phaser.Math.Between(0, 2);
     const route = { x: 0, y: 0, targetX: 0, targetY: 0 };
@@ -525,19 +1084,68 @@ class GameScene extends Phaser.Scene {
       this.fireBullet();
     }
 
+    // 強力模式：按住時持續發射雷射光束
+    if (this.powerMode && this.isFiring && !this.bigWinLock) {
+      this.updateBeam(delta);
+    } else if (this.beamGraphics) {
+      this.beamGraphics.clear();
+      this.beamActive = false;
+    }
+
     this.fishGroup.children.each((fish) => {
       this.animateFishSwim(fish, time, delta);
+      // depth 每幀根據當前 y 更新，且最低 10，徹底避免「魚被背景遮住但仍可命中」
+      fish.setDepth(Math.max(10, fish.y));
+      // 魚在任何 y 都可被命中（像素級判定保證視覺準確）；body 保持 enabled 讓魚正常游動
       if (fish.x < -360 || fish.x > GAME_WIDTH + 360 || fish.y < -360 || fish.y > GAME_HEIGHT + 360) {
         fish.destroy();
       }
     });
 
     this.bulletGroup.children.each((bullet) => {
+      if (!bullet.active) return;
       bullet.setData('life', bullet.getData('life') - delta);
-      if (bullet.getData('life') <= 0
-          || bullet.x < -60 || bullet.x > GAME_WIDTH + 60
-          || bullet.y < -60 || bullet.y > GAME_HEIGHT + 60) {
+      // 持續拖尾：每幀在子彈當前位置畫一個小光點，快速淡出
+      const tailDot = this.add.circle(bullet.x, bullet.y, 6, 0xfff1a5, 0.7).setDepth(3150);
+      this.tweens.add({
+        targets: tailDot, alpha: 0, scale: 0.2,
+        duration: 320, ease: 'Cubic.easeOut',
+        onComplete: () => tailDot.destroy()
+      });
+      if (bullet.getData('life') <= 0) {
+        this.markBulletDeath(bullet.x, bullet.y, 'LIFE');
         bullet.destroy();
+        return;
+      }
+      if (bullet.x < -60 || bullet.x > GAME_WIDTH + 60
+          || bullet.y < -60 || bullet.y > GAME_HEIGHT + 60) {
+        // 離場小水花：明確標示子彈飛出螢幕（不是「停在空中」）
+        this.spawnExitSplash(bullet.x, bullet.y);
+        this.markBulletDeath(bullet.x, bullet.y, 'OFF');
+        bullet.destroy();
+        return;
+      }
+      // 手動命中判定：純粹用視覺中心 + 視覺半徑做距離測試（不依賴 Phaser body offset）
+      const br = bullet.getData('hitRadius');
+      let hitFish = null;
+      this.fishGroup.children.each((fish) => {
+        if (hitFish) return;
+        if (!fish.active) return;
+        if (fish.body && !fish.body.enable) return;
+        // 先用 AABB 快速剔除（橢圓粗篩），再做像素級判定
+        const dx = bullet.x - fish.x;
+        const dy = bullet.y - fish.y;
+        const halfW = fish.getData('hitHalfW') / 0.85;  // 完整顯示半寬
+        const halfH = fish.getData('hitHalfH') / 0.85;
+        if (Math.abs(dx) > halfW + br || Math.abs(dy) > halfH + br) return;
+        // 像素級判定（最精準）：只在魚的「實體像素」上才算命中
+        if (this.bulletHitsFish(bullet, fish)) {
+          hitFish = fish;
+        }
+      });
+      if (hitFish) {
+        this.markBulletDeath(bullet.x, bullet.y, `HIT ${hitFish.getData('name')}`);
+        this.onBulletHitFish(bullet, hitFish);
       }
     });
 
@@ -598,31 +1206,34 @@ class GameScene extends Phaser.Scene {
   // -------------------- 開火 --------------------
   fireBullet() {
     if (this.bigWinLock) return;
-    if (this.coins < this.bet) {
+    if (this.powerMode) return;  // 強力模式不發射子彈，改由 updateBeam() 處理光束
+    const cost = this.bet;
+    if (this.coins < cost) {
       this.flashFloatingText(CENTER_X, 1620, '金幣不足', '#ff7777');
       this.isFiring = false;
       return;
     }
 
-    this.coins -= this.bet;
+    this.coins -= cost;
     this.displayCoins = this.coins;
-    this.fireCooldown = BULLET_COOLDOWN;
+    this.fireCooldown = this.powerMode ? 360 : BULLET_COOLDOWN;
 
     const angle = Phaser.Math.Angle.Between(CANNON_ORIGIN.x, CANNON_ORIGIN.y, this.aimPoint.x, this.aimPoint.y);
     const muzzleX = CANNON_ORIGIN.x + Math.cos(angle) * 110;
     const muzzleY = CANNON_ORIGIN.y + Math.sin(angle) * 110;
 
     const bullet = this.bulletGroup.create(muzzleX, muzzleY, 'bulletTex');
-    const bulletScale = 0.9 + this.bet * 0.12;  // 下注越高砲彈越大顆
+    const bulletScale = (0.9 + this.bet * 0.12) * (this.powerMode ? 1.9 : 1);  // 強力砲砲彈大
     bullet.setScale(bulletScale)
       .setDepth(3200);
-    // bulletTex 是 48px 圓形，body 對齊紋理中心
-    const bodyRadius = 16;
-    bullet.body.setCircle(bodyRadius, 24 - bodyRadius, 24 - bodyRadius);
+    if (this.powerMode) bullet.setTint(0xff5555);  // 強力砲彈染紅
+    bullet.body.setCircle(2, 22, 22);
+    bullet.setData('hitRadius', 16 * bulletScale);
+    bullet.setData('powerMode', this.powerMode);
     bullet.setVelocity(Math.cos(angle) * BULLET_SPEED, Math.sin(angle) * BULLET_SPEED);
 
     // 拖尾效果，讓子彈軌跡更明顯
-    const trail = this.add.circle(muzzleX, muzzleY, 18 * bulletScale, 0xffd447, 0.45)
+    const trail = this.add.circle(muzzleX, muzzleY, 18 * bulletScale, 0xffd447, 0.55)
       .setDepth(3150);
     this.tweens.add({
       targets: trail,
@@ -635,7 +1246,7 @@ class GameScene extends Phaser.Scene {
     bullet.setData('bet', this.bet);
     bullet.setData('life', BULLET_LIFETIME);
 
-    const muzzleFlash = this.add.circle(muzzleX, muzzleY, 36 + this.bet * 4, 0xfff1a5, 0.7)
+    const muzzleFlash = this.add.circle(muzzleX, muzzleY, 36 + this.bet * 4, 0xfff1a5, 0.75)
       .setDepth(3300);
     this.tweens.add({
       targets: muzzleFlash,
@@ -657,8 +1268,10 @@ class GameScene extends Phaser.Scene {
     const bet = bullet.getData('bet');
     const odds = fish.getData('odds');
 
-    // 子彈消耗
-    const burst = this.add.sprite(bullet.x, bullet.y, 'cannonEffects', 10)
+    // 爆炸畫在魚的「視覺中心」(不是 frame 中心)，避免偏離魚身
+    const fishVisX = fish.x + fish.getData('visOffsetX');
+    const fishVisY = fish.y + fish.getData('visOffsetY');
+    const burst = this.add.sprite(fishVisX, fishVisY, 'cannonEffects', 10)
       .setScale(0.18 + bet * 0.012)
       .setDepth(5000);
     this.tweens.add({
@@ -671,29 +1284,52 @@ class GameScene extends Phaser.Scene {
     });
     bullet.destroy();
 
-    // 命中閃光
+    // 命中閃光（強化：讓玩家清楚知道「子彈確實打到魚」即使沒擊殺）
+    fish.setTintFill(0xffffff);
     this.tweens.add({
       targets: fish,
-      scaleX: fish.getData('baseScale') * 1.12,
-      scaleY: fish.getData('baseScale') * 1.12,
-      duration: 70,
+      scaleX: fish.getData('baseScale') * 1.22,
+      scaleY: fish.getData('baseScale') * 1.22,
+      duration: 130,
       yoyo: true,
       ease: 'Quad.easeOut'
     });
-    fish.setTintFill(0xffffff);
-    this.time.delayedCall(50, () => {
+    this.time.delayedCall(160, () => {
       if (fish.active) fish.clearTint();
     });
+    // 魚周圍快速擴散青色衝擊環（畫在視覺中心，不是 frame 中心）
+    const impactRing = this.add.circle(fishVisX, fishVisY, fish.getData('hitRadius') * 0.6, 0, 0)
+      .setStrokeStyle(5, 0xfff1a5, 1)
+      .setDepth(4800);
+    this.tweens.add({
+      targets: impactRing,
+      scale: 2.4,
+      alpha: 0,
+      duration: 320,
+      ease: 'Cubic.easeOut',
+      onComplete: () => impactRing.destroy()
+    });
 
-    // 擊殺機率 = (下注 / 魚倍率) * RTP，含微量保底與封頂
-    const chance = Phaser.Math.Clamp((bet / odds) * RTP, 0.005, 0.95);
+    // 擊殺機率 = (下注 / 魚倍率) * RTP，強力砲彈 ×2.5
+    const isPower = bullet.getData('powerMode');
+    const powerMult = isPower ? 2.5 : 1;
+    const chance = Phaser.Math.Clamp((bet / odds) * RTP * powerMult, 0.005, 0.98);
     if (Math.random() < chance) {
-      this.catchFish(fish, bet);
+      this.catchFish(fish, isPower ? bet * 3 : bet);
+    } else {
+      this.playSfx('sfx_hit_no_kill', { volume: 0.35 }); // 命中沒擊殺
     }
   }
 
   catchFish(fish, bet) {
+    fish.setActive(false);
+    if (fish.body) fish.body.enable = false;
     const odds = fish.getData('odds');
+    const cls = fish.getData('class');
+    // 擊殺音效
+    if (cls === 'boss') this.playSfx('sfx_boss_kill');
+    else if (cls === 'large' || cls === 'bonus') this.playSfx('sfx_fish_kill2');
+    else this.playSfx('sfx_fish_kill', { volume: 0.5 });
     const baseReward = bet * odds;
     this.combo += 1;
     this.lastCatchAt = this.time.now;
@@ -718,6 +1354,15 @@ class GameScene extends Phaser.Scene {
 
     this.flashFloatingText(fish.x, fish.y - 42, `+${reward}`, '#fff1a5');
     this.flashFloatingText(fish.x, fish.y + 14, `x${odds}`, '#86f1ff');
+
+    // 雷射道具掉落：Gold 50% / Boss 100% / 其他 large 大魚 15%
+    let dropChance = 0;
+    if (cls === 'boss') dropChance = 1.0;
+    else if (cls === 'bonus') dropChance = 0.5;
+    else if (cls === 'large') dropChance = 0.15;
+    if (Math.random() < dropChance) {
+      this.spawnLaserOrb(fish.x, fish.y);
+    }
 
     if (this.shouldTriggerBigWin(fish, reward, bet)) {
       this.playBigWin(fish.x, fish.y, reward, previousCoins, previousScore, null, bet);
@@ -764,6 +1409,7 @@ class GameScene extends Phaser.Scene {
 
     this.cameras.main.flash(260, 255, 224, 96);
     this.cameras.main.shake(420, tier === 'JACKPOT' ? 0.012 : 0.007);
+    this.playSfx('sfx_big_win', { volume: 0.9 });
 
     const glow = this.add.circle(x, y, 90, 0xffd65a, 0.18)
       .setStrokeStyle(8, 0xfff1a3, 0.72)
@@ -801,8 +1447,13 @@ class GameScene extends Phaser.Scene {
   }
 
   spawnCoinRain(count) {
+    // 金幣雨期間穿插播放金幣音（每 8 顆播一次，避免過吵）
+    const coinSoundSpacing = 8;
     for (let i = 0; i < count; i += 1) {
       this.time.delayedCall(i * 10, () => {
+        if (i % coinSoundSpacing === 0) {
+          this.playSfx('sfx_coin', { volume: 0.45, detune: Phaser.Math.Between(-200, 200) });
+        }
         const coin = this.add.ellipse(
           Phaser.Math.Between(-40, GAME_WIDTH + 40),
           Phaser.Math.Between(-260, -40),
