@@ -1,0 +1,183 @@
+{
+  "project": "戰國雙雄",
+  "style": "Premium Japanese Sengoku Oda Nobunaga and Takeda Shingen cascade slot game art",
+  "generatedAt": "2026-05-13",
+  "screens": {
+    "loadingBackground": {
+      "path": "assets/images/screens/loading-background.png",
+      "size": [
+        1672,
+        941
+      ],
+      "use": "Loading scene background. Keep lower center clear for a Phaser loading bar."
+    },
+    "mainMenuBackground": {
+      "path": "assets/images/screens/main-menu-background.png",
+      "size": [
+        1672,
+        941
+      ],
+      "use": "Main menu/title scene background. Place title near top center and buttons in lower center."
+    },
+    "gameplaySlotScreenConcept": {
+      "path": "assets/images/screens/gameplay-slot-screen-concept.png",
+      "size": [
+        1672,
+        941
+      ],
+      "use": "Full gameplay visual reference for slot/cascade layout: jackpot header, 6x5 board, side characters, spin controls."
+    },
+    "gameplayBattleBackground": {
+      "path": "assets/images/screens/gameplay-battle-background.png",
+      "size": [
+        1672,
+        941
+      ],
+      "use": "Alternate Egyptian battle/temple background, useful for bonus or transition scenes."
+    }
+  },
+  "characters": {
+    "setBoss": {
+      "path": "assets/images/characters/set-boss.png",
+      "source": "assets/images/characters/set-boss-chromakey.png",
+      "size": [
+        1024,
+        1536
+      ],
+      "alpha": true,
+      "use": "Transparent Set boss/guardian character. Good for left or center feature animations."
+    },
+    "heroWarrior": {
+      "path": "assets/images/characters/hero-warrior.png",
+      "source": "assets/images/characters/hero-warrior-chromakey.png",
+      "size": [
+        1024,
+        1536
+      ],
+      "alpha": true,
+      "use": "Transparent Egyptian hero character. Good for intro, bonus, or side panel art."
+    }
+  },
+  "ui": {
+    "slotSymbolsSheet": {
+      "path": "assets/images/ui/slot-symbols-sheet.png",
+      "size": [
+        1254,
+        1254
+      ],
+      "use": "4x4 symbol sheet source. Slice into 16 icon regions for reel symbols."
+    },
+    "slicedSymbols": {
+      "path": "assets/images/symbols/*.png",
+      "count": 16,
+      "use": "Runtime-ready Phaser symbol textures sliced from the source sheet."
+    },
+    "slotControlsSheet": {
+      "path": "assets/images/ui/slot-controls-sheet.png",
+      "size": [
+        1536,
+        1024
+      ],
+      "use": "Spin button, autoplay, turbo, menu/info/sound icons, bet controls, jackpot panels, FREE GAMES plaque."
+    },
+    "egyptianUiKitSheet": {
+      "path": "assets/images/ui/egyptian-ui-kit-sheet.png",
+      "size": [
+        1672,
+        941
+      ],
+      "use": "General Egyptian UI frames: buttons, loading bar frame, HUD panels, icon slots, title plaque."
+    }
+  },
+  "gameplayNotes": {
+    "referenceLayout": "Premium ATG-style slot/cascade board with jackpot header, ticker/header region, side character art, central 6x5 grid, bottom bet/win panels, and large spin button.",
+    "recommendedBoard": {
+      "columns": 6,
+      "rows": 5,
+      "symbolTypes": [
+        "scatter_scarab",
+        "eye_of_horus",
+        "khopesh",
+        "cobra",
+        "crossed_bows",
+        "ankh",
+        "red_gem",
+        "yellow_gem",
+        "green_gem",
+        "blue_gem",
+        "purple_gem",
+        "multiplier_3x",
+        "multiplier_100x",
+        "jackpot_coin",
+        "sun_disk",
+        "set_mask"
+      ]
+    },
+    "bonus": "Use 4 to 6 scatter symbols to trigger free games, then show the FREE GAMES plaque and feature character animation."
+  },
+  "japanTheme": {
+    "screens": {
+      "loadingBackground": "assets/images/japan/screens/sengoku-loading-background.png",
+      "mainMenuBackground": "assets/images/japan/screens/sengoku-main-menu-background.png",
+      "gameplayBackground": "assets/images/japan/screens/sengoku-gameplay-background.png"
+    },
+    "symbols": {
+      "sourceSheet": "assets/images/japan/sources/sengoku-symbols-sheet.png",
+      "runtimeTextures": "assets/images/japan/symbols/*.png",
+      "count": 16,
+      "theme": [
+        "kin-koban scatter",
+        "kabuto",
+        "katana",
+        "gunbai",
+        "yari",
+        "matchlock rifle",
+        "taiko",
+        "torii",
+        "sakura",
+        "momiji",
+        "snowflake",
+        "hanabi",
+        "3x",
+        "100x",
+        "Oda crest",
+        "Takeda crest"
+      ]
+    },
+    "effects": [
+      "season cycling: spring petals, summer fireflies, autumn maple leaves, winter snow",
+      "gold koban coin shower on wins"
+    ],
+    "characters": {
+      "odaNobunaga": "assets/images/japan/characters/oda-nobunaga.png",
+      "takedaShingen": "assets/images/japan/characters/takeda-shingen.png",
+      "notes": "Oda Nobunaga corrected to no helmet/kabuto; both are transparent overlay characters with idle, spin, and win animations."
+    },
+    "characterPoses": {
+      "odaStand": "assets/images/japan/characters/poses/oda-stand.png",
+      "odaFire": "assets/images/japan/characters/poses/oda-fire.png",
+      "takedaStand": "assets/images/japan/characters/poses/takeda-stand.png",
+      "takedaWave": "assets/images/japan/characters/poses/takeda-wave.png",
+      "animation": "Pose switching only: Nobunaga stands/fires teppo; Shingen stands/waves proper Japanese gunbai. No scale-based action animation.",
+      "notes": "Takeda wave pose regenerated so the gunbai handle is visibly gripped and no longer floating apart from the hand."
+    },
+    "splitUi": {
+      "jackpotStrip": "assets/images/japan/ui/jackpot-strip.png",
+      "boardFrame": "assets/images/japan/ui/board-frame.png",
+      "spinButton": "assets/images/japan/ui/spin-button.png",
+      "notes": "Split from Sengoku gameplay UI source so Phaser can layer and reuse jackpot frames, board frame, and spin button separately."
+    },
+    "properLayers": {
+      "background": "assets/images/japan/layers/clean-background.png",
+      "boardFrame": "assets/images/japan/layers/board-frame.png",
+      "jackpotStrip": "assets/images/japan/layers/jackpot-strip.png",
+      "spinButton": "assets/images/japan/layers/spin-button.png",
+      "notes": "These are real isolated layers. UI assets are transparent PNGs generated on chroma key and alpha-extracted, not rectangular crops with background pixels."
+    },
+    "menu": {
+      "startButton": "assets/images/japan/ui/start-button.png",
+      "title": "戰國雙雄",
+      "subtitle": "長篠之戰"
+    }
+  }
+}
