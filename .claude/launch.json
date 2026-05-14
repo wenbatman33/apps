@@ -79,6 +79,14 @@
       "port": 8774,
       "autoPort": false,
       "cwd": "aespaBlackJack"
+    },
+    {
+      "name": "japanSengoku",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": ["-m", "http.server", "8775"],
+      "port": 8775,
+      "autoPort": false,
+      "cwd": "japanSengoku/dist"
     }
   ]
 }
