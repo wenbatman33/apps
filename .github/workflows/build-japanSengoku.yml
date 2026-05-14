@@ -1,0 +1,59 @@
+name: Build japanSengoku
+
+# 只有 src / assets / config 變動時才觸發
+# dist/ 由 bot 自動產生 commit，paths 不含 dist/ 避免無限迴圈
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'japanSengoku/src/**'
+      - 'japanSengoku/assets/**'
+      - 'japanSengoku/scripts/**'
+      - 'japanSengoku/index.html'
+      - 'japanSengoku/vite.config.js'
+      - 'japanSengoku/package.json'
+      - 'japanSengoku/package-lock.json'
+      - '.github/workflows/build-japanSengoku.yml'
+  workflow_dispatch: {}
+
+concurrency:
+  group: build-japanSengoku
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install deps
+        working-directory: japanSengoku
+        run: npm ci || npm install
+
+      - name: Build
+        working-directory: japanSengoku
+        run: npm run build
+
+      - name: Commit dist if changed
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add japanSengoku/dist
+          if git diff --cached --quiet; then
+            echo "✓ dist 沒有變更，跳過 commit"
+          else
+            git commit -m "ci(japanSengoku): 自動 rebuild dist [skip ci]"
+            git push
+            echo "✓ dist 已自動更新並推送"
+          fi
