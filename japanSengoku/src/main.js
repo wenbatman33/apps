@@ -309,9 +309,9 @@ class PreloadScene extends Phaser.Scene {
     this.load.image('oda-bigwin', 'assets/images/characters/poses/oda-bigwin.png');
     this.load.image('takeda-bigwin', 'assets/images/characters/poses/takeda-bigwin.png');
     this.load.image('fx-koban', 'assets/images/fx/koban-coin.png');
-    for (let i = 1; i <= 4; i++) {
-      this.load.image(`scatter-glow-${i}`, `assets/images/symbols/scatter-glow-0${i}.png`);
-    }
+    // 只用 01（scatter 主圖）和 04（bonus 主圖），02/03 已不使用
+    this.load.image('scatter-glow-1', 'assets/images/symbols/scatter-glow-01.png');
+    this.load.image('scatter-glow-4', 'assets/images/symbols/scatter-glow-04.png');
     this.load.audio('bgm-sengoku', AUDIO.music.sengoku);
     Object.entries(AUDIO.sfx).forEach(([key, path]) => {
       this.load.audio(`sfx-${key}`, path);
