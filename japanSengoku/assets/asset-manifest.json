@@ -117,13 +117,13 @@
   },
   "japanTheme": {
     "screens": {
-      "loadingBackground": "assets/images/japan/screens/sengoku-loading-background.png",
-      "mainMenuBackground": "assets/images/japan/screens/sengoku-main-menu-background.png",
-      "gameplayBackground": "assets/images/japan/screens/sengoku-gameplay-background.png"
+      "loadingBackground": "assets/images/screens/sengoku-loading-background.png",
+      "mainMenuBackground": "assets/images/screens/sengoku-main-menu-background.png",
+      "gameplayBackground": "assets/images/screens/sengoku-gameplay-background.png"
     },
     "symbols": {
-      "sourceSheet": "assets/images/japan/sources/sengoku-symbols-sheet.png",
-      "runtimeTextures": "assets/images/japan/symbols/*.png",
+      "sourceSheet": "assets/images/sources/sengoku-symbols-sheet.png",
+      "runtimeTextures": "assets/images/symbols/*.png",
       "count": 16,
       "theme": [
         "kin-koban scatter",
@@ -149,33 +149,33 @@
       "gold koban coin shower on wins"
     ],
     "characters": {
-      "odaNobunaga": "assets/images/japan/characters/oda-nobunaga.png",
-      "takedaShingen": "assets/images/japan/characters/takeda-shingen.png",
+      "odaNobunaga": "assets/images/characters/oda-nobunaga.png",
+      "takedaShingen": "assets/images/characters/takeda-shingen.png",
       "notes": "Oda Nobunaga corrected to no helmet/kabuto; both are transparent overlay characters with idle, spin, and win animations."
     },
     "characterPoses": {
-      "odaStand": "assets/images/japan/characters/poses/oda-stand.png",
-      "odaFire": "assets/images/japan/characters/poses/oda-fire.png",
-      "takedaStand": "assets/images/japan/characters/poses/takeda-stand.png",
-      "takedaWave": "assets/images/japan/characters/poses/takeda-wave.png",
+      "odaStand": "assets/images/characters/poses/oda-stand.png",
+      "odaFire": "assets/images/characters/poses/oda-fire.png",
+      "takedaStand": "assets/images/characters/poses/takeda-stand.png",
+      "takedaWave": "assets/images/characters/poses/takeda-wave.png",
       "animation": "Pose switching only: Nobunaga stands/fires teppo; Shingen stands/waves proper Japanese gunbai. No scale-based action animation.",
       "notes": "Takeda wave pose regenerated so the gunbai handle is visibly gripped and no longer floating apart from the hand."
     },
     "splitUi": {
-      "jackpotStrip": "assets/images/japan/ui/jackpot-strip.png",
-      "boardFrame": "assets/images/japan/ui/board-frame.png",
-      "spinButton": "assets/images/japan/ui/spin-button.png",
+      "jackpotStrip": "assets/images/ui/jackpot-strip.png",
+      "boardFrame": "assets/images/ui/board-frame.png",
+      "spinButton": "assets/images/ui/spin-button.png",
       "notes": "Split from Sengoku gameplay UI source so Phaser can layer and reuse jackpot frames, board frame, and spin button separately."
     },
     "properLayers": {
-      "background": "assets/images/japan/layers/clean-background.png",
-      "boardFrame": "assets/images/japan/layers/board-frame.png",
-      "jackpotStrip": "assets/images/japan/layers/jackpot-strip.png",
-      "spinButton": "assets/images/japan/layers/spin-button.png",
+      "background": "assets/images/layers/clean-background.png",
+      "boardFrame": "assets/images/layers/board-frame.png",
+      "jackpotStrip": "assets/images/layers/jackpot-strip.png",
+      "spinButton": "assets/images/layers/spin-button.png",
       "notes": "These are real isolated layers. UI assets are transparent PNGs generated on chroma key and alpha-extracted, not rectangular crops with background pixels."
     },
     "menu": {
-      "startButton": "assets/images/japan/ui/start-button.png",
+      "startButton": "assets/images/ui/start-button.png",
       "title": "戰國雙雄",
       "subtitle": "長篠之戰"
     }

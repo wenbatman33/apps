@@ -3,6 +3,7 @@ import { cp } from 'fs/promises'
 import { existsSync } from 'fs'
 
 export default defineConfig({
+  base: './',
   plugins: [
     {
       name: 'copy-assets-to-dist',
