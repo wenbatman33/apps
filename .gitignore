@@ -14,8 +14,10 @@ pokerGame/assets/**/*.psd
 # DS_Store
 **/.DS_Store
 
-# Claude Code 本地設定（不推上 repo）
+# Claude Code 本地設定與 worktree（不推上 repo、不該污染 git status）
 **/.claude/settings.local.json
+**/.claude/worktrees/
+**/.claude/launch.json
 
 # mergeShooter: 排除超大字型集合與未使用素材(保留 Png/ 與 fonts_used/)
 mergeShooter/assets/font/

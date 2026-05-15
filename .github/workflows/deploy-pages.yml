@@ -1,0 +1,39 @@
+name: Deploy Pages
+
+# 純靜態站（無 build），push main 即部署整個 repo 內容
+# 取代會卡死的 legacy pages-build-deployment；可在 Actions 看到、可手動 re-run
+on:
+  push:
+    branches: [main]
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: '.'
+
+      - name: Deploy
+        id: deployment
+        uses: actions/deploy-pages@v4
