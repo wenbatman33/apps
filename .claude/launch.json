@@ -87,6 +87,14 @@
       "port": 8775,
       "autoPort": false,
       "cwd": "japanSengoku/dist"
+    },
+    {
+      "name": "stack",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": ["-m", "http.server", "8776"],
+      "port": 8776,
+      "autoPort": false,
+      "cwd": "stack"
     }
   ]
 }
