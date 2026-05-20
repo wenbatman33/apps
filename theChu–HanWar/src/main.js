@@ -270,6 +270,12 @@ class PreloadScene extends Phaser.Scene {
     this.load.image('win_bg',          'assets/win/bg/win_bg_award_clean.png');
     this.load.image('win_coin',        'assets/win/ui/win_coin.png');
 
+    // === 楚漢多格漫畫頁（左右側欄輪播）===
+    for (let ch = 1; ch <= 4; ch++) {
+      this.load.image(`page_ch${ch}_chu`, `assets/comics/page_ch${ch}_chu.png`);
+      this.load.image(`page_ch${ch}_han`, `assets/comics/page_ch${ch}_han.png`);
+    }
+
     // BGM 改用原生 Audio 載入（避免 Phaser preload 卡住）
   }
 
@@ -314,10 +320,15 @@ class MainScene extends Phaser.Scene {
     this.bg = this.add.image(960, 540, 'bg_battle').setDisplaySize(W, H).setDepth(0);
 
     // === Depth 10/20：左右人物（base game：項羽 / 劉邦）===
-    this.chuChar = this.add.image(238, 1311, 'chu_idle').setOrigin(0.5, 1).setDepth(10);
+    // 注意：base game 預設改用漫畫敘事面板；立繪保留實例但不顯示，
+    // 之後 Free Game 退出時若需要可再顯示
+    this.chuChar = this.add.image(238, 1311, 'chu_idle').setOrigin(0.5, 1).setDepth(10).setVisible(false);
     this.fitImageHeight(this.chuChar, 1240);
-    this.hanChar = this.add.image(1690, 1360, 'han_idle').setOrigin(0.5, 1).setDepth(20);
+    this.hanChar = this.add.image(1690, 1360, 'han_idle').setOrigin(0.5, 1).setDepth(20).setVisible(false);
     this.fitImageHeight(this.hanChar, 1240);
+
+    // === 楚漢漫畫敘事面板（左右側欄）===
+    this.buildComicNarrator();
 
     // Free game 用的虞姬（兩側），預設隱藏；鳳凰光環當背景底
     // 注意：鳳凰 depth 必須比兩位虞姬還低，才不會蓋住人物
@@ -481,6 +492,140 @@ class MainScene extends Phaser.Scene {
 
     // 右上音量控制 UI
     this.buildVolumePanel();
+  }
+
+  // ----------------------------------------------------------
+  // 楚漢漫畫敘事系統：3 分鐘 4 章 × 2 頁 × 左楚右漢
+  // 流程：page B&W 淡入 → 左 panel 一格格染色 → 右 panel 染色 → 換頁
+  // ----------------------------------------------------------
+  buildComicNarrator() {
+    // 4 章節（每章一頁多格漫畫頁）
+    this.comicChapters = [
+      { ch: 1, title: '第一章　起兵反秦' },
+      { ch: 2, title: '第二章　鴻門宴' },
+      { ch: 3, title: '第三章　楚河漢界' },
+      { ch: 4, title: '第四章　垓下烏江' },
+    ];
+
+    // 左右側欄漫畫頁的位置與尺寸
+    const PANEL_SIZE = 420;
+    const LEFT_X  = 230;
+    const RIGHT_X = 1690;
+    const PANEL_Y = 540;
+    this.COMIC_PANEL_SIZE = PANEL_SIZE;
+    this.COMIC_LEFT_X = LEFT_X;
+    this.COMIC_RIGHT_X = RIGHT_X;
+    this.COMIC_PANEL_Y = PANEL_Y;
+
+    // 漫畫格底板與金邊外框
+    const makeFrame = (x) => this.add.rectangle(x, PANEL_Y, PANEL_SIZE + 20, PANEL_SIZE + 20, 0x0a0604, 0.85)
+      .setStrokeStyle(4, 0xd4a54a).setDepth(12);
+    makeFrame(LEFT_X);
+    makeFrame(RIGHT_X);
+
+    // 漫畫頁 image holder
+    this.comicLeft  = this.add.image(LEFT_X,  PANEL_Y, '__DEFAULT')
+      .setDisplaySize(PANEL_SIZE, PANEL_SIZE).setDepth(13).setVisible(false);
+    this.comicRight = this.add.image(RIGHT_X, PANEL_Y, '__DEFAULT')
+      .setDisplaySize(PANEL_SIZE, PANEL_SIZE).setDepth(13).setVisible(false);
+
+    // 章節標題（置中於上方）
+    this.comicChapterText = this.add.text(960, 215, '', {
+      fontFamily: 'Noto Serif TC, serif', fontSize: '24px', fontStyle: '900',
+      color: '#ffe55f', stroke: '#3a0e0a', strokeThickness: 4, resolution: 2,
+    }).setOrigin(0.5).setDepth(135).setAlpha(0);
+
+    // 5 個子格的相對區域（百分比，依照 codex prompt 的 5 格佈局）
+    // A 左上大格、B 右上窄格、C 中央橫跨、D 左下傾斜、E 右下窄
+    const ZONES = [
+      { x: 0.00, y: 0.00, w: 0.50, h: 0.33 }, // A
+      { x: 0.50, y: 0.00, w: 0.50, h: 0.33 }, // B
+      { x: 0.00, y: 0.33, w: 1.00, h: 0.33 }, // C
+      { x: 0.00, y: 0.66, w: 0.50, h: 0.34 }, // D
+      { x: 0.50, y: 0.66, w: 0.50, h: 0.34 }, // E
+    ];
+    const makeOverlays = (centerX) => {
+      const half = PANEL_SIZE / 2;
+      const left = centerX - half;
+      const top  = PANEL_Y - half;
+      return ZONES.map(z => this.add.rectangle(
+        left + (z.x + z.w / 2) * PANEL_SIZE,
+        top  + (z.y + z.h / 2) * PANEL_SIZE,
+        z.w * PANEL_SIZE, z.h * PANEL_SIZE,
+        0x111111, 0.88,
+      ).setDepth(14).setVisible(false));
+    };
+    this.comicLeftOverlays  = makeOverlays(LEFT_X);
+    this.comicRightOverlays = makeOverlays(RIGHT_X);
+
+    // 啟動敘事流程
+    this.comicIndex = 0;
+    this.time.delayedCall(1500, () => this.playComicSequence());
+  }
+
+  // 播放單章節：左楚 + 右漢一頁多格漫畫，10 格依序揭色（左右交錯）
+  playComicSequence() {
+    if (this.inFreeGame) {
+      this.time.delayedCall(2000, () => this.playComicSequence());
+      return;
+    }
+    const c = this.comicChapters[this.comicIndex];
+    const leftKey  = `page_ch${c.ch}_chu`;
+    const rightKey = `page_ch${c.ch}_han`;
+
+    if (!this.textures.exists(leftKey) || !this.textures.exists(rightKey)) {
+      this.comicIndex = (this.comicIndex + 1) % this.comicChapters.length;
+      this.time.delayedCall(500, () => this.playComicSequence());
+      return;
+    }
+
+    // 章節標題
+    this.comicChapterText.setText(c.title).setAlpha(0);
+    this.tweens.add({ targets: this.comicChapterText, alpha: 1, duration: 600 });
+
+    // 換貼圖
+    const SZ = this.COMIC_PANEL_SIZE;
+    this.comicLeft.setTexture(leftKey).setDisplaySize(SZ, SZ).setVisible(true).setAlpha(0);
+    this.comicRight.setTexture(rightKey).setDisplaySize(SZ, SZ).setVisible(true).setAlpha(0);
+
+    // 全部 overlay 重新蓋上（B&W 狀態）
+    [...this.comicLeftOverlays, ...this.comicRightOverlays].forEach(o => o.setVisible(true).setAlpha(0.88));
+
+    // 漫畫頁淡入
+    this.tweens.add({
+      targets: [this.comicLeft, this.comicRight],
+      alpha: 1, duration: 700, ease: 'Cubic.easeOut',
+    });
+
+    // 揭色：左右各 5 格依序揭開（左右交錯）
+    // 整章節 ~45 秒（4 章 × 45 = 180 秒 = 3 分鐘）
+    const REVEAL_START = 3000;        // 3s 後開始揭色
+    const REVEAL_GAP   = 3500;        // 每格間隔 3.5s
+    const REVEAL_DUR   = 1200;        // 單格揭色淡出時間
+    const seq = [];
+    for (let i = 0; i < 5; i++) {
+      seq.push(this.comicLeftOverlays[i]);
+      seq.push(this.comicRightOverlays[i]);
+    }
+    seq.forEach((ovr, idx) => {
+      this.time.delayedCall(REVEAL_START + idx * REVEAL_GAP, () => {
+        this.tweens.add({ targets: ovr, alpha: 0, duration: REVEAL_DUR, ease: 'Cubic.easeOut' });
+      });
+    });
+
+    // 全部揭完後欣賞 5 秒 → 淡出 → 下一章
+    const total = REVEAL_START + seq.length * REVEAL_GAP + 5000;
+    this.time.delayedCall(total, () => {
+      this.tweens.add({
+        targets: [this.comicLeft, this.comicRight, this.comicChapterText,
+                  ...this.comicLeftOverlays, ...this.comicRightOverlays],
+        alpha: 0, duration: 1500,
+        onComplete: () => {
+          this.comicIndex = (this.comicIndex + 1) % this.comicChapters.length;
+          this.playComicSequence();
+        },
+      });
+    });
   }
 
   // ----------------------------------------------------------
@@ -958,6 +1103,12 @@ class MainScene extends Phaser.Scene {
     this.sound2?.playSfx('trans');
     this.sound2?.playSfx('fg_in');
 
+    // 隱藏漫畫面板（FreeGame 期間用虞姬畫面）
+    this.tweens.add({
+      targets: [this.comicLeft, this.comicRight, this.comicChapterText, ...this.comicLeftOverlays, ...this.comicRightOverlays],
+      alpha: 0, duration: 400,
+    });
+
     // ===== 過場：暗幕 =====
     const dim = this.add.rectangle(960, 540, W, H, 0x000000, 0).setDepth(900);
     this.tweens.add({ targets: dim, alpha: 0.78, duration: 500 });
@@ -1071,12 +1222,8 @@ class MainScene extends Phaser.Scene {
         this.fengmingLogo.setVisible(false).setY(380).setScale(1);
       },
     });
-    // 項羽劉邦回來
-    this.tweens.add({
-      targets: [this.chuChar, this.hanChar], alpha: 1,
-      duration: 700, delay: 300,
-    });
-
+    // 項羽劉邦不回來（已永久隱藏，改用漫畫敘事）
+    // 漫畫面板淡入（exit 後 inFreeGame 為 false，下次 playComicSequence 會自動恢復）
     this.inFreeGame = false;
     await this.delay(1500);
   }

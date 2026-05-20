@@ -1,0 +1,624 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>楚漢相爭 · 手機直版 UI 示意圖</title>
+<style>
+  /* ============================
+     楚漢相爭 — 漫畫風手機直版 Mockup
+     畫布：412 × 915（標準手機 9:20）
+     ============================ */
+  :root {
+    --ink-black: #14110f;
+    --paper: #f4ead5;
+    --paper-cream: #ede0c2;
+    --gold: #d4a54a;
+    --gold-bright: #f5d27a;
+    --crimson: #7f1f1b;
+    --crimson-dark: #3a0e0a;
+    --jade: #2f5d55;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body {
+    background: #1a1410;
+    color: var(--ink-black);
+    font-family: "Noto Serif TC", "Songti TC", serif;
+    min-height: 100vh;
+    display: flex; align-items: flex-start; justify-content: center;
+    padding: 30px 10px;
+    overflow-x: hidden;
+  }
+  .frame-label {
+    color: var(--gold-bright); font-size: 13px;
+    text-align: center; margin: 0 auto 8px;
+    letter-spacing: 4px;
+  }
+  /* 手機殼 */
+  .phone {
+    width: 412px;
+    height: 915px;
+    background:
+      /* halftone 點紋 */
+      radial-gradient(circle at 25% 25%, rgba(0,0,0,0.08) 1px, transparent 1.5px) 0 0/8px 8px,
+      radial-gradient(circle at 75% 75%, rgba(0,0,0,0.05) 1px, transparent 1.5px) 0 0/12px 12px,
+      linear-gradient(180deg, #1a0e0a 0%, #2a1810 40%, #1a0e0a 100%);
+    border: 3px solid var(--ink-black);
+    border-radius: 36px;
+    box-shadow:
+      0 0 0 6px #0a0604,
+      0 20px 60px rgba(0,0,0,0.6),
+      inset 0 0 40px rgba(127,31,27,0.25);
+    overflow: hidden;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+  }
+  /* 通用 manga 邊框 */
+  .manga-box {
+    border: 2.5px solid var(--ink-black);
+    background: var(--paper);
+    box-shadow: 3px 3px 0 var(--ink-black);
+    position: relative;
+  }
+  .manga-box::before {
+    /* 內側細描邊 */
+    content: '';
+    position: absolute; inset: 2px;
+    border: 1px solid rgba(20,17,15,0.25);
+    pointer-events: none;
+  }
+
+  /* ─── 0. status bar（手機系統列示意） ─── */
+  .status-bar {
+    height: 18px;
+    background: rgba(0,0,0,0.8);
+    color: #fff;
+    font-size: 10px;
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 0 12px;
+  }
+
+  /* ─── 1. Top jackpot bar ─── */
+  .jackpots {
+    background: linear-gradient(180deg, #2e1633 0%, #1d0b22 100%);
+    border-bottom: 3px solid var(--gold);
+    padding: 6px 8px 4px;
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr 1fr;
+    gap: 4px;
+    color: var(--gold-bright);
+    font-size: 9px;
+    text-align: center;
+    font-weight: 900;
+    letter-spacing: 1px;
+  }
+  .jp { line-height: 1.2; }
+  .jp .label { color: var(--gold-bright); font-size: 9px; }
+  .jp .val { color: #fff; font-size: 11px; font-weight: 900; text-shadow: 0 1px 0 #000; }
+
+  /* ─── 2. 漫畫敘事區（取代左右立繪） ─── */
+  .comic-section {
+    padding: 6px 8px 4px;
+    display: flex;
+    gap: 6px;
+  }
+  .comic-panel {
+    flex: 1;
+    aspect-ratio: 1/1;
+    background:
+      linear-gradient(135deg, rgba(127,31,27,.1), rgba(212,165,74,.05)),
+      url('assets/comics/page_ch1_chu.png') center/cover no-repeat,
+      var(--paper);
+    border: 3px solid var(--ink-black);
+    border-radius: 4px;
+    box-shadow: 3px 3px 0 var(--ink-black), inset 0 0 0 2px rgba(245,210,122,.4);
+    position: relative;
+  }
+  .comic-panel.han {
+    background:
+      linear-gradient(135deg, rgba(212,165,74,.1), rgba(47,93,85,.05)),
+      url('assets/comics/page_ch1_han.png') center/cover no-repeat,
+      var(--paper);
+  }
+  .comic-panel::after {
+    content: attr(data-label);
+    position: absolute;
+    top: 4px; left: 4px;
+    background: var(--crimson);
+    color: var(--gold-bright);
+    padding: 2px 6px;
+    font-size: 9px;
+    font-weight: 900;
+    border: 2px solid var(--ink-black);
+    border-radius: 2px;
+    letter-spacing: 1px;
+  }
+  .chapter-title {
+    text-align: center;
+    color: var(--gold-bright);
+    font-size: 13px;
+    font-weight: 900;
+    letter-spacing: 4px;
+    margin: 2px 0 0;
+    text-shadow: 1px 1px 0 var(--crimson-dark);
+  }
+
+  /* ─── 3. Logo brand ─── */
+  .brand {
+    text-align: center;
+    margin: 4px 0 6px;
+    color: var(--gold-bright);
+  }
+  .brand .title {
+    display: inline-block;
+    background: linear-gradient(180deg, var(--crimson) 0%, var(--crimson-dark) 100%);
+    color: var(--gold-bright);
+    padding: 4px 28px;
+    font-size: 18px;
+    font-weight: 900;
+    letter-spacing: 8px;
+    border: 3px solid var(--gold);
+    border-radius: 4px;
+    box-shadow: 0 0 0 1px #000, 3px 3px 0 #000;
+    text-shadow: 0 2px 0 #000;
+  }
+
+  /* ─── 4. Reel area ─── */
+  .reel-frame {
+    margin: 4px 10px;
+    background:
+      url('assets/reel/reel_bg.png') center/cover no-repeat,
+      linear-gradient(180deg, #1c1410 0%, #0e0806 100%);
+    border: 3px solid var(--gold);
+    border-radius: 8px;
+    box-shadow:
+      0 0 0 2px #000,
+      inset 0 0 30px rgba(0,0,0,.7),
+      0 4px 12px rgba(0,0,0,.5);
+    padding: 6px;
+    position: relative;
+  }
+  .reel-grid {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    grid-template-rows: repeat(5, 1fr);
+    gap: 3px;
+    aspect-ratio: 6/5;
+    position: relative;
+  }
+  .cell {
+    background: rgba(10,6,4,0.4);
+    border-radius: 4px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px;
+    color: #fff;
+  }
+  /* 用 emoji 暫代符號 */
+  .cell.gem-r { background: radial-gradient(circle, #ff4040 30%, #5a0808 80%); }
+  .cell.gem-b { background: radial-gradient(circle, #4070ff 30%, #08185a 80%); }
+  .cell.gem-y { background: radial-gradient(circle, #ffd040 30%, #5a4308 80%); }
+  .cell.gem-g { background: radial-gradient(circle, #40c060 30%, #08401a 80%); }
+  .cell.gem-p { background: radial-gradient(circle, #a040c0 30%, #2e0843 80%); }
+  .cell.hi { background: radial-gradient(circle, #d4a54a 30%, #5a3010 80%); border: 1px solid var(--gold-bright); }
+  .cell.scatter { background: radial-gradient(circle, #ff80c0 20%, #7f1f1b 80%); border: 1px solid #fff; }
+  .cell .lab { font-size: 10px; font-weight: 900; text-shadow: 1px 1px 0 #000; }
+
+  /* 倍數球（疊在格子上） */
+  .mult-orb {
+    position: absolute;
+    width: 36px; height: 36px;
+    background: radial-gradient(circle, #ffd040 20%, #ff4040 60%, #5a0808 100%);
+    border: 2px solid var(--gold-bright);
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    color: #fff8d0;
+    font-size: 12px; font-weight: 900;
+    text-shadow: 0 1px 0 #000;
+    box-shadow: 0 0 12px rgba(255,160,0,.8);
+    z-index: 5;
+  }
+
+  /* ─── 5. Scatter trigger banner ─── */
+  .scatter-info {
+    margin: 6px 10px 0;
+    background:
+      linear-gradient(90deg, transparent 0%, rgba(212,165,74,.15) 50%, transparent 100%),
+      linear-gradient(180deg, #1c1410 0%, #0e0806 100%);
+    border: 2px solid var(--gold);
+    border-radius: 999px;
+    padding: 6px 12px;
+    text-align: center;
+    color: var(--gold-bright);
+    font-size: 11px;
+    font-weight: 900;
+    letter-spacing: 2px;
+    text-shadow: 0 1px 0 #000;
+  }
+
+  /* ─── 6. HUD row ─── */
+  .hud {
+    margin: 8px 10px 4px;
+    background: linear-gradient(180deg, #2a1810 0%, #1a0e0a 100%);
+    border: 2px solid var(--gold);
+    border-radius: 24px;
+    padding: 6px 12px;
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 6px;
+    color: var(--gold-bright);
+    font-size: 10px;
+    text-align: center;
+    align-items: center;
+  }
+  .hud .v { color: #fff; font-size: 14px; font-weight: 900; text-shadow: 0 1px 0 #000; }
+  .hud .l { color: var(--gold-bright); font-size: 10px; letter-spacing: 2px; }
+
+  /* ─── 7. Bottom controls ─── */
+  .controls {
+    margin: 6px 10px 8px;
+    display: grid;
+    grid-template-columns: 36px 36px 1fr 60px 1fr 36px 36px;
+    gap: 6px;
+    align-items: center;
+  }
+  .btn {
+    background: radial-gradient(circle at 35% 35%, #4a2a18, #1a0e0a);
+    border: 2px solid var(--gold);
+    border-radius: 50%;
+    aspect-ratio: 1/1;
+    display: flex; align-items: center; justify-content: center;
+    color: var(--gold-bright);
+    font-size: 16px;
+    font-weight: 900;
+    text-shadow: 0 1px 0 #000;
+    box-shadow: 0 2px 0 #000, inset 0 1px 0 rgba(255,255,255,.2);
+  }
+  .btn.minus { color: var(--gold-bright); font-size: 22px; }
+  .btn.plus { color: var(--gold-bright); font-size: 22px; }
+  .btn-spin {
+    grid-column: 4 / 5;
+    background: radial-gradient(circle at 35% 35%, #c01818 10%, #7f1f1b 50%, #3a0e0a 90%);
+    border: 3px solid var(--gold-bright);
+    border-radius: 50%;
+    aspect-ratio: 1/1;
+    display: flex; align-items: center; justify-content: center;
+    color: var(--gold-bright);
+    font-size: 24px;
+    font-weight: 900;
+    box-shadow: 0 0 12px rgba(255,160,0,.6), inset 0 0 12px rgba(0,0,0,.5);
+  }
+  .btn-spin::after {
+    content: '↻';
+    font-size: 32px;
+    text-shadow: 0 2px 0 #000;
+  }
+
+  /* bet 顯示與快捷 */
+  .bet-display {
+    grid-column: 3 / 4;
+    background: rgba(10,6,4,.6);
+    border: 2px solid var(--gold);
+    border-radius: 999px;
+    color: var(--gold-bright);
+    text-align: center;
+    font-size: 9px;
+    padding: 4px 0;
+    line-height: 1.2;
+  }
+  .bet-display .num { color: #fff; font-size: 14px; font-weight: 900; }
+  .auto-section {
+    grid-column: 5 / 6;
+    background: rgba(10,6,4,.6);
+    border: 2px solid var(--gold);
+    border-radius: 999px;
+    color: var(--gold-bright);
+    text-align: center;
+    font-size: 9px;
+    padding: 4px 0;
+    line-height: 1.2;
+  }
+  .auto-section .num { color: #fff; font-size: 14px; font-weight: 900; }
+
+  /* 購買特色 */
+  .buy-feature {
+    margin: 4px 60px 0;
+    background:
+      linear-gradient(90deg, transparent 0%, rgba(212,165,74,.2) 50%, transparent 100%),
+      linear-gradient(180deg, var(--crimson) 0%, var(--crimson-dark) 100%);
+    border: 2px solid var(--gold);
+    border-radius: 999px;
+    padding: 6px 0;
+    text-align: center;
+    color: var(--gold-bright);
+    font-size: 12px;
+    font-weight: 900;
+    letter-spacing: 3px;
+    text-shadow: 0 1px 0 #000;
+  }
+
+  /* 玩家暱稱條 */
+  .nick {
+    margin: 4px 10px 0;
+    background: rgba(0,0,0,.4);
+    border: 1.5px solid rgba(212,165,74,.5);
+    border-radius: 999px;
+    padding: 4px 10px;
+    color: var(--gold-bright);
+    font-size: 10px;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .nick .avatar {
+    width: 18px; height: 18px;
+    background: var(--gold);
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  /* Free Game 元素 */
+  .fg-mult-badge {
+    position: absolute;
+    top: 100px; right: 8px;
+    width: 64px; height: 64px;
+    z-index: 25;
+    text-align: center;
+    color: var(--gold-bright);
+  }
+  .fg-mult-badge .ring {
+    position: absolute; inset: 0;
+    border: 3px solid var(--gold);
+    background: radial-gradient(circle, #5a0808 30%, #1a0e0a 80%);
+    border-radius: 50%;
+    box-shadow: 0 0 16px rgba(255,160,0,.6), inset 0 0 8px #000;
+  }
+  .fg-mult-badge .val {
+    position: relative; z-index: 2;
+    color: #fff8d0; font-size: 22px; font-weight: 900;
+    line-height: 60px;
+    text-shadow: 0 2px 0 #000, 0 0 10px rgba(255,160,0,.8);
+  }
+  .fg-mult-badge .tag {
+    position: absolute; top: 100%; left: 50%; transform: translateX(-50%);
+    background: var(--crimson); color: var(--gold-bright);
+    padding: 1px 6px; font-size: 9px; border: 1.5px solid var(--gold);
+    border-radius: 999px; white-space: nowrap; margin-top: 2px;
+  }
+  .fg-count {
+    position: absolute;
+    bottom: 200px; left: 6px;
+    z-index: 25;
+    text-align: center;
+    color: var(--gold-bright);
+    background: rgba(0,0,0,.55);
+    border: 2px solid var(--gold);
+    border-radius: 8px;
+    padding: 4px 8px;
+    box-shadow: 2px 2px 0 #000;
+  }
+  .fg-count .num {
+    color: #fff8d0; font-size: 26px; font-weight: 900;
+    text-shadow: 0 2px 0 #000;
+    line-height: 1;
+  }
+  .fg-count .lbl {
+    color: var(--gold-bright); font-size: 9px; line-height: 1.1;
+    letter-spacing: 1px; font-weight: 900;
+  }
+  .fg-max-cap {
+    position: absolute;
+    top: 86px; left: 50%; transform: translateX(-50%);
+    z-index: 24;
+    background: linear-gradient(180deg, var(--crimson) 0%, var(--crimson-dark) 100%);
+    border: 2px solid var(--gold);
+    border-radius: 999px;
+    padding: 4px 16px;
+    color: var(--gold-bright);
+    font-size: 11px; font-weight: 900;
+    letter-spacing: 2px;
+    box-shadow: 0 0 12px rgba(255,160,0,.4);
+    white-space: nowrap;
+  }
+
+  /* 音量控制圖示（右上角） */
+  .audio-ctrl {
+    position: absolute;
+    top: 50px;
+    right: 6px;
+    z-index: 30;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .audio-ctrl .a-btn {
+    width: 26px; height: 26px;
+    background: rgba(10,6,4,.7);
+    border: 1.5px solid var(--gold);
+    border-radius: 50%;
+    color: var(--gold-bright);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px;
+  }
+
+  /* 整體標題 */
+  h1.page-title {
+    color: var(--gold-bright);
+    font-size: 22px;
+    text-align: center;
+    font-weight: 900;
+    margin-bottom: 16px;
+    letter-spacing: 6px;
+    text-shadow: 0 2px 0 #000;
+  }
+  .sub { color: rgba(255,255,255,0.6); font-size: 12px; text-align: center; margin-bottom: 24px; }
+  .legend {
+    color: var(--gold-bright);
+    font-size: 11px;
+    max-width: 412px;
+    margin: 20px auto 0;
+    line-height: 1.8;
+    background: rgba(0,0,0,.35);
+    border: 1px dashed var(--gold);
+    border-radius: 8px;
+    padding: 12px 18px;
+  }
+  .legend h3 { color: var(--gold-bright); font-size: 14px; margin-bottom: 6px; letter-spacing: 2px; }
+  .legend .row { display: flex; gap: 8px; margin: 4px 0; align-items: baseline; }
+  .legend .row .k {
+    flex: 0 0 90px; color: #fff; font-weight: 900;
+    background: var(--crimson); padding: 1px 6px; border-radius: 3px; text-align: center;
+  }
+</style>
+</head>
+<body>
+  <div>
+    <h1 class="page-title">楚漢相爭 · 手機直版 UI 示意圖</h1>
+    <p class="sub">412 × 915 · 漫畫風 · 戰神賽特 同類欄位齊全</p>
+
+    <div class="phone">
+      <!-- 0. 系統列 -->
+      <div class="status-bar"><span>9:41</span><span>📶 🔋</span></div>
+
+      <!-- 1. Jackpot bar -->
+      <div class="jackpots">
+        <div class="jp"><div class="label">GRAND</div><div class="val">250,000</div></div>
+        <div class="jp"><div class="label">MAJOR</div><div class="val">50,000</div></div>
+        <div class="jp"><div class="label">MINOR</div><div class="val">2,000</div></div>
+        <div class="jp"><div class="label">MINI</div><div class="val">800</div></div>
+      </div>
+
+      <!-- 2. 漫畫敘事（取代左右立繪） -->
+      <div class="comic-section">
+        <div class="comic-panel" data-label="楚"></div>
+        <div class="comic-panel han" data-label="漢"></div>
+      </div>
+      <div class="chapter-title">第一章 · 起兵反秦</div>
+
+      <!-- 3. 品牌 logo -->
+      <div class="brand">
+        <span class="title">楚漢爭霸</span>
+      </div>
+
+      <!-- 4. Reel -->
+      <div class="reel-frame">
+        <div class="reel-grid">
+          <!-- row 1 -->
+          <div class="cell gem-b"><span class="lab">藍</span></div>
+          <div class="cell gem-r"><span class="lab">紅</span></div>
+          <div class="cell hi"><span class="lab">戟</span></div>
+          <div class="cell gem-y"><span class="lab">黃</span></div>
+          <div class="cell gem-p"><span class="lab">紫</span></div>
+          <div class="cell hi"><span class="lab">虎</span></div>
+          <!-- row 2 -->
+          <div class="cell hi"><span class="lab">羽</span></div>
+          <div class="cell gem-g"><span class="lab">綠</span></div>
+          <div class="cell scatter"><span class="lab">鳳</span></div>
+          <div class="cell gem-r"><span class="lab">紅</span></div>
+          <div class="cell gem-b"><span class="lab">藍</span></div>
+          <div class="cell hi"><span class="lab">璽</span></div>
+          <!-- row 3 -->
+          <div class="cell gem-y"><span class="lab">黃</span></div>
+          <div class="cell gem-p"><span class="lab">紫</span></div>
+          <div class="cell hi"><span class="lab">邦</span></div>
+          <div class="cell gem-g"><span class="lab">綠</span></div>
+          <div class="cell hi"><span class="lab">戟</span></div>
+          <div class="cell gem-r"><span class="lab">紅</span></div>
+          <!-- row 4 -->
+          <div class="cell gem-b"><span class="lab">藍</span></div>
+          <div class="cell hi"><span class="lab">虎</span></div>
+          <div class="cell gem-y"><span class="lab">黃</span></div>
+          <div class="cell hi"><span class="lab">羽</span></div>
+          <div class="cell gem-p"><span class="lab">紫</span></div>
+          <div class="cell gem-g"><span class="lab">綠</span></div>
+          <!-- row 5 -->
+          <div class="cell hi"><span class="lab">璽</span></div>
+          <div class="cell gem-r"><span class="lab">紅</span></div>
+          <div class="cell gem-y"><span class="lab">黃</span></div>
+          <div class="cell scatter"><span class="lab">鳳</span></div>
+          <div class="cell gem-b"><span class="lab">藍</span></div>
+          <div class="cell hi"><span class="lab">戟</span></div>
+
+          <!-- 倍數球疊加示意 -->
+          <div class="mult-orb" style="top: 32%; left: 32%;">x50</div>
+          <div class="mult-orb" style="top: 60%; left: 72%;">x100</div>
+        </div>
+      </div>
+
+      <!-- 5. Scatter 觸發提示（base game 顯示） -->
+      <div class="scatter-info">🏮 4 × 鳳釵 SCATTER　贏取免費遊戲</div>
+
+      <!-- ============ Free Game 狀態元素（base game 隱藏） ============ -->
+      <!-- 右上角：累計倍數圓形徽章 -->
+      <div class="fg-mult-badge">
+        <div class="ring"></div>
+        <div class="val">x8</div>
+        <div class="tag">累計倍數</div>
+      </div>
+      <!-- 左側：剩餘 Free Games 立體字 -->
+      <div class="fg-count">
+        <div class="num">12</div>
+        <div class="lbl">FREE<br>GAMES</div>
+      </div>
+      <!-- 頂部最高倍數提示橫條（取代 scatter 條） -->
+      <div class="fg-max-cap">⚜　最高　51,000　倍　⚜</div>
+
+      <!-- 6. HUD -->
+      <div class="hud">
+        <div><div class="l">餘額</div><div class="v">10,000.00</div></div>
+        <div><div class="l">下注</div><div class="v">60.00</div></div>
+        <div><div class="l">贏分</div><div class="v">0.00</div></div>
+      </div>
+
+      <!-- 7. 控制列 -->
+      <div class="controls">
+        <div class="btn">☰</div>
+        <div class="btn">📜<br><span style="font-size:8px">550</span></div>
+        <div class="bet-display">
+          <div class="num">60</div>
+          <div>押注</div>
+        </div>
+        <div class="btn-spin"></div>
+        <div class="auto-section">
+          <div class="num">▶</div>
+          <div>自動</div>
+        </div>
+        <div class="btn plus">＋</div>
+        <div class="btn minus">－</div>
+      </div>
+
+      <!-- 購買特色 -->
+      <div class="buy-feature">⚜  購買特色  ⚜</div>
+
+      <!-- 暱稱 -->
+      <div class="nick">
+        <div class="avatar"></div>
+        <span>玩家 漢王</span>
+        <span style="color:#888">·</span>
+        <span>LV. 88</span>
+        <span style="margin-left:auto">編輯 ✎</span>
+      </div>
+
+      <!-- 音量控制 -->
+      <div class="audio-ctrl">
+        <div class="a-btn">🔊</div>
+        <div class="a-btn">🔇</div>
+      </div>
+    </div>
+
+    <!-- 欄位說明 -->
+    <div class="legend">
+      <h3>版面欄位對照（仿戰神賽特）</h3>
+      <div class="row"><span class="k">Jackpot</span><span>GRAND / MAJOR / MINOR / MINI · 4 級獎池</span></div>
+      <div class="row"><span class="k">漫畫敘事</span><span>頂部左右雙格漫畫頁（取代立繪），3 分鐘 4 章節輪播</span></div>
+      <div class="row"><span class="k">章節標題</span><span>當前漫畫章節文字（如「第一章 · 起兵反秦」）</span></div>
+      <div class="row"><span class="k">品牌 Logo</span><span>楚漢爭霸 標題</span></div>
+      <div class="row"><span class="k">Reel 6×5</span><span>主玩法盤面 + 倍數球疊加</span></div>
+      <div class="row"><span class="k">Scatter</span><span>免費遊戲觸發說明條</span></div>
+      <div class="row"><span class="k">HUD</span><span>餘額 / 下注 / 贏分（三欄）</span></div>
+      <div class="row"><span class="k">控制列</span><span>菜單 / 押注堆 / 押注顯示 / SPIN / 自動 / +/-</span></div>
+      <div class="row"><span class="k">購買特色</span><span>直接買 free game 入口</span></div>
+      <div class="row"><span class="k">暱稱條</span><span>玩家名/LV/編輯</span></div>
+      <div class="row"><span class="k">音量</span><span>右側浮動：BGM 開關 + SFX 開關</span></div>
+    </div>
+  </div>
+</body>
+</html>
