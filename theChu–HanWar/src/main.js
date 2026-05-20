@@ -306,14 +306,16 @@ class PreloadScene extends Phaser.Scene {
 
     // === Reel ===
     this.load.image('reel_bg',           'assets/reel/reel_bg.png');
-    this.load.image('reel_frame',        'assets/reel/reel_frame.png');
+    this.load.image('reel_frame',        'assets/ui_new/frame_reel_6x5.png');     // ★ 新漫畫風
     this.load.image('reel_separator',    'assets/reel/reel_separator.png');
 
-    // === UI 面板 ===
-    this.load.image('top_jackpot_panel', 'assets/ui/panels/top_jackpot_panel.png');
-    this.load.image('bottom_hud_panel',  'assets/ui/panels/bottom_hud_panel.png');
-    this.load.image('info_bar',          'assets/logo/info_bar.png');
+    // === UI 面板（漫畫風 v2） ===
+    this.load.image('top_jackpot_panel', 'assets/ui_new/panel_top_jackpot.png');  // ★
+    this.load.image('bottom_hud_panel',  'assets/ui_new/panel_bottom_hud.png');   // ★
+    this.load.image('info_bar',          'assets/ui_new/panel_info_strip.png');   // ★
     this.load.image('logo_title',        'assets/logo/chuhan_logo_title.png');
+    this.load.image('panel_nickname',    'assets/ui_new/panel_nickname.png');     // 新增
+    this.load.image('panel_audio',       'assets/ui_new/panel_audio_strip.png');  // 新增
 
     // === HUD ===
     this.load.image('avatar_chu',        'assets/ui/hud/player_avatar_chu.png');
@@ -322,13 +324,13 @@ class PreloadScene extends Phaser.Scene {
     this.load.image('btn_bet_plus',      'assets/ui/hud/btn_bet_plus.png');
     this.load.image('btn_max_bet',       'assets/ui/hud/btn_max_bet.png');
 
-    // === 主按鈕 ===
-    this.load.image('btn_spin',          'assets/ui/buttons/btn_spin_normal.png');
-    this.load.image('btn_settings',      'assets/ui/buttons/btn_settings_normal.png');
-    this.load.image('btn_event',         'assets/ui/buttons/btn_event_normal.png');
-    this.load.image('btn_fast',          'assets/ui/buttons/btn_fast_normal.png');
-    this.load.image('btn_auto',          'assets/ui/buttons/btn_auto_normal.png');
-    this.load.image('btn_menu',          'assets/ui/buttons/btn_menu_normal.png');
+    // === 主按鈕（漫畫風 v2）===
+    this.load.image('btn_spin',          'assets/ui_new/btn_spin_chuhan.png');    // ★
+    this.load.image('btn_settings',      'assets/ui_new/btn_round_settings.png'); // ★
+    this.load.image('btn_event',         'assets/ui_new/btn_round_event.png');    // ★
+    this.load.image('btn_fast',          'assets/ui_new/btn_round_fast.png');     // ★
+    this.load.image('btn_auto',          'assets/ui_new/btn_round_auto.png');     // ★
+    this.load.image('btn_menu',          'assets/ui_new/btn_round_menu.png');     // ★
 
     // === 符號（10 種，無 wild）===
     this.load.image('sym_xiang_yu',    'assets/symbols/high/sym_xiang_yu.png');
@@ -448,8 +450,8 @@ class MainScene extends Phaser.Scene {
     this.grid = Array.from({ length: COLS }, () => Array(ROWS).fill(null));
     this.multOrbs = [];
 
-    // === Depth 110：reel_frame ===
-    this.add.image(REEL_CX, REEL_CY, 'reel_frame').setDisplaySize(REEL_W + 34, REEL_H + 44).setDepth(110).setAlpha(0.95);
+    // === Depth 110：reel_frame（新漫畫風包外緣，外加 ~140px 邊框）===
+    this.add.image(REEL_CX, REEL_CY, 'reel_frame').setDisplaySize(REEL_W + 130, REEL_H + 130).setDepth(110);
 
     // === Depth 120：top_jackpot_panel ===
     this.add.image(L.W/2, L.jackpotY, 'top_jackpot_panel').setDisplaySize(L.W, L.jackpotH).setDepth(120);
