@@ -1,0 +1,10 @@
+order	depth	key	file	x1	y1	x2	y2	description	status
+1	0	base_game_bg_battlefield	assets/_deprecated/base_game_bg_battlefield.png	0	60	1660	830	battlefield, flags, side character backdrop	deprecated
+2	10	base_game_top_jackpot_bar	assets/base_game/canonical_layers/base_game_top_jackpot_bar.png	0	0	1660	64	top GRAND/MAJOR/MINOR jackpot bar and settings icon	legacy_cut_not_active
+3	20	base_game_title_banner	assets/base_game/canonical_layers/base_game_title_banner.png	470	60	1190	265	main title and multiplier rule banner	legacy_cut_not_active
+4	30	base_game_left_character	assets/_deprecated/base_game_left_character.png	0	72	430	842	left Chu warrior character and name badge	deprecated
+5	40	base_game_right_character	assets/_deprecated/base_game_right_character.png	1210	72	1660	842	right Han character and side decoration	deprecated
+6	100	base_game_reel_board	assets/base_game/canonical_layers/base_game_reel_board.png	420	260	1265	825	central 6x5 reel board and frame	legacy_cut_not_active
+7	210	base_game_side_buttons	assets/base_game/canonical_layers/base_game_side_buttons.png	1544	438	1660	820	right activity, turbo, auto, menu buttons	legacy_cut_not_active
+8	220	base_game_bottom_hud	assets/base_game/canonical_layers/base_game_bottom_hud.png	0	830	1660	948	bottom player, balance, total bet HUD	legacy_cut_not_active
+9	230	base_game_spin_button	assets/base_game/canonical_layers/base_game_spin_button.png	1292	708	1580	948	large magenta spin button	legacy_cut_not_active

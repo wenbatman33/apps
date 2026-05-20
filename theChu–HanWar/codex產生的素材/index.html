@@ -1,0 +1,447 @@
+<!doctype html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>楚漢爭霸遊戲圖素材規劃</title>
+    <link rel="stylesheet" href="./styles.css">
+    <script src="https://cdn.jsdelivr.net/npm/phaser@3.90.0/dist/phaser.min.js" defer></script>
+    <script src="./game.js" defer></script>
+  </head>
+  <body>
+    <header class="site-header">
+      <div>
+        <p class="eyebrow">Game Art Asset Board</p>
+        <h1>楚漢爭霸遊戲圖素材規劃</h1>
+      </div>
+      <div class="status-strip" aria-label="素材統計">
+        <span><strong>19</strong> Base Game 層</span>
+        <span><strong>16:9</strong> 主畫面比例</span>
+        <span><strong>PNG</strong> 來源格式</span>
+      </div>
+    </header>
+
+    <main>
+      <section class="section-block game-section" aria-labelledby="main-menu-title">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">Phaser Preview</p>
+            <h2 id="main-menu-title">開始畫面</h2>
+          </div>
+          <p>MainMenuScene 已改成乾淨背景加一致角色分層：背景不再使用烘好 UI 的 `開始畫面.png`，按鈕與副標題框獨立載入。</p>
+        </div>
+
+        <div class="base-game-layout">
+          <div class="game-shell">
+            <div id="main-menu-root" class="preview-root menu-preview-root" aria-label="楚漢爭霸開始畫面 Phaser 預覽"></div>
+            <div class="game-panel">
+              <div>
+                <span class="tag ready">MainMenuScene</span>
+                <h3>Start Screen Preview</h3>
+                <p>使用 `assets/bg/bg_battlefield_clean.png` 作為乾淨背景，角色沿用 Base / Free Game 相同人物素材。</p>
+              </div>
+              <a class="panel-link" href="./開始畫面.png" target="_blank" rel="noreferrer">Reference PNG</a>
+            </div>
+          </div>
+
+          <aside class="layer-panel" aria-label="開始畫面層級與圖檔">
+            <div>
+              <span id="main-menu-layer-status">Showing layers</span>
+              <h3>Main Menu Layers</h3>
+            </div>
+            <ol id="main-menu-layer-list"></ol>
+            <div class="layer-files">
+              <code>Depth 0: assets/bg/bg_battlefield_clean.png</code>
+              <code>Depth 10: assets/characters/chu/chu_idle.png</code>
+              <code>Depth 12: assets/characters/han/han_idle.png</code>
+              <code>Depth 14: assets/free_game/characters/yuji_idle.png</code>
+              <code>Depth 70: assets/logo/chuhan_logo_title.png</code>
+              <code>Depth 88: assets/logo/info_bar.png</code>
+              <code>Depth 90: assets/main_menu/ui/button_start_game_gpt.png</code>
+              <code>Depth 91: dynamic tagline text</code>
+              <code>Depth 101: dynamic start button text</code>
+              <code>Reference only: 開始畫面.png</code>
+            </div>
+          </aside>
+        </div>
+      </section>
+
+      <section class="section-block game-section" aria-labelledby="base-game-title">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">Phaser Preview</p>
+            <h2 id="base-game-title">Base Game 主遊戲畫面</h2>
+          </div>
+          <p>Base Game 已重新接入真正分層素材：純背景、左右人物、轉軸、6x5 符號與不含中央裝飾的資訊框。每層都可用眼睛按鈕單獨 hide/show。</p>
+        </div>
+
+        <div class="base-game-layout">
+          <div class="game-shell">
+            <div id="game-root" aria-label="楚漢爭霸 Base Game Phaser 畫面"></div>
+            <div class="game-panel">
+              <div>
+                <span class="tag ready">Layered real assets</span>
+                <h3>GameScene Preview</h3>
+                <p>按 Next Layer 或每層眼睛按鈕，逐層確認實際圖檔與深度排序。</p>
+              </div>
+              <div class="game-controls">
+                <button id="clear-layers-button" type="button">Clear</button>
+                <button id="next-layer-button" type="button">Next Layer</button>
+                <button id="all-layers-button" type="button">Show All</button>
+                <span id="spin-status">Ready</span>
+              </div>
+            </div>
+          </div>
+
+          <aside class="layer-panel" aria-label="Base Game 層級與圖檔">
+            <div>
+              <span id="layer-status">Showing layers</span>
+              <h3>Base Game Layers</h3>
+            </div>
+            <ol id="base-game-layer-list"></ol>
+            <div class="layer-files">
+              <code>Depth 0: assets/bg/bg_battlefield_clean.png</code>
+              <code>Depth 10: assets/characters/chu/chu_idle.png</code>
+              <code>Depth 20: assets/characters/han/han_idle.png</code>
+              <code>Depth 80: assets/reel/reel_bg.png</code>
+              <code>Depth 90: assets/reel/reel_separator.png x5</code>
+              <code>Depth 100: assets/symbols/**/*.png x30 cells / 10 files</code>
+              <code>Depth 110: assets/reel/reel_frame.png</code>
+              <code>Depth 120: assets/ui/panels/top_jackpot_panel.png</code>
+              <code>Depth 121: jackpot_text dynamic layer</code>
+              <code>Depth 125: assets/logo/chuhan_logo_title.png</code>
+              <code>Depth 130: assets/logo/info_bar.png</code>
+              <code>Depth 131: info_text dynamic layer</code>
+              <code>Depth 140: assets/ui/panels/bottom_hud_panel.png</code>
+              <code>Depth 145: assets/ui/hud/player_avatar_chu.png</code>
+              <code>Depth 145: assets/ui/hud/icon_coin_stack.png</code>
+              <code>Depth 145: assets/ui/hud/btn_bet_minus.png x2</code>
+              <code>Depth 145: assets/ui/hud/btn_bet_plus.png</code>
+              <code>Depth 145: assets/ui/hud/btn_max_bet.png</code>
+              <code>Depth 146: hud_text dynamic layer</code>
+              <code>Depth 150: assets/ui/buttons/btn_event_normal.png</code>
+              <code>Depth 150: assets/ui/buttons/btn_fast_normal.png</code>
+              <code>Depth 150: assets/ui/buttons/btn_auto_normal.png</code>
+              <code>Depth 150: assets/ui/buttons/btn_menu_normal.png</code>
+              <code>Depth 155: assets/ui/buttons/btn_spin_normal.png</code>
+              <code>Depth 156: button_labels dynamic layer</code>
+              <code>Symbol: assets/symbols/low/sym_gem_red.png</code>
+              <code>Symbol: assets/symbols/low/sym_gem_yellow.png</code>
+              <code>Symbol: assets/symbols/low/sym_gem_blue.png</code>
+              <code>Symbol: assets/symbols/low/sym_gem_green.png</code>
+              <code>Symbol: assets/symbols/low/sym_gem_purple.png</code>
+              <code>Symbol: assets/symbols/high/sym_halberd.png</code>
+              <code>Symbol: assets/symbols/high/sym_tiger_tally.png</code>
+              <code>Symbol: assets/symbols/special/sym_bonus_han_seal.png</code>
+              <code>Symbol: assets/symbols/special/sym_scatter_phoenix_hairpin.png</code>
+              <code>Symbol: assets/symbols/special/sym_wild_dragon_jade.png</code>
+            </div>
+          </aside>
+        </div>
+      </section>
+
+      <section class="section-block game-section" aria-labelledby="free-game-title">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">Phaser Preview</p>
+            <h2 id="free-game-title">Free Game 鳳鳴九霄畫面</h2>
+          </div>
+          <p>Free Game 已改成「鳳鳴九霄」模式：畫面只出現虞姬，鳳凰翅膀在虞姬後方做小幅來回展翅，左側顯示動態 15 FREE GAME，最後出現贏得獎金文字。</p>
+        </div>
+
+        <div class="base-game-layout">
+          <div class="game-shell">
+            <div id="free-game-root" aria-label="鳳鳴九霄 Free Game Phaser 畫面"></div>
+            <div class="game-panel">
+              <div>
+                <span class="tag ready">FreeGameScene</span>
+                <h3>鳳鳴九霄 Preview</h3>
+                <p>15 由 numbers_gold 金屬數字圖動態組成，可倒數、增加或重設；FREE / GAME 固定為同風格金屬字圖，不做縮放跳動。</p>
+              </div>
+              <div class="game-controls free-game-counter-controls" aria-label="Free Game 次數控制">
+                <button id="free-count-down-button" type="button">-1</button>
+                <button id="free-count-up-button" type="button">+1</button>
+                <button id="free-count-reset-button" type="button">Reset 15</button>
+              </div>
+            </div>
+          </div>
+
+          <aside class="layer-panel" aria-label="Free Game 層級與圖檔">
+            <div>
+              <span id="free-layer-status">Showing layers</span>
+              <h3>Free Game Layers</h3>
+            </div>
+            <ol id="free-game-layer-list"></ol>
+            <div class="layer-files">
+              <code>Depth 0: assets/bg/bg_battlefield_clean.png</code>
+              <code>Depth 8: assets/free_game/fx/phoenix_back.png</code>
+              <code>Depth 12: assets/free_game/characters/yuji_idle.png</code>
+              <code>Depth 40-60: assets/reel/*.png + symbols</code>
+              <code>Depth 70-82: shared UI / HUD / side buttons</code>
+              <code>Depth 95: assets/free_game/ui/free_word_metal.png</code>
+              <code>Depth 95: assets/free_game/ui/game_word_metal.png</code>
+              <code>Depth 96: numbers_gold/num_*.png dynamic count</code>
+              <code>Depth 96: numbers_gold/num_*.png only, no broken x crop</code>
+              <code>Depth 110: assets/free_game/ui/fengming_jiuxiao_logo.png</code>
+              <code>Depth 115: 贏得獎金 dynamic text</code>
+            </div>
+          </aside>
+        </div>
+      </section>
+
+      <section class="section-block game-section" aria-labelledby="win-demo-title">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">Phaser Preview</p>
+            <h2 id="win-demo-title">Big / Super / Mega Win 爆獎畫面</h2>
+          </div>
+          <p>爆獎畫面已拆成背景、人物、鳳凰、WIN Title、累積數字、副標題與金幣層；左上角楚漢爭霸 Logo 不顯示，副標題改為「鳳鳴九霄」。</p>
+        </div>
+
+        <div class="base-game-layout">
+          <div class="game-shell">
+            <div id="win-demo-root" aria-label="Big Super Mega Win 爆獎 Phaser 畫面"></div>
+            <div class="game-panel">
+              <div>
+                <span class="tag ready">WinDemoScene</span>
+                <h3>爆獎動態 Preview</h3>
+                <p>Title 會來回閃爍縮放、鳳凰在後方展翅、獎金數字會從 0 持續累積到目標值。</p>
+              </div>
+              <div class="game-controls win-mode-controls" aria-label="爆獎模式切換">
+                <button type="button" data-win-mode="big">Big Win</button>
+                <button type="button" data-win-mode="super">Super Win</button>
+                <button type="button" data-win-mode="mega" class="active">Mega Win</button>
+              </div>
+            </div>
+          </div>
+
+          <aside class="layer-panel" aria-label="爆獎畫面層級與圖檔">
+            <div>
+              <span id="win-layer-status">Showing layers</span>
+              <h3>Win Layers</h3>
+            </div>
+            <ol id="win-layer-list"></ol>
+            <div class="layer-files">
+              <code>Depth 0: assets/win/bg/win_bg_award_clean.png</code>
+              <code>Depth 10: assets/characters/chu/chu_idle.png</code>
+              <code>Depth 10: assets/characters/han/han_idle.png</code>
+              <code>Depth 20: assets/free_game/fx/phoenix_back.png</code>
+              <code>Depth 36: assets/win/fx/coin_fx_sprites.png spritesheet 128x160</code>
+              <code>Depth 40: text/win_text_big.png</code>
+              <code>Depth 40: text/win_text_super.png</code>
+              <code>Depth 40: text/win_text_mega.png</code>
+              <code>Depth 45: assets/logo/title_plaque.png</code>
+              <code>Depth 46: amount_text dynamic counter</code>
+              <code>Depth 48: assets/logo/info_bar.png</code>
+              <code>Depth 49: 鳳鳴九霄　獎勵翻倍！ dynamic text</code>
+              <code>Not used: top-left chuhan logo block</code>
+            </div>
+          </aside>
+        </div>
+      </section>
+
+      <section class="section-block">
+        <div class="section-heading">
+          <h2>現有素材陳列</h2>
+          <p>目前專案根目錄內可用的畫面稿與 UI 圖，先作為美術方向與版面規格基準。</p>
+        </div>
+
+        <div class="asset-grid">
+          <article class="asset-card feature">
+            <a href="./base-game.png" target="_blank" rel="noreferrer">
+              <img src="./base-game.png" alt="Base game 主遊戲畫面">
+            </a>
+            <div class="asset-info">
+              <span class="tag ready">已存在</span>
+              <h3>Base Game 主遊戲畫面</h3>
+              <p>1660 x 948，主場景、轉輪區與整體視覺密度基準。</p>
+              <code>base-game.png</code>
+            </div>
+          </article>
+
+          <article class="asset-card">
+            <a href="./開始畫面.png" target="_blank" rel="noreferrer">
+              <img src="./開始畫面.png" alt="開始畫面">
+            </a>
+            <div class="asset-info">
+              <span class="tag ready">已存在</span>
+              <h3>開始畫面</h3>
+              <p>1672 x 941，遊戲入口與品牌第一視覺。</p>
+              <code>開始畫面.png</code>
+            </div>
+          </article>
+
+          <article class="asset-card">
+            <a href="./freeGame啟動畫面.png" target="_blank" rel="noreferrer">
+              <img src="./freeGame啟動畫面.png" alt="Free Game 啟動畫面">
+            </a>
+            <div class="asset-info">
+              <span class="tag ready">已存在</span>
+              <h3>Free Game 啟動畫面</h3>
+              <p>1672 x 941，免費遊戲觸發轉場與氛圍基準。</p>
+              <code>freeGame啟動畫面.png</code>
+            </div>
+          </article>
+
+          <article class="asset-card">
+            <a href="./v1-chuhan-yuji-descends-freegame.old.png" target="_blank" rel="noreferrer">
+              <img src="./v1-chuhan-yuji-descends-freegame.old.png" alt="虞姬降臨 Free Game 舊稿">
+            </a>
+            <div class="asset-info">
+              <span class="tag review">舊稿參考</span>
+              <h3>虞姬降臨 Free Game</h3>
+              <p>1672 x 941，角色事件畫面參考，建議後續重整命名與版本。</p>
+              <code>v1-chuhan-yuji-descends-freegame.old.png</code>
+            </div>
+          </article>
+
+          <article class="asset-card">
+            <a href="./爆獎畫面.png" target="_blank" rel="noreferrer">
+              <img src="./爆獎畫面.png" alt="爆獎畫面">
+            </a>
+            <div class="asset-info">
+              <span class="tag ready">已存在</span>
+              <h3>爆獎畫面</h3>
+              <p>1672 x 941，大獎展示、光效層次與數字舞台參考。</p>
+              <code>爆獎畫面.png</code>
+            </div>
+          </article>
+
+          <article class="asset-card">
+            <a href="./assets/win/bg/win_bg_award_clean.png" target="_blank" rel="noreferrer">
+              <img src="./assets/win/bg/win_bg_award_clean.png" alt="爆獎專屬背景">
+            </a>
+            <div class="asset-info">
+              <span class="tag ready">新增</span>
+              <h3>爆獎專屬背景</h3>
+              <p>Big / Super / Mega Win 專用背景層，不再沿用一般 Base Game battlefield 直接擺放。</p>
+              <code>assets/win/bg/win_bg_award_clean.png</code>
+            </div>
+          </article>
+
+          <article class="asset-card">
+            <a href="./assets/win/fx/coin_fx_sprites.png" target="_blank" rel="noreferrer">
+              <img src="./assets/win/fx/coin_fx_sprites.png" alt="撒幣金幣 spritesheet">
+            </a>
+            <div class="asset-info">
+              <span class="tag ready">新增</span>
+              <h3>撒幣金幣 Spritesheet</h3>
+              <p>使用補上的金幣圖做 128x160 spritesheet，由 Phaser 從底部往上拋灑。</p>
+              <code>assets/win/fx/coin_fx_sprites.png</code>
+            </div>
+          </article>
+
+          <article class="asset-card">
+            <a href="./assets/free_game/ui/free_word_metal.png" target="_blank" rel="noreferrer">
+              <img src="./assets/free_game/ui/free_word_metal.png" alt="FREE 金屬字">
+            </a>
+            <div class="asset-info">
+              <span class="tag ready">新增</span>
+              <h3>FREE 金屬字</h3>
+              <p>從原本金屬字素材拆出的獨立 FREE 圖層，搭配動態金屬數字使用。</p>
+              <code>assets/free_game/ui/free_word_metal.png</code>
+            </div>
+          </article>
+
+          <article class="asset-card">
+            <a href="./assets/free_game/ui/game_word_metal.png" target="_blank" rel="noreferrer">
+              <img src="./assets/free_game/ui/game_word_metal.png" alt="GAME 金屬字">
+            </a>
+            <div class="asset-info">
+              <span class="tag ready">新增</span>
+              <h3>GAME 金屬字</h3>
+              <p>從原本金屬字素材拆出的獨立 GAME 圖層，15 數字不再被烘在圖裡。</p>
+              <code>assets/free_game/ui/game_word_metal.png</code>
+            </div>
+          </article>
+
+          <article class="asset-card">
+            <a href="./v1-bonus-wheel-multipliers.png" target="_blank" rel="noreferrer">
+              <img src="./v1-bonus-wheel-multipliers.png" alt="Bonus Wheel Multipliers">
+            </a>
+            <div class="asset-info">
+              <span class="tag ready">已存在</span>
+              <h3>Bonus Wheel Multipliers</h3>
+              <p>1672 x 941，Bonus 輪盤、倍率版型與獎項展示參考。</p>
+              <code>v1-bonus-wheel-multipliers.png</code>
+            </div>
+          </article>
+
+          <article class="asset-card">
+            <a href="./v1-ui-components.png" target="_blank" rel="noreferrer">
+              <img src="./v1-ui-components.png" alt="UI Components">
+            </a>
+            <div class="asset-info">
+              <span class="tag ready">已存在</span>
+              <h3>UI Components</h3>
+              <p>1672 x 941，按鈕、面板、圖示與介面元件切圖參考。</p>
+              <code>v1-ui-components.png</code>
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <section class="section-block planning">
+        <div class="section-heading">
+          <h2>素材建置規劃</h2>
+          <p>先把遊戲可視素材拆成明確清單，後續每一項都應交付真實圖檔，不使用程式繪製色塊代替。</p>
+        </div>
+
+        <div class="plan-grid">
+          <article class="plan-panel">
+            <h3>場景與背景</h3>
+            <ul>
+              <li><span>主遊戲背景</span><strong>已具方向</strong></li>
+              <li><span>Free Game 背景</span><strong>已具方向</strong></li>
+              <li><span>爆獎舞台背景</span><strong>已具方向</strong></li>
+              <li><span>轉場光效層</span><strong>待補 PNG / WebP</strong></li>
+            </ul>
+          </article>
+
+          <article class="plan-panel">
+            <h3>角色素材</h3>
+            <ul>
+              <li><span>項羽立繪</span><strong>待補透明 PNG</strong></li>
+              <li><span>劉邦立繪</span><strong>待補透明 PNG</strong></li>
+              <li><span>虞姬立繪</span><strong>舊稿參考</strong></li>
+              <li><span>角色表情 / 特效版本</span><strong>待補</strong></li>
+            </ul>
+          </article>
+
+          <article class="plan-panel">
+            <h3>轉輪與符號</h3>
+            <ul>
+              <li><span>高倍率角色符號</span><strong>待補 sprite sheet</strong></li>
+              <li><span>A/K/Q/J/10 低倍率符號</span><strong>待補</strong></li>
+              <li><span>Wild / Scatter / Bonus</span><strong>待補</strong></li>
+              <li><span>符號中獎高亮</span><strong>待補序列圖</strong></li>
+            </ul>
+          </article>
+
+          <article class="plan-panel">
+            <h3>介面與特效</h3>
+            <ul>
+              <li><span>下注 / 自動 / 停止按鈕</span><strong>已具方向</strong></li>
+              <li><span>金額數字字型圖</span><strong>待補 bitmap font</strong></li>
+              <li><span>Win / Big Win / Mega Win</span><strong>待補分層圖</strong></li>
+              <li><span>粒子與光束素材</span><strong>待補透明 PNG</strong></li>
+            </ul>
+          </article>
+        </div>
+      </section>
+
+      <section class="section-block spec-row">
+        <div>
+          <h2>建議輸出規格</h2>
+          <p>畫面稿維持接近 1672 x 941；可互動物件改用透明 PNG、spritesheet 或 atlas。命名建議統一英文小寫與用途前綴，方便 Phaser 載入。</p>
+        </div>
+        <div class="naming-box">
+          <code>screens/base-game.png</code>
+          <code>characters/xiang-yu_idle.png</code>
+          <code>symbols/scatter_yuji.png</code>
+          <code>ui/spin-button_normal.png</code>
+        </div>
+      </section>
+    </main>
+  </body>
+</html>
