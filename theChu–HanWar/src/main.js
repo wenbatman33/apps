@@ -12,25 +12,29 @@ const ROWS = 5;
 const LAYOUT_PC = {
   mode: 'pc',
   W: 1920, H: 1080,
-  // Reel（位於頁面中央，當作 1 個大漫畫格）
-  reelCx: 960, reelCy: 572, reelW: 870, reelH: 580,
-  // 不規則漫畫頁版型（真實 manga 風）
-  // 左側 4 格 + 右側 4 格，大小錯落（不要 4 個等大）
-  // 加上頂部 2 個橫向寬格 = 10 格
+  // Reel（位於 codex manga 頁中央大格內，比例 ~6:5）
+  reelCx: 960, reelCy: 540, reelW: 720, reelH: 450,
+  // 對齊 codex 生 manga_page_full.png 中的各個漫畫格位置
+  // 圖原始 1024x1024，在 1920x1080 拉伸（x*1.875, y*1.055）
+  // 中央大格約占 (320-700, 300-620) -> reel 區
+  // 周圍小格依視覺估計位置
   storyPanels: [
-    // === 左側 4 格（楚的劇情）— 大小交錯 ===
-    { cx: 175, cy: 220, w: 300, h: 220, src: 'comic_ch1_chu_p2', label: '會稽起兵' },  // 大
-    { cx: 175, cy: 385, w: 300, h: 110, src: 'comic_ch1_chu_p1', label: '會稽望秦' },  // 小窄
-    { cx: 175, cy: 575, w: 300, h: 270, src: 'comic_ch3_chu_p1', label: '彭城追擊' },  // 大
-    { cx: 175, cy: 845, w: 300, h: 210, src: 'comic_ch4_chu_p2', label: '烏江末路' },  // 中
-    // === 右側 4 格（漢的劇情）— 不同節奏的錯落 ===
-    { cx: 1745, cy: 220, w: 300, h: 160, src: 'comic_ch1_han_p1', label: '沛縣起義' },  // 中
-    { cx: 1745, cy: 365, w: 300, h: 130, src: 'comic_ch1_han_p2', label: '入關咸陽' },  // 小
-    { cx: 1745, cy: 530, w: 300, h: 200, src: 'comic_ch2_han_p2', label: '樊噲闖帳' },  // 中
-    { cx: 1745, cy: 790, w: 300, h: 320, src: 'comic_ch4_han_p2', label: '漢家天下' },  // 大
-    // === 頂部 2 格橫向寬格 — 重要劇情瞬間 ===
-    { cx: 700, cy: 165, w: 460, h: 100, src: 'comic_ch2_chu_p2', label: '項莊舞劍' },
-    { cx: 1220, cy: 165, w: 460, h: 100, src: 'comic_ch4_han_p1', label: '十面埋伏' },
+    // === 頂部 3 個橫向小格（y ~ 230-300） ===
+    { cx: 360,  cy: 290, w: 270, h: 100, src: 'comic_ch1_chu_p1', label: '少年項羽' },
+    { cx: 720,  cy: 290, w: 300, h: 100, src: 'comic_ch2_chu_p2', label: '項莊舞劍' },
+    { cx: 1100, cy: 290, w: 280, h: 100, src: 'comic_ch4_han_p1', label: '十面埋伏' },
+    // === 左側 3 格（垂直） ===
+    { cx: 220, cy: 430, w: 220, h: 130, src: 'comic_ch1_chu_p2', label: '會稽起兵' },
+    { cx: 220, cy: 575, w: 220, h: 130, src: 'comic_ch3_chu_p1', label: '彭城追擊' },
+    { cx: 220, cy: 720, w: 220, h: 130, src: 'comic_ch4_chu_p2', label: '烏江末路' },
+    // === 右側 3 格（垂直） ===
+    { cx: 1700, cy: 430, w: 220, h: 130, src: 'comic_ch1_han_p1', label: '沛縣起義' },
+    { cx: 1700, cy: 575, w: 220, h: 130, src: 'comic_ch2_han_p2', label: '樊噲闖帳' },
+    { cx: 1700, cy: 720, w: 220, h: 130, src: 'comic_ch4_han_p2', label: '漢家天下' },
+    // === 底部 3 個橫向小格（y ~ 850） ===
+    { cx: 360,  cy: 830, w: 270, h: 100, src: 'comic_ch3_chu_p2', label: '鴻溝議和' },
+    { cx: 720,  cy: 830, w: 300, h: 100, src: 'comic_ch2_han_p1', label: '親赴鴻門' },
+    { cx: 1100, cy: 830, w: 280, h: 100, src: 'comic_ch3_han_p1', label: '敗走彭城' },
   ],
   // 頂部
   jackpotY: 42, jackpotH: 64,
@@ -318,7 +322,7 @@ class PreloadScene extends Phaser.Scene {
 
   preload() {
     // 限制並行載入，避免大量 PNG 同時下載導致 loader 卡住
-    this.load.maxParallelDownloads = 16;  // 加大並行載入加速
+    this.load.maxParallelDownloads = 8;
     // Loading 顯示
     this.cameras.main.setBackgroundColor('#0a0604');
     const t = this.add.text(W/2, H/2 - 80, '楚漢相爭 · 載入中', {
@@ -395,6 +399,7 @@ class PreloadScene extends Phaser.Scene {
 
     // === v3 漫畫風 UI（依 mockup 設計）===
     this.load.image('page_pc_template',   'assets/ui_v3/page_pc_template.png');
+    this.load.image('manga_page_full',    'assets/ui_v3/manga_page_full.png');
     this.load.image('v3_bar_jackpot',     'assets/ui_v3/bar_jackpot_4seg.png');
     this.load.image('v3_bar_hud',         'assets/ui_v3/bar_hud_bottom.png');
     this.load.image('v3_banner_chapter',  'assets/ui_v3/banner_chapter_title.png');
@@ -465,18 +470,16 @@ class MainScene extends Phaser.Scene {
     this.fgTotalWin = 0;
     this.autoMode = false;
 
-    // === Depth 0：背景（漫畫稿紙米色 + halftone）===
+    // === Depth 0：背景（漫畫稿紙米色）===
     this.bg = this.add.rectangle(L.W/2, L.H/2, L.W, L.H, 0xf4ead5, 1).setDepth(0);
-    // 加上微弱的網點漸層
-    const overlay = this.add.graphics().setDepth(0.5).setAlpha(0.06);
-    overlay.fillStyle(0x14110f, 1);
-    for (let y = 0; y < L.H; y += 8) {
-      for (let x = (y % 16); x < L.W; x += 16) {
-        overlay.fillCircle(x, y, 1);
-      }
-    }
-    // 保留 bg_battle 引用以便 freegame 切色（直接 tint rectangle 即可）
+    // 保留 bg setFillStyle override 給 freegame 切色用
     this.bg.setFillStyle = (color) => this.bg.fillColor = color;
+
+    // === Depth 1：整頁漫畫版型底圖（codex 生的連體 manga page）===
+    if (L.mode === 'pc' && this.textures.exists('manga_page_full')) {
+      this.add.image(L.W/2, L.H/2, 'manga_page_full')
+        .setDisplaySize(L.W, L.H).setDepth(1);
+    }
 
     // === 左右立繪（base game 隱藏，Free Game 切換用）===
     this.chuChar = this.add.image(L.W * 0.12, L.H, 'chu_idle').setOrigin(0.5, 1).setDepth(10).setVisible(false);
@@ -518,8 +521,7 @@ class MainScene extends Phaser.Scene {
     this.multOrbs = [];
 
     // === Depth 110：reel_frame（新漫畫風包外緣，外加 ~140px 邊框）===
-    // 漫畫黑墨邊框（簡潔版）
-    this.add.image(REEL_CX, REEL_CY, 'reel_frame').setDisplaySize(REEL_W + 50, REEL_H + 50).setDepth(110);
+    // reel 邊框已由整頁 manga_page_full 底圖提供，不再單獨疊 reel_frame
 
     // === Depth 120：top_jackpot_panel ===
     this.add.image(L.W/2, L.jackpotY, 'top_jackpot_panel').setDisplaySize(L.W, L.jackpotH).setDepth(120);
@@ -874,9 +876,8 @@ class MainScene extends Phaser.Scene {
     this.storyPanelFrames = [];
     this.storyPanelLocks = [];
     this.L.storyPanels.forEach((p, i) => {
-      // 漫畫頁感：白色 gutter (cream) + 粗黑墨邊
-      const frame = this.add.rectangle(p.cx, p.cy, p.w + 8, p.h + 8, 0xfdf5e0, 1)
-        .setStrokeStyle(8, 0x14110f).setDepth(11);
+      // 底圖 manga_page_full 已提供連體黑邊，這裡只放圖內容（無額外框）
+      const frame = null;
       this.storyPanelFrames.push(frame);
 
       // 圖（若 texture 不存在則用空 rect）
