@@ -52,12 +52,23 @@ const LAYOUT_PC = {
   autoBtnX: 1350, autoBtnY: 1018,
   // 中央 SPIN（PC 在右下）
   spinBtnX: 1670, spinBtnY: 940, spinBtnSize: 140,
-  // Side buttons（右側直排）
-  sideBtnX: 1826,
-  sideBtnYs: [452, 562, 672, 832],   // event / fast / auto / menu
-  settingsBtnX: 1868, settingsBtnY: 44,
-  // 購買特色（左下）
-  buyFeatureX: 200, buyFeatureY: 1018, buyFeatureW: 240, buyFeatureH: 60,
+  // Side buttons（PC 改成底部長按鈕，不用右側圓鈕了）
+  sideBtnX: null,
+  sideBtnYs: [],
+  settingsBtnX: 1880, settingsBtnY: 44,
+  // 8 個底部長方形按鈕（左 4 顆 + 右 4 顆，置中是 SPIN）
+  bottomButtons: [
+    // 左側 4 顆
+    { key: 'v3_btn_buy_feature', label: '購買特色', x: 130, y: 1020, w: 180, h: 56, action: 'buy' },
+    { key: 'v3_btn_menu',        label: '菜單',     x: 330, y: 1020, w: 140, h: 56, action: 'menu' },
+    { key: 'v3_btn_event',       label: '活動',     x: 490, y: 1020, w: 140, h: 56, action: 'event' },
+    { key: 'v3_btn_fast',        label: '快速',     x: 650, y: 1020, w: 140, h: 56, action: 'fast' },
+    // 右側 4 顆
+    { key: 'v3_btn_auto',        label: '自動',     x: 1130, y: 1020, w: 140, h: 56, action: 'auto' },
+    { key: 'v3_btn_select',      label: '選單',     x: 1290, y: 1020, w: 140, h: 56, action: 'select' },
+    { key: 'v3_btn_bet_pm',      label: '60',       x: 1480, y: 1020, w: 200, h: 56, action: 'bet_pm' },
+    { key: 'v3_btn_max_bet',     label: '最大押注', x: 1720, y: 1020, w: 160, h: 56, action: 'max_bet' },
+  ],
   // 音量面板
   volPanelX: 1580, volPanelY: 88, volPanelW: 280, volPanelH: 64,
 };
@@ -93,6 +104,7 @@ const LAYOUT_MOBILE = {
   settingsBtnX: 504, settingsBtnY: 24,
   // 購買特色（SPIN 左側，獨佔一塊）
   buyFeatureX: 90, buyFeatureY: 905, buyFeatureW: 130, buyFeatureH: 36,
+  bottomButtons: [],  // mobile 暫時不用底部 8 按鈕
   // 音量面板（settings 下方）
   volPanelX: 270, volPanelY: 80, volPanelW: 380, volPanelH: 44,
 };
@@ -674,6 +686,9 @@ class MainScene extends Phaser.Scene {
 
     // 購買特色按鈕
     this.buildBuyFeatureButton();
+
+    // 底部長按鈕列（PC 版漫畫風）
+    this.buildBottomButtons();
   }
 
   // ----------------------------------------------------------
@@ -750,8 +765,62 @@ class MainScene extends Phaser.Scene {
   // ----------------------------------------------------------
   // 購買特色按鈕（左下 / 手機在 HUD 上方）
   // ----------------------------------------------------------
+  // ----------------------------------------------------------
+  // 底部長方形按鈕列（PC 漫畫風）
+  // ----------------------------------------------------------
+  buildBottomButtons() {
+    const L = this.L;
+    if (!L.bottomButtons || !L.bottomButtons.length) return;
+    L.bottomButtons.forEach((b) => {
+      const img = this.add.image(b.x, b.y, b.key)
+        .setDisplaySize(b.w, b.h)
+        .setDepth(155)
+        .setInteractive({ useHandCursor: true });
+      img.on('pointerup', () => this.onBottomBtn(b.action));
+      // 標籤文字疊在按鈕右半（左半保留給 icon）
+      if (b.label && b.action !== 'bet_pm') {
+        const labelStyle = {
+          fontFamily: 'Noto Serif TC, serif', fontSize: '20px', fontStyle: '900',
+          color: '#fff8d0', stroke: '#3a0e0a', strokeThickness: 3, resolution: 2,
+        };
+        this.add.text(b.x + (b.action === 'buy' || b.action === 'max_bet' ? 0 : 10), b.y, b.label, labelStyle)
+          .setOrigin(0.5).setDepth(156);
+      }
+      // bet_pm 中央顯示押注數字
+      if (b.action === 'bet_pm') {
+        this.txtBetCenter = this.add.text(b.x, b.y, String(this.bet), {
+          fontFamily: 'Noto Serif TC, serif', fontSize: '28px', fontStyle: '900',
+          color: '#ffe55f', stroke: '#3a0e0a', strokeThickness: 4, resolution: 2,
+        }).setOrigin(0.5).setDepth(156);
+        // 左右半邊各別點擊：左半 -、右半 +
+        img.removeAllListeners('pointerup');
+        img.on('pointerup', (p) => {
+          if (p.x < b.x) this.changeBet(-1);
+          else this.changeBet(+1);
+          if (this.txtBetCenter) this.txtBetCenter.setText(String(this.bet));
+        });
+      }
+    });
+  }
+
+  onBottomBtn(action) {
+    switch (action) {
+      case 'buy':     this.onBuyFeature(); break;
+      case 'auto':    this.toggleAuto(); break;
+      case 'max_bet': this.setBet(BET_STEPS[BET_STEPS.length - 1]);
+                      if (this.txtBetCenter) this.txtBetCenter.setText(String(this.bet));
+                      break;
+      case 'fast':    this.flashText('快速模式（待實作）'); break;
+      case 'menu':    this.flashText('菜單（待實作）'); break;
+      case 'event':   this.flashText('活動（待實作）'); break;
+      case 'select':  this.flashText('選單（待實作）'); break;
+    }
+  }
+
   buildBuyFeatureButton() {
     const L = this.L;
+    // PC 版改用 bottomButtons 內的長條按鈕（含 buy_feature），這裡跳過
+    if (!L.buyFeatureX) return;
     const isMobile = L.mode === 'mobile';
     const btn = this.add.image(L.buyFeatureX, L.buyFeatureY, 'ui_btn_buy_feature')
       .setDisplaySize(L.buyFeatureW, L.buyFeatureH)
