@@ -397,6 +397,12 @@ class PreloadScene extends Phaser.Scene {
     this.load.image('ui_logo_plaque',     'assets/ui_new/logo_title_plaque.png');
     this.load.image('ui_banner_big_win',  'assets/ui_new/banner_big_win.png');
 
+    // === B&W manga 戲劇 overlay（關鍵時刻 burst-in）===
+    this.load.image('mo_fg_phoenix',  'assets/manga_overlay/fg_phoenix_descend.png');
+    this.load.image('mo_bigwin',      'assets/manga_overlay/bigwin_dramatic.png');
+    this.load.image('mo_mult',        'assets/manga_overlay/mult_drop.png');
+    this.load.image('mo_scatter',     'assets/manga_overlay/scatter_chance.png');
+
     // === v3 漫畫風 UI（依 mockup 設計）===
     this.load.image('page_pc_template',   'assets/ui_v3/page_pc_template.png');
     this.load.image('manga_page_full',    'assets/ui_v3/manga_page_full.png');
@@ -1182,7 +1188,13 @@ class MainScene extends Phaser.Scene {
     this.tweens.add({ targets: this.btnSpin, angle: 0, duration: 280, ease: 'Back.easeOut' });
 
     const scatterCount = this.countScatters();
-    if (scatterCount >= 2) this.sound2?.playSfx('scatter_in');
+    if (scatterCount >= 2) {
+      this.sound2?.playSfx('scatter_in');
+      // 漫畫戲劇 burst：scatter 多顆時
+      if (scatterCount >= 3) {
+        this.showMangaOverlay('mo_scatter', { text: `${scatterCount}`, textX: -300, textY: -310, holdMs: 900 });
+      }
+    }
     if (!this.inFreeGame && scatterCount >= FREE_SPIN_TRIGGER) {
       this.sound2?.playSfx('scatter_win');
       await this.enterFreeGame();
@@ -1437,6 +1449,10 @@ class MainScene extends Phaser.Scene {
     const c = Phaser.Math.Between(0, COLS - 1);
     const r = Phaser.Math.Between(0, ROWS - 1);
     const value = pickMultiplier();
+    // 高倍數時觸發 manga 戲劇 burst
+    if (value >= 50) {
+      this.showMangaOverlay('mo_mult', { text: `x${value}`, textY: -50, holdMs: 700 });
+    }
     const x = cellX(c);
     const y = cellY(r);
 
@@ -1465,6 +1481,10 @@ class MainScene extends Phaser.Scene {
     this.fgMultSum = 0;
     this.sound2?.playSfx('trans');
     this.sound2?.playSfx('fg_in');
+
+    // B&W manga 戲劇 burst：鳳鳴九霄!!
+    this.showMangaOverlay('mo_fg_phoenix', { holdMs: 1800 });
+    await this.delay(2400);
 
     // 顯示 Free Game HUD
     this.updateFreeGameHUD(this.freeSpinsLeft, 0);
@@ -1600,6 +1620,45 @@ class MainScene extends Phaser.Scene {
   // ----------------------------------------------------------
   // 飄字 / Big Win
   // ----------------------------------------------------------
+  // ----------------------------------------------------------
+  // B&W manga overlay 戲劇 burst（關鍵時刻 1.5s 全屏動態彈出）
+  // ----------------------------------------------------------
+  showMangaOverlay(key, opts = {}) {
+    if (!this.textures.exists(key)) return;
+    const L = this.L;
+    const cont = this.add.container(L.W/2, L.H/2).setDepth(2500);
+    // 暗背景
+    const dim = this.add.rectangle(0, 0, L.W * 1.5, L.H * 1.5, 0x000000, 0).setAlpha(0);
+    // 圖片（從 0.3 縮放彈入）
+    const size = Math.min(L.W * 0.6, L.H * 0.7);
+    const img = this.add.image(0, 0, key).setDisplaySize(size, size).setScale(0.3).setAlpha(0);
+    // 可選疊加文字（如倍數值、剩餘 free games 數）
+    let extra = null;
+    if (opts.text) {
+      extra = this.add.text(opts.textX ?? 0, opts.textY ?? 100, opts.text, {
+        fontFamily: 'Noto Serif TC, serif', fontSize: '64px', fontStyle: '900',
+        color: '#fff8d0', stroke: '#000000', strokeThickness: 8, resolution: 2,
+      }).setOrigin(0.5).setAlpha(0);
+    }
+    cont.add([dim, img]);
+    if (extra) cont.add(extra);
+
+    // 動畫：暗化 → 圖爆入 → 停留 → 整體淡出
+    this.tweens.add({ targets: dim, alpha: 0.6, duration: 250 });
+    this.tweens.add({
+      targets: img, scale: 1.0, alpha: 1, duration: 350, ease: 'Back.easeOut',
+    });
+    if (extra) this.tweens.add({ targets: extra, alpha: 1, duration: 400, delay: 350 });
+
+    const holdMs = opts.holdMs ?? 1100;
+    this.time.delayedCall(350 + holdMs, () => {
+      this.tweens.add({
+        targets: cont, alpha: 0, scale: 1.15, duration: 500, ease: 'Cubic.easeIn',
+        onComplete: () => cont.destroy(),
+      });
+    });
+  }
+
   flashText(msg) {
     const t = this.add.text(L.W/2, L.H/2, msg, {
       fontFamily: 'Noto Sans TC, sans-serif', fontSize: '72px', fontStyle: '900',
@@ -1615,6 +1674,12 @@ class MainScene extends Phaser.Scene {
   }
 
   bigWin(amount) {
+    // B&W manga 戲劇 burst：大獎降臨!!
+    this.showMangaOverlay('mo_bigwin', {
+      text: amount.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 }),
+      textY: 80, holdMs: 1500,
+    });
+
     // 依贏分倍數決定 vocal
     const ratio = amount / this.bet;
     if      (ratio >= 1000) this.sound2?.playSfx('legend_vocal');
