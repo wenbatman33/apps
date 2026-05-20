@@ -14,24 +14,24 @@ const LAYOUT_PC = {
   W: 1920, H: 1080,
   // Reel（位於頁面中央，當作 1 個大漫畫格）
   reelCx: 960, reelCy: 572, reelW: 870, reelH: 580,
-  // 12 個劇情漫畫格的位置（圍繞 reel 排列，由淺到深陸續解鎖）
-  // 順序：左楚 4 格（上→下）→ 右漢 4 格（上→下）→ 中央上方 2 格 → 中央下方 2 格
+  // 12 個劇情漫畫格（緊密貼合像真實漫畫頁、單格場景）
+  // 8 個側邊（左右各 4 vertical stacked） + 4 個頂部橫向窄格
   storyPanels: [
-    // 左側 4 格（楚）
-    { cx: 145, cy: 200, w: 220, h: 180, src: 'page_ch1_chu', label: '一楚' },
-    { cx: 145, cy: 410, w: 220, h: 180, src: 'page_ch2_chu', label: '二楚' },
-    { cx: 145, cy: 620, w: 220, h: 180, src: 'page_ch3_chu', label: '三楚' },
-    { cx: 145, cy: 830, w: 220, h: 180, src: 'page_ch4_chu', label: '四楚' },
-    // 右側 4 格（漢）
-    { cx: 1775, cy: 200, w: 220, h: 180, src: 'page_ch1_han', label: '一漢' },
-    { cx: 1775, cy: 410, w: 220, h: 180, src: 'page_ch2_han', label: '二漢' },
-    { cx: 1775, cy: 620, w: 220, h: 180, src: 'page_ch3_han', label: '三漢' },
-    { cx: 1775, cy: 830, w: 220, h: 180, src: 'page_ch4_han', label: '四漢' },
-    // 中央上下 4 個窄格（標誌物特寫，用既有單格漫畫）
-    { cx: 530, cy: 195, w: 280, h: 130, src: 'comic_ch1_chu_p1', label: '楚旗' },
-    { cx: 850, cy: 195, w: 280, h: 130, src: 'comic_ch1_han_p1', label: '漢旗' },
-    { cx: 1070, cy: 195, w: 280, h: 130, src: 'comic_ch2_chu_p1', label: '謀略' },
-    { cx: 1390, cy: 195, w: 280, h: 130, src: 'comic_ch4_han_p2', label: '一統' },
+    // 左側 4 格垂直排列（楚的劇情）
+    { cx: 165, cy: 235, w: 270, h: 200, src: 'comic_ch1_chu_p2', label: '會稽起兵' },
+    { cx: 165, cy: 450, w: 270, h: 200, src: 'comic_ch2_chu_p1', label: '楚怒鴻門' },
+    { cx: 165, cy: 665, w: 270, h: 200, src: 'comic_ch3_chu_p1', label: '彭城追擊' },
+    { cx: 165, cy: 880, w: 270, h: 200, src: 'comic_ch4_chu_p2', label: '烏江末路' },
+    // 右側 4 格垂直排列（漢的劇情）
+    { cx: 1755, cy: 235, w: 270, h: 200, src: 'comic_ch1_han_p2', label: '入關咸陽' },
+    { cx: 1755, cy: 450, w: 270, h: 200, src: 'comic_ch2_han_p2', label: '樊噲闖帳' },
+    { cx: 1755, cy: 665, w: 270, h: 200, src: 'comic_ch3_han_p2', label: '張良勸戰' },
+    { cx: 1755, cy: 880, w: 270, h: 200, src: 'comic_ch4_han_p2', label: '漢家天下' },
+    // 頂部 4 格橫向窄格（人物特寫 + 重要瞬間）
+    { cx: 530, cy: 165, w: 250, h: 110, src: 'comic_ch1_chu_p1', label: '少年項羽' },
+    { cx: 790, cy: 165, w: 250, h: 110, src: 'comic_ch2_chu_p2', label: '項莊舞劍' },
+    { cx: 1130, cy: 165, w: 250, h: 110, src: 'comic_ch1_han_p1', label: '沛縣起義' },
+    { cx: 1390, cy: 165, w: 250, h: 110, src: 'comic_ch4_han_p1', label: '十面埋伏' },
   ],
   // 頂部
   jackpotY: 42, jackpotH: 64,
@@ -413,13 +413,14 @@ class PreloadScene extends Phaser.Scene {
       this.load.image(`page_ch${ch}_chu`, `assets/comics/page_ch${ch}_chu.png`);
       this.load.image(`page_ch${ch}_han`, `assets/comics/page_ch${ch}_han.png`);
     }
-    // 中央 4 個小窄格用既有單格漫畫
-    [
-      ['comic_ch1_chu_p1', 'assets/comics/ch1_chu_p1.png'],
-      ['comic_ch1_han_p1', 'assets/comics/ch1_han_p1.png'],
-      ['comic_ch2_chu_p1', 'assets/comics/ch2_chu_p1.png'],
-      ['comic_ch4_han_p2', 'assets/comics/ch4_han_p2.png'],
-    ].forEach(([k, p]) => this.load.image(k, p));
+    // 全部 16 張單格漫畫場景（4 章 × 楚漢 × 2 頁）
+    for (let ch = 1; ch <= 4; ch++) {
+      for (const side of ['chu', 'han']) {
+        for (let p = 1; p <= 2; p++) {
+          this.load.image(`comic_ch${ch}_${side}_p${p}`, `assets/comics/ch${ch}_${side}_p${p}.png`);
+        }
+      }
+    }
 
     // BGM 改用原生 Audio 載入（避免 Phaser preload 卡住）
   }
@@ -871,19 +872,26 @@ class MainScene extends Phaser.Scene {
     this.storyPanelImgs = [];
     this.storyPanelFXs  = [];
     this.storyPanelFrames = [];
+    this.storyPanelLocks = [];
     this.L.storyPanels.forEach((p, i) => {
-      // 黑色粗墨外框（漫畫風）
-      const frame = this.add.rectangle(p.cx, p.cy, p.w + 12, p.h + 12, 0xf4ead5, 1)
-        .setStrokeStyle(6, 0x14110f).setDepth(11);
+      // 漫畫頁感：白色 gutter (cream) + 粗黑墨邊
+      const frame = this.add.rectangle(p.cx, p.cy, p.w + 8, p.h + 8, 0xfdf5e0, 1)
+        .setStrokeStyle(8, 0x14110f).setDepth(11);
       this.storyPanelFrames.push(frame);
 
       // 圖（若 texture 不存在則用空 rect）
       if (this.textures.exists(p.src)) {
         const img = this.add.image(p.cx, p.cy, p.src).setDisplaySize(p.w, p.h).setDepth(12);
+        const revealed = i < this.revealedCount;
         const fx = img.preFX?.addColorMatrix();
-        if (fx) fx.grayscale(i < this.revealedCount ? 0 : 1);
+        if (fx) fx.grayscale(revealed ? 0 : 0.85);
+        img.setAlpha(revealed ? 1 : 0.55);
         this.storyPanelImgs.push(img);
         this.storyPanelFXs.push(fx);
+        // 鎖 icon（未揭時可見、揭開後隱藏）
+        const lock = this.add.text(p.cx, p.cy, '🔒', { fontSize: '40px' })
+          .setOrigin(0.5).setDepth(13).setAlpha(revealed ? 0 : 0.55);
+        this.storyPanelLocks.push(lock);
       } else {
         // fallback：用標籤文字
         const t = this.add.text(p.cx, p.cy, p.label || '?', {
@@ -891,6 +899,7 @@ class MainScene extends Phaser.Scene {
         }).setOrigin(0.5).setDepth(12);
         this.storyPanelImgs.push(t);
         this.storyPanelFXs.push(null);
+        this.storyPanelLocks.push(null);
       }
     });
 
@@ -933,27 +942,39 @@ class MainScene extends Phaser.Scene {
     this.refreshProgressText();
   }
 
-  // 把某格從灰階淡入彩色（含閃光提示）
+  // 把某格從灰階+半透明 → 全色（含閃光提示 + 鎖頭淡出）
   revealStoryPanel(idx) {
     const fx = this.storyPanelFXs[idx];
     const frame = this.storyPanelFrames[idx];
     const img = this.storyPanelImgs[idx];
-    if (!fx || !img) return;
+    const lock = this.storyPanelLocks[idx];
+    if (!img) return;
     // 框瞬間發光
     if (frame) {
-      const orig = frame.strokeColor;
       this.tweens.add({
         targets: frame, scale: { from: 1, to: 1.08 },
         yoyo: true, repeat: 2, duration: 200,
       });
-      frame.setStrokeStyle(6, 0xf5d27a);
-      this.time.delayedCall(900, () => frame.setStrokeStyle(6, 0x14110f));
+      frame.setStrokeStyle(8, 0xf5d27a);
+      this.time.delayedCall(900, () => frame.setStrokeStyle(8, 0x14110f));
     }
-    // grayscale 漸退
-    this.tweens.addCounter({
-      from: 1, to: 0, duration: 1500, ease: 'Cubic.easeInOut',
-      onUpdate: (tw, target) => fx.grayscale(target.value),
+    // 圖片 alpha 從 0.55 → 1
+    this.tweens.add({
+      targets: img, alpha: 1, duration: 1500, ease: 'Cubic.easeInOut',
     });
+    // grayscale 0.85 → 0
+    if (fx) {
+      this.tweens.addCounter({
+        from: 0.85, to: 0, duration: 1500, ease: 'Cubic.easeInOut',
+        onUpdate: (tw, target) => fx.grayscale(target.value),
+      });
+    }
+    // 鎖頭淡出
+    if (lock) {
+      this.tweens.add({
+        targets: lock, alpha: 0, duration: 800, ease: 'Cubic.easeIn',
+      });
+    }
     this.flashText(`第 ${idx + 1} 格揭曉`);
   }
 
