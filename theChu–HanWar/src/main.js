@@ -14,24 +14,23 @@ const LAYOUT_PC = {
   W: 1920, H: 1080,
   // Reel（位於頁面中央，當作 1 個大漫畫格）
   reelCx: 960, reelCy: 572, reelW: 870, reelH: 580,
-  // 12 個劇情漫畫格（緊密貼合像真實漫畫頁、單格場景）
-  // 8 個側邊（左右各 4 vertical stacked） + 4 個頂部橫向窄格
+  // 不規則漫畫頁版型（真實 manga 風）
+  // 左側 4 格 + 右側 4 格，大小錯落（不要 4 個等大）
+  // 加上頂部 2 個橫向寬格 = 10 格
   storyPanels: [
-    // 左側 4 格垂直排列（楚的劇情）
-    { cx: 165, cy: 235, w: 270, h: 200, src: 'comic_ch1_chu_p2', label: '會稽起兵' },
-    { cx: 165, cy: 450, w: 270, h: 200, src: 'comic_ch2_chu_p1', label: '楚怒鴻門' },
-    { cx: 165, cy: 665, w: 270, h: 200, src: 'comic_ch3_chu_p1', label: '彭城追擊' },
-    { cx: 165, cy: 880, w: 270, h: 200, src: 'comic_ch4_chu_p2', label: '烏江末路' },
-    // 右側 4 格垂直排列（漢的劇情）
-    { cx: 1755, cy: 235, w: 270, h: 200, src: 'comic_ch1_han_p2', label: '入關咸陽' },
-    { cx: 1755, cy: 450, w: 270, h: 200, src: 'comic_ch2_han_p2', label: '樊噲闖帳' },
-    { cx: 1755, cy: 665, w: 270, h: 200, src: 'comic_ch3_han_p2', label: '張良勸戰' },
-    { cx: 1755, cy: 880, w: 270, h: 200, src: 'comic_ch4_han_p2', label: '漢家天下' },
-    // 頂部 4 格橫向窄格（人物特寫 + 重要瞬間）
-    { cx: 530, cy: 165, w: 250, h: 110, src: 'comic_ch1_chu_p1', label: '少年項羽' },
-    { cx: 790, cy: 165, w: 250, h: 110, src: 'comic_ch2_chu_p2', label: '項莊舞劍' },
-    { cx: 1130, cy: 165, w: 250, h: 110, src: 'comic_ch1_han_p1', label: '沛縣起義' },
-    { cx: 1390, cy: 165, w: 250, h: 110, src: 'comic_ch4_han_p1', label: '十面埋伏' },
+    // === 左側 4 格（楚的劇情）— 大小交錯 ===
+    { cx: 175, cy: 220, w: 300, h: 220, src: 'comic_ch1_chu_p2', label: '會稽起兵' },  // 大
+    { cx: 175, cy: 385, w: 300, h: 110, src: 'comic_ch1_chu_p1', label: '會稽望秦' },  // 小窄
+    { cx: 175, cy: 575, w: 300, h: 270, src: 'comic_ch3_chu_p1', label: '彭城追擊' },  // 大
+    { cx: 175, cy: 845, w: 300, h: 210, src: 'comic_ch4_chu_p2', label: '烏江末路' },  // 中
+    // === 右側 4 格（漢的劇情）— 不同節奏的錯落 ===
+    { cx: 1745, cy: 220, w: 300, h: 160, src: 'comic_ch1_han_p1', label: '沛縣起義' },  // 中
+    { cx: 1745, cy: 365, w: 300, h: 130, src: 'comic_ch1_han_p2', label: '入關咸陽' },  // 小
+    { cx: 1745, cy: 530, w: 300, h: 200, src: 'comic_ch2_han_p2', label: '樊噲闖帳' },  // 中
+    { cx: 1745, cy: 790, w: 300, h: 320, src: 'comic_ch4_han_p2', label: '漢家天下' },  // 大
+    // === 頂部 2 格橫向寬格 — 重要劇情瞬間 ===
+    { cx: 700, cy: 165, w: 460, h: 100, src: 'comic_ch2_chu_p2', label: '項莊舞劍' },
+    { cx: 1220, cy: 165, w: 460, h: 100, src: 'comic_ch4_han_p1', label: '十面埋伏' },
   ],
   // 頂部
   jackpotY: 42, jackpotH: 64,
@@ -342,7 +341,7 @@ class PreloadScene extends Phaser.Scene {
 
     // === Reel ===
     this.load.image('reel_bg',           'assets/reel/reel_bg.png');
-    this.load.image('reel_frame',        'assets/ui_new/frame_reel_6x5.png');     // ★ 新漫畫風
+    this.load.image('reel_frame',        'assets/ui_v3/frame_reel_manga.png');    // ★ 漫畫黑墨邊（簡潔）
     this.load.image('reel_separator',    'assets/reel/reel_separator.png');
 
     // === UI 面板（漫畫風 v2） ===
@@ -519,7 +518,8 @@ class MainScene extends Phaser.Scene {
     this.multOrbs = [];
 
     // === Depth 110：reel_frame（新漫畫風包外緣，外加 ~140px 邊框）===
-    this.add.image(REEL_CX, REEL_CY, 'reel_frame').setDisplaySize(REEL_W + 130, REEL_H + 130).setDepth(110);
+    // 漫畫黑墨邊框（簡潔版）
+    this.add.image(REEL_CX, REEL_CY, 'reel_frame').setDisplaySize(REEL_W + 50, REEL_H + 50).setDepth(110);
 
     // === Depth 120：top_jackpot_panel ===
     this.add.image(L.W/2, L.jackpotY, 'top_jackpot_panel').setDisplaySize(L.W, L.jackpotH).setDepth(120);
