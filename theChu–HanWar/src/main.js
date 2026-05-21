@@ -239,7 +239,7 @@ class SoundManager {
     }
   }
 
-  initBgm(src = 'audio/bgm_main.mp3') {
+  initBgm(src = 'audio/bgm_2.mp3') {
     if (!this.bgmAudio) {
       const a = new Audio(src);
       a.loop = true;
@@ -315,22 +315,71 @@ function SPINS_REMAIN(within, perPanel) {
 // ============================================================
 // PreloadScene
 // ============================================================
+// Boot Scene：只載 loading 背景圖 + 標題 logo（秒載入），然後丟給 PreloadScene
+class BootScene extends Phaser.Scene {
+  constructor() { super('Boot'); }
+  preload() {
+    this.cameras.main.setBackgroundColor('#0a0604');
+    this.load.image('loading_bg', 'assets/ui/loading_bg.png');
+    this.load.image('loading_logo', 'assets/ui/v5_splash_top_duel.png');
+  }
+  create() {
+    // 移除 HTML 啟動 cover（fade-out）
+    const cover = document.getElementById('boot-cover');
+    if (cover) {
+      cover.classList.add('fade');
+      setTimeout(() => cover.remove(), 600);
+    }
+    this.scene.start('Preload');
+  }
+}
+
 class PreloadScene extends Phaser.Scene {
   constructor() { super('Preload'); }
 
   preload() {
     // 限制並行載入，避免大量 PNG 同時下載導致 loader 卡住
     this.load.maxParallelDownloads = 8;
-    // Loading 顯示
+    // === 漫畫風 Loading 畫面 ===
     this.cameras.main.setBackgroundColor('#0a0604');
-    const t = this.add.text(W/2, H/2 - 80, '楚漢相爭 · 載入中', {
-      fontFamily: 'Noto Serif TC, serif', fontSize: '48px', color: '#f5d27a',
+    // 鋪滿底圖（cover 模式，保證填滿不變形）
+    if (this.textures.exists('loading_bg')) {
+      const bg = this.add.image(W/2, H/2, 'loading_bg');
+      const sx = W / bg.width;
+      const sy = H / bg.height;
+      const scale = Math.max(sx, sy);
+      bg.setScale(scale);
+    }
+    // 半透明暗化層，讓 logo / 進度條清楚
+    this.add.rectangle(W/2, H/2, W, H, 0x000000, 0.3);
+
+    // 不放標題與副標 — 漫畫底圖本身已有對峙感
+    const t = null;
+    const sub = null;
+
+    // 進度條：純黑，置中於底圖白色留白區（視覺重心 H*0.55）
+    const barX = W/2, barY = H * 0.55, barW = 880, barH = 36;
+    // 框（白邊）
+    const barBg = this.add.rectangle(barX, barY, barW, barH, 0x000000, 0.5).setStrokeStyle(2, 0xffffff, 0.8);
+    const dotL = null, dotR = null;
+    // 黑色筆觸填色（從左推進）
+    const bar = this.add.rectangle(barX - barW/2 + 4, barY, 4, barH - 10, 0x000000).setOrigin(0, 0.5);
+    // 百分比文字
+    const pctText = this.add.text(barX, barY, '0%', {
+      fontFamily: 'Noto Sans TC, sans-serif',
+      fontSize: '22px', fontStyle: '900',
+      color: '#ffffff', resolution: 2,
     }).setOrigin(0.5);
-    const barBg = this.add.rectangle(W/2, H/2, 800, 24, 0x2a1a10).setStrokeStyle(2, 0xd4a54a);
-    const bar = this.add.rectangle(W/2 - 398, H/2, 4, 18, 0xf5d27a).setOrigin(0, 0.5);
-    this.load.on('progress', p => { if (bar?.active) bar.width = 4 + 792 * p; });
+    // 移除潑墨裝飾，讓畫面乾淨
+    const inkL = null, inkR = null;
+
+    this.load.on('progress', p => {
+      if (bar?.active) bar.width = 4 + (barW - 8) * p;
+      if (pctText?.active) pctText.setText(`${Math.floor(p * 100)}%`);
+    });
     this.load.on('complete', () => {
-      t?.destroy(); barBg?.destroy(); bar?.destroy();
+      t?.destroy(); sub?.destroy(); barBg?.destroy(); bar?.destroy(); pctText?.destroy();
+      dotL?.destroy(); dotR?.destroy(); inkL?.destroy(); inkR?.destroy();
     });
 
     // === 背景 / 人物（依 codex 座標） ===
@@ -1217,11 +1266,7 @@ class MainScene extends Phaser.Scene {
       });
     });
 
-    // 章節提示
-    const chapterMap = ['章一 起兵', '章二 鴻門', '章三 彭城', '章四 烏江'];
-    const chapter = chapterMap[Math.floor(this._currentPageIdx / 5)];
-    const subPage = (this._currentPageIdx % 5) + 1;
-    this.flashText?.(`${chapter} P${subPage}`);
+    // 章節提示已移除（章節由背景圖本身敘述，不需文字標題）
   }
 
   // 取出 0-9 / 逗號 / 小數點的金屬字 texture key
@@ -1298,7 +1343,7 @@ class MainScene extends Phaser.Scene {
       this.progressSpins = 0;
       this.revealedCount = 0;
       this.storyPanelFXs.forEach(fx => fx && fx.grayscale(1));
-      this.flashText('翻新頁　新故事開始');
+      // 章節文字提示已移除
     } else {
       const newRevealed = Math.floor(this.progressSpins / this._spinsPerPanel);
       if (newRevealed > this.revealedCount && newRevealed <= this._totalPanels) {
@@ -2256,7 +2301,7 @@ const game = new Phaser.Game({
     mode: Phaser.Scale.FIT,
     autoCenter: Phaser.Scale.CENTER_BOTH,
   },
-  scene: [PreloadScene, MainScene],
+  scene: [BootScene, PreloadScene, MainScene],
   callbacks: {
     postBoot: (g) => {
       // 確保全 game 的 texture filter 為 LINEAR（高品質縮放）
