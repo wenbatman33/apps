@@ -1,0 +1,163 @@
+<!doctype html>
+<html lang="zh-TW">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>楚漢爭霸 v4 預覽</title>
+<style>
+  body { margin: 0; background: #000; color: #ffe894;
+         font-family: "Noto Sans TC", "PingFang TC", sans-serif; }
+  .toolbar { padding: 12px 16px; display: flex; gap: 12px; align-items: center;
+             background: #111; border-bottom: 1px solid #333; }
+  .toolbar button { background: #222; color: #ffe894; border: 1px solid #555;
+                    padding: 6px 12px; border-radius: 4px; cursor: pointer; }
+  .toolbar .label { opacity: 0.7; font-size: 13px; }
+
+  /* 整頁 1920×1080 → 自動縮放至視窗寬度 */
+  .stage-wrap { width: 100%; display: flex; justify-content: center; padding: 20px 0; }
+  .stage { position: relative; width: 1920px; height: 1080px; background: #111;
+           transform-origin: top center; }
+  .stage img { position: absolute; image-rendering: -webkit-optimize-contrast; }
+  .label-box { position: absolute; color: #ffe894; font-weight: 900;
+               text-shadow: 0 0 6px #000, 0 0 6px #000; pointer-events: none; }
+
+  /* 區塊定位（對應預定 LAYOUT_PC v4）*/
+  .bg          { left: 0; top: 0; width: 1920px; height: 1080px; opacity: 1; }
+  .splash      { left: 0; top: 0; width: 1920px; height: 320px; }
+  .side-left   { left: 0; top: 260px; width: 420px; height: 720px; }
+  .side-right  { left: 1500px; top: 260px; width: 420px; height: 720px; }
+  .reel-frame  { left: 320px; top: 220px; width: 1280px; height: 900px; }
+  .scatter     { left: 420px; top: 240px; width: 1080px; height: 80px; }
+  .reel-area   { left: 420px; top: 320px; width: 1080px; height: 580px;
+                 display: grid; grid-template-columns: repeat(6, 1fr); grid-template-rows: repeat(5, 1fr);
+                 gap: 6px; padding: 16px; background: rgba(20,15,40,0.55); }
+  .reel-area .sym { background: rgba(255,255,255,0.06); border: 1px solid rgba(255,223,85,0.35);
+                    border-radius: 50%; display:flex; align-items:center; justify-content:center;
+                    color:#ffdf55; font-size: 18px; }
+  .bottom      { left: 0; top: 860px; width: 1920px; height: 220px; }
+  .spin        { left: 1640px; top: 870px; width: 200px; height: 200px; }
+  .hud-text    { left: 0; top: 1020px; width: 1920px; height: 40px;
+                 display:flex; justify-content:center; align-items:center; gap: 60px;
+                 font-size: 28px; color: #ffe894; font-weight: 900; }
+  .bigwin-label{ left: 540px; top: 920px; width: 840px; height: 60px;
+                 display:flex; justify-content:center; align-items:center;
+                 font-size: 44px; color: #ffe894; font-weight: 900;
+                 letter-spacing: 8px; }
+
+  /* 上方雙漫畫格 placeholder 字（之後 Phaser 內疊故事漫畫）*/
+  .panel-left  { position: absolute; left: 30px;  top: 80px;  width: 380px; height: 210px;
+                 border: 2px dashed rgba(255,223,85,0.4); display:flex; align-items:center; justify-content:center; }
+  .panel-right { position: absolute; left: 1510px; top: 80px;  width: 380px; height: 210px;
+                 border: 2px dashed rgba(255,223,85,0.4); display:flex; align-items:center; justify-content:center; }
+  .panel-left span, .panel-right span { color: rgba(255,223,85,0.6); font-size: 18px; }
+
+  /* Jackpot 文字（左欄 4 格）*/
+  .jp { position: absolute; left: 50px; width: 320px; height: 130px;
+        display:flex; flex-direction:column; justify-content:center; align-items:center; }
+  .jp .name { font-size: 26px; font-weight: 900; }
+  .jp .val  { font-size: 22px; color: #fff; margin-top: 6px; }
+  .jp1 { top: 295px; } .jp1 .name { color:#ff6464; }
+  .jp2 { top: 440px; } .jp2 .name { color:#c878ff; }
+  .jp3 { top: 585px; } .jp3 .name { color:#78b4ff; }
+  .jp4 { top: 730px; } .jp4 .name { color:#7cf09a; }
+
+  /* 右欄 4 格資訊 */
+  .ri { position: absolute; left: 1550px; width: 320px; height: 130px;
+        display:flex; flex-direction:column; justify-content:center; align-items:center; color:#ffe894; }
+  .ri .name { font-size: 22px; font-weight: 900; }
+  .ri .val  { font-size: 26px; color:#fff; margin-top: 4px; }
+  .ri1 { top: 295px; } .ri2 { top: 440px; } .ri3 { top: 585px; }
+  .ri4 { top: 730px; }
+  .ri4 table { color:#ffe894; font-size: 18px; border-spacing: 8px 2px; }
+  .ri4 table td:nth-child(2) { color:#fff; }
+</style>
+</head>
+<body>
+  <div class="toolbar">
+    <span class="label">楚漢爭霸 v4 預覽（1920×1080 → 自動縮放）</span>
+    <button onclick="fit()">符合視窗</button>
+    <button onclick="orig()">原始 1:1</button>
+    <button onclick="toggle('bg')">切換背景</button>
+    <button onclick="toggle('frame')">切換 reel 框</button>
+  </div>
+
+  <div class="stage-wrap" id="wrap">
+    <div class="stage" id="stage">
+      <img class="bg"          src="assets/ui_v4/bg_manga_paper.png">
+      <img class="splash"      src="assets/ui_v4/splash_title_top.png">
+
+      <!-- 上方雙漫畫格 placeholder（將由 Phaser 內疊故事漫畫）-->
+      <div class="panel-left"><span>故事漫畫格 1<br>章一 起兵</span></div>
+      <div class="panel-right"><span>故事漫畫格 2<br>章一 沛公</span></div>
+
+      <img class="side-left"   src="assets/ui_v4/side_left_panel.png">
+      <img class="side-right"  src="assets/ui_v4/side_right_panel.png">
+      <img class="reel-frame"  src="assets/ui_v4/frame_reel_v2.png">
+      <img class="scatter"     src="assets/ui_v4/banner_scatter_top.png">
+
+      <div class="bigwin-label">BIG&nbsp;WIN</div>
+      <img class="bottom"      src="assets/ui_v4/bottom_bigwin_panel.png" style="z-index:-1;">
+
+      <!-- reel 內示意符號 -->
+      <div class="reel-area">
+        <!-- 30 個 symbol slots -->
+      </div>
+
+      <!-- Jackpot 文字 -->
+      <div class="jp jp1"><div class="name">GRAND</div><div class="val">250,000.00</div></div>
+      <div class="jp jp2"><div class="name">MAJOR</div><div class="val">50,000.00</div></div>
+      <div class="jp jp3"><div class="name">MINOR</div><div class="val">10,000.00</div></div>
+      <div class="jp jp4"><div class="name">MINI</div><div class="val">2,000.00</div></div>
+
+      <!-- 右欄 4 格 -->
+      <div class="ri ri1"><div class="name">FREE SPIN</div><div class="val">12 / 15</div></div>
+      <div class="ri ri2"><div class="name">MULTIPLIER</div><div class="val">×25</div></div>
+      <div class="ri ri3"><div class="name">TOTAL WIN</div><div class="val">88,888</div></div>
+      <div class="ri ri4"><div class="name">PAYOUT</div>
+        <table>
+          <tr><td>項羽</td><td>×5000</td></tr>
+          <tr><td>劉邦</td><td>×1000</td></tr>
+          <tr><td>玉璽</td><td>×300</td></tr>
+          <tr><td>虎符</td><td>×100</td></tr>
+          <tr><td>戟</td><td>×50</td></tr>
+          <tr><td>寶石</td><td>×30</td></tr>
+        </table>
+      </div>
+
+      <img class="spin" src="assets/ui_v4/btn_spin_v2.png">
+
+      <!-- 底部純文字 HUD -->
+      <div class="hud-text">
+        <span>餘額 9,960</span>
+        <span>押注 − 20 +</span>
+        <span>贏分 0</span>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // 動態生成 6x5 reel cells
+    const ra = document.querySelector('.reel-area');
+    const labels = ['7','💎','虎','💎','戟','璽','💎','💎','7','虎','戟','💎',
+                    '璽','7','戟','虎','💎','7','💎','璽','虎','7','戟','💎',
+                    '7','虎','璽','戟','7','💎'];
+    labels.forEach(l => { const d = document.createElement('div'); d.className='sym'; d.textContent=l; ra.appendChild(d); });
+
+    function fit() {
+      const w = window.innerWidth - 40;
+      const scale = Math.min(1, w / 1920);
+      document.getElementById('stage').style.transform = `scale(${scale})`;
+      document.getElementById('wrap').style.minHeight = (1080 * scale + 40) + 'px';
+    }
+    function orig() {
+      document.getElementById('stage').style.transform = 'scale(1)';
+      document.getElementById('wrap').style.minHeight = '1100px';
+    }
+    function toggle(k) {
+      const el = document.querySelector(k === 'bg' ? '.bg' : '.reel-frame');
+      el.style.display = el.style.display === 'none' ? '' : 'none';
+    }
+    fit(); window.addEventListener('resize', fit);
+  </script>
+</body>
+</html>

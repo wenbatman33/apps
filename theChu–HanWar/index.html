@@ -18,7 +18,14 @@
         width: 100vw;
         height: 100vh;
       }
-      canvas { display: block; }
+      canvas {
+        display: block;
+        /* 高品質縮放：避免畫面被瀏覽器再做 nearest-neighbor 放大造成鋸齒 */
+        image-rendering: -webkit-optimize-contrast;
+        image-rendering: high-quality;
+        image-rendering: auto;
+      }
+      img { image-rendering: high-quality; }
     </style>
   </head>
   <body>

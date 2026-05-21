@@ -12,66 +12,63 @@ const ROWS = 5;
 const LAYOUT_PC = {
   mode: 'pc',
   W: 1920, H: 1080,
-  // Reel（位於 codex manga 頁中央大格內，比例 ~6:5）
-  reelCx: 960, reelCy: 540, reelW: 720, reelH: 450,
-  // 對齊 codex 生 manga_page_full.png 中的各個漫畫格位置
-  // 圖原始 1024x1024，在 1920x1080 拉伸（x*1.875, y*1.055）
-  // 中央大格約占 (320-700, 300-620) -> reel 區
-  // 周圍小格依視覺估計位置
-  storyPanels: [
-    // === 頂部 3 個橫向小格（y ~ 230-300） ===
-    { cx: 360,  cy: 290, w: 270, h: 100, src: 'comic_ch1_chu_p1', label: '少年項羽' },
-    { cx: 720,  cy: 290, w: 300, h: 100, src: 'comic_ch2_chu_p2', label: '項莊舞劍' },
-    { cx: 1100, cy: 290, w: 280, h: 100, src: 'comic_ch4_han_p1', label: '十面埋伏' },
-    // === 左側 3 格（垂直） ===
-    { cx: 220, cy: 430, w: 220, h: 130, src: 'comic_ch1_chu_p2', label: '會稽起兵' },
-    { cx: 220, cy: 575, w: 220, h: 130, src: 'comic_ch3_chu_p1', label: '彭城追擊' },
-    { cx: 220, cy: 720, w: 220, h: 130, src: 'comic_ch4_chu_p2', label: '烏江末路' },
-    // === 右側 3 格（垂直） ===
-    { cx: 1700, cy: 430, w: 220, h: 130, src: 'comic_ch1_han_p1', label: '沛縣起義' },
-    { cx: 1700, cy: 575, w: 220, h: 130, src: 'comic_ch2_han_p2', label: '樊噲闖帳' },
-    { cx: 1700, cy: 720, w: 220, h: 130, src: 'comic_ch4_han_p2', label: '漢家天下' },
-    // === 底部 3 個橫向小格（y ~ 850） ===
-    { cx: 360,  cy: 830, w: 270, h: 100, src: 'comic_ch3_chu_p2', label: '鴻溝議和' },
-    { cx: 720,  cy: 830, w: 300, h: 100, src: 'comic_ch2_han_p1', label: '親赴鴻門' },
-    { cx: 1100, cy: 830, w: 280, h: 100, src: 'comic_ch3_han_p1', label: '敗走彭城' },
+  // === v5 整頁漫畫版型（4 章節背景 + 中央 reel）===
+  // 整張 1920×1080 為章節漫畫底圖（bg_ch1..4）；中央 1200×680 透明區放 reel；頂中央放 logo+章節文字；頂條放 jackpot；底條放 HUD
+  reelCx: 960, reelCy: 690, reelW: 900, reelH: 480,
+  storyPanels: [],                                        // v5：背景已含故事漫畫格，不另疊小格
+  // v5 各區位置
+  jackpotBarY: 30, jackpotBarH: 60,                       // bar_jackpot_h（頂部橫向 4 段）
+  jackpotXs: [240, 720, 1200, 1680],                      // 4 段中心 x
+  logoCx: 960, logoCy: 240, logoW: 1080, logoH: 360,       // splash_top_duel（拉滿到 reel 寬度）
+  scatterBannerY: 400, scatterBannerW: 900, scatterBannerH: 55,  // splash 下方、reel 上方（與 reel 同寬）
+  reelFrameW: 1240, reelFrameH: 720,                      // frame_reel_v2
+  // 底部 HUD
+  hudBaseY: 1020,
+  bgChapterKey: 'v6_page_01',                             // 預設頁面（v6 20 頁循環）
+  // v6 6 個故事漫畫格的覆蓋區域（給 fade-in mask 用）
+  storyMaskRects: [
+    { x: 0,    y: 0,   w: 420, h: 340 },   // 左1
+    { x: 1500, y: 0,   w: 420, h: 340 },   // 右1
+    { x: 0,    y: 340, w: 420, h: 320 },   // 左2
+    { x: 1500, y: 340, w: 420, h: 320 },   // 右2
+    { x: 0,    y: 660, w: 420, h: 320 },   // 左3
+    { x: 1500, y: 660, w: 420, h: 320 },   // 右3
   ],
-  // 頂部
+  // 兼容欄位（舊代碼讀取）
+  splashTopY: 130, splashTopH: 260,
+  sideLeftCx: -999, sideLeftCy: 0, sideLeftW: 0, sideLeftH: 0,    // v5 廢棄
+  sideRightCx: -999, sideRightCy: 0, sideRightW: 0, sideRightH: 0, // v5 廢棄
+  bottomPanelY: 970, bottomPanelH: 220,
+  jackpotX: 215, jackpotYs: [340, 460, 580, 700], jackpotW: 260, jackpotH: 90,
+  rightInfoX: 1705, rightInfoYs: [340, 460, 580, 700], rightInfoW: 260, rightInfoH: 90,
+  // 舊欄位保留供其他模組讀取（無效但不致 crash）
   jackpotY: 42, jackpotH: 64,
-  logoX: 960, logoY: 165, logoW: 360, logoH: 100,
-  topBannerY: 210, topBannerW: 720, topBannerH: 60,
+  // 舊欄位（保留 logoX/Y 給其他模組讀；logoW/H 已上面定義為 splash 對峙圖大小，這裡不重複寫）
+  logoX: 960, logoY: 60,
+  topBannerY: 280, topBannerW: 1080, topBannerH: 70,
   // 左右側欄漫畫頁（取代立繪）
   comicLeftX: 230, comicRightX: 1690, comicY: 540, comicSize: 420,
   chapterTextY: 215,
   // Free Game 元件（左漫畫上方）
-  fgCountX: 230, fgCountY: 200, fgCountW: 180, fgCountH: 200,
-  // 累計倍數圓徽（右漫畫上方）
-  multBadgeX: 1690, multBadgeY: 200, multBadgeR: 80,
-  // HUD 底部
-  hudY: 1018, hudPanelW: 1810, hudPanelH: 129,
-  avatarX: 116, avatarY: 1008,
+  fgCountX: 130, fgCountY: 540, fgCountW: 140, fgCountH: 140,    // FREE GAMES 徽（reel 左側）
+  multBadgeX: 1490, multBadgeY: 460, multBadgeR: 70,             // 倍數圓徽（reel 右上角、蓋住一點）
+  // HUD 底部（v5：縮小底部空間，HUD 上移）
+  hudY: 1000, hudPanelW: 1810, hudPanelH: 80,
+  avatarX: 96, avatarY: 1000,
   coinX: 468, balX: 625, betDispX: 1060,
   betMinusX: 900, betPlusX: 1220,
   autoBtnX: 1350, autoBtnY: 1018,
-  // 中央 SPIN（PC 在右下）
-  spinBtnX: 1670, spinBtnY: 940, spinBtnSize: 140,
+  // 中央 SPIN（PC 在右下，貼在 bottom_bigwin_panel 右側）
+  spinBtnX: 1740, spinBtnY: 970, spinBtnSize: 200,
   // Side buttons（PC 改成底部長按鈕，不用右側圓鈕了）
   sideBtnX: null,
   sideBtnYs: [],
   settingsBtnX: 1880, settingsBtnY: 44,
-  // 8 個底部長方形按鈕（左 4 顆 + 右 4 顆，置中是 SPIN）
-  bottomButtons: [
-    // 左側 4 顆
-    { key: 'v3_btn_buy_feature', label: '購買特色', x: 130, y: 1020, w: 180, h: 56, action: 'buy' },
-    { key: 'v3_btn_menu',        label: '菜單',     x: 330, y: 1020, w: 140, h: 56, action: 'menu' },
-    { key: 'v3_btn_event',       label: '活動',     x: 490, y: 1020, w: 140, h: 56, action: 'event' },
-    { key: 'v3_btn_fast',        label: '快速',     x: 650, y: 1020, w: 140, h: 56, action: 'fast' },
-    // 右側 4 顆
-    { key: 'v3_btn_auto',        label: '自動',     x: 1130, y: 1020, w: 140, h: 56, action: 'auto' },
-    { key: 'v3_btn_select',      label: '選單',     x: 1290, y: 1020, w: 140, h: 56, action: 'select' },
-    { key: 'v3_btn_bet_pm',      label: '60',       x: 1480, y: 1020, w: 200, h: 56, action: 'bet_pm' },
-    { key: 'v3_btn_max_bet',     label: '最大押注', x: 1720, y: 1020, w: 160, h: 56, action: 'max_bet' },
-  ],
+  // v4：純文字 HUD，移除所有底部紅色按鈕
+  bottomButtons: [],
+  // 上方雙漫畫格（v4 splash 內的兩個故事漫畫格）
+  topPanelLeftCx: 220, topPanelLeftCy: 185, topPanelLeftW: 380, topPanelLeftH: 210,
+  topPanelRightCx: 1700, topPanelRightCy: 185, topPanelRightW: 380, topPanelRightH: 210,
   // 音量面板
   volPanelX: 1580, volPanelY: 88, volPanelW: 280, volPanelH: 64,
 };
@@ -348,13 +345,44 @@ class PreloadScene extends Phaser.Scene {
     this.load.image('reel_frame',        'assets/ui_v3/frame_reel_manga.png');    // ★ 漫畫黑墨邊（簡潔）
     this.load.image('reel_separator',    'assets/reel/reel_separator.png');
 
-    // === UI 面板（漫畫風 v2） ===
-    this.load.image('top_jackpot_panel', 'assets/ui_new/panel_top_jackpot.png');  // ★
-    this.load.image('bottom_hud_panel',  'assets/ui_new/panel_bottom_hud.png');   // ★
-    this.load.image('info_bar',          'assets/ui_new/panel_info_strip.png');   // ★
-    this.load.image('logo_title',        'assets/logo/chuhan_logo_title.png');
-    this.load.image('panel_nickname',    'assets/ui_new/panel_nickname.png');     // 新增
-    this.load.image('panel_audio',       'assets/ui_new/panel_audio_strip.png');  // 新增
+    // === v5 整頁漫畫底圖（4 章節 + 共用 UI 元素）===
+    this.load.image('v5_bg_ch1',          'assets/ui_v5/bg_ch1.png');
+    this.load.image('v5_bg_ch2',          'assets/ui_v5/bg_ch2.png');
+    this.load.image('v5_bg_ch3',          'assets/ui_v5/bg_ch3.png');
+    this.load.image('v5_bg_ch4',          'assets/ui_v5/bg_ch4.png');
+    this.load.image('v5_logo',            'assets/ui_v5/logo_chuhan_v2.png');
+    this.load.image('v5_bar_jackpot',     'assets/ui_v5/bar_jackpot_h.png');
+    // 保留 v4 reel 框 + scatter 條 + SPIN（v5 已棄用 frame_reel）
+    this.load.image('v4_frame_reel',      'assets/ui_v4/frame_reel_v2.png');
+    this.load.image('v4_banner_scatter',  'assets/ui_v4/banner_scatter_top.png');
+    this.load.image('v4_btn_spin',        'assets/ui_v4/btn_spin_v2.png');
+    // v5：靜態底 + 獨立 icon
+    this.load.image('v5_btn_spin_base',   'assets/ui_v5/btn_spin_base.png');
+    this.load.image('v5_btn_spin_icon',   'assets/ui_v5/btn_spin_icon.png');
+    // v5：對峙 splash + 新 scatter 條 + 新 auto 按鈕
+    this.load.image('v5_splash_duel',     'assets/ui_v5/splash_top_duel.png');
+    this.load.image('v5_banner_scatter',  'assets/ui_v5/banner_scatter_v2.png');
+    this.load.image('v5_btn_auto',        'assets/ui_v5/btn_auto_v2.png');
+
+    // v6：20 頁故事底圖
+    for (let i = 1; i <= 20; i++) {
+      const k = String(i).padStart(2, '0');
+      this.load.image(`v6_page_${k}`, `assets/ui_v6/page_${k}.png`);
+    }
+    this.load.image('v6_badge_mult',     'assets/ui_v6/badge_mult_v4.png');  // ← 升級到 v4 精緻版
+    this.load.image('v6_badge_mult_v2',  'assets/ui_v6/badge_mult_v2.png');
+    this.load.image('v6_badge_mult_v3',  'assets/ui_v6/badge_mult_v3.png');
+    this.load.image('v6_btn_sound',      'assets/ui_v6/btn_sound.png');
+    this.load.image('v6_bg_freegame',    'assets/ui_v6/bg_freegame_yuji.png');
+
+    // 金屬字：0-9 + 逗號 + FREE GAMES + BIG WIN
+    for (let d = 0; d <= 9; d++) {
+      this.load.image(`gold_d${d}`, `assets/gold_text/digit_${d}.png`);
+    }
+    this.load.image('gold_comma', 'assets/gold_text/digit_comma.png');
+    this.load.image('gold_free_games', 'assets/gold_text/free_games.png');
+    this.load.image('gold_big_win', 'assets/gold_text/big_win.png');
+    this.load.image('logo_title',         'assets/logo/chuhan_logo_title.png');
 
     // === HUD ===
     this.load.image('avatar_chu',        'assets/ui/hud/player_avatar_chu.png');
@@ -363,8 +391,8 @@ class PreloadScene extends Phaser.Scene {
     this.load.image('btn_bet_plus',      'assets/ui/hud/btn_bet_plus.png');
     this.load.image('btn_max_bet',       'assets/ui/hud/btn_max_bet.png');
 
-    // === 主按鈕（漫畫風 v2）===
-    this.load.image('btn_spin',          'assets/ui_new/btn_spin_chuhan.png');    // ★
+    // === 主按鈕（v4 漫畫風）===
+    this.load.image('btn_spin',          'assets/ui_v4/btn_spin_v2.png');         // ★ v4
     this.load.image('btn_settings',      'assets/ui_new/btn_round_settings.png'); // ★
     this.load.image('btn_event',         'assets/ui_new/btn_round_event.png');    // ★
     this.load.image('btn_fast',          'assets/ui_new/btn_round_fast.png');     // ★
@@ -389,26 +417,25 @@ class PreloadScene extends Phaser.Scene {
     this.load.image('win_bg',          'assets/win/bg/win_bg_award_clean.png');
     this.load.image('win_coin',        'assets/win/ui/win_coin.png');
 
-    // === 新 UI 元素（codex 生）===
-    this.load.image('ui_banner_top',      'assets/ui_new/banner_top_capsule.png');
+    // === 新 UI 元素（codex 生）— banner_top/big_win 已併入 v4 ===
+    // 以下 alias 指向 v4 素材，避免改動所有引用
+    this.load.image('ui_banner_top',      'assets/ui_v4/banner_scatter_top.png');
     this.load.image('ui_badge_fg',        'assets/ui_new/badge_free_games.png');
     this.load.image('ui_badge_mult',      'assets/ui_new/badge_mult.png');
     this.load.image('ui_btn_buy_feature', 'assets/ui_new/btn_buy_feature.png');
     this.load.image('ui_logo_plaque',     'assets/ui_new/logo_title_plaque.png');
-    this.load.image('ui_banner_big_win',  'assets/ui_new/banner_big_win.png');
+    this.load.image('ui_banner_big_win',  'assets/ui_v4/bottom_bigwin_panel.png');
 
     // === B&W manga 戲劇 overlay（關鍵時刻 burst-in）===
     this.load.image('mo_fg_phoenix',  'assets/manga_overlay/fg_phoenix_descend.png');
     this.load.image('mo_bigwin',      'assets/manga_overlay/bigwin_dramatic.png');
     this.load.image('mo_mult',        'assets/manga_overlay/mult_drop.png');
     this.load.image('mo_scatter',     'assets/manga_overlay/scatter_chance.png');
+    this.load.image('mo_fg_total',    'assets/manga_overlay/fg_total_dramatic.png');
+    this.load.image('mo_fg_end',      'assets/manga_overlay/fg_end_dramatic.png');
 
-    // === v3 漫畫風 UI（依 mockup 設計）===
-    this.load.image('page_pc_template',   'assets/ui_v3/page_pc_template.png');
-    this.load.image('manga_page_full',    'assets/ui_v3/manga_page_full.png');
-    this.load.image('v3_bar_jackpot',     'assets/ui_v3/bar_jackpot_4seg.png');
-    this.load.image('v3_bar_hud',         'assets/ui_v3/bar_hud_bottom.png');
-    this.load.image('v3_banner_chapter',  'assets/ui_v3/banner_chapter_title.png');
+    // === v3 漫畫風 UI（v4 後大部分淘汰；保留尚存的 btn_rect_* ）===
+    // page_pc_template / manga_page_full / bar_jackpot_4seg / bar_hud_bottom / banner_chapter_title 已搬到 _archive
     this.load.image('v3_btn_menu',        'assets/ui_v3/btn_rect_menu.png');
     this.load.image('v3_btn_event',       'assets/ui_v3/btn_rect_event.png');
     this.load.image('v3_btn_fast',        'assets/ui_v3/btn_rect_fast.png');
@@ -477,14 +504,51 @@ class MainScene extends Phaser.Scene {
     this.autoMode = false;
 
     // === Depth 0：背景（漫畫稿紙米色）===
-    this.bg = this.add.rectangle(L.W/2, L.H/2, L.W, L.H, 0xf4ead5, 1).setDepth(0);
-    // 保留 bg setFillStyle override 給 freegame 切色用
+    this.bg = this.add.rectangle(L.W/2, L.H/2, L.W, L.H, 0x111111, 1).setDepth(0);
     this.bg.setFillStyle = (color) => this.bg.fillColor = color;
 
-    // === Depth 1：整頁漫畫版型底圖（codex 生的連體 manga page）===
-    if (L.mode === 'pc' && this.textures.exists('manga_page_full')) {
-      this.add.image(L.W/2, L.H/2, 'manga_page_full')
-        .setDisplaySize(L.W, L.H).setDepth(1);
+    // === v5 整頁漫畫底圖版型 ===
+    if (L.mode === 'pc') {
+      // Depth 1：整張故事頁面背景（v6 20 頁循環）— 下移 60px 避開 jackpot 條
+      this._currentPageIdx = 0;
+      this.chapterBg = this.add.image(L.W/2, L.H/2 + 30, L.bgChapterKey)
+        .setDisplaySize(L.W, L.H - 60).setDepth(1);
+
+      // Depth 1.5：頂部中央留白區用黑色填滿（給對峙圖背景用）
+      this.add.rectangle(L.W/2, 210, 960, 420, 0x000000, 1).setDepth(1.5);
+      // v6 page reel 中央區由 reel 自己的深藍底覆蓋，不需要額外黑塊
+
+      // Depth 1.6：6 格 fade-in mask 黑色覆蓋（切換頁時暫時遮蔽再 fade out）
+      this._storyPanelMasks = (L.storyMaskRects || []).map(r => {
+        return this.add.rectangle(r.x + r.w/2, r.y + r.h/2, r.w, r.h, 0x000000, 0)
+          .setDepth(2).setAlpha(0);
+      });
+      // Depth 2：底部 HUD 黑色半透明條（60% 透明）
+      this.add.rectangle(L.W/2, 1020, L.W, 120, 0x000000, 0.6).setDepth(2);
+      // Depth 2：頂部 jackpot 條（只覆蓋 y 0-60、章節 bg 在這留白）
+      this.add.rectangle(L.W/2, 30, L.W, 60, 0x000000, 0.92).setDepth(2);
+
+      // Depth 3：頂部橫向 jackpot 條 — 純黑底（無分隔線）
+      this.add.rectangle(L.W/2, L.jackpotBarY, L.W, L.jackpotBarH, 0x000000, 1).setDepth(3);
+
+      // Depth 4：對峙圖（直接顯示、無斜切、無白邊）
+      if (this.textures.exists('v5_splash_duel')) {
+        this.add.image(L.logoCx, L.logoCy, 'v5_splash_duel')
+          .setDisplaySize(L.logoW, L.logoH).setDepth(4);
+      } else {
+        const logoKey = this.textures.exists('v5_logo') ? 'v5_logo' : 'logo_title';
+        this.add.image(L.logoCx, L.logoCy, logoKey)
+          .setDisplaySize(580, 200).setDepth(4);
+      }
+
+      // 章節文字暫時不顯示（會被 reel 壓到，章節由背景圖本身呈現即可）
+      this.chapterText = null;
+
+      // 兼容舊代碼
+      this.topPanelLeft = null;
+      this.topPanelRight = null;
+      this.topPanelLeftLabel = null;
+      this.topPanelRightLabel = null;
     }
 
     // === 左右立繪（base game 隱藏，Free Game 切換用）===
@@ -526,45 +590,59 @@ class MainScene extends Phaser.Scene {
     this.grid = Array.from({ length: COLS }, () => Array(ROWS).fill(null));
     this.multOrbs = [];
 
-    // === Depth 110：reel_frame（新漫畫風包外緣，外加 ~140px 邊框）===
-    // reel 邊框已由整頁 manga_page_full 底圖提供，不再單獨疊 reel_frame
+    // v5：reel 內部實心深藍底（蓋住下層章節背景的奇怪文字）+ 細金屬邊框緊貼
+    if (L.mode === 'pc') {
+      // Depth 75：reel 實心底色（深藍黑、無圓角、完全填滿）
+      this.add.rectangle(REEL_CX, REEL_CY, REEL_W, REEL_H, 0x0b0e2a, 1).setDepth(75);
+      // Depth 110：細金屬雙線框
+      const rg = this.add.graphics().setDepth(110);
+      rg.lineStyle(3, 0xd4a54a, 1);
+      rg.strokeRect(REEL_CX - REEL_W/2, REEL_CY - REEL_H/2, REEL_W, REEL_H);
+      rg.lineStyle(1, 0x8a6b2a, 1);
+      rg.strokeRect(REEL_CX - REEL_W/2 - 4, REEL_CY - REEL_H/2 - 4, REEL_W + 8, REEL_H + 8);
+    }
 
-    // === Depth 120：top_jackpot_panel ===
-    this.add.image(L.W/2, L.jackpotY, 'top_jackpot_panel').setDisplaySize(L.W, L.jackpotH).setDepth(120);
-    const jpFontSize = isMobile ? 14 : 27;
+    // === v5：頂部橫向 Jackpot 4 段（GRAND ｜ MAJOR ｜ MINOR ｜ MINI）===
+    const jpFontSize = isMobile ? 14 : 22;
     const jackpotStyle = (color) => ({
       fontFamily: 'Noto Sans TC, sans-serif', fontSize: `${jpFontSize}px`, fontStyle: '900',
       color, stroke: '#2b1334', strokeThickness: 2, resolution: 2,
     });
-    // Jackpot 四級分佈（依寬度均分）
     const jpItems = [
-      { label: 'GRAND', value: '250,000.00' },
-      { label: 'MAJOR', value: '50,000.00'  },
-      { label: 'MINOR', value: '2,000.00'   },
-      { label: 'MINI',  value: '800.00'     },
+      { label: 'GRAND', value: '13,498,357', color: '#ffdf55' },
+      { label: 'MAJOR', value: '3,547,057',  color: '#ffdf55' },
+      { label: 'MINOR', value: '626,857',    color: '#ffdf55' },
+      { label: 'MINI',  value: '106,950',    color: '#ffdf55' },
     ];
-    jpItems.forEach((j, i) => {
-      const cx = L.W * (i + 0.5) / jpItems.length;
-      const labelOffset = isMobile ? -32 : -50;
-      const valueOffset = isMobile ? 32 : 50;
-      this.add.text(cx + labelOffset, L.jackpotY, j.label, jackpotStyle('#ffdf55')).setOrigin(0.5).setDepth(121);
-      this.add.text(cx + valueOffset, L.jackpotY, j.value, jackpotStyle('#ffffff')).setOrigin(0.5).setDepth(121);
-    });
+    if (L.mode === 'pc') {
+      jpItems.forEach((j, i) => {
+        const cx = L.jackpotXs[i];
+        // 同一行：左 label、右 value
+        this.add.text(cx - 75, L.jackpotBarY, j.label, jackpotStyle(j.color))
+          .setOrigin(0.5).setDepth(121);
+        this.add.text(cx + 60, L.jackpotBarY, j.value, jackpotStyle('#ffffff'))
+          .setOrigin(0.5).setDepth(121);
+      });
+    }
 
-    // === Depth 125：楚漢爭霸 logo 匾額 ===
-    const logoSize = isMobile ? 160 : 280;
-    this.add.image(L.W/2, isMobile ? 105 : 130, 'ui_logo_plaque')
-      .setDisplaySize(logoSize, logoSize * 0.85).setDepth(125);
-
-    // === Depth 130：info_bar（Scatter 提示橫條）===
-    this.add.image(L.logoX, L.topBannerY, 'info_bar').setDisplaySize(L.topBannerW, L.topBannerH).setDepth(130);
-    this.infoText = this.add.text(L.logoX, L.topBannerY, '4×　鳳釵 SCATTER　贏取免費遊戲', {
-      fontFamily: 'Noto Sans TC, sans-serif', fontSize: isMobile ? '13px' : '24px', fontStyle: '900',
+    // === Depth 130：v5 scatter 提示條（Phaser 自繪、和 reel 同款金屬框）===
+    if (L.mode === 'pc') {
+      const sbX = REEL_CX - L.scatterBannerW/2;
+      const sbY = L.scatterBannerY - L.scatterBannerH/2;
+      const sg = this.add.graphics().setDepth(130);
+      sg.fillStyle(0x000000, 0.92);
+      sg.fillRect(sbX, sbY, L.scatterBannerW, L.scatterBannerH);
+      sg.lineStyle(3, 0xd4a54a, 1);
+      sg.strokeRect(sbX, sbY, L.scatterBannerW, L.scatterBannerH);
+      sg.lineStyle(1, 0x8a6b2a, 1);
+      sg.strokeRect(sbX - 4, sbY - 4, L.scatterBannerW + 8, L.scatterBannerH + 8);
+    }
+    this.infoText = this.add.text(REEL_CX, L.scatterBannerY, '4× 鳳釵 SCATTER　贏取免費遊戲', {
+      fontFamily: 'Noto Sans TC, sans-serif', fontSize: isMobile ? '13px' : '26px', fontStyle: '900',
       color: '#ffe894', stroke: '#08352f', strokeThickness: 3, resolution: 2,
     }).setOrigin(0.5).setDepth(131);
 
-    // === Depth 140：bottom_hud_panel ===
-    this.add.image(L.W/2, L.hudY, 'bottom_hud_panel').setDisplaySize(L.hudPanelW, L.hudPanelH).setDepth(140);
+    // v5：右欄資訊已併入頂部 jackpot 條 + 底部 HUD，這裡不再渲染側欄資訊框
 
     // === Depth 145：HUD controls ===
     const HUD_Y = L.hudY;
@@ -573,19 +651,101 @@ class MainScene extends Phaser.Scene {
     const betBtnSize = isMobile ? 40 : 58;
     const autoBtnSize = isMobile ? 56 : 72;
 
+    // v5 極簡 HUD：avatar + 編輯暱稱 + 點數/贏分（純文字）+ 拖曳式押注 + auto + SPIN
+    // avatar 圓形外框
+    this.add.circle(L.avatarX, HUD_Y, avSize/2 + 3, 0xd4a54a, 1).setDepth(144);
     this.add.image(L.avatarX, HUD_Y, 'avatar_chu').setDisplaySize(avSize, avSize).setDepth(145);
-    this.add.image(L.coinX,   HUD_Y, 'icon_coin').setDisplaySize(coinSize, coinSize).setDepth(145);
 
-    const btnMinus = this.add.image(L.betMinusX, HUD_Y, 'btn_bet_minus').setDisplaySize(betBtnSize, betBtnSize)
-      .setDepth(145).setInteractive({ useHandCursor: true });
-    const btnPlus  = this.add.image(L.betPlusX, HUD_Y, 'btn_bet_plus').setDisplaySize(betBtnSize, betBtnSize)
-      .setDepth(145).setInteractive({ useHandCursor: true });
-    btnMinus.on('pointerup', () => this.changeBet(-1));
-    btnPlus.on('pointerup',  () => this.changeBet(+1));
+    // === 押注膠囊（戰神賽特風拖曳 slider）===
+    const betCapsuleW = isMobile ? 200 : 340;
+    const betCapsuleH = isMobile ? 56 : 80;
+    const betCapsuleX = isMobile ? L.betDispX : 1300;
+    L._betCapsuleX = betCapsuleX;
 
-    this.btnAutoHud = this.add.image(L.autoBtnX, L.autoBtnY, 'btn_auto').setDisplaySize(autoBtnSize, autoBtnSize)
-      .setDepth(145).setInteractive({ useHandCursor: true });
+    // 膠囊底（深紅 enamel + 金邊）
+    const capsule = this.add.graphics().setDepth(144);
+    capsule.fillStyle(0x1a0508, 0.88);
+    capsule.lineStyle(3, 0xd4a54a, 1);
+    capsule.fillRoundedRect(betCapsuleX - betCapsuleW/2, HUD_Y - betCapsuleH/2, betCapsuleW, betCapsuleH, betCapsuleH/2);
+    capsule.strokeRoundedRect(betCapsuleX - betCapsuleW/2, HUD_Y - betCapsuleH/2, betCapsuleW, betCapsuleH, betCapsuleH/2);
+
+    // 內部進度條 = 整個膠囊內側（從藥丸最左邊一路到最右邊）
+    const innerInset = 4;  // 留 4px 給金色外邊
+    const trackX0 = betCapsuleX - betCapsuleW/2 + innerInset;
+    const trackX1 = betCapsuleX + betCapsuleW/2 - innerInset;
+    const trackW = trackX1 - trackX0;
+    const trackY = HUD_Y;
+    const trackH = betCapsuleH - innerInset * 2;
+
+    // 金色半透明填充（依下注等級、alpha 0.5）+ mask 切到藥丸形狀
+    this._betFillGfx = this.add.graphics().setDepth(144);
+    // mask：膠囊內側 rounded rect（用 betMaskShape 避免和 reel maskShape 衝突）
+    const betMaskShape = this.make.graphics({ x: 0, y: 0, add: false });
+    betMaskShape.fillStyle(0xffffff, 1);
+    betMaskShape.fillRoundedRect(
+      betCapsuleX - betCapsuleW/2 + innerInset,
+      HUD_Y - betCapsuleH/2 + innerInset,
+      betCapsuleW - innerInset * 2,
+      betCapsuleH - innerInset * 2,
+      (betCapsuleH - innerInset * 2) / 2,
+    );
+    this._betFillGfx.setMask(betMaskShape.createGeometryMask());
+    const drawBetFill = () => {
+      const i = BET_STEPS.indexOf(this.bet);
+      const t = BET_STEPS.length > 1 ? Math.max(0, i + 1) / BET_STEPS.length : 0;
+      const fillW = Math.max(6, trackW * t);
+      this._betFillGfx.clear();
+      this._betFillGfx.fillGradientStyle(0xffe55f, 0xffd700, 0xd4a54a, 0xb8860b, 0.5);
+      this._betFillGfx.fillRect(trackX0, trackY - trackH/2, fillW, trackH);
+    };
+    this._updateBetKnob = drawBetFill;
+    drawBetFill();
+
+    // 點 / 拖曳 整個 track
+    const setBetByPos = (x) => {
+      const t = Phaser.Math.Clamp((x - trackX0) / trackW, 0, 1);
+      const idx = Math.round(t * (BET_STEPS.length - 1));
+      const newBet = BET_STEPS[idx];
+      if (newBet !== this.bet) {
+        this.bet = newBet;
+        this.refreshHUD();
+      }
+    };
+    const trackHit = this.add.rectangle(betCapsuleX, trackY, trackW, trackH, 0xffffff, 0)
+      .setDepth(145).setInteractive({ useHandCursor: true, draggable: true });
+    this.input.setDraggable(trackHit);
+    trackHit.on('pointerdown', (p) => setBetByPos(p.x));
+    trackHit.on('drag', (p) => setBetByPos(p.x));
+
+    // − / + 文字按鈕
+    const sideFs = isMobile ? 28 : 42;
+    const btnMinusText = this.add.text(betCapsuleX - betCapsuleW/2 + 24, HUD_Y, '−',
+      { fontFamily: 'Noto Sans TC, sans-serif', fontSize: `${sideFs}px`, fontStyle: '900',
+        color: '#ffdf55', stroke: '#000', strokeThickness: 3, resolution: 2 })
+      .setOrigin(0.5).setDepth(146).setInteractive({ useHandCursor: true });
+    const btnPlusText = this.add.text(betCapsuleX + betCapsuleW/2 - 24, HUD_Y, '＋',
+      { fontFamily: 'Noto Sans TC, sans-serif', fontSize: `${sideFs}px`, fontStyle: '900',
+        color: '#ffdf55', stroke: '#000', strokeThickness: 3, resolution: 2 })
+      .setOrigin(0.5).setDepth(146).setInteractive({ useHandCursor: true });
+    btnMinusText.on('pointerup', () => this.changeBet(-1));
+    btnPlusText.on('pointerup', () => this.changeBet(+1));
+
+    // === 自動按鈕（大一點、無文字標籤、啟動時有金光環效果）===
+    const autoBtnKey = this.textures.exists('v5_btn_auto') ? 'v5_btn_auto' : 'btn_auto';
+    const autoSize = isMobile ? 70 : 120;
+    const autoX = L.spinBtnX - L.spinBtnSize * 0.72;
+    const autoY = L.spinBtnY;
+    // 啟動光環（金色脈衝、預設隱藏）
+    this.btnAutoRing = this.add.circle(autoX, autoY, autoSize * 0.55, 0xffdf55, 0)
+      .setStrokeStyle(4, 0xffdf55, 1).setDepth(144).setVisible(false);
+    // 按鈕本體
+    this.btnAutoHud = this.add.image(autoX, autoY, autoBtnKey)
+      .setDisplaySize(autoSize, autoSize).setDepth(145)
+      .setInteractive({ useHandCursor: true });
     this.btnAutoHud.on('pointerup', () => this.toggleAuto());
+    L.autoBtnX = autoX;
+    L.autoBtnY = autoY;
+    this._autoRingTween = null;
 
     // === Depth 146：HUD 文字 ===
     const hudTextStyle = (size, color, opts = {}) => ({
@@ -600,36 +760,101 @@ class MainScene extends Phaser.Scene {
     const offNameAbove = isMobile ? -10 : -20;
     const offLVBelow = isMobile ? 11 : 20;
 
-    // 玩家（avatar 旁；手機版只顯示 LV 縮短佔位）
+    // 編輯暱稱（avatar 右邊）+ 鉛筆 icon（純文字 emoji）
+    const nickX = L.avatarX + (isMobile ? 24 : 48);
     if (!isMobile) {
-      this.add.text(L.avatarX + 90, HUD_Y + offNameAbove, '玩家 漢王', hudTextStyle(fsName, '#ffffff')).setOrigin(0, 0.5).setDepth(146);
-      this.add.text(L.avatarX + 90, HUD_Y + offLVBelow, 'LV. 88', hudTextStyle(fsLV, '#ffdf5a')).setOrigin(0, 0.5).setDepth(146);
+      const nickText = this.add.text(nickX, HUD_Y, '編輯暱稱', hudTextStyle(20, '#ffffff'))
+        .setOrigin(0, 0.5).setDepth(146).setInteractive({ useHandCursor: true });
+      this.add.text(nickX + 110, HUD_Y, '✎', hudTextStyle(22, '#ffdf55'))
+        .setOrigin(0, 0.5).setDepth(146);
+      // 點 → 開暱稱編輯（暫時 prompt）
+      nickText.on('pointerup', () => {
+        const cur = localStorage.getItem('chuhan_nick') || '玩家漢王';
+        const v = prompt('輸入新暱稱：', cur);
+        if (v && v.trim()) { localStorage.setItem('chuhan_nick', v.trim()); nickText.setText(v.trim()); }
+      });
+      const savedNick = localStorage.getItem('chuhan_nick'); if (savedNick) nickText.setText(savedNick);
     } else {
-      // 手機：avatar 下方加 LV 標籤即可
       this.add.text(L.avatarX, HUD_Y + 24, 'LV.88', hudTextStyle(9, '#ffdf5a')).setOrigin(0.5).setDepth(146);
     }
 
-    // 餘額
-    this.txtBalance = this.add.text(L.balX, HUD_Y - (isMobile ? 8 : 18), '0.00', hudTextStyle(fsMain, '#ffffff', { strokeThickness: 4 })).setOrigin(0.5).setDepth(146);
-    this.add.text(L.balX, HUD_Y + offBelow, '餘額', hudTextStyle(fsLabel, '#d8c399')).setOrigin(0.5).setDepth(146);
+    // 點數（大數字 + 下方標籤『點數』）
+    const pointsX = isMobile ? L.balX : 580;
+    this.txtBalance = this.add.text(pointsX, HUD_Y - (isMobile ? 8 : 12), '0.00',
+      hudTextStyle(fsMain + 4, '#ffffff', { strokeThickness: 4 }))
+      .setOrigin(0.5).setDepth(146);
+    this.add.text(pointsX, HUD_Y + (isMobile ? 18 : 30), '點數',
+      hudTextStyle(fsLabel - 2, '#a8967a')).setOrigin(0.5).setDepth(146);
 
-    // 押注
-    this.txtBet = this.add.text(L.betDispX, HUD_Y - (isMobile ? 8 : 18), '0.00', hudTextStyle(fsMain, '#ffe55f', { strokeThickness: 4 })).setOrigin(0.5).setDepth(146);
-    this.add.text(L.betDispX, HUD_Y + offBelow, '總押注', hudTextStyle(fsLabel, '#d8c399')).setOrigin(0.5).setDepth(146);
+    // 贏分（大數字 + 下方標籤『贏分』）
+    const winX = isMobile ? L.betDispX - 80 : 880;
+    this.txtWinHud = this.add.text(winX, HUD_Y - (isMobile ? 8 : 12), '0.00',
+      hudTextStyle(fsMain + 4, '#ffffff', { strokeThickness: 4 }))
+      .setOrigin(0.5).setDepth(146);
+    this.add.text(winX, HUD_Y + (isMobile ? 18 : 30), '贏分',
+      hudTextStyle(fsLabel - 2, '#a8967a')).setOrigin(0.5).setDepth(146);
 
-    // 自動按鈕下方標籤
-    this.txtAutoLabel = this.add.text(L.autoBtnX, L.autoBtnY + (isMobile ? 35 : 45), '自動', hudTextStyle(fsLabel, '#ffe55f', { strokeThickness: 3 })).setOrigin(0.5).setDepth(146);
+    // 押注（顯示在膠囊中央，下方標籤『押注』）
+    const _betX = L._betCapsuleX ?? L.betDispX;
+    this.txtBet = this.add.text(_betX, HUD_Y - (isMobile ? 6 : 10), '60',
+      hudTextStyle(fsMain + 4, '#ffe55f', { strokeThickness: 4 }))
+      .setOrigin(0.5).setDepth(146);
+    this.add.text(_betX, HUD_Y + (isMobile ? 18 : 28), '押注',
+      hudTextStyle(fsLabel - 2, '#d8c399')).setOrigin(0.5).setDepth(146);
 
-    // 本局贏分（疊在資訊區）
-    this.txtWin = this.add.text(L.logoX, L.topBannerY, '', {
-      fontFamily: 'Noto Sans TC, sans-serif', fontSize: isMobile ? '18px' : '36px', fontStyle: '900',
+    // 自動按鈕無文字標籤（用啟動光環判斷）
+    this.txtAutoLabel = null;
+
+    // === Free Game 大金屬字 15 FREE GAMES（在玩家名字上方一點）===
+    if (!isMobile) {
+      const fgX = 150, fgY = 890;  // HUD 玩家名字上方一點
+      // 金屬字 15（縮小一點，因放在 HUD 上方）
+      this.fgBigNum = this.buildGoldNumber(fgX, fgY - 22, '15', {
+        digitW: 50, digitH: 72, gap: -6, depth: 146, origin: 0.5,
+      });
+      this.fgBigNum.setVisible(false);
+      // FREE GAMES 金屬字圖
+      if (this.textures.exists('gold_free_games')) {
+        this.fgBigLabel = this.add.image(fgX, fgY + 36, 'gold_free_games')
+          .setDisplaySize(140, 70).setDepth(146).setVisible(false);
+      } else {
+        this.fgBigLabel = this.add.text(fgX, fgY + 36, 'FREE\nGAMES', {
+          fontFamily: 'Noto Serif TC, serif', fontSize: '20px', fontStyle: '900',
+          color: '#ffdf55', stroke: '#000', strokeThickness: 4, align: 'center', resolution: 2,
+        }).setOrigin(0.5).setDepth(146).setVisible(false);
+      }
+
+      // === 購買特色按鈕（base game 用、HUD 上方小金字膠囊）===
+      const bfX = 130, bfY = HUD_Y - 75;
+      const bfW = 200, bfH = 56;
+      this.btnBuyFeatureBg = this.add.graphics().setDepth(144);
+      this.btnBuyFeatureBg.fillStyle(0x0a2e3a, 0.9);
+      this.btnBuyFeatureBg.lineStyle(3, 0xd4a54a, 1);
+      this.btnBuyFeatureBg.fillRoundedRect(bfX - bfW/2, bfY - bfH/2, bfW, bfH, bfH/2);
+      this.btnBuyFeatureBg.strokeRoundedRect(bfX - bfW/2, bfY - bfH/2, bfW, bfH, bfH/2);
+      this.btnBuyFeatureTxt1 = this.add.text(bfX, bfY - 10, '購買特色', {
+        fontFamily: 'Noto Serif TC, serif', fontSize: '20px', fontStyle: '900',
+        color: '#ffdf55', stroke: '#000', strokeThickness: 3, resolution: 2,
+      }).setOrigin(0.5).setDepth(146);
+      this.btnBuyFeatureTxt2 = this.add.text(bfX, bfY + 12, '15 次 Free Game', {
+        fontFamily: 'Noto Sans TC, sans-serif', fontSize: '11px', fontStyle: '700',
+        color: '#fff8d0', resolution: 2,
+      }).setOrigin(0.5).setDepth(146);
+      const bfHit = this.add.rectangle(bfX, bfY, bfW, bfH, 0xffffff, 0)
+        .setDepth(147).setInteractive({ useHandCursor: true });
+      bfHit.on('pointerup', () => this.onBuyFeature());
+    }
+
+    // 本局贏分（顯示在 scatter 條中央，取代 scatter 提示文字）
+    this.txtWin = this.add.text(L.W/2, L.scatterBannerY, '', {
+      fontFamily: 'Noto Sans TC, sans-serif', fontSize: isMobile ? '18px' : '32px', fontStyle: '900',
       color: '#fff8d0', stroke: '#7f1f1b', strokeThickness: 6, resolution: 2,
     }).setOrigin(0.5).setDepth(132);
 
-    // Free Game 計數文字（已用左側獨立 fg badge，這裡保留為備用）
-    this.txtFG = this.add.text(L.W/2, isMobile ? 320 : 230, '', {
-      fontFamily: 'Noto Sans TC, sans-serif', fontSize: isMobile ? '16px' : '32px', fontStyle: '900',
-      color: '#ffe55f', stroke: '#3a0e0a', strokeThickness: 6, resolution: 2,
+    // Free Game 計數文字（顯示在 scatter 條內，跟 infoText 互斥）
+    this.txtFG = this.add.text(L.W/2, L.scatterBannerY, '', {
+      fontFamily: 'Noto Sans TC, sans-serif', fontSize: isMobile ? '16px' : '26px', fontStyle: '900',
+      color: '#ffe55f', stroke: '#3a0e0a', strokeThickness: 4, resolution: 2,
     }).setOrigin(0.5).setDepth(132);
 
     // === Depth 150：side buttons (PC only)（手機版隱藏，用設定齒輪即可）===
@@ -649,14 +874,30 @@ class MainScene extends Phaser.Scene {
         if (b.cb) img.on('pointerup', b.cb);
       });
     }
-    this.add.image(L.settingsBtnX, L.settingsBtnY, 'btn_settings').setDisplaySize(isMobile ? 36 : 58, isMobile ? 36 : 58).setDepth(150)
-      .setInteractive({ useHandCursor: true });
+    // v6：設定按鈕（紅金徽）移除 — 沒實際功能且擋章節 bg
+    // this.add.image(L.settingsBtnX, L.settingsBtnY, 'btn_settings').setDisplaySize(isMobile ? 36 : 58, isMobile ? 36 : 58).setDepth(150)
+    //   .setInteractive({ useHandCursor: true });
 
-    // === Depth 155：btn_spin ===
-    this.btnSpin = this.add.image(L.spinBtnX, L.spinBtnY, 'btn_spin').setDisplaySize(L.spinBtnSize, L.spinBtnSize).setDepth(155)
-      .setInteractive({ useHandCursor: true });
-    this.btnSpin.on('pointerup', () => this.onSpin());
-    // idle 呼吸光（依 setDisplaySize 後的 scale 微幅縮放）
+    // === Depth 155：btn_spin（v5：靜態底 + 獨立旋轉 icon）===
+    const useV5Spin = this.textures.exists('v5_btn_spin_base') && this.textures.exists('v5_btn_spin_icon');
+    if (useV5Spin) {
+      // 靜態底（按鈕本體絕不旋轉）
+      this.btnSpin = this.add.image(L.spinBtnX, L.spinBtnY, 'v5_btn_spin_base')
+        .setDisplaySize(L.spinBtnSize, L.spinBtnSize).setDepth(155)
+        .setInteractive({ useHandCursor: true });
+      this.btnSpin.on('pointerup', () => this.onSpin());
+      // 旋轉 icon（疊在底上方、只有它在轉）
+      this.btnSpinIcon = this.add.image(L.spinBtnX, L.spinBtnY, 'v5_btn_spin_icon')
+        .setDisplaySize(L.spinBtnSize * 0.5, L.spinBtnSize * 0.5).setDepth(156);
+    } else {
+      // fallback：用 v4 整顆按鈕（會整個轉）
+      this.btnSpin = this.add.image(L.spinBtnX, L.spinBtnY, 'btn_spin')
+        .setDisplaySize(L.spinBtnSize, L.spinBtnSize).setDepth(155)
+        .setInteractive({ useHandCursor: true });
+      this.btnSpin.on('pointerup', () => this.onSpin());
+      this.btnSpinIcon = null;
+    }
+    // idle 呼吸光（只縮底、不旋轉）
     const baseScale = this.btnSpin.scaleX;
     this.btnSpinIdleTween = this.tweens.add({
       targets: this.btnSpin, scale: { from: baseScale * 0.97, to: baseScale * 1.03 },
@@ -681,11 +922,11 @@ class MainScene extends Phaser.Scene {
     this.sound2 = window.__chuhanSound;
     this.bgm = this.sound2.bgmAudio;
 
-    // 開發期間先不自動播 BGM（QA 完成後再開）
-    // const tryPlay = () => this.sound2.playBgm();
-    // tryPlay();
-    // this.input.once('pointerdown', tryPlay);
-    // window.addEventListener('keydown', tryPlay, { once: true });
+    // BGM 自動播放（瀏覽器 autoplay policy：第一次互動才能播）
+    const tryPlay = () => this.sound2.playBgm();
+    tryPlay();
+    this.input.once('pointerdown', tryPlay);
+    window.addEventListener('keydown', tryPlay, { once: true });
 
     // 右上音量控制 UI
     this.buildVolumePanel();
@@ -707,68 +948,92 @@ class MainScene extends Phaser.Scene {
     const L = this.L;
     const isMobile = L.mode === 'mobile';
 
-    // 1) 最高倍 banner（PC 在頂部 Logo 下方，Mobile 在 reel 下方靠 scatter info 位置）
-    const bannerW = isMobile ? 360 : 720;
-    const bannerH = isMobile ? 56  : 100;
-    const bannerX = isMobile ? L.W / 2 : L.W / 2;
-    const bannerY = isMobile ? 270    : 270;
-    this.fgMaxCap = this.add.image(bannerX, bannerY, 'ui_banner_top')
-      .setDisplaySize(bannerW, bannerH).setDepth(133).setVisible(false);
-    this.fgMaxCapText = this.add.text(bannerX, bannerY, '最高　51000　倍', {
-      fontFamily: 'Noto Serif TC, serif', fontSize: isMobile ? '20px' : '36px', fontStyle: '900',
-      color: '#ffe55f', stroke: '#3a0e0a', strokeThickness: 4, resolution: 2, letterSpacing: 2,
-    }).setOrigin(0.5).setDepth(134).setVisible(false);
+    // v5/v6：取消「最高 51000 倍」獨立 banner（資訊統一在 scatter 條內顯示）
+    this.fgMaxCap = this.add.rectangle(0, 0, 1, 1, 0x000000, 0).setVisible(false);
+    this.fgMaxCapText = this.add.text(0, 0, '', { fontSize: '1px' }).setVisible(false);
 
     // 2) FREE GAMES 計數徽章（PC 在左漫畫上方，Mobile 在左下角）
     const fgW = isMobile ? 88  : 160;
     const fgH = isMobile ? 110 : 200;
     const fgX = isMobile ? 55  : L.fgCountX;
     const fgY = isMobile ? 600 : L.fgCountY;
-    this.fgCountBg = this.add.image(fgX, fgY, 'ui_badge_fg')
-      .setDisplaySize(fgW, fgH).setDepth(133).setVisible(false);
-    this.fgCountNum = this.add.text(fgX, fgY - (isMobile ? 10 : 20), '15', {
-      fontFamily: 'Noto Serif TC, serif', fontSize: isMobile ? '32px' : '64px', fontStyle: '900',
-      color: '#fff8d0', stroke: '#7f1f1b', strokeThickness: 5, resolution: 2,
-    }).setOrigin(0.5).setDepth(134).setVisible(false);
-    this.fgCountLabel = this.add.text(fgX, fgY + (isMobile ? 22 : 50), 'FREE\nGAMES', {
-      fontFamily: 'Noto Sans TC, sans-serif', fontSize: isMobile ? '10px' : '16px', fontStyle: '900',
-      color: '#ffe55f', stroke: '#3a0e0a', strokeThickness: 2, resolution: 2,
-      align: 'center',
-    }).setOrigin(0.5).setDepth(134).setVisible(false);
+    // v6：取消 FREE GAMES 紅金框底圖（醜），只留金屬字
+    this.fgCountBg = this.add.rectangle(fgX, fgY, 1, 1, 0x000000, 0).setVisible(false);
+    // 15 FREE GAMES 數字 — 用 0-9 金屬字組合
+    const fgDigitW = isMobile ? 30 : 64;
+    const fgDigitH = isMobile ? 40 : 90;
+    this.fgCountNum = this.buildGoldNumber(fgX, fgY - (isMobile ? 8 : 16), '15', {
+      digitW: fgDigitW, digitH: fgDigitH, gap: -8, depth: 134, origin: 0.5,
+    });
+    this.fgCountNum.setVisible(false);
+    // 提供 setText 介面相容舊代碼
+    this.fgCountNum.setText = (s) => this.updateGoldNumber(this.fgCountNum, s, {
+      digitW: fgDigitW, digitH: fgDigitH, gap: -8, origin: 0.5,
+    });
+    // FREE GAMES 標籤 — 使用金屬字圖
+    if (this.textures.exists('gold_free_games')) {
+      this.fgCountLabel = this.add.image(fgX, fgY + (isMobile ? 22 : 55), 'gold_free_games')
+        .setDisplaySize(isMobile ? 60 : 130, isMobile ? 30 : 65).setDepth(134).setVisible(false);
+    } else {
+      this.fgCountLabel = this.add.text(fgX, fgY + (isMobile ? 22 : 50), 'FREE\nGAMES', {
+        fontFamily: 'Noto Sans TC, sans-serif', fontSize: isMobile ? '10px' : '16px', fontStyle: '900',
+        color: '#ffe55f', stroke: '#3a0e0a', strokeThickness: 2, resolution: 2,
+        align: 'center',
+      }).setOrigin(0.5).setDepth(134).setVisible(false);
+    }
 
     // 3) 累計倍數圓徽（PC 在右漫畫上方，Mobile 在右下角）
     const multSize = isMobile ? 100 : 180;
     const multX = isMobile ? 485 : L.multBadgeX;
     const multY = isMobile ? 600 : L.multBadgeY;
-    this.fgMultBg = this.add.image(multX, multY, 'ui_badge_mult')
+    const multBadgeKey = this.textures.exists('v6_badge_mult') ? 'v6_badge_mult' : 'ui_badge_mult';
+    this.fgMultBg = this.add.image(multX, multY, multBadgeKey)
       .setDisplaySize(multSize, multSize).setDepth(133).setVisible(false);
     this.fgMultText = this.add.text(multX, multY - (isMobile ? 4 : 8), 'x1', {
       fontFamily: 'Noto Serif TC, serif', fontSize: isMobile ? '32px' : '60px', fontStyle: '900',
       color: '#fff8d0', stroke: '#7f1f1b', strokeThickness: 5, resolution: 2,
     }).setOrigin(0.5).setDepth(134).setVisible(false);
-    this.fgMultLabel = this.add.text(multX, multY + (isMobile ? 28 : 60), '累計倍數', {
+    // v6：累計倍數不再寫字標籤，圓徽中央 x 倍數就夠了
+    this.fgMultLabel = this.add.text(multX, multY + 9999, '', {
       fontFamily: 'Noto Sans TC, sans-serif', fontSize: isMobile ? '10px' : '14px', fontStyle: '900',
       color: '#ffe55f', stroke: '#3a0e0a', strokeThickness: 2, resolution: 2,
     }).setOrigin(0.5).setDepth(134).setVisible(false);
 
-    // 收集統一控制
+    // 收集統一控制（v6：舊 fgCountBg/Num/Label 不再顯示、改用 fgBigNum + fgBigLabel）
     this.fgHudElements = [
       this.fgMaxCap, this.fgMaxCapText,
-      this.fgCountBg, this.fgCountNum, this.fgCountLabel,
       this.fgMultBg, this.fgMultText, this.fgMultLabel,
     ];
+    // 永久隱藏舊的 FREE GAMES 計數元件（避免和大金屬字重疊）
+    if (this.fgCountBg) this.fgCountBg.setVisible(false);
+    if (this.fgCountNum) this.fgCountNum.setVisible(false);
+    if (this.fgCountLabel) this.fgCountLabel.setVisible(false);
   }
 
   // 顯示／隱藏 Free Game HUD
   showFreeGameHUD(visible) {
     if (!this.fgHudElements) return;
     this.fgHudElements.forEach(el => el?.setVisible(visible));
+    // v6：大金屬字 15 FREE GAMES 與 購買特色按鈕互斥
+    if (this.fgBigNum) this.fgBigNum.setVisible(visible);
+    if (this.fgBigLabel) this.fgBigLabel.setVisible(visible);
+    // base game 顯示購買特色，free game 隱藏
+    const buyVis = !visible;
+    if (this.btnBuyFeatureBg) this.btnBuyFeatureBg.setVisible(buyVis);
+    if (this.btnBuyFeatureTxt1) this.btnBuyFeatureTxt1.setVisible(buyVis);
+    if (this.btnBuyFeatureTxt2) this.btnBuyFeatureTxt2.setVisible(buyVis);
   }
 
   // 更新數值
   updateFreeGameHUD(remaining, multTotal) {
     if (this.fgCountNum) this.fgCountNum.setText(String(remaining));
     if (this.fgMultText) this.fgMultText.setText(`x${multTotal}`);
+    // v6：更新大金屬字 15 FREE GAMES 的數字
+    if (this.fgBigNum && this.fgBigNum.removeAll) {
+      this.updateGoldNumber(this.fgBigNum, String(remaining), {
+        digitW: 70, digitH: 100, gap: -10, origin: 0.5,
+      });
+    }
   }
 
   // ----------------------------------------------------------
@@ -926,8 +1191,96 @@ class MainScene extends Phaser.Scene {
     this.progressText.setText(`漫畫進度　${this.revealedCount}/${this._totalPanels}　·　下一格 ${SPINS_REMAIN(within, this._spinsPerPanel)}/${this._spinsPerPanel}`);
   }
 
+  // v6：每 N 轉切換故事頁面（20 頁循環），6 格依序 L1→R1→L2→R2→L3→R3 fade-in
+  advanceTopStoryPanels() {
+    if (!this.chapterBg) return;
+    this._topStorySpins = (this._topStorySpins ?? 0) + 1;
+    const SPINS_PER_PAGE = 8; // 每頁 8 轉
+    if (this._topStorySpins % SPINS_PER_PAGE !== 0) return;
+
+    this._currentPageIdx = ((this._currentPageIdx ?? 0) + 1) % 20;
+    const pageNum = String(this._currentPageIdx + 1).padStart(2, '0');
+    const newKey = `v6_page_${pageNum}`;
+    if (!this.textures.exists(newKey)) return;
+
+    // 1) 6 個故事格瞬間覆蓋黑色
+    const masks = this._storyPanelMasks || [];
+    masks.forEach(m => m.setAlpha(1));
+
+    // 2) 切換背景圖
+    this.chapterBg.setTexture(newKey).setDisplaySize(this.L.W, this.L.H - 60);
+
+    // 3) 6 格依序 fade-out（揭開新故事）— L1, R1, L2, R2, L3, R3
+    const order = [0, 1, 2, 3, 4, 5]; // 已按 L1,R1,L2,R2,L3,R3 排列
+    order.forEach((idx, i) => {
+      this.time.delayedCall(i * 220, () => {
+        if (masks[idx]) {
+          this.tweens.add({ targets: masks[idx], alpha: 0, duration: 350, ease: 'Cubic.easeOut' });
+        }
+      });
+    });
+
+    // 章節提示
+    const chapterMap = ['章一 起兵', '章二 鴻門', '章三 彭城', '章四 烏江'];
+    const chapter = chapterMap[Math.floor(this._currentPageIdx / 5)];
+    const subPage = (this._currentPageIdx % 5) + 1;
+    this.flashText?.(`${chapter} P${subPage}`);
+  }
+
+  // 取出 0-9 / 逗號的金屬字 texture key
+  _goldDigitKey(ch) {
+    if (ch === ',') return 'gold_comma';
+    if (ch >= '0' && ch <= '9') return `gold_d${ch}`;
+    return null;
+  }
+
+  // 用金屬字組合一個數字字串（回 container）
+  buildGoldNumber(x, y, text, opts = {}) {
+    const digitW = opts.digitW ?? 28;
+    const digitH = opts.digitH ?? 40;
+    const gap    = opts.gap ?? -4;        // 字間距（可負數讓字緊靠）
+    const depth  = opts.depth ?? 200;
+    const origin = opts.origin ?? 0.5;    // 0=左、0.5=置中、1=右
+    const str = String(text);
+    const cont = this.add.container(x, y).setDepth(depth);
+    // 先計算總寬
+    const totalW = str.length * digitW + (str.length - 1) * gap;
+    let cx = -totalW * origin + digitW / 2;
+    for (const ch of str) {
+      const key = this._goldDigitKey(ch);
+      if (key && this.textures.exists(key)) {
+        const img = this.add.image(cx, 0, key).setDisplaySize(digitW, digitH);
+        cont.add(img);
+      }
+      cx += digitW + gap;
+    }
+    return cont;
+  }
+  // 更新金屬字 container 的內容
+  updateGoldNumber(cont, text, opts = {}) {
+    if (!cont) return;
+    cont.removeAll(true);
+    const digitW = opts.digitW ?? 28;
+    const digitH = opts.digitH ?? 40;
+    const gap    = opts.gap ?? -4;
+    const origin = opts.origin ?? 0.5;
+    const str = String(text);
+    const totalW = str.length * digitW + (str.length - 1) * gap;
+    let cx = -totalW * origin + digitW / 2;
+    for (const ch of str) {
+      const key = this._goldDigitKey(ch);
+      if (key && this.textures.exists(key)) {
+        const img = this.add.image(cx, 0, key).setDisplaySize(digitW, digitH);
+        cont.add(img);
+      }
+      cx += digitW + gap;
+    }
+  }
+
   // 每次 spin 結束後呼叫一次：推進進度，若該揭新格就揭
   advanceComicProgress() {
+    // v4：先推進上方雙漫畫格
+    this.advanceTopStoryPanels();
     if (!this._progressLS) return;
     this.progressSpins += 1;
     const total = this._totalPanels * this._spinsPerPanel;
@@ -994,9 +1347,14 @@ class MainScene extends Phaser.Scene {
     const baseY = 88;
     const panelW = 280;
     const panelH = 64;
+
+    // 將整組音量元件收集成 array、預設隱藏，由右上小按鈕展開
+    this._volPanelObjs = [];
+    const trackObj = (o) => { this._volPanelObjs.push(o); return o; };
+
     // 底板
-    this.add.rectangle(baseX + panelW/2, baseY + panelH/2, panelW, panelH, 0x0a0604, 0.78)
-      .setStrokeStyle(2, 0xd4a54a).setDepth(950);
+    trackObj(this.add.rectangle(baseX + panelW/2, baseY + panelH/2, panelW, panelH, 0x0a0604, 0.92)
+      .setStrokeStyle(2, 0xd4a54a).setDepth(950));
     const labelStyle = (size, color) => ({
       fontFamily: 'Noto Sans TC, sans-serif', fontSize: `${size}px`,
       color, stroke: '#2a0908', strokeThickness: 2, resolution: 2,
@@ -1025,11 +1383,11 @@ class MainScene extends Phaser.Scene {
     };
 
     const makeMuteBtn = (x, y, initMuted, onToggle) => {
-      const g = this.add.graphics({ x, y }).setDepth(953);
+      const g = trackObj(this.add.graphics({ x, y }).setDepth(953));
       drawIcon(g, initMuted);
       // 命中區
-      const hit = this.add.circle(x, y, 14, 0xffffff, 0)
-        .setDepth(954).setInteractive({ useHandCursor: true });
+      const hit = trackObj(this.add.circle(x, y, 14, 0xffffff, 0)
+        .setDepth(954).setInteractive({ useHandCursor: true }));
       hit.on('pointerup', () => {
         const m = onToggle();
         drawIcon(g, m);
@@ -1043,14 +1401,14 @@ class MainScene extends Phaser.Scene {
       // 靜音按鈕在左
       const muteBtn = makeMuteBtn(baseX + 18, y, initMuted, onMute);
       // 標籤
-      this.add.text(baseX + 38, y, label, labelStyle(13, '#ffe55f')).setOrigin(0, 0.5).setDepth(951);
+      trackObj(this.add.text(baseX + 38, y, label, labelStyle(13, '#ffe55f')).setOrigin(0, 0.5).setDepth(951));
       const trackX = baseX + 92;
       const trackW = 150;
-      const track = this.add.rectangle(trackX, y, trackW, 6, 0x3a2418, 1).setOrigin(0, 0.5).setDepth(951)
-        .setInteractive({ useHandCursor: true });
-      const fill = this.add.rectangle(trackX, y, trackW * initVol, 6, 0xf5d27a, 1).setOrigin(0, 0.5).setDepth(952);
-      const knob = this.add.circle(trackX + trackW * initVol, y, 8, 0xfff8d0).setDepth(953)
-        .setStrokeStyle(2, 0x7f1f1b).setInteractive({ useHandCursor: true, draggable: true });
+      const track = trackObj(this.add.rectangle(trackX, y, trackW, 6, 0x3a2418, 1).setOrigin(0, 0.5).setDepth(951)
+        .setInteractive({ useHandCursor: true }));
+      const fill = trackObj(this.add.rectangle(trackX, y, trackW * initVol, 6, 0xf5d27a, 1).setOrigin(0, 0.5).setDepth(952));
+      const knob = trackObj(this.add.circle(trackX + trackW * initVol, y, 8, 0xfff8d0).setDepth(953)
+        .setStrokeStyle(2, 0x7f1f1b).setInteractive({ useHandCursor: true, draggable: true }));
       this.input.setDraggable(knob);
 
       const setVal = (v) => {
@@ -1071,6 +1429,53 @@ class MainScene extends Phaser.Scene {
     this.sfxSlider = makeSlider(43, 'SFX', this.sound2.sfxVol, this.sound2.sfxMuted,
       v => this.sound2.setSfxVolume(v),
       () => { this.sound2.toggleSfxMute(); return this.sound2.sfxMuted; });
+
+    // === 預設隱藏整組音量介面 ===
+    this._volPanelVisible = false;
+    this._setVolPanelVisible = (v) => {
+      this._volPanelVisible = v;
+      this._volPanelObjs.forEach(o => o.setVisible(v));
+    };
+    this._setVolPanelVisible(false);
+
+    // === 右上角開關按鈕（v6 漫畫風小圓鈕 icon、和 jackpot 條同高）===
+    const toggleX = this.L.W - 40;
+    const toggleY = 30;
+    const toggleSize = 56;
+    // 若有 v6 圖則用，否則 fallback 到 Graphics
+    let toggleImg, glowRing;
+    if (this.textures.exists('v6_btn_sound')) {
+      toggleImg = this.add.image(toggleX, toggleY, 'v6_btn_sound')
+        .setDisplaySize(toggleSize, toggleSize).setDepth(960);
+      glowRing = this.add.circle(toggleX, toggleY, toggleSize/2 + 4, 0xfff8d0, 0)
+        .setStrokeStyle(3, 0xfff8d0, 1).setDepth(959).setVisible(false);
+    } else {
+      const tg = this.add.graphics({ x: toggleX, y: toggleY }).setDepth(960);
+      tg.fillStyle(0x1a0e08, 0.92);
+      tg.fillCircle(0, 0, toggleSize/2);
+      tg.lineStyle(2, 0xd4a54a, 1);
+      tg.strokeCircle(0, 0, toggleSize/2);
+    }
+    const updateGlow = () => {
+      if (glowRing) glowRing.setVisible(!!this._volPanelVisible);
+    };
+    updateGlow();
+    const toggleHit = this.add.circle(toggleX, toggleY, toggleSize/2 + 4, 0xffffff, 0)
+      .setDepth(961).setInteractive({ useHandCursor: true });
+    toggleHit.on('pointerup', () => {
+      this._setVolPanelVisible(!this._volPanelVisible);
+      updateGlow();
+    });
+    // 點面板外自動收合
+    this.input.on('pointerdown', (p) => {
+      if (!this._volPanelVisible) return;
+      const inBtn = Phaser.Math.Distance.Between(p.x, p.y, toggleX, toggleY) <= toggleSize/2 + 6;
+      const inPanel = p.x >= baseX && p.x <= baseX + panelW && p.y >= baseY && p.y <= baseY + panelH;
+      if (!inBtn && !inPanel) {
+        this._setVolPanelVisible(false);
+        updateGlow();
+      }
+    });
   }
 
   // 把圖片以保持比例方式對齊到目標高度
@@ -1084,7 +1489,12 @@ class MainScene extends Phaser.Scene {
   // ----------------------------------------------------------
   refreshHUD() {
     this.txtBalance.setText(this.balance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
-    this.txtBet.setText(this.bet.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
+    this.txtBet.setText(String(this.bet));
+    this._updateBetKnob?.();
+    // v5：HUD 上的贏分文字（與上方資訊條的 txtWin 分離）
+    if (this.txtWinHud) {
+      this.txtWinHud.setText(this.lastWin.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
+    }
     if (this.lastWin > 0) {
       this.txtWin.setText(`本局贏分　${this.lastWin.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`);
       this.infoText.setAlpha(0);
@@ -1094,8 +1504,12 @@ class MainScene extends Phaser.Scene {
     }
     if (this.inFreeGame) {
       this.txtFG.setText(`免費遊戲 ${this.freeSpinsLeft}　累計 ${this.fgTotalWin.toFixed(2)}`);
+      this.infoText.setVisible(false);
+      this.txtFG.setVisible(true);
     } else {
       this.txtFG.setText('');
+      this.txtFG.setVisible(false);
+      this.infoText.setVisible(true);
     }
   }
 
@@ -1114,12 +1528,26 @@ class MainScene extends Phaser.Scene {
   toggleAuto() {
     if (this.spinning && !this.autoMode) return;
     this.autoMode = !this.autoMode;
-    // 自動按鈕視覺反饋
+    // 自動按鈕視覺反饋（金色脈衝光環）
     if (this.btnAutoHud) {
       this.btnAutoHud.setTint(this.autoMode ? 0xffe55f : 0xffffff);
     }
-    if (this.txtAutoLabel) {
-      this.txtAutoLabel.setText(this.autoMode ? '自動中' : '自動');
+    if (this.btnAutoRing) {
+      this.btnAutoRing.setVisible(this.autoMode);
+      if (this._autoRingTween) { this._autoRingTween.stop(); this._autoRingTween = null; }
+      if (this.autoMode) {
+        // 啟動：金色光環脈衝 + 旋轉
+        this.btnAutoRing.setAlpha(1).setScale(1);
+        this._autoRingTween = this.tweens.add({
+          targets: this.btnAutoRing,
+          scale: { from: 1, to: 1.25 },
+          alpha: { from: 1, to: 0.3 },
+          duration: 700,
+          yoyo: true,
+          repeat: -1,
+          ease: 'Sine.easeInOut',
+        });
+      }
     }
     if (this.autoMode && !this.spinning) this.onSpin();
   }
@@ -1172,9 +1600,10 @@ class MainScene extends Phaser.Scene {
     if (!this.inFreeGame) this.advanceComicProgress?.();
     this.btnSpin.setAlpha(0.7);
     this.btnSpinIdleTween?.pause();
-    // 啟動旋轉
+    // v5：只旋轉 icon，按鈕底不轉
+    const rotateTarget = this.btnSpinIcon ?? this.btnSpin;
     this.spinRotateTween = this.tweens.add({
-      targets: this.btnSpin, angle: '+=360',
+      targets: rotateTarget, angle: '+=360',
       duration: 700, repeat: -1, ease: 'Linear',
     });
     this.refreshHUD();
@@ -1182,10 +1611,11 @@ class MainScene extends Phaser.Scene {
     await this.spinAnimation();
     await this.runTumbleCycle();
 
-    // 停止旋轉、回到原角度
+    // 停止旋轉、回到原角度（只回 icon）
     this.spinRotateTween?.stop();
     this.spinRotateTween = null;
-    this.tweens.add({ targets: this.btnSpin, angle: 0, duration: 280, ease: 'Back.easeOut' });
+    const resetTarget = this.btnSpinIcon ?? this.btnSpin;
+    this.tweens.add({ targets: resetTarget, angle: 0, duration: 280, ease: 'Back.easeOut' });
 
     const scatterCount = this.countScatters();
     if (scatterCount >= 2) {
@@ -1206,8 +1636,15 @@ class MainScene extends Phaser.Scene {
 
     if (this.inFreeGame) {
       this.freeSpinsLeft--;
+      const prevTotal = this.fgTotalWin;
       this.fgTotalWin += this.lastWin;
       this.updateFreeGameHUD(Math.max(0, this.freeSpinsLeft), this.fgMultSum || 0);
+      // v6：累計超過 bet*100 門檻時觸發累計連發 overlay
+      const milestone = this.bet * 100;
+      if (Math.floor(prevTotal / milestone) < Math.floor(this.fgTotalWin / milestone) && this.lastWin > 0) {
+        const totalStr = this.fgTotalWin.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        this.showMangaOverlay('mo_fg_total', { text: totalStr, textY: 50, holdMs: 1500 });
+      }
       if (this.freeSpinsLeft <= 0) {
         await this.exitFreeGame();
       }
@@ -1227,26 +1664,44 @@ class MainScene extends Phaser.Scene {
 
   spinAnimation() {
     return new Promise(resolve => {
-      const old = [];
-      for (let c = 0; c < COLS; c++)
-        for (let r = 0; r < ROWS; r++)
-          if (this.grid[c][r]) { old.push(this.grid[c][r]); this.grid[c][r] = null; }
-      if (old.length) {
-        this.tweens.add({
-          targets: old, y: REEL_CY + REEL_H, alpha: 0, duration: 220, ease: 'Cubic.easeIn',
-          onComplete: () => old.forEach(s => s.destroy()),
-        });
+      // 6 直行各自的時間差（毫秒）— 由左至右逐欄落定
+      const COL_DELAY = 90;        // 每欄延遲
+      const FALL_OUT_MS = 220;     // 舊符號掉出時長
+      const SETTLE_MS = 700;       // 新符號落定後等待
+
+      // 1) 舊符號逐欄掉出
+      for (let c = 0; c < COLS; c++) {
+        const colSymbols = [];
+        for (let r = 0; r < ROWS; r++) {
+          if (this.grid[c][r]) { colSymbols.push(this.grid[c][r]); this.grid[c][r] = null; }
+        }
+        if (colSymbols.length) {
+          this.tweens.add({
+            targets: colSymbols,
+            y: REEL_CY + REEL_H, alpha: 0,
+            duration: FALL_OUT_MS, ease: 'Cubic.easeIn',
+            delay: c * COL_DELAY,
+            onComplete: () => colSymbols.forEach(s => s.destroy()),
+          });
+        }
       }
+
       // 清掉舊倍數球
       this.multOrbs.forEach(o => o.container.destroy());
       this.multOrbs = [];
 
-      this.time.delayedCall(260, () => {
-        for (let c = 0; c < COLS; c++)
-          for (let r = 0; r < ROWS; r++)
+      // 2) 新符號逐欄落入（每欄相對前一欄延遲 COL_DELAY ms）
+      const lastColEndTime = (COLS - 1) * COL_DELAY + FALL_OUT_MS + 40;
+      for (let c = 0; c < COLS; c++) {
+        this.time.delayedCall(c * COL_DELAY + FALL_OUT_MS + 40, () => {
+          for (let r = 0; r < ROWS; r++) {
             this.placeSymbol(c, r, pickSymbol(true), true);
-        this.time.delayedCall(700, resolve);
-      });
+          }
+        });
+      }
+
+      // 最後一欄落定後再等 SETTLE_MS 才 resolve
+      this.time.delayedCall(lastColEndTime + SETTLE_MS, resolve);
     });
   }
 
@@ -1477,6 +1932,17 @@ class MainScene extends Phaser.Scene {
   async enterFreeGame() {
     this.inFreeGame = true;
     this.freeSpinsLeft = FREE_SPINS_INITIAL;
+    // v6：切到虞姬 Free Game 背景
+    if (this.chapterBg && this.textures.exists('v6_bg_freegame')) {
+      this._savedChapterTexture = this.chapterBg.texture.key;
+      this.tweens.add({
+        targets: this.chapterBg, alpha: 0, duration: 400,
+        onComplete: () => {
+          this.chapterBg.setTexture('v6_bg_freegame').setDisplaySize(this.L.W, this.L.H - 60);
+          this.tweens.add({ targets: this.chapterBg, alpha: 1, duration: 400 });
+        },
+      });
+    }
     this.fgTotalWin = 0;
     this.fgMultSum = 0;
     this.sound2?.playSfx('trans');
@@ -1490,49 +1956,26 @@ class MainScene extends Phaser.Scene {
     this.updateFreeGameHUD(this.freeSpinsLeft, 0);
     this.showFreeGameHUD(true);
 
-    // 隱藏漫畫面板（FreeGame 期間用虞姬畫面）
-    this.tweens.add({
-      targets: [this.comicLeft, this.comicRight, this.comicChapterText, ...this.comicLeftOverlays, ...this.comicRightOverlays],
-      alpha: 0, duration: 400,
-    });
+    // 隱藏漫畫面板（FreeGame 期間用虞姬畫面）— 用 filter 過濾 null
+    const comicTargets = [this.comicLeft, this.comicRight, this.comicChapterText,
+      ...(this.comicLeftOverlays || []), ...(this.comicRightOverlays || [])].filter(Boolean);
+    if (comicTargets.length) {
+      this.tweens.add({ targets: comicTargets, alpha: 0, duration: 400 });
+    }
 
     // ===== 過場：暗幕 =====
     const dim = this.add.rectangle(L.W/2, L.H/2, L.W, L.H, 0x000000, 0).setDepth(900);
     this.tweens.add({ targets: dim, alpha: 0.78, duration: 500 });
 
-    // 鳳凰光環從中央放大（過場期間在暗幕上方，但人物會在更上層 920）
-    this.fgPhoenix.setVisible(true).setAlpha(0).setScale(0.6).setPosition(L.W/2, L.H/2).setDepth(905);
-    this.tweens.add({
-      targets: this.fgPhoenix, alpha: 0.85, scale: 1.0,
-      duration: 900, ease: 'Cubic.easeOut',
-    });
-    // 鳳凰光環持續呼吸（後面切換用）
-    this.fgPhoenixTween = this.tweens.add({
-      targets: this.fgPhoenix, scale: 1.06,
-      yoyo: true, repeat: -1, duration: 1800, delay: 900,
-    });
+    // v6：彩色鳳凰廢案、不在 Free Game 過場顯示（只用 mo_fg_phoenix 漫畫 burst）
+    this.fgPhoenix.setVisible(false);
+    this.fgPhoenixTween = null;
 
-    // 虞姬中央現身（一顆大尺寸，使用 yujiLeft 暫時當作 hero pose）
-    const heroYuji = this.add.image(L.W/2, L.H, 'yuji_idle')
-      .setOrigin(0.5, 1).setDepth(920).setAlpha(0);
-    this.fitImageHeight(heroYuji, 1100);
-    this.tweens.add({
-      targets: heroYuji, alpha: 1, y: 1060,
-      duration: 700, ease: 'Cubic.easeOut',
-    });
-    // 細微浮動
-    this.tweens.add({
-      targets: heroYuji, y: 1050,
-      yoyo: true, repeat: -1, duration: 2200, ease: 'Sine.easeInOut',
-    });
+    // v6：彩色虞姬廢案、不在 Free Game 過場中央顯示（只用 mo_fg_phoenix 漫畫 burst）
+    const heroYuji = { destroy: () => {}, setAlpha: () => {}, setScale: () => {} };
 
-    // 鳳鳴九霄 logo 從上方飛入
-    this.fengmingLogo.setVisible(true).setAlpha(0).setScale(0.3)
-      .setPosition(L.W/2, L.H * 0.2).setDepth(925);
-    this.tweens.add({
-      targets: this.fengmingLogo, alpha: 1, scale: 1, y: 280,
-      duration: 700, delay: 400, ease: 'Back.easeOut',
-    });
+    // v6：彩色鳳鳴九霄 logo 廢案、不顯示（用 mo_fg_phoenix B&W 漫畫 burst 替代）
+    this.fengmingLogo.setVisible(false);
 
     // 15 次免費公告
     await this.delay(1100);
@@ -1553,50 +1996,58 @@ class MainScene extends Phaser.Scene {
     this.tweens.add({ targets: [announce, this.fengmingLogo], alpha: 0, duration: 500,
       onComplete: () => { announce.destroy(); this.fengmingLogo.setVisible(false); } });
 
-    // 場上兩側虞姬出現在 chu/han 位置，從中央 hero 飛過去
-    this.yujiLeft.setPosition(L.W/2, L.H).setAlpha(0).setVisible(true).setDepth(11);
-    this.yujiRight.setPosition(L.W/2, L.H).setAlpha(0).setVisible(true).setDepth(21);
-    this.fitImageHeight(this.yujiLeft, 1240);
-    this.fitImageHeight(this.yujiRight, 1240);
-    this.yujiRight.flipX = true;
-    this.tweens.add({
-      targets: this.yujiLeft, x: 238, alpha: 1,
-      duration: 800, ease: 'Cubic.easeInOut',
-    });
-    this.tweens.add({
-      targets: this.yujiRight, x: 1690, alpha: 1,
-      duration: 800, ease: 'Cubic.easeInOut',
-    });
-    // 中央 hero 與項羽劉邦淡出
-    this.tweens.add({
-      targets: heroYuji, alpha: 0, scale: 0.9,
-      duration: 600, onComplete: () => heroYuji.destroy(),
-    });
+    // v6：彩色虞姬廢案，不再兩側分身飛出（章節 bg 已有虞姬漫畫格）
+    this.yujiLeft.setVisible(false);
+    this.yujiRight.setVisible(false);
+    // 中央 hero 已廢案，只 fade 項羽劉邦立繪
     this.tweens.add({ targets: [this.chuChar, this.hanChar], alpha: 0, duration: 500 });
 
-    // 鳳凰光環縮回背景，並把 depth 降到人物下方（不蓋虞姬）
-    this.fgPhoenix.setDepth(2);
-    this.tweens.add({
-      targets: this.fgPhoenix, alpha: 0.45, scale: 1.3,
-      duration: 800, ease: 'Cubic.easeOut',
-    });
+    // v6：彩色鳳凰廢案，跳過縮回動畫
 
     // 暗幕退場、背景換色
     this.tweens.add({
       targets: dim, alpha: 0, duration: 700,
       onComplete: () => dim.destroy(),
     });
-    this.bg.setTint(0x553a78);
+    // v6：bg 是 Rectangle，用 fillColor 不用 setTint
+    if (this.bg.setFillStyle) this.bg.setFillStyle(0x553a78);
 
     await this.delay(900);
+
+    // v6：自動觸發第一次 free spin（不管從 scatter 或 buy feature 進來）
+    if (this.inFreeGame && this.freeSpinsLeft > 0 && !this.spinning) {
+      this.onSpin();
+    }
   }
 
   async exitFreeGame() {
     this.sound2?.playSfx('fg_out');
-    this.flashText(`免費遊戲結束　共贏 ${this.fgTotalWin.toFixed(2)}`);
-    this.bg.clearTint();
+    // bg 是 Rectangle 不用 clearTint
+    if (this.bg.setFillStyle) this.bg.setFillStyle(0x111111);
+    // v6：先 reset inFreeGame（避免阻擋 buy feature 重新點擊）
+    const totalWin = this.fgTotalWin;
+    this.inFreeGame = false;
+
+    // v6：戰罷凱旋戲劇 overlay + 金屬字金額
+    const totalWinStr = totalWin.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    this.showMangaOverlay('mo_fg_end', { text: totalWinStr, textY: 0, holdMs: 2500, useGoldDigits: true });
+    this.sound2?.playSfx('fireworks', { volume: 0.6 });
+    await this.delay(2800);
+
     // 隱藏 Free Game HUD
     this.showFreeGameHUD(false);
+
+    // v6：切回原章節 bg
+    if (this.chapterBg && this._savedChapterTexture && this.textures.exists(this._savedChapterTexture)) {
+      const restoreKey = this._savedChapterTexture;
+      this.tweens.add({
+        targets: this.chapterBg, alpha: 0, duration: 400,
+        onComplete: () => {
+          this.chapterBg.setTexture(restoreKey).setDisplaySize(this.L.W, this.L.H);
+          this.tweens.add({ targets: this.chapterBg, alpha: 1, duration: 400 });
+        },
+      });
+    }
 
     // 鳳凰光環停止 & 虞姬退場
     this.fgPhoenixTween?.stop();
@@ -1611,9 +2062,7 @@ class MainScene extends Phaser.Scene {
         this.fengmingLogo.setVisible(false).setY(380).setScale(1);
       },
     });
-    // 項羽劉邦不回來（已永久隱藏，改用漫畫敘事）
-    // 漫畫面板淡入（exit 後 inFreeGame 為 false，下次 playComicSequence 會自動恢復）
-    this.inFreeGame = false;
+    // inFreeGame 已在開頭 reset，這裡不重複
     await this.delay(1500);
   }
 
@@ -1632,13 +2081,20 @@ class MainScene extends Phaser.Scene {
     // 圖片（從 0.3 縮放彈入）
     const size = Math.min(L.W * 0.6, L.H * 0.7);
     const img = this.add.image(0, 0, key).setDisplaySize(size, size).setScale(0.3).setAlpha(0);
-    // 可選疊加文字（如倍數值、剩餘 free games 數）
+    // 可選疊加文字（如倍數值、金額）— 金額用金屬字數字
     let extra = null;
     if (opts.text) {
-      extra = this.add.text(opts.textX ?? 0, opts.textY ?? 100, opts.text, {
-        fontFamily: 'Noto Serif TC, serif', fontSize: '64px', fontStyle: '900',
-        color: '#fff8d0', stroke: '#000000', strokeThickness: 8, resolution: 2,
-      }).setOrigin(0.5).setAlpha(0);
+      if (opts.useGoldDigits) {
+        extra = this.buildGoldNumber(opts.textX ?? 0, opts.textY ?? 100, opts.text, {
+          digitW: 60, digitH: 90, gap: -8, depth: 2510, origin: 0.5,
+        });
+        extra.setAlpha(0);
+      } else {
+        extra = this.add.text(opts.textX ?? 0, opts.textY ?? 100, opts.text, {
+          fontFamily: 'Noto Serif TC, serif', fontSize: '64px', fontStyle: '900',
+          color: '#fff8d0', stroke: '#000000', strokeThickness: 8, resolution: 2,
+        }).setOrigin(0.5).setAlpha(0);
+      }
     }
     cont.add([dim, img]);
     if (extra) cont.add(extra);
@@ -1691,20 +2147,32 @@ class MainScene extends Phaser.Scene {
 
     const L = this.L;
     const isMobile = L.mode === 'mobile';
-    const cont = this.add.container(L.W/2, L.H/2).setDepth(2000);
+    // v4：BIG WIN 移到上方 splash 區（取代楚漢爭霸標題位置）
+    const cy = isMobile ? L.H * 0.18 : (L.splashTopY ?? 130);
+    const cont = this.add.container(L.W/2, cy).setDepth(2000);
 
     // 暗化背景
-    const dim = this.add.rectangle(0, 0, L.W, L.H, 0x000000, 0).setAlpha(0);
-    // 大獎旗幟
-    const bannerW = isMobile ? 380 : 900;
-    const bannerH = isMobile ? 280 : 660;
-    const banner = this.add.image(0, 0, 'ui_banner_big_win').setDisplaySize(bannerW, bannerH).setAlpha(0).setScale(0.3);
-    // 獎金文字（疊在 banner 中央留白）
-    const fontSize = isMobile ? 36 : 80;
-    const txt = this.add.text(0, isMobile ? 40 : 80, amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }), {
+    const dim = this.add.rectangle(L.W/2 - L.W/2, L.H/2 - cy, L.W, L.H, 0x000000, 0).setAlpha(0);
+    // BIG WIN 金屬字圖
+    let title;
+    if (this.textures.exists('gold_big_win')) {
+      title = this.add.image(0, isMobile ? -36 : -80, 'gold_big_win')
+        .setDisplaySize(isMobile ? 360 : 680, isMobile ? 140 : 260)
+        .setAlpha(0).setScale(0.3);
+    } else {
+      const titleSize = isMobile ? 56 : 110;
+      title = this.add.text(0, isMobile ? -36 : -60, 'BIG WIN!!', {
+        fontFamily: 'Noto Serif TC, serif', fontSize: `${titleSize}px`, fontStyle: '900',
+        color: '#ffdf55', stroke: '#000000', strokeThickness: 10, resolution: 2,
+      }).setOrigin(0.5).setAlpha(0).setScale(0.3);
+    }
+    // 獎金文字
+    const fontSize = isMobile ? 44 : 100;
+    const txt = this.add.text(0, isMobile ? 30 : 60, amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }), {
       fontFamily: 'Noto Serif TC, serif', fontSize: `${fontSize}px`, fontStyle: '900',
       color: '#fff8d0', stroke: '#7f1f1b', strokeThickness: 8, resolution: 2,
     }).setOrigin(0.5).setAlpha(0);
+    const banner = title; // 沿用變數名給後續 tween
 
     cont.add([dim, banner, txt]);
 
@@ -1737,17 +2205,18 @@ if (window.__game) {
   window.__game = null;
 }
 const game = new Phaser.Game({
-  type: Phaser.AUTO,
+  type: Phaser.WEBGL,
   parent: 'game',
   width: W,
   height: H,
   backgroundColor: '#0a0604',
-  // 高品質渲染：抗鋸齒 + 線性過濾 + 高 DPI
+  // 最高品質渲染：抗鋸齒 + 線性過濾 + 高 DPI + 不取整 + mipmap
   antialias: true,
   antialiasGL: true,
   roundPixels: false,
   pixelArt: false,
-  resolution: window.devicePixelRatio || 1,
+  // 全圖預設 LINEAR filter（去除像素硬邊、避免縮放鋸齒）
+  resolution: Math.max(1, window.devicePixelRatio || 1),
   render: {
     antialias: true,
     antialiasGL: true,
@@ -1755,11 +2224,24 @@ const game = new Phaser.Game({
     roundPixels: false,
     mipmapFilter: 'LINEAR_MIPMAP_LINEAR',
     powerPreference: 'high-performance',
+    premultipliedAlpha: true,
+    transparent: false,
+    desynchronized: false,
   },
   scale: {
     mode: Phaser.Scale.FIT,
     autoCenter: Phaser.Scale.CENTER_BOTH,
   },
   scene: [PreloadScene, MainScene],
+  callbacks: {
+    postBoot: (g) => {
+      // 確保全 game 的 texture filter 為 LINEAR（高品質縮放）
+      try {
+        g.textures.list && Object.values(g.textures.list).forEach(t => {
+          if (t && t.source) t.source.forEach(s => { try { s.setFilter && s.setFilter(Phaser.Textures.FilterMode.LINEAR); } catch (e) {} });
+        });
+      } catch (e) {}
+    },
+  },
 });
 window.__game = game;
