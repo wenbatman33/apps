@@ -149,10 +149,10 @@ const SYMBOLS = [
 ];
 
 const SYMBOL_WEIGHTS = {
-  // dev 測試：高價符號權重大幅提高，方便看 BIG WIN
-  sym_xiang_yu: 10, sym_liu_bang: 10, sym_jade_seal: 10,
-  sym_halberd: 10,  sym_tiger: 10,
-  gem_red: 10, gem_purple: 10, gem_yellow: 10, gem_green: 10, gem_blue: 10,
+  // dev 測試：寶石權重特高、容易 8+ hit Pay Anywhere 觸發 BIG WIN
+  sym_xiang_yu: 2, sym_liu_bang: 2, sym_jade_seal: 3,
+  sym_halberd: 3,  sym_tiger: 3,
+  gem_red: 30, gem_purple: 30, gem_yellow: 30, gem_green: 30, gem_blue: 30,
   scatter: 4,
 };
 
@@ -1238,46 +1238,57 @@ class MainScene extends Phaser.Scene {
   }
 
   // 用金屬字組合一個數字字串（回 container）
-  buildGoldNumber(x, y, text, opts = {}) {
+  // 計算單字符顯示尺寸 / 偏移（comma / dot 比數字小很多、靠下）
+  _goldCharMetrics(ch, digitW, digitH) {
+    if (ch === ',') {
+      // 逗號縮小到 35% 寬、45% 高，並下移到底
+      return { w: digitW * 0.35, h: digitH * 0.45, yOff: digitH * 0.30, advance: digitW * 0.35 };
+    }
+    if (ch === '.') {
+      // 點縮小到 25% 寬、25% 高，貼底
+      return { w: digitW * 0.25, h: digitH * 0.25, yOff: digitH * 0.36, advance: digitW * 0.28 };
+    }
+    return { w: digitW, h: digitH, yOff: 0, advance: digitW };
+  }
+
+  _renderGoldChars(cont, str, opts) {
     const digitW = opts.digitW ?? 28;
     const digitH = opts.digitH ?? 40;
-    const gap    = opts.gap ?? -4;        // 字間距（可負數讓字緊靠）
-    const depth  = opts.depth ?? 200;
-    const origin = opts.origin ?? 0.5;    // 0=左、0.5=置中、1=右
-    const str = String(text);
-    const cont = this.add.container(x, y).setDepth(depth);
-    // 先計算總寬
-    const totalW = str.length * digitW + (str.length - 1) * gap;
-    let cx = -totalW * origin + digitW / 2;
+    const gap    = opts.gap ?? -4;
+    const origin = opts.origin ?? 0.5;
+    // 先算總寬（依每個字符實際 advance）
+    let totalW = 0;
+    const metrics = [];
     for (const ch of str) {
+      const m = this._goldCharMetrics(ch, digitW, digitH);
+      metrics.push(m);
+      totalW += m.advance;
+    }
+    totalW += (str.length - 1) * gap;
+    let cx = -totalW * origin;
+    for (let i = 0; i < str.length; i++) {
+      const ch = str[i];
+      const m = metrics[i];
       const key = this._goldDigitKey(ch);
       if (key && this.textures.exists(key)) {
-        const img = this.add.image(cx, 0, key).setDisplaySize(digitW, digitH);
+        const img = this.add.image(cx + m.advance / 2, m.yOff, key).setDisplaySize(m.w, m.h);
         cont.add(img);
       }
-      cx += digitW + gap;
+      cx += m.advance + gap;
     }
+  }
+
+  buildGoldNumber(x, y, text, opts = {}) {
+    const depth  = opts.depth ?? 200;
+    const cont = this.add.container(x, y).setDepth(depth);
+    this._renderGoldChars(cont, String(text), opts);
     return cont;
   }
   // 更新金屬字 container 的內容
   updateGoldNumber(cont, text, opts = {}) {
     if (!cont) return;
     cont.removeAll(true);
-    const digitW = opts.digitW ?? 28;
-    const digitH = opts.digitH ?? 40;
-    const gap    = opts.gap ?? -4;
-    const origin = opts.origin ?? 0.5;
-    const str = String(text);
-    const totalW = str.length * digitW + (str.length - 1) * gap;
-    let cx = -totalW * origin + digitW / 2;
-    for (const ch of str) {
-      const key = this._goldDigitKey(ch);
-      if (key && this.textures.exists(key)) {
-        const img = this.add.image(cx, 0, key).setDisplaySize(digitW, digitH);
-        cont.add(img);
-      }
-      cx += digitW + gap;
-    }
+    this._renderGoldChars(cont, String(text), opts);
   }
 
   // 每次 spin 結束後呼叫一次：推進進度，若該揭新格就揭
@@ -1625,7 +1636,10 @@ class MainScene extends Phaser.Scene {
       this.sound2?.playSfx('scatter_in');
       // 漫畫戲劇 burst：scatter 多顆時
       if (scatterCount >= 3) {
-        this.showMangaOverlay('mo_scatter', { text: `${scatterCount}`, textX: -300, textY: -310, holdMs: 900 });
+        this.showMangaOverlay('mo_scatter', {
+          text: `${scatterCount}`, textX: -300, textY: -310, holdMs: 900,
+          useGoldDigits: true, digitW: 56, digitH: 80, gap: -6,
+        });
       }
     }
     if (!this.inFreeGame && scatterCount >= FREE_SPIN_TRIGGER) {
@@ -1752,7 +1766,7 @@ class MainScene extends Phaser.Scene {
     this.lastWin = finalWin;
     this.refreshHUD();
 
-    if (finalWin >= this.bet * 3) this.bigWin(finalWin);   // dev 測試：降低門檻 20→3
+    if (finalWin > 0) this.bigWin(finalWin);   // dev 測試：任何贏分都觸發 BIG WIN
   }
 
   findWins() {
@@ -2089,7 +2103,10 @@ class MainScene extends Phaser.Scene {
     if (opts.text) {
       if (opts.useGoldDigits) {
         extra = this.buildGoldNumber(opts.textX ?? 0, opts.textY ?? 100, opts.text, {
-          digitW: 60, digitH: 90, gap: -8, depth: 2510, origin: 0.5,
+          digitW: opts.digitW ?? 60,
+          digitH: opts.digitH ?? 90,
+          gap:    opts.gap    ?? -8,
+          depth: 2510, origin: 0.5,
         });
         extra.setAlpha(0);
       } else {
@@ -2133,12 +2150,6 @@ class MainScene extends Phaser.Scene {
   }
 
   bigWin(amount) {
-    // B&W manga 戲劇 burst：大獎降臨!!
-    this.showMangaOverlay('mo_bigwin', {
-      text: amount.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 }),
-      textY: 80, holdMs: 1500,
-    });
-
     // 依贏分倍數決定 vocal
     const ratio = amount / this.bet;
     if      (ratio >= 1000) this.sound2?.playSfx('legend_vocal');
@@ -2150,50 +2161,65 @@ class MainScene extends Phaser.Scene {
 
     const L = this.L;
     const isMobile = L.mode === 'mobile';
-    // v4：BIG WIN 移到上方 splash 區（取代楚漢爭霸標題位置）
-    const cy = isMobile ? L.H * 0.18 : (L.splashTopY ?? 130);
-    const cont = this.add.container(L.W/2, cy).setDepth(2000);
+    // 將金額金屬數字 直接疊在「大獎降臨」漫畫圖層上（同一 container）
+    const cont = this.add.container(L.W/2, L.H/2).setDepth(2500);
 
-    // 暗化背景
-    const dim = this.add.rectangle(L.W/2 - L.W/2, L.H/2 - cy, L.W, L.H, 0x000000, 0).setAlpha(0);
-    // BIG WIN 金屬字圖
-    let title;
-    if (this.textures.exists('gold_big_win')) {
-      title = this.add.image(0, isMobile ? -36 : -80, 'gold_big_win')
-        .setDisplaySize(isMobile ? 360 : 680, isMobile ? 140 : 260)
-        .setAlpha(0).setScale(0.3);
-    } else {
-      const titleSize = isMobile ? 56 : 110;
-      title = this.add.text(0, isMobile ? -36 : -60, 'BIG WIN!!', {
-        fontFamily: 'Noto Serif TC, serif', fontSize: `${titleSize}px`, fontStyle: '900',
-        color: '#ffdf55', stroke: '#000000', strokeThickness: 10, resolution: 2,
-      }).setOrigin(0.5).setAlpha(0).setScale(0.3);
-    }
-    // 獎金文字
-    const fontSize = isMobile ? 44 : 100;
-    const txt = this.add.text(0, isMobile ? 30 : 60, amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }), {
-      fontFamily: 'Noto Serif TC, serif', fontSize: `${fontSize}px`, fontStyle: '900',
-      color: '#fff8d0', stroke: '#7f1f1b', strokeThickness: 8, resolution: 2,
-    }).setOrigin(0.5).setAlpha(0);
-    const banner = title; // 沿用變數名給後續 tween
+    // 暗背景
+    const dim = this.add.rectangle(0, 0, L.W * 1.5, L.H * 1.5, 0x000000, 0).setAlpha(0);
+    // 大獎降臨 漫畫底圖
+    const size = Math.min(L.W * 0.6, L.H * 0.7);
+    const img = this.add.image(0, 0, 'mo_bigwin').setDisplaySize(size, size).setScale(0.3).setAlpha(0);
+    cont.add([dim, img]);
 
-    cont.add([dim, banner, txt]);
+    // 金屬數字（疊在漫畫圖內部，置於下半部）
+    const digitW = isMobile ? 38 : 72;
+    const digitH = isMobile ? 52 : 100;
+    const gap    = isMobile ? -4 : -8;
+    // 大獎降臨 漫畫圖的爆光中心偏左（右邊有項羽角色），數字需往左偏才對得上
+    const numX   = isMobile ? -size * 0.08 : -size * 0.10;
+    const numY   = isMobile ? size * 0.08  : size * 0.10;
+    const initStr = (0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    const goldNum = this.buildGoldNumber(numX, numY, initStr, {
+      digitW, digitH, gap, depth: 2510, origin: 0.5,
+    });
+    goldNum.setAlpha(0).setScale(0.3);
+    cont.add(goldNum);
 
-    // 動畫：先暗化 → banner 彈出 → 文字浮現
-    this.tweens.add({ targets: dim, alpha: 0.65, duration: 400 });
-    this.tweens.add({ targets: banner, alpha: 1, scale: 1, duration: 600, ease: 'Back.easeOut' });
-    this.tweens.add({ targets: txt, alpha: 1, duration: 500, delay: 600 });
-    // 金額數字滾動效果
-    const counter = { v: 0 };
+    // 動畫：暗化 → 漫畫圖爆入 → 金屬數字彈入並滾動結算
+    this.tweens.add({ targets: dim, alpha: 0.65, duration: 250 });
     this.tweens.add({
-      targets: counter, v: amount, duration: 1800, delay: 600, ease: 'Cubic.easeOut',
+      targets: img, scale: 1.0, alpha: 1, duration: 350, ease: 'Back.easeOut',
+    });
+    this.tweens.add({
+      targets: goldNum, alpha: 1, scale: 1, duration: 450, delay: 300, ease: 'Back.easeOut',
+    });
+
+    // 金額滾動
+    const counter = { v: 0 };
+    let lastText = initStr;
+    this.tweens.add({
+      targets: counter, v: amount, duration: 2200, delay: 500, ease: 'Cubic.easeOut',
       onUpdate: () => {
-        txt.setText(counter.v.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
+        const s = counter.v.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        if (s !== lastText) {
+          this.updateGoldNumber(goldNum, s, { digitW, digitH, gap, origin: 0.5 });
+          // container 位置由 buildGoldNumber 設定後即固定，updateGoldNumber 不會改 x/y
+          lastText = s;
+        }
+      },
+      onComplete: () => {
+        // 結算完成 punch：放大彈跳
+        this.tweens.add({
+          targets: goldNum, scale: 1.18, duration: 180, yoyo: true, ease: 'Quad.easeOut',
+        });
       },
     });
 
-    this.time.delayedCall(3500, () => {
-      this.tweens.add({ targets: cont, alpha: 0, duration: 600, onComplete: () => cont.destroy() });
+    this.time.delayedCall(4200, () => {
+      this.tweens.add({
+        targets: cont, alpha: 0, scale: 1.05, duration: 600, ease: 'Cubic.easeIn',
+        onComplete: () => cont.destroy(),
+      });
     });
   }
 
