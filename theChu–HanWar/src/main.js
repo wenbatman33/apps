@@ -149,10 +149,11 @@ const SYMBOLS = [
 ];
 
 const SYMBOL_WEIGHTS = {
-  sym_xiang_yu: 3, sym_liu_bang: 4, sym_jade_seal: 5,
-  sym_halberd: 7,  sym_tiger: 8,
-  gem_red: 10, gem_purple: 11, gem_yellow: 12, gem_green: 13, gem_blue: 14,
-  scatter: 2,
+  // dev 測試：高價符號權重大幅提高，方便看 BIG WIN
+  sym_xiang_yu: 10, sym_liu_bang: 10, sym_jade_seal: 10,
+  sym_halberd: 10,  sym_tiger: 10,
+  gem_red: 10, gem_purple: 10, gem_yellow: 10, gem_green: 10, gem_blue: 10,
+  scatter: 4,
 };
 
 const MULT_VALUES  = [2,3,4,5,6,8,10,12,15,20,25,50,100,250,500];
@@ -380,6 +381,7 @@ class PreloadScene extends Phaser.Scene {
       this.load.image(`gold_d${d}`, `assets/gold_text/digit_${d}.png`);
     }
     this.load.image('gold_comma', 'assets/gold_text/digit_comma.png');
+    this.load.image('gold_dot',   'assets/gold_text/digit_dot.png');
     this.load.image('gold_free_games', 'assets/gold_text/free_games.png');
     this.load.image('gold_big_win', 'assets/gold_text/big_win.png');
     this.load.image('logo_title',         'assets/logo/chuhan_logo_title.png');
@@ -1227,9 +1229,10 @@ class MainScene extends Phaser.Scene {
     this.flashText?.(`${chapter} P${subPage}`);
   }
 
-  // 取出 0-9 / 逗號的金屬字 texture key
+  // 取出 0-9 / 逗號 / 小數點的金屬字 texture key
   _goldDigitKey(ch) {
     if (ch === ',') return 'gold_comma';
+    if (ch === '.') return 'gold_dot';
     if (ch >= '0' && ch <= '9') return `gold_d${ch}`;
     return null;
   }
@@ -1749,7 +1752,7 @@ class MainScene extends Phaser.Scene {
     this.lastWin = finalWin;
     this.refreshHUD();
 
-    if (finalWin >= this.bet * 20) this.bigWin(finalWin);
+    if (finalWin >= this.bet * 3) this.bigWin(finalWin);   // dev 測試：降低門檻 20→3
   }
 
   findWins() {
