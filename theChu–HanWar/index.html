@@ -55,6 +55,178 @@
   <body>
     <div id="boot-cover"></div>
     <div id="game"></div>
+
+    <!-- ============== DEV 微調 / 狀態測試面板 ============== -->
+    <div id="dev-panel" style="
+      position: fixed; right: 12px; top: 12px; z-index: 1000;
+      background: rgba(15,10,8,0.92); border: 1px solid #d4a54a;
+      padding: 12px; border-radius: 8px; color: #f5d27a;
+      font-family: 'Noto Sans TC', sans-serif; font-size: 13px;
+      max-width: 240px; max-height: 90vh; overflow-y: auto;
+      display: none; box-shadow: 0 8px 32px rgba(0,0,0,0.7);
+    ">
+      <div style="font-weight:900; font-size:14px; margin-bottom:8px; letter-spacing:2px;">
+        🛠️ DEV 模式 <span style="float:right;cursor:pointer;color:#999;" id="dev-close">✕</span>
+      </div>
+      <div style="font-size:11px; color:#999; margin-bottom:10px;">D 鍵切換 | ?dev=1 也可開</div>
+
+      <div style="border-top:1px solid #5a4020; padding-top:8px; margin-bottom:6px; font-weight:700;">💰 BIG WIN</div>
+      <button class="dev-btn" data-action="bigwin" data-arg="200">小贏 (×10)</button>
+      <button class="dev-btn" data-action="bigwin" data-arg="2000">中贏 (×100)</button>
+      <button class="dev-btn" data-action="bigwin" data-arg="10000">大贏 (×500)</button>
+      <button class="dev-btn" data-action="bigwin" data-arg="50000">傳奇 (×2500)</button>
+
+      <div style="border-top:1px solid #5a4020; padding-top:8px; margin:8px 0 6px; font-weight:700;">🎁 Free Game</div>
+      <button class="dev-btn" data-action="fg-start">FG 開始 (15 spins)</button>
+      <button class="dev-btn" data-action="fg-end">FG 結算 (戰罷凱旋)</button>
+      <button class="dev-btn" data-action="fg-total">累計連發 overlay</button>
+
+      <div style="border-top:1px solid #5a4020; padding-top:8px; margin:8px 0 6px; font-weight:700;">⭐ Manga Overlay</div>
+      <button class="dev-btn" data-action="overlay-scatter">Scatter (CHANCE)</button>
+      <button class="dev-btn" data-action="overlay-scatter-edit" style="background:linear-gradient(180deg,#5a2a08,#3a1a04);">✋ 編輯 Scatter 位置（可拖曳）</button>
+      <div id="coord-display" style="display:none;">
+        <div style="font-size:10px; color:#999; margin-top:4px;">拖曳後座標：</div>
+        <input id="coord-input" readonly style="
+          width: 100%; box-sizing: border-box;
+          font-family: monospace; font-size: 16px; font-weight: 900;
+          padding: 8px; background: #000; color: #ff0;
+          border: 2px solid #d4a54a; border-radius: 4px;
+          text-align: center; cursor: text;
+        " value="尚未拖曳" />
+        <div style="font-size:10px; color:#999; margin-top:2px;">↑ 直接點選複製，或按下方按鈕</div>
+      </div>
+      <button class="dev-btn" data-action="copy-coord" style="display:none;" id="copy-coord-btn">📋 複製到剪貼簿</button>
+      <button class="dev-btn" data-action="overlay-mult" data-arg="5">倍數 ×5</button>
+      <button class="dev-btn" data-action="overlay-mult" data-arg="25">倍數 ×25</button>
+      <button class="dev-btn" data-action="overlay-mult" data-arg="100">倍數 ×100</button>
+
+      <div style="border-top:1px solid #5a4020; padding-top:8px; margin:8px 0 6px; font-weight:700;">📖 章節頁</div>
+      <div style="display:grid; grid-template-columns:repeat(5,1fr); gap:3px;">
+        <button class="dev-btn-mini" data-action="page" data-arg="1">1</button>
+        <button class="dev-btn-mini" data-action="page" data-arg="5">5</button>
+        <button class="dev-btn-mini" data-action="page" data-arg="10">10</button>
+        <button class="dev-btn-mini" data-action="page" data-arg="15">15</button>
+        <button class="dev-btn-mini" data-action="page" data-arg="20">20</button>
+      </div>
+      <button class="dev-btn" data-action="page-next">⏭ 下一頁</button>
+
+      <div style="border-top:1px solid #5a4020; padding-top:8px; margin:8px 0 6px; font-weight:700;">🎰 Spin 控制</div>
+      <button class="dev-btn" data-action="spin">立即 Spin</button>
+      <button class="dev-btn" data-action="reload">重整頁面</button>
+
+      <style>
+        #dev-panel .dev-btn, #dev-panel .dev-btn-mini {
+          display: block; width: 100%; margin-bottom: 4px;
+          background: linear-gradient(180deg, #2a1a08, #1a0e04);
+          color: #f5d27a; border: 1px solid #5a4020; padding: 6px 10px;
+          border-radius: 4px; cursor: pointer; font-size: 12px;
+          text-align: left;
+        }
+        #dev-panel .dev-btn-mini { text-align: center; padding: 4px 0; font-size: 11px; }
+        #dev-panel .dev-btn:hover, #dev-panel .dev-btn-mini:hover {
+          background: linear-gradient(180deg, #4a2e14, #2a1a08);
+          border-color: #d4a54a;
+        }
+      </style>
+    </div>
+    <script>
+      // DEV 模式開關
+      const devParam = new URLSearchParams(location.search).get('dev') === '1';
+      const panel = document.getElementById('dev-panel');
+      if (devParam) panel.style.display = 'block';
+      window.addEventListener('keydown', e => {
+        if (e.key === 'd' || e.key === 'D') {
+          panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+        }
+      });
+      document.getElementById('dev-close').onclick = () => panel.style.display = 'none';
+
+      // 按鈕事件路由
+      panel.addEventListener('click', e => {
+        const btn = e.target.closest('[data-action]');
+        if (!btn) return;
+        const action = btn.dataset.action;
+        const arg = btn.dataset.arg;
+        const game = window.__game;
+        if (!game) { console.warn('Game not ready'); return; }
+        const scene = game.scene.getScene('Main');
+        if (!scene) { console.warn('Main scene not ready'); return; }
+        try {
+          switch (action) {
+            case 'bigwin':       scene.bigWin?.(parseInt(arg)); break;
+            case 'fg-start':     scene.enterFreeGame?.(); break;
+            case 'fg-end':       scene.exitFreeGame?.(); break;
+            case 'fg-total':
+              scene.showMangaOverlay?.('mo_fg_total', { text: '12,345.67', textY: 50, holdMs: 1800, useGoldDigits: true });
+              break;
+            case 'overlay-scatter':
+              scene.showMangaOverlay?.('mo_scatter', {
+                text: '6', textX: -326, textY: -240, holdMs: 1500,
+                useGoldDigits: true, digitW: 50, digitH: 72, gap: -4,
+              });
+              break;
+            case 'overlay-scatter-edit':
+              // 預設座標
+              window.__lastDragCoord = { x: -250, y: -230 };
+              scene.showMangaOverlay?.('mo_scatter', {
+                text: '6', textX: -250, textY: -230, holdMs: 999999,
+                useGoldDigits: true, digitW: 50, digitH: 72, gap: -4,
+                editable: true,
+              });
+              document.getElementById('coord-display').style.display = 'block';
+              document.getElementById('copy-coord-btn').style.display = 'block';
+              if (window.__coordPollTimer) clearInterval(window.__coordPollTimer);
+              window.__coordPollTimer = setInterval(() => {
+                const c = window.__lastDragCoord;
+                if (c) {
+                  document.getElementById('coord-input').value = `textX: ${c.x}, textY: ${c.y}`;
+                }
+              }, 100);
+              break;
+            case 'copy-coord':
+              const inp = document.getElementById('coord-input');
+              inp.select();
+              try {
+                navigator.clipboard.writeText(inp.value)
+                  .then(() => alert(`已複製：\n${inp.value}\n\n貼給 Claude 即可更新`))
+                  .catch(() => {
+                    document.execCommand('copy');
+                    alert(`已複製（用 fallback）：\n${inp.value}`);
+                  });
+              } catch (err) {
+                document.execCommand('copy');
+                alert(`已複製：\n${inp.value}`);
+              }
+              break;
+            case 'overlay-mult':
+              scene.showMangaOverlay?.('mo_mult', {
+                text: `x${arg}`, textY: -50, holdMs: 1000,
+                useGoldDigits: true, digitW: 70, digitH: 100, gap: -6,
+              });
+              break;
+            case 'page':
+              if (scene._setPage) scene._setPage(parseInt(arg) - 1);
+              else if (scene.chapterBg) {
+                const k = String(parseInt(arg)).padStart(2, '0');
+                scene.chapterBg.setTexture(`v6_page_${k}`);
+                scene._currentPageIdx = parseInt(arg) - 1;
+              }
+              break;
+            case 'page-next':
+              scene.advanceTopStoryPanels?.();
+              break;
+            case 'spin':
+              scene.onSpin?.();
+              break;
+            case 'reload':
+              location.reload();
+              break;
+          }
+        } catch (err) { console.error('DEV action error:', err); }
+      });
+    </script>
+    <!-- ============== /DEV ============== -->
+
     <script type="module" src="/src/main.js"></script>
   </body>
 </html>

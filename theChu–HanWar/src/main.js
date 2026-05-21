@@ -430,6 +430,7 @@ class PreloadScene extends Phaser.Scene {
     }
     this.load.image('gold_comma', 'assets/gold_text/digit_comma.png');
     this.load.image('gold_dot',   'assets/gold_text/digit_dot.png');
+    this.load.image('gold_x',     'assets/gold_text/digit_x.png');
     this.load.image('gold_free_games', 'assets/gold_text/free_games.png');
     this.load.image('logo_title',         'assets/ui/logo_chuhan_logo_title.png');
 
@@ -559,10 +560,7 @@ class MainScene extends Phaser.Scene {
       this._currentPageIdx = 0;
       this.chapterBg = this.add.image(L.W/2, L.H/2 + 30, L.bgChapterKey)
         .setDisplaySize(L.W, L.H - 60).setDepth(1);
-
-      // Depth 1.5：頂部中央留白區用黑色填滿（給對峙圖背景用）
-      this.add.rectangle(L.W/2, 210, 960, 420, 0x000000, 1).setDepth(1.5);
-      // v6 page reel 中央區由 reel 自己的深藍底覆蓋，不需要額外黑塊
+      // 移除 depth 1.5 黑色色塊（原本給對峙圖當背景，但 splash 本身有黑底所以是多餘的）
 
       // Depth 1.6：6 格 fade-in mask 黑色覆蓋（切換頁時暫時遮蔽再 fade out）
       this._storyPanelMasks = (L.storyMaskRects || []).map(r => {
@@ -616,8 +614,13 @@ class MainScene extends Phaser.Scene {
     this.yujiRight.flipX = true;
     this.fengmingLogo = this.add.image(L.W/2, L.H * 0.35, 'fengming_logo').setDepth(160).setAlpha(0).setVisible(false);
 
-    // === Depth 80：reel_bg ===
-    this.add.image(REEL_CX, REEL_CY, 'reel_bg').setDisplaySize(REEL_W, REEL_H).setDepth(80);
+    // === Depth 80：reel_bg（放大讓圓角溢出 + 方形遮罩裁切，填滿到金色外框）===
+    const reelBgImg = this.add.image(REEL_CX, REEL_CY, 'reel_bg')
+      .setDisplaySize(REEL_W * 1.15, REEL_H * 1.25).setDepth(80);
+    const reelBgMask = this.make.graphics();
+    reelBgMask.fillStyle(0xffffff);
+    reelBgMask.fillRect(REEL_CX - REEL_W/2, REEL_CY - REEL_H/2, REEL_W, REEL_H);
+    reelBgImg.setMask(reelBgMask.createGeometryMask());
 
     // === Depth 90：reel 直線分隔（用 codex 的 reel_separator.png）===
     const startX = REEL_CX - REEL_W / 2;
@@ -636,11 +639,9 @@ class MainScene extends Phaser.Scene {
     this.grid = Array.from({ length: COLS }, () => Array(ROWS).fill(null));
     this.multOrbs = [];
 
-    // v5：reel 內部實心深藍底（蓋住下層章節背景的奇怪文字）+ 細金屬邊框緊貼
+    // v6：移除 reel 內部黑底 — 章節漫畫 bg 已乾淨，讓背景透出
     if (L.mode === 'pc') {
-      // Depth 75：reel 實心底色（深藍黑、無圓角、完全填滿）
-      this.add.rectangle(REEL_CX, REEL_CY, REEL_W, REEL_H, 0x0b0e2a, 1).setDepth(75);
-      // Depth 110：細金屬雙線框
+      // Depth 110：保留細金屬雙線框
       const rg = this.add.graphics().setDepth(110);
       rg.lineStyle(3, 0xd4a54a, 1);
       rg.strokeRect(REEL_CX - REEL_W/2, REEL_CY - REEL_H/2, REEL_W, REEL_H);
@@ -853,16 +854,16 @@ class MainScene extends Phaser.Scene {
 
     // === Free Game 大金屬字 15 FREE GAMES（在玩家名字上方一點）===
     if (!isMobile) {
-      const fgX = 150, fgY = 890;  // HUD 玩家名字上方一點
-      // 金屬字 15（縮小一點，因放在 HUD 上方）
-      this.fgBigNum = this.buildGoldNumber(fgX, fgY - 22, '15', {
-        digitW: 50, digitH: 72, gap: -6, depth: 146, origin: 0.5,
+      const fgX = 150, fgY = 820;  // 整組往上移 60px，遠離 HUD 玩家名字
+      // 金屬字 15
+      this.fgBigNum = this.buildGoldNumber(fgX, fgY - 50, '15', {
+        digitW: 48, digitH: 70, gap: -6, depth: 146, origin: 0.5,
       });
       this.fgBigNum.setVisible(false);
-      // FREE GAMES 金屬字圖
+      // FREE GAMES 金屬字圖（保持 1:1 aspect、與數字拉開間距）
       if (this.textures.exists('gold_free_games')) {
-        this.fgBigLabel = this.add.image(fgX, fgY + 36, 'gold_free_games')
-          .setDisplaySize(140, 70).setDepth(146).setVisible(false);
+        this.fgBigLabel = this.add.image(fgX, fgY + 50, 'gold_free_games')
+          .setDisplaySize(110, 110).setDepth(146).setVisible(false);
       } else {
         this.fgBigLabel = this.add.text(fgX, fgY + 36, 'FREE\nGAMES', {
           fontFamily: 'Noto Serif TC, serif', fontSize: '20px', fontStyle: '900',
@@ -1016,10 +1017,10 @@ class MainScene extends Phaser.Scene {
     this.fgCountNum.setText = (s) => this.updateGoldNumber(this.fgCountNum, s, {
       digitW: fgDigitW, digitH: fgDigitH, gap: -8, origin: 0.5,
     });
-    // FREE GAMES 標籤 — 使用金屬字圖
+    // FREE GAMES 標籤 — 使用金屬字圖（1:1 aspect、與數字拉開間距）
     if (this.textures.exists('gold_free_games')) {
-      this.fgCountLabel = this.add.image(fgX, fgY + (isMobile ? 22 : 55), 'gold_free_games')
-        .setDisplaySize(isMobile ? 60 : 130, isMobile ? 30 : 65).setDepth(134).setVisible(false);
+      this.fgCountLabel = this.add.image(fgX, fgY + (isMobile ? 38 : 80), 'gold_free_games')
+        .setDisplaySize(isMobile ? 60 : 120, isMobile ? 60 : 120).setDepth(134).setVisible(false);
     } else {
       this.fgCountLabel = this.add.text(fgX, fgY + (isMobile ? 22 : 50), 'FREE\nGAMES', {
         fontFamily: 'Noto Sans TC, sans-serif', fontSize: isMobile ? '10px' : '16px', fontStyle: '900',
@@ -1035,10 +1036,19 @@ class MainScene extends Phaser.Scene {
     const multBadgeKey = this.textures.exists('v6_badge_mult') ? 'v6_badge_mult' : 'ui_badge_mult';
     this.fgMultBg = this.add.image(multX, multY, multBadgeKey)
       .setDisplaySize(multSize, multSize).setDepth(133).setVisible(false);
-    this.fgMultText = this.add.text(multX, multY - (isMobile ? 4 : 8), 'x1', {
-      fontFamily: 'Noto Serif TC, serif', fontSize: isMobile ? '32px' : '60px', fontStyle: '900',
-      color: '#fff8d0', stroke: '#7f1f1b', strokeThickness: 5, resolution: 2,
-    }).setOrigin(0.5).setDepth(134).setVisible(false);
+    // 倍數金屬字（用 buildGoldNumber 拼，× + 數字）
+    const multDigitW = isMobile ? 24 : 44;
+    const multDigitH = isMobile ? 34 : 64;
+    this.fgMultText = this.buildGoldNumber(multX, multY, 'x1', {
+      digitW: multDigitW, digitH: multDigitH, gap: -4, depth: 134, origin: 0.5,
+    });
+    this.fgMultText.setVisible(false);
+    // 相容舊代碼：提供 setText 介面（更新時用 updateGoldNumber 重繪）
+    this.fgMultText.setText = (s) => {
+      this.updateGoldNumber(this.fgMultText, s, {
+        digitW: multDigitW, digitH: multDigitH, gap: -4, origin: 0.5,
+      });
+    };
     // v6：累計倍數不再寫字標籤，圓徽中央 x 倍數就夠了
     this.fgMultLabel = this.add.text(multX, multY + 9999, '', {
       fontFamily: 'Noto Sans TC, sans-serif', fontSize: isMobile ? '10px' : '14px', fontStyle: '900',
@@ -1273,6 +1283,7 @@ class MainScene extends Phaser.Scene {
   _goldDigitKey(ch) {
     if (ch === ',') return 'gold_comma';
     if (ch === '.') return 'gold_dot';
+    if (ch === 'x' || ch === 'X' || ch === '×') return 'gold_x';
     if (ch >= '0' && ch <= '9') return `gold_d${ch}`;
     return null;
   }
@@ -1281,12 +1292,14 @@ class MainScene extends Phaser.Scene {
   // 計算單字符顯示尺寸 / 偏移（comma / dot 比數字小很多、靠下）
   _goldCharMetrics(ch, digitW, digitH) {
     if (ch === ',') {
-      // 逗號縮小到 35% 寬、45% 高，並下移到底
-      return { w: digitW * 0.35, h: digitH * 0.45, yOff: digitH * 0.30, advance: digitW * 0.35 };
+      return { w: digitW * 0.55, h: digitH * 0.75, yOff: digitH * 0.18, advance: digitW * 0.5 };
     }
     if (ch === '.') {
-      // 點縮小到 25% 寬、25% 高，貼底
-      return { w: digitW * 0.25, h: digitH * 0.25, yOff: digitH * 0.36, advance: digitW * 0.28 };
+      return { w: digitW * 0.45, h: digitH * 0.45, yOff: digitH * 0.28, advance: digitW * 0.4 };
+    }
+    if (ch === 'x' || ch === 'X' || ch === '×') {
+      // × 縮到 70% 大小、垂直置中
+      return { w: digitW * 0.7, h: digitH * 0.6, yOff: 0, advance: digitW * 0.7 };
     }
     return { w: digitW, h: digitH, yOff: 0, advance: digitW };
   }
@@ -1677,8 +1690,8 @@ class MainScene extends Phaser.Scene {
       // 漫畫戲劇 burst：scatter 多顆時
       if (scatterCount >= 3) {
         this.showMangaOverlay('mo_scatter', {
-          text: `${scatterCount}`, textX: -300, textY: -310, holdMs: 900,
-          useGoldDigits: true, digitW: 56, digitH: 80, gap: -6,
+          text: `${scatterCount}`, textX: -326, textY: -240, holdMs: 900,
+          useGoldDigits: true, digitW: 50, digitH: 72, gap: -4,
         });
       }
     }
@@ -1963,7 +1976,10 @@ class MainScene extends Phaser.Scene {
     const value = pickMultiplier();
     // 高倍數時觸發 manga 戲劇 burst
     if (value >= 50) {
-      this.showMangaOverlay('mo_mult', { text: `x${value}`, textY: -50, holdMs: 700 });
+      this.showMangaOverlay('mo_mult', {
+        text: `x${value}`, textY: -50, holdMs: 700,
+        useGoldDigits: true, digitW: 70, digitH: 100, gap: -6,
+      });
     }
     const x = cellX(c);
     const y = cellY(r);
@@ -2165,6 +2181,34 @@ class MainScene extends Phaser.Scene {
       targets: img, scale: 1.0, alpha: 1, duration: 350, ease: 'Back.easeOut',
     });
     if (extra) this.tweens.add({ targets: extra, alpha: 1, duration: 400, delay: 350 });
+
+    // DEV 編輯模式：讓 extra（數字）可拖曳，即時顯示 x/y
+    if (opts.editable && extra) {
+      const dragHandle = this.add.zone(extra.x, extra.y,
+        (opts.digitW ?? 60) * (opts.text?.length || 1),
+        opts.digitH ?? 90
+      ).setOrigin(0.5).setInteractive({ draggable: true });
+      cont.add(dragHandle);
+      // 浮動座標顯示
+      const coordLabel = this.add.text(extra.x, extra.y - 60, `x:${extra.x} y:${extra.y}`, {
+        fontFamily: 'monospace', fontSize: '18px',
+        color: '#ffff00', backgroundColor: '#000',
+        padding: { x: 4, y: 2 },
+      }).setOrigin(0.5).setDepth(2520);
+      cont.add(coordLabel);
+      // 拖曳事件
+      this.input.setDraggable(dragHandle);
+      dragHandle.on('drag', (pointer, dragX, dragY) => {
+        extra.x = dragX; extra.y = dragY;
+        dragHandle.x = dragX; dragHandle.y = dragY;
+        coordLabel.x = dragX; coordLabel.y = dragY - 60;
+        coordLabel.setText(`x:${Math.round(dragX)} y:${Math.round(dragY)}`);
+        // 同步到 window 給 DEV panel 讀取
+        window.__lastDragCoord = { x: Math.round(dragX), y: Math.round(dragY) };
+      });
+      // 編輯模式不自動關閉
+      return;
+    }
 
     const holdMs = opts.holdMs ?? 1100;
     this.time.delayedCall(350 + holdMs, () => {
