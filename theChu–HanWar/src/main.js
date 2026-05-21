@@ -334,47 +334,46 @@ class PreloadScene extends Phaser.Scene {
     });
 
     // === 背景 / 人物（依 codex 座標） ===
-    this.load.image('bg_battle',         'assets/bg/bg_battlefield_clean.png');
-    this.load.image('chu_idle',          'assets/characters/chu/chu_idle.png');
-    this.load.image('han_idle',          'assets/characters/han/han_idle.png');
-    this.load.image('yuji_idle',         'assets/free_game/characters/yuji_idle.png');
-    this.load.image('phoenix_back',      'assets/free_game/fx/phoenix_back.png');
-    this.load.image('fengming_logo',     'assets/free_game/ui/fengming_jiuxiao_logo.png');
+    this.load.image('chu_idle',          'assets/ui/chu_idle.png');
+    this.load.image('han_idle',          'assets/ui/han_idle.png');
+    this.load.image('yuji_idle',         'assets/ui/yuji_idle.png');
+    this.load.image('phoenix_back',      'assets/ui/phoenix_back.png');
+    this.load.image('fengming_logo',     'assets/ui/fengming_jiuxiao_logo.png');
 
     // === Reel ===
-    this.load.image('reel_bg',           'assets/reel/reel_bg.png');
-    this.load.image('reel_frame',        'assets/ui_v3/frame_reel_manga.png');    // ★ 漫畫黑墨邊（簡潔）
-    this.load.image('reel_separator',    'assets/reel/reel_separator.png');
+    this.load.image('reel_bg',           'assets/ui/reel_bg.png');
+    this.load.image('reel_frame',        'assets/ui/v3_frame_reel_manga.png');    // ★ 漫畫黑墨邊（簡潔）
+    this.load.image('reel_separator',    'assets/ui/reel_separator.png');
 
     // === v5 整頁漫畫底圖（4 章節 + 共用 UI 元素）===
-    this.load.image('v5_bg_ch1',          'assets/ui_v5/bg_ch1.png');
-    this.load.image('v5_bg_ch2',          'assets/ui_v5/bg_ch2.png');
-    this.load.image('v5_bg_ch3',          'assets/ui_v5/bg_ch3.png');
-    this.load.image('v5_bg_ch4',          'assets/ui_v5/bg_ch4.png');
-    this.load.image('v5_logo',            'assets/ui_v5/logo_chuhan_v2.png');
-    this.load.image('v5_bar_jackpot',     'assets/ui_v5/bar_jackpot_h.png');
+    this.load.image('v5_bg_ch1',          'assets/ui/v5_bg_ch1.png');
+    this.load.image('v5_bg_ch2',          'assets/ui/v5_bg_ch2.png');
+    this.load.image('v5_bg_ch3',          'assets/ui/v5_bg_ch3.png');
+    this.load.image('v5_bg_ch4',          'assets/ui/v5_bg_ch4.png');
+    this.load.image('v5_logo',            'assets/ui/v5_logo_chuhan_v2.png');
+    this.load.image('v5_bar_jackpot',     'assets/ui/v5_bar_jackpot_h.png');
     // 保留 v4 reel 框 + scatter 條 + SPIN（v5 已棄用 frame_reel）
-    this.load.image('v4_frame_reel',      'assets/ui_v4/frame_reel_v2.png');
-    this.load.image('v4_banner_scatter',  'assets/ui_v4/banner_scatter_top.png');
-    this.load.image('v4_btn_spin',        'assets/ui_v4/btn_spin_v2.png');
+    this.load.image('v4_frame_reel',      'assets/ui/v4_frame_reel_v2.png');
+    this.load.image('v4_banner_scatter',  'assets/ui/v4_banner_scatter_top.png');
+    this.load.image('v4_btn_spin',        'assets/ui/v4_btn_spin_v2.png');
     // v5：靜態底 + 獨立 icon
-    this.load.image('v5_btn_spin_base',   'assets/ui_v5/btn_spin_base.png');
-    this.load.image('v5_btn_spin_icon',   'assets/ui_v5/btn_spin_icon.png');
+    this.load.image('v5_btn_spin_base',   'assets/ui/v5_btn_spin_base.png');
+    this.load.image('v5_btn_spin_icon',   'assets/ui/v5_btn_spin_icon.png');
     // v5：對峙 splash + 新 scatter 條 + 新 auto 按鈕
-    this.load.image('v5_splash_duel',     'assets/ui_v5/splash_top_duel.png');
-    this.load.image('v5_banner_scatter',  'assets/ui_v5/banner_scatter_v2.png');
-    this.load.image('v5_btn_auto',        'assets/ui_v5/btn_auto_v2.png');
+    this.load.image('v5_splash_duel',     'assets/ui/v5_splash_top_duel.png');
+    this.load.image('v5_banner_scatter',  'assets/ui/v5_banner_scatter_v2.png');
+    this.load.image('v5_btn_auto',        'assets/ui/v5_btn_auto_v2.png');
 
     // v6：20 頁故事底圖
     for (let i = 1; i <= 20; i++) {
       const k = String(i).padStart(2, '0');
-      this.load.image(`v6_page_${k}`, `assets/ui_v6/page_${k}.png`);
+      this.load.image(`v6_page_${k}`, `assets/ui/v6_page_${k}.png`);
     }
-    this.load.image('v6_badge_mult',     'assets/ui_v6/badge_mult_v4.png');  // ← 升級到 v4 精緻版
-    this.load.image('v6_badge_mult_v2',  'assets/ui_v6/badge_mult_v2.png');
-    this.load.image('v6_badge_mult_v3',  'assets/ui_v6/badge_mult_v3.png');
-    this.load.image('v6_btn_sound',      'assets/ui_v6/btn_sound.png');
-    this.load.image('v6_bg_freegame',    'assets/ui_v6/bg_freegame_yuji.png');
+    this.load.image('v6_badge_mult',     'assets/ui/v6_badge_mult_v4.png');  // ← 升級到 v4 精緻版
+    this.load.image('v6_badge_mult_v2',  'assets/ui/v6_badge_mult_v2.png');
+    this.load.image('v6_badge_mult_v3',  'assets/ui/v6_badge_mult_v3.png');
+    this.load.image('v6_btn_sound',      'assets/ui/v6_btn_sound.png');
+    this.load.image('v6_bg_freegame',    'assets/ui/v6_bg_freegame_yuji.png');
 
     // 金屬字：0-9 + 逗號 + FREE GAMES + BIG WIN
     for (let d = 0; d <= 9; d++) {
@@ -383,50 +382,46 @@ class PreloadScene extends Phaser.Scene {
     this.load.image('gold_comma', 'assets/gold_text/digit_comma.png');
     this.load.image('gold_dot',   'assets/gold_text/digit_dot.png');
     this.load.image('gold_free_games', 'assets/gold_text/free_games.png');
-    this.load.image('gold_big_win', 'assets/gold_text/big_win.png');
-    this.load.image('logo_title',         'assets/logo/chuhan_logo_title.png');
+    this.load.image('logo_title',         'assets/ui/logo_chuhan_logo_title.png');
 
     // === HUD ===
-    this.load.image('avatar_chu',        'assets/ui/hud/player_avatar_chu.png');
-    this.load.image('icon_coin',         'assets/ui/hud/icon_coin_stack.png');
-    this.load.image('btn_bet_minus',     'assets/ui/hud/btn_bet_minus.png');
-    this.load.image('btn_bet_plus',      'assets/ui/hud/btn_bet_plus.png');
-    this.load.image('btn_max_bet',       'assets/ui/hud/btn_max_bet.png');
+    this.load.image('avatar_chu',        'assets/ui/player_avatar_chu.png');
+    this.load.image('icon_coin',         'assets/ui/icon_coin_stack.png');
+    this.load.image('btn_bet_minus',     'assets/ui/btn_bet_minus.png');
+    this.load.image('btn_bet_plus',      'assets/ui/btn_bet_plus.png');
+    this.load.image('btn_max_bet',       'assets/ui/btn_max_bet.png');
 
     // === 主按鈕（v4 漫畫風）===
-    this.load.image('btn_spin',          'assets/ui_v4/btn_spin_v2.png');         // ★ v4
-    this.load.image('btn_settings',      'assets/ui_new/btn_round_settings.png'); // ★
-    this.load.image('btn_event',         'assets/ui_new/btn_round_event.png');    // ★
-    this.load.image('btn_fast',          'assets/ui_new/btn_round_fast.png');     // ★
-    this.load.image('btn_auto',          'assets/ui_new/btn_round_auto.png');     // ★
-    this.load.image('btn_menu',          'assets/ui_new/btn_round_menu.png');     // ★
+    this.load.image('btn_spin',          'assets/ui/v4_btn_spin_v2.png');         // ★ v4
+    this.load.image('btn_settings',      'assets/ui/btn_round_settings.png'); // ★
+    this.load.image('btn_event',         'assets/ui/btn_round_event.png');    // ★
+    this.load.image('btn_fast',          'assets/ui/btn_round_fast.png');     // ★
+    this.load.image('btn_auto',          'assets/ui/btn_round_auto.png');     // ★
+    this.load.image('btn_menu',          'assets/ui/btn_round_menu.png');     // ★
 
     // === 符號（10 種，漫畫風 v3）===
-    this.load.image('sym_xiang_yu',    'assets/symbols_v3/sym_xiang_yu.png');
-    this.load.image('sym_liu_bang',    'assets/symbols_v3/sym_liu_bang.png');
-    this.load.image('sym_jade_seal',   'assets/symbols_v3/sym_jade_seal.png');
-    this.load.image('sym_halberd',     'assets/symbols_v3/sym_halberd.png');
-    this.load.image('sym_tiger',       'assets/symbols_v3/sym_tiger_tally.png');
-    this.load.image('gem_red',         'assets/symbols_v3/sym_gem_red.png');
-    this.load.image('gem_purple',      'assets/symbols_v3/sym_gem_purple.png');
-    this.load.image('gem_yellow',      'assets/symbols_v3/sym_gem_yellow.png');
-    this.load.image('gem_green',       'assets/symbols_v3/sym_gem_green.png');
-    this.load.image('gem_blue',        'assets/symbols_v3/sym_gem_blue.png');
-    this.load.image('scatter',         'assets/symbols/special/sym_scatter_phoenix_hairpin.png');
-    this.load.image('mult_orb',        'assets/symbols/special/sym_multiplier_orb.png');
+    this.load.image('sym_xiang_yu',    'assets/symbols/sym_xiang_yu.png');
+    this.load.image('sym_liu_bang',    'assets/symbols/sym_liu_bang.png');
+    this.load.image('sym_jade_seal',   'assets/symbols/sym_jade_seal.png');
+    this.load.image('sym_halberd',     'assets/symbols/sym_halberd.png');
+    this.load.image('sym_tiger',       'assets/symbols/sym_tiger_tally.png');
+    this.load.image('gem_red',         'assets/symbols/sym_gem_red.png');
+    this.load.image('gem_purple',      'assets/symbols/sym_gem_purple.png');
+    this.load.image('gem_yellow',      'assets/symbols/sym_gem_yellow.png');
+    this.load.image('gem_green',       'assets/symbols/sym_gem_green.png');
+    this.load.image('gem_blue',        'assets/symbols/sym_gem_blue.png');
+    this.load.image('scatter',         'assets/symbols/sym_scatter_phoenix_hairpin.png');
+    this.load.image('mult_orb',        'assets/symbols/sym_multiplier_orb.png');
 
     // === Win ===
-    this.load.image('win_bg',          'assets/win/bg/win_bg_award_clean.png');
-    this.load.image('win_coin',        'assets/win/ui/win_coin.png');
 
     // === 新 UI 元素（codex 生）— banner_top/big_win 已併入 v4 ===
     // 以下 alias 指向 v4 素材，避免改動所有引用
-    this.load.image('ui_banner_top',      'assets/ui_v4/banner_scatter_top.png');
-    this.load.image('ui_badge_fg',        'assets/ui_new/badge_free_games.png');
-    this.load.image('ui_badge_mult',      'assets/ui_new/badge_mult.png');
-    this.load.image('ui_btn_buy_feature', 'assets/ui_new/btn_buy_feature.png');
-    this.load.image('ui_logo_plaque',     'assets/ui_new/logo_title_plaque.png');
-    this.load.image('ui_banner_big_win',  'assets/ui_v4/bottom_bigwin_panel.png');
+    this.load.image('ui_banner_top',      'assets/ui/v4_banner_scatter_top.png');
+    this.load.image('ui_badge_fg',        'assets/ui/badge_free_games.png');
+    this.load.image('ui_badge_mult',      'assets/ui/badge_mult.png');
+    this.load.image('ui_btn_buy_feature', 'assets/ui/btn_buy_feature.png');
+    this.load.image('ui_logo_plaque',     'assets/ui/logo_title_plaque.png');
 
     // === B&W manga 戲劇 overlay（關鍵時刻 burst-in）===
     this.load.image('mo_fg_phoenix',  'assets/manga_overlay/fg_phoenix_descend.png');
@@ -438,14 +433,14 @@ class PreloadScene extends Phaser.Scene {
 
     // === v3 漫畫風 UI（v4 後大部分淘汰；保留尚存的 btn_rect_* ）===
     // page_pc_template / manga_page_full / bar_jackpot_4seg / bar_hud_bottom / banner_chapter_title 已搬到 _archive
-    this.load.image('v3_btn_menu',        'assets/ui_v3/btn_rect_menu.png');
-    this.load.image('v3_btn_event',       'assets/ui_v3/btn_rect_event.png');
-    this.load.image('v3_btn_fast',        'assets/ui_v3/btn_rect_fast.png');
-    this.load.image('v3_btn_auto',        'assets/ui_v3/btn_rect_auto.png');
-    this.load.image('v3_btn_select',      'assets/ui_v3/btn_rect_select.png');
-    this.load.image('v3_btn_buy_feature', 'assets/ui_v3/btn_rect_buy_feature.png');
-    this.load.image('v3_btn_max_bet',     'assets/ui_v3/btn_rect_max_bet.png');
-    this.load.image('v3_btn_bet_pm',      'assets/ui_v3/btn_rect_bet_pm.png');
+    this.load.image('v3_btn_menu',        'assets/ui/v3_btn_rect_menu.png');
+    this.load.image('v3_btn_event',       'assets/ui/v3_btn_rect_event.png');
+    this.load.image('v3_btn_fast',        'assets/ui/v3_btn_rect_fast.png');
+    this.load.image('v3_btn_auto',        'assets/ui/v3_btn_rect_auto.png');
+    this.load.image('v3_btn_select',      'assets/ui/v3_btn_rect_select.png');
+    this.load.image('v3_btn_buy_feature', 'assets/ui/v3_btn_rect_buy_feature.png');
+    this.load.image('v3_btn_max_bet',     'assets/ui/v3_btn_rect_max_bet.png');
+    this.load.image('v3_btn_bet_pm',      'assets/ui/v3_btn_rect_bet_pm.png');
 
     // === 楚漢多格漫畫頁（12 格進度系統）===
     for (let ch = 1; ch <= 4; ch++) {

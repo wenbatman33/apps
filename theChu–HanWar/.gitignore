@@ -1,0 +1,3 @@
+# 備份夾（本地保留即可、不入版控）
+assets/_backup/
+.claude/
