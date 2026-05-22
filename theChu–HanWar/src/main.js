@@ -78,7 +78,7 @@ const LAYOUT_MOBILE = {
   mode: 'mobile',
   W: 540, H: 960,
   // Reel（縮小 / 置中）
-  reelCx: 270, reelCy: 555, reelW: 504, reelH: 410,
+  reelCx: 270, reelCy: 495, reelW: 504, reelH: 410,
   // 頂部 Jackpot 橫條
   jackpotY: 24, jackpotH: 48,
   // 頂部漫畫敘事（雙格並排在上方）
@@ -86,18 +86,20 @@ const LAYOUT_MOBILE = {
   chapterTextY: 310,
   // 「最高 N 倍」/ scatter info bar（在 reel 下方）
   logoX: 270, logoY: 335, logoW: 280, logoH: 56,
-  topBannerY: 765, topBannerW: 400, topBannerH: 32,
+  topBannerY: 724, topBannerW: 400, topBannerH: 32,
+  scatterBannerY: 752, scatterBannerW: 480, scatterBannerH: 36,  // mobile: reel 下方資訊條
   // Free Game 元件
   fgCountX: 50, fgCountY: 560, fgCountW: 80, fgCountH: 100,
   multBadgeX: 490, multBadgeY: 560, multBadgeR: 45,
-  // HUD（scatter info 下方）
-  hudY: 832, hudPanelW: 520, hudPanelH: 64,
+  // HUD（兩排）：上排 avatar+balance+win+bet；下排 Buy+SPIN+Auto+Volume
+  hudY: 816, hudPanelW: 520, hudPanelH: 64,
   avatarX: 36, avatarY: 832,
-  coinX: 95, balX: 145,
-  betMinusX: 200, betDispX: 270, betPlusX: 340,
-  autoBtnX: 480, autoBtnY: 832,
-  // SPIN 居中底部
-  spinBtnX: 270, spinBtnY: 905, spinBtnSize: 90,
+  coinX: 60, balX: 110,
+  // 上排：avatar(30-60) | balance(80-150) | win(180-260) | bet capsule(310-470)
+  betMinusX: 320, betDispX: 390, betPlusX: 460,
+  // 下排：Buy(20-150) | SPIN(215-305) | Auto(330-410) | Volume(450-510)
+  autoBtnX: 192, autoBtnY: 905,
+  spinBtnX: 266, spinBtnY: 901, spinBtnSize: 100,
   // Side buttons（手機隱藏）
   sideBtnX: null,
   sideBtnYs: [],
@@ -111,12 +113,19 @@ const LAYOUT_MOBILE = {
 
 // 在 boot 時決定（在 Phaser.Game 創建前）
 function detectLayout() {
-  // 依寬高比決定：< 1.0 視為手機直版
+  // URL 強制：?mobile=1 → 強制手機版、?pc=1 → 強制 PC 版
+  const params = new URLSearchParams(location.search);
+  if (params.get('mobile') === '1') return LAYOUT_MOBILE;
+  if (params.get('pc') === '1') return LAYOUT_PC;
+  // 預設依寬高比：< 1.0 視為手機直版
   const aspect = window.innerWidth / window.innerHeight;
   return aspect < 1.0 ? LAYOUT_MOBILE : LAYOUT_PC;
 }
 
 const L = detectLayout();
+// 高 DPR 渲染：canvas 內部用 DPR 倍解析度 + camera zoom 對應放大
+// 維持所有 LAYOUT 座標在原 W/H 空間（座標不用乘 DPR）
+const DPR = Math.max(1, Math.min(3, window.devicePixelRatio || 1));
 const W = L.W;
 const H = L.H;
 const REEL_CX = L.reelCx;
@@ -320,7 +329,11 @@ class BootScene extends Phaser.Scene {
   constructor() { super('Boot'); }
   preload() {
     this.cameras.main.setBackgroundColor('#0a0604');
-    this.load.image('loading_bg', 'assets/ui/loading_bg.png');
+    // 依視窗判斷載 PC 或 Mobile 版 loading bg
+    const isMobileViewport = (window.innerWidth / window.innerHeight) < 1.0
+      || new URLSearchParams(location.search).get('mobile') === '1';
+    const bgPath = isMobileViewport ? 'assets/ui/mobile_loading_bg.png' : 'assets/ui/loading_bg.png';
+    this.load.image('loading_bg', bgPath);
     this.load.image('loading_logo', 'assets/ui/v5_splash_top_duel.png');
   }
   create() {
@@ -357,13 +370,21 @@ class PreloadScene extends Phaser.Scene {
     const t = null;
     const sub = null;
 
-    // 進度條：純黑，置中於底圖白色留白區（視覺重心 H*0.55）
-    const barX = W/2, barY = H * 0.55, barW = 880, barH = 36;
-    // 框（白邊）
-    const barBg = this.add.rectangle(barX, barY, barW, barH, 0x000000, 0.5).setStrokeStyle(2, 0xffffff, 0.8);
+    // 進度條：自適應寬度（PC 880、Mobile 80% 寬）+ URL 參數可調位置
+    const isMobile = W < 1000;
+    const urlParams = new URLSearchParams(location.search);
+    const barW = parseInt(urlParams.get('barW')) || (isMobile ? Math.floor(W * 0.8) : 880);
+    const barH = parseInt(urlParams.get('barH')) || (isMobile ? 24 : 36);
+    const barX = parseInt(urlParams.get('barX')) || (isMobile ? 284 : W/2);
+    // barY 支援比例 (0~1) 或絕對 px
+    const barYRaw = urlParams.get('barY');
+    const barYRatio = parseFloat(urlParams.get('barYRatio')) || (isMobile ? 0.658 : 0.55);
+    const barY = barYRaw ? parseInt(barYRaw) : H * barYRatio;
+    // 框（金邊）
+    const barBg = this.add.rectangle(barX, barY, barW, barH, 0x1a0e04, 0.8).setStrokeStyle(2, 0xd4a54a, 1);
     const dotL = null, dotR = null;
-    // 黑色筆觸填色（從左推進）
-    const bar = this.add.rectangle(barX - barW/2 + 4, barY, 4, barH - 10, 0x000000).setOrigin(0, 0.5);
+    // 金色進度條（從左推進）
+    const bar = this.add.rectangle(barX - barW/2 + 4, barY, 4, barH - 6, 0xd4a54a).setOrigin(0, 0.5);
     // 百分比文字
     const pctText = this.add.text(barX, barY, '0%', {
       fontFamily: 'Noto Sans TC, sans-serif',
@@ -377,7 +398,32 @@ class PreloadScene extends Phaser.Scene {
       if (bar?.active) bar.width = 4 + (barW - 8) * p;
       if (pctText?.active) pctText.setText(`${Math.floor(p * 100)}%`);
     });
+
+    // DEV 模式：loading bar 永遠停留、可拖曳；座標即時印到 console
+    const devMode = urlParams.get('dev') === '1';
+    let dragZone = null, coordLabel = null;
+    if (devMode) {
+      // 建拖曳區（覆蓋整個 bar）
+      dragZone = this.add.zone(barX, barY, barW, barH + 40).setOrigin(0.5).setInteractive({ draggable: true });
+      coordLabel = this.add.text(barX, barY - barH - 20,
+        `X:${Math.round(barX)} Y:${Math.round(barY)} W:${barW} H:${barH}`, {
+        fontFamily: 'monospace', fontSize: '16px', color: '#ffff00', backgroundColor: '#000',
+        padding: { x: 6, y: 3 },
+      }).setOrigin(0.5);
+      this.input.setDraggable(dragZone);
+      dragZone.on('drag', (pointer, dx, dy) => {
+        barBg.x = dx; barBg.y = dy;
+        bar.x = dx - barW/2 + 4; bar.y = dy;
+        pctText.x = dx; pctText.y = dy;
+        dragZone.x = dx; dragZone.y = dy;
+        coordLabel.x = dx; coordLabel.y = dy - barH - 20;
+        coordLabel.setText(`X:${Math.round(dx)} Y:${Math.round(dy)} W:${barW} H:${barH} | Ratio:${(dy/H).toFixed(3)}`);
+        window.__loadingBarCoord = { x: Math.round(dx), y: Math.round(dy), ratio: +(dy/H).toFixed(3) };
+      });
+    }
+
     this.load.on('complete', () => {
+      if (devMode) return;  // DEV 模式不消失，讓你拖
       t?.destroy(); sub?.destroy(); barBg?.destroy(); bar?.destroy(); pctText?.destroy();
       dotL?.destroy(); dotR?.destroy(); inkL?.destroy(); inkR?.destroy();
     });
@@ -406,22 +452,29 @@ class PreloadScene extends Phaser.Scene {
     this.load.image('v4_banner_scatter',  'assets/ui/v4_banner_scatter_top.png');
     this.load.image('v4_btn_spin',        'assets/ui/v4_btn_spin_v2.png');
     // v5：靜態底 + 獨立 icon
-    this.load.image('v5_btn_spin_base',   'assets/ui/v5_btn_spin_base.png');
-    this.load.image('v5_btn_spin_icon',   'assets/ui/v5_btn_spin_icon.png');
+    this.load.image('v5_btn_spin_base',   'assets/ui/v7_btn_base.png');
+    this.load.image('v5_btn_spin_icon',   'assets/ui/v7_spin_icon.png');
     // v5：對峙 splash + 新 scatter 條 + 新 auto 按鈕
     this.load.image('v5_splash_duel',     'assets/ui/v5_splash_top_duel.png');
     this.load.image('v5_banner_scatter',  'assets/ui/v5_banner_scatter_v2.png');
-    this.load.image('v5_btn_auto',        'assets/ui/v5_btn_auto_v2.png');
+    this.load.image('v5_btn_auto',        'assets/ui/v7_btn_auto.png');
 
     // v6：20 頁故事底圖
     for (let i = 1; i <= 20; i++) {
       const k = String(i).padStart(2, '0');
       this.load.image(`v6_page_${k}`, `assets/ui/v6_page_${k}.png`);
     }
+    // Mobile 直版章節 bg — v3 三層架構（panel 頂 + 黑填充 + ink 底）
+    for (let i = 1; i <= 10; i++) {
+      const k = String(i).padStart(2, '0');
+      this.load.image(`mbl_panel_${k}`, `assets/ui/mbl_panel_${k}.png`);
+    }
+    this.load.image('mbl_panel_fg_yuji', 'assets/ui/mbl_panel_fg_yuji.png');
+    this.load.image('mbl_ink_bot',       'assets/ui/mbl_ink_bot.png');
     this.load.image('v6_badge_mult',     'assets/ui/v6_badge_mult_v4.png');  // ← 升級到 v4 精緻版
     this.load.image('v6_badge_mult_v2',  'assets/ui/v6_badge_mult_v2.png');
     this.load.image('v6_badge_mult_v3',  'assets/ui/v6_badge_mult_v3.png');
-    this.load.image('v6_btn_sound',      'assets/ui/v6_btn_sound.png');
+    this.load.image('v6_btn_sound',      'assets/ui/v7_btn_sound.png');
     this.load.image('v6_bg_freegame',    'assets/ui/v6_bg_freegame_yuji.png');
 
     // 金屬字：0-9 + 逗號 + FREE GAMES + BIG WIN
@@ -516,6 +569,17 @@ class PreloadScene extends Phaser.Scene {
         tex.setFilter(Phaser.Textures.FilterMode.LINEAR);
       } catch (e) {}
     }, this);
+    // DEV 模式：不跳場景，讓使用者拖 loading bar 到想要的位置
+    const devMode = new URLSearchParams(location.search).get('dev') === '1';
+    if (devMode) {
+      // 在 bar 下方顯示「進入遊戲」按鈕
+      const goBtn = this.add.text(W/2, H * 0.65, '▶ 進入遊戲（確認位置後點我）', {
+        fontFamily: 'Noto Sans TC, sans-serif', fontSize: '20px', fontStyle: '900',
+        color: '#0a0604', backgroundColor: '#d4a54a', padding: { x: 20, y: 10 },
+      }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+      goBtn.on('pointerdown', () => { goBtn.destroy(); this.scene.start('Main'); });
+      return;
+    }
     this.scene.start('Main');
   }
   // 防呆：若 load 卡住超過 45 秒才強制進 Main（70 個檔案需要時間）
@@ -555,6 +619,54 @@ class MainScene extends Phaser.Scene {
     this.bg.setFillStyle = (color) => this.bg.fillColor = color;
 
     // === v5 整頁漫畫底圖版型 ===
+    if (isMobile) {
+      // Mobile 直版章節 bg — v3 三層架構
+      // Layer A: 頂部漫畫格 (1080×540 native → 顯示 540×270, y=0-270)
+      // Layer B: 黑色填充中間（遮住 reel 區 y=270~720）
+      // Layer C: 底部墨潑紋理 (1080×480 native → 顯示 540×240, y=720-960)
+      const panelH = Math.round(L.W * 540 / 1080);  // = 270
+      const inkH   = Math.round(L.W * 480 / 1080);  // = 240
+      const inkY   = L.H - inkH / 2;                // = 840
+
+      // Layer B：黑色中間填充（背景不透明）
+      this.add.rectangle(L.W/2, (panelH + (L.H - inkH)) / 2,
+        L.W, L.H - panelH - inkH, 0x0a0604).setDepth(1);
+
+      // Layer C：底部墨潑紋理（固定，不輪播）
+      if (this.textures.exists('mbl_ink_bot')) {
+        this.add.image(L.W/2, inkY, 'mbl_ink_bot')
+          .setDisplaySize(L.W, inkH).setDepth(1).setAlpha(0.85);
+      }
+
+      // Layer A：頂部漫畫格（輪播主角）
+      this._mobileBgCount = 10;
+      this._mobileBgIdx = 0;
+      const initKey = `mbl_panel_${String(this._mobileBgIdx + 1).padStart(2, '0')}`;
+      if (this.textures.exists(initKey)) {
+        this.chapterBg = this.add.image(L.W/2, panelH / 2, initKey)
+          .setDisplaySize(L.W, panelH).setDepth(1);
+      }
+
+      // 啟動時間輪播：每 12 秒切換到下一張，淡入淡出 0.3s
+      this.time.addEvent({
+        delay: 12000,
+        loop: true,
+        callback: () => {
+          if (!this.chapterBg) return;
+          if (this.inFreeGame) return;
+          this._mobileBgIdx = (this._mobileBgIdx + 1) % this._mobileBgCount;
+          const nextKey = `mbl_panel_${String(this._mobileBgIdx + 1).padStart(2, '0')}`;
+          if (!this.textures.exists(nextKey)) return;
+          this.tweens.add({
+            targets: this.chapterBg, alpha: 0, duration: 300,
+            onComplete: () => {
+              this.chapterBg.setTexture(nextKey);
+              this.tweens.add({ targets: this.chapterBg, alpha: 1, duration: 300 });
+            },
+          });
+        },
+      });
+    }
     if (L.mode === 'pc') {
       // Depth 1：整張故事頁面背景（v6 20 頁循環）— 下移 60px 避開 jackpot 條
       this._currentPageIdx = 0;
@@ -622,11 +734,13 @@ class MainScene extends Phaser.Scene {
     reelBgMask.fillRect(REEL_CX - REEL_W/2, REEL_CY - REEL_H/2, REEL_W, REEL_H);
     reelBgImg.setMask(reelBgMask.createGeometryMask());
 
-    // === Depth 90：reel 直線分隔（用 codex 的 reel_separator.png）===
+    // === Depth 90：reel 直線分隔（簡潔金色細線）===
     const startX = REEL_CX - REEL_W / 2;
+    const sepG = this.add.graphics().setDepth(90);
+    sepG.lineStyle(2, 0xd4a54a, 0.6);
     for (let c = 1; c < COLS; c++) {
-      this.add.image(startX + c * CELL_W, REEL_CY, 'reel_separator')
-        .setDisplaySize(18, REEL_H).setDepth(90);
+      const x = startX + c * CELL_W;
+      sepG.lineBetween(x, REEL_CY - REEL_H/2 + 8, x, REEL_CY + REEL_H/2 - 8);
     }
 
     // === Depth 100：符號（容器 + 遮罩）===
@@ -640,8 +754,8 @@ class MainScene extends Phaser.Scene {
     this.multOrbs = [];
 
     // v6：移除 reel 內部黑底 — 章節漫畫 bg 已乾淨，讓背景透出
-    if (L.mode === 'pc') {
-      // Depth 110：保留細金屬雙線框
+    // Depth 110：細金屬雙線框（PC + Mobile 都顯示）
+    {
       const rg = this.add.graphics().setDepth(110);
       rg.lineStyle(3, 0xd4a54a, 1);
       rg.strokeRect(REEL_CX - REEL_W/2, REEL_CY - REEL_H/2, REEL_W, REEL_H);
@@ -672,8 +786,8 @@ class MainScene extends Phaser.Scene {
       });
     }
 
-    // === Depth 130：v5 scatter 提示條（Phaser 自繪、和 reel 同款金屬框）===
-    if (L.mode === 'pc') {
+    // === Depth 130：v5 scatter 提示條（Phaser 自繪、PC + Mobile 都顯示）===
+    {
       const sbX = REEL_CX - L.scatterBannerW/2;
       const sbY = L.scatterBannerY - L.scatterBannerH/2;
       const sg = this.add.graphics().setDepth(130);
@@ -704,7 +818,7 @@ class MainScene extends Phaser.Scene {
     this.add.image(L.avatarX, HUD_Y, 'avatar_chu').setDisplaySize(avSize, avSize).setDepth(145);
 
     // === 押注膠囊（戰神賽特風拖曳 slider）===
-    const betCapsuleW = isMobile ? 200 : 340;
+    const betCapsuleW = isMobile ? 160 : 340;
     const betCapsuleH = isMobile ? 56 : 80;
     const betCapsuleX = isMobile ? L.betDispX : 1300;
     L._betCapsuleX = betCapsuleX;
@@ -779,9 +893,9 @@ class MainScene extends Phaser.Scene {
 
     // === 自動按鈕（大一點、無文字標籤、啟動時有金光環效果）===
     const autoBtnKey = this.textures.exists('v5_btn_auto') ? 'v5_btn_auto' : 'btn_auto';
-    const autoSize = isMobile ? 70 : 120;
-    const autoX = L.spinBtnX - L.spinBtnSize * 0.72;
-    const autoY = L.spinBtnY;
+    const autoSize = isMobile ? 54 : 120;
+    const autoX = isMobile ? L.autoBtnX : L.spinBtnX - L.spinBtnSize * 0.72;
+    const autoY = isMobile ? L.autoBtnY : L.spinBtnY;
     // 啟動光環（金色脈衝、預設隱藏）
     this.btnAutoRing = this.add.circle(autoX, autoY, autoSize * 0.55, 0xffdf55, 0)
       .setStrokeStyle(4, 0xffdf55, 1).setDepth(144).setVisible(false);
@@ -834,7 +948,7 @@ class MainScene extends Phaser.Scene {
       hudTextStyle(fsLabel - 2, '#a8967a')).setOrigin(0.5).setDepth(146);
 
     // 贏分（大數字 + 下方標籤『贏分』）
-    const winX = isMobile ? L.betDispX - 80 : 880;
+    const winX = isMobile ? 215 : 880;
     this.txtWinHud = this.add.text(winX, HUD_Y - (isMobile ? 8 : 12), '0.00',
       hudTextStyle(fsMain + 4, '#ffffff', { strokeThickness: 4 }))
       .setOrigin(0.5).setDepth(146);
@@ -926,30 +1040,15 @@ class MainScene extends Phaser.Scene {
     //   .setInteractive({ useHandCursor: true });
 
     // === Depth 155：btn_spin（v5：靜態底 + 獨立旋轉 icon）===
-    const useV5Spin = this.textures.exists('v5_btn_spin_base') && this.textures.exists('v5_btn_spin_icon');
-    if (useV5Spin) {
-      // 靜態底（按鈕本體絕不旋轉）
-      this.btnSpin = this.add.image(L.spinBtnX, L.spinBtnY, 'v5_btn_spin_base')
-        .setDisplaySize(L.spinBtnSize, L.spinBtnSize).setDepth(155)
-        .setInteractive({ useHandCursor: true });
-      this.btnSpin.on('pointerup', () => this.onSpin());
-      // 旋轉 icon（疊在底上方、只有它在轉）
-      this.btnSpinIcon = this.add.image(L.spinBtnX, L.spinBtnY, 'v5_btn_spin_icon')
-        .setDisplaySize(L.spinBtnSize * 0.5, L.spinBtnSize * 0.5).setDepth(156);
-    } else {
-      // fallback：用 v4 整顆按鈕（會整個轉）
-      this.btnSpin = this.add.image(L.spinBtnX, L.spinBtnY, 'btn_spin')
-        .setDisplaySize(L.spinBtnSize, L.spinBtnSize).setDepth(155)
-        .setInteractive({ useHandCursor: true });
-      this.btnSpin.on('pointerup', () => this.onSpin());
-      this.btnSpinIcon = null;
-    }
-    // idle 呼吸光（只縮底、不旋轉）
-    const baseScale = this.btnSpin.scaleX;
-    this.btnSpinIdleTween = this.tweens.add({
-      targets: this.btnSpin, scale: { from: baseScale * 0.97, to: baseScale * 1.03 },
-      duration: 900, yoyo: true, repeat: -1,
-    });
+    // v7：底座不動 + icon 旋轉（兩層）
+    this.btnSpin = this.add.image(L.spinBtnX, L.spinBtnY, 'v5_btn_spin_base')
+      .setDisplaySize(L.spinBtnSize, L.spinBtnSize).setDepth(155)
+      .setInteractive({ useHandCursor: true });
+    this.btnSpin.on('pointerup', () => this.onSpin());
+    this.btnSpinIcon = this.add.image(L.spinBtnX, L.spinBtnY, 'v5_btn_spin_icon')
+      .setDisplaySize(L.spinBtnSize * 0.55, L.spinBtnSize * 0.55).setDepth(156);
+    // idle 呼吸光已移除（縮放會產生鋸齒感）
+    this.btnSpinIdleTween = null;
     this.spinRotateTween = null;
 
     // 初始填盤（不中獎）
@@ -1409,11 +1508,12 @@ class MainScene extends Phaser.Scene {
   // 右上角音量控制 UI（BGM / SFX 各一條 slider）
   // ----------------------------------------------------------
   buildVolumePanel() {
-    // 放在 jackpot panel 與 reel_frame 之間（不擋 MINOR 與設定按鈕）
-    const baseX = 1580;
-    const baseY = 88;
-    const panelW = 280;
-    const panelH = 64;
+    // PC 放右上 jackpot 條附近；Mobile 放右下喇叭按鈕上方
+    const isMobile = this.L.mode === 'mobile';
+    const panelW = isMobile ? 320 : 280;
+    const panelH = isMobile ? 56 : 64;
+    const baseX = isMobile ? (this.L.W - panelW - 12) : 1580;
+    const baseY = isMobile ? (this.L.H - panelH - 100) : 88;
 
     // 將整組音量元件收集成 array、預設隱藏，由右上小按鈕展開
     this._volPanelObjs = [];
@@ -1505,10 +1605,11 @@ class MainScene extends Phaser.Scene {
     };
     this._setVolPanelVisible(false);
 
-    // === 右上角開關按鈕（v6 漫畫風小圓鈕 icon、和 jackpot 條同高）===
-    const toggleX = this.L.W - 40;
-    const toggleY = 30;
-    const toggleSize = 56;
+    // === 音量按鈕：PC 右上角、Mobile 右下角（避開 jackpot 條、SPIN、HUD）===
+    const _isMobile = this.L.mode === 'mobile';
+    const toggleSize = _isMobile ? 72 : 56;
+    const toggleX = this.L.W - (_isMobile ? toggleSize/2 + 8 : 40);
+    const toggleY = _isMobile ? (this.L.H - toggleSize/2 - 8) : 30;
     // 若有 v6 圖則用，否則 fallback 到 Graphics
     let toggleImg, glowRing;
     if (this.textures.exists('v6_btn_sound')) {
@@ -1665,24 +1766,25 @@ class MainScene extends Phaser.Scene {
 
     // 漫畫進度推進（每 spin += 1 點，每 10 點解鎖一格）
     if (!this.inFreeGame) this.advanceComicProgress?.();
-    this.btnSpin.setAlpha(0.7);
+    // 底座不變透明，只有 icon 旋轉
     this.btnSpinIdleTween?.pause();
-    // v5：只旋轉 icon，按鈕底不轉
-    const rotateTarget = this.btnSpinIcon ?? this.btnSpin;
-    this.spinRotateTween = this.tweens.add({
-      targets: rotateTarget, angle: '+=360',
-      duration: 700, repeat: -1, ease: 'Linear',
-    });
+    if (this.btnSpinIcon) {
+      this.spinRotateTween = this.tweens.add({
+        targets: this.btnSpinIcon, angle: '+=360',
+        duration: 700, ease: 'Cubic.easeOut',
+      });
+    }
     this.refreshHUD();
 
     await this.spinAnimation();
     await this.runTumbleCycle();
 
-    // 停止旋轉、回到原角度（只回 icon）
+    // 停止旋轉、icon 歸位
     this.spinRotateTween?.stop();
     this.spinRotateTween = null;
-    const resetTarget = this.btnSpinIcon ?? this.btnSpin;
-    this.tweens.add({ targets: resetTarget, angle: 0, duration: 280, ease: 'Back.easeOut' });
+    if (this.btnSpinIcon) {
+      this.tweens.add({ targets: this.btnSpinIcon, angle: 0, duration: 280, ease: 'Back.easeOut' });
+    }
 
     const scatterCount = this.countScatters();
     if (scatterCount >= 2) {
@@ -1690,8 +1792,10 @@ class MainScene extends Phaser.Scene {
       // 漫畫戲劇 burst：scatter 多顆時
       if (scatterCount >= 3) {
         this.showMangaOverlay('mo_scatter', {
-          text: `${scatterCount}`, textX: -326, textY: -240, holdMs: 900,
-          useGoldDigits: true, digitW: 50, digitH: 72, gap: -4,
+          text: `${scatterCount}`, textX: -326, textY: -240,
+          textX_mobile: -165, textY_mobile: -106,
+          holdMs: 900,
+          useGoldDigits: true, digitW: 80, digitH: 115, gap: -4,
         });
       }
     }
@@ -1721,7 +1825,6 @@ class MainScene extends Phaser.Scene {
     }
 
     this.spinning = false;
-    this.btnSpin.setAlpha(1);
     this.btnSpinIdleTween?.resume();
     this.refreshHUD();
 
@@ -2005,13 +2108,18 @@ class MainScene extends Phaser.Scene {
   async enterFreeGame() {
     this.inFreeGame = true;
     this.freeSpinsLeft = FREE_SPINS_INITIAL;
-    // v6：切到虞姬 Free Game 背景
-    if (this.chapterBg && this.textures.exists('v6_bg_freegame')) {
+    // 切到虞姬 Free Game 背景（Mobile 用 mobile_bg_fg_yuji、PC 用 v6_bg_freegame）
+    const isMobile = this.L.mode === 'mobile';
+    const fgBgKey = isMobile ? 'mbl_panel_fg_yuji' : 'v6_bg_freegame';
+    if (this.chapterBg && this.textures.exists(fgBgKey)) {
       this._savedChapterTexture = this.chapterBg.texture.key;
+      const panelH = isMobile ? Math.round(this.L.W * 540 / 1080) : 0;
       this.tweens.add({
         targets: this.chapterBg, alpha: 0, duration: 400,
         onComplete: () => {
-          this.chapterBg.setTexture('v6_bg_freegame').setDisplaySize(this.L.W, this.L.H - 60);
+          this.chapterBg.setTexture(fgBgKey);
+          if (isMobile) this.chapterBg.setDisplaySize(this.L.W, panelH);
+          else this.chapterBg.setDisplaySize(this.L.W, this.L.H - 60);
           this.tweens.add({ targets: this.chapterBg, alpha: 1, duration: 400 });
         },
       });
@@ -2116,7 +2224,13 @@ class MainScene extends Phaser.Scene {
       this.tweens.add({
         targets: this.chapterBg, alpha: 0, duration: 400,
         onComplete: () => {
-          this.chapterBg.setTexture(restoreKey).setDisplaySize(this.L.W, this.L.H);
+          this.chapterBg.setTexture(restoreKey);
+          if (this.L.mode === 'mobile') {
+            const ph = Math.round(this.L.W * 540 / 1080);
+            this.chapterBg.setDisplaySize(this.L.W, ph);
+          } else {
+            this.chapterBg.setDisplaySize(this.L.W, this.L.H - 60);
+          }
           this.tweens.add({ targets: this.chapterBg, alpha: 1, duration: 400 });
         },
       });
@@ -2151,24 +2265,42 @@ class MainScene extends Phaser.Scene {
     const cont = this.add.container(L.W/2, L.H/2).setDepth(2500);
     // 暗背景
     const dim = this.add.rectangle(0, 0, L.W * 1.5, L.H * 1.5, 0x000000, 0).setAlpha(0);
-    // 圖片（從 0.3 縮放彈入）
-    const size = Math.min(L.W * 0.6, L.H * 0.7);
-    const img = this.add.image(0, 0, key).setDisplaySize(size, size).setScale(0.3).setAlpha(0);
-    // 可選疊加文字（如倍數值、金額）— 金額用金屬字數字
+    // 圖片大小：PC 60% width / Mobile 92% width，自動隨螢幕縮放
+    const isMobile = L.mode === 'mobile';
+    const sizeRatio = isMobile ? 0.92 : 0.6;
+    const size = Math.min(L.W * sizeRatio, L.H * 0.7);
+    const img = this.add.image(0, 0, key);
+    const targetScale = size / Math.max(img.width, img.height);
+    img.setScale(targetScale * 0.3).setAlpha(0);
+    // === 文字 / 數字座標跟著 overlay size 等比縮放 ===
+    // textX/textY/digitW/digitH 以 PC reference size (756) 校準，mobile 自動縮放
+    const refSize = Math.min(1920 * 0.6, 1080 * 0.7);  // PC 標準 = 756
+    const sf = size / refSize;  // 縮放係數
     let extra = null;
     if (opts.text) {
+      // Mobile 專屬座標優先使用（不套 sf）；沒有的話用 PC 校準值 × sf 自動縮放
+      const tx = isMobile && opts.textX_mobile !== undefined
+        ? opts.textX_mobile : (opts.textX ?? 0) * sf;
+      const ty = isMobile && opts.textY_mobile !== undefined
+        ? opts.textY_mobile : (opts.textY ?? 100) * sf;
+      const dW = isMobile && opts.digitW_mobile !== undefined
+        ? opts.digitW_mobile : (opts.digitW ?? 60) * sf;
+      const dH = isMobile && opts.digitH_mobile !== undefined
+        ? opts.digitH_mobile : (opts.digitH ?? 90) * sf;
       if (opts.useGoldDigits) {
-        extra = this.buildGoldNumber(opts.textX ?? 0, opts.textY ?? 100, opts.text, {
-          digitW: opts.digitW ?? 60,
-          digitH: opts.digitH ?? 90,
-          gap:    opts.gap    ?? -8,
+        extra = this.buildGoldNumber(tx, ty, opts.text, {
+          digitW: dW,
+          digitH: dH,
+          gap:    (opts.gap    ?? -8) * sf,
           depth: 2510, origin: 0.5,
         });
         extra.setAlpha(0);
       } else {
-        extra = this.add.text(opts.textX ?? 0, opts.textY ?? 100, opts.text, {
-          fontFamily: 'Noto Serif TC, serif', fontSize: '64px', fontStyle: '900',
-          color: '#fff8d0', stroke: '#000000', strokeThickness: 8, resolution: 2,
+        extra = this.add.text(tx, ty, opts.text, {
+          fontFamily: 'Noto Serif TC, serif',
+          fontSize: `${Math.round(64 * sf)}px`,
+          fontStyle: '900',
+          color: '#fff8d0', stroke: '#000000', strokeThickness: Math.max(2, 8 * sf), resolution: 2,
         }).setOrigin(0.5).setAlpha(0);
       }
     }
@@ -2178,7 +2310,7 @@ class MainScene extends Phaser.Scene {
     // 動畫：暗化 → 圖爆入 → 停留 → 整體淡出
     this.tweens.add({ targets: dim, alpha: 0.6, duration: 250 });
     this.tweens.add({
-      targets: img, scale: 1.0, alpha: 1, duration: 350, ease: 'Back.easeOut',
+      targets: img, scale: targetScale, alpha: 1, duration: 350, ease: 'Back.easeOut',
     });
     if (extra) this.tweens.add({ targets: extra, alpha: 1, duration: 400, delay: 350 });
 
@@ -2250,18 +2382,21 @@ class MainScene extends Phaser.Scene {
 
     // 暗背景
     const dim = this.add.rectangle(0, 0, L.W * 1.5, L.H * 1.5, 0x000000, 0).setAlpha(0);
-    // 大獎降臨 漫畫底圖
-    const size = Math.min(L.W * 0.6, L.H * 0.7);
-    const img = this.add.image(0, 0, 'mo_bigwin').setDisplaySize(size, size).setScale(0.3).setAlpha(0);
+    // 大獎降臨 漫畫底圖（mobile 比 PC 大、自動縮放）
+    const sizeRatio = isMobile ? 0.92 : 0.6;
+    const size = Math.min(L.W * sizeRatio, L.H * 0.7);
+    const img = this.add.image(0, 0, 'mo_bigwin');
+    const targetScale = size / Math.max(img.width, img.height);
+    img.setScale(targetScale * 0.3).setAlpha(0);
     cont.add([dim, img]);
 
-    // 金屬數字（疊在漫畫圖內部，置於下半部）
-    const digitW = isMobile ? 38 : 72;
-    const digitH = isMobile ? 52 : 100;
-    const gap    = isMobile ? -4 : -8;
-    // 大獎降臨 漫畫圖的爆光中心偏左（右邊有項羽角色），數字需往左偏才對得上
-    const numX   = isMobile ? -size * 0.08 : -size * 0.10;
-    const numY   = isMobile ? size * 0.08  : size * 0.10;
+    // 金屬數字（疊在漫畫圖內部，相對 size 等比縮放）
+    const digitW = size * 0.095;   // 70/756 ≈ 0.093，相對 overlay 一致
+    const digitH = size * 0.137;
+    const gap    = -size * 0.012;
+    // 大獎降臨 漫畫圖的爆光中心偏左 — 數字往左偏對齊
+    const numX   = -size * 0.10;
+    const numY   = size * 0.10;
     const initStr = (0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     const goldNum = this.buildGoldNumber(numX, numY, initStr, {
       digitW, digitH, gap, depth: 2510, origin: 0.5,
@@ -2272,7 +2407,7 @@ class MainScene extends Phaser.Scene {
     // 動畫：暗化 → 漫畫圖爆入 → 金屬數字彈入並滾動結算
     this.tweens.add({ targets: dim, alpha: 0.65, duration: 250 });
     this.tweens.add({
-      targets: img, scale: 1.0, alpha: 1, duration: 350, ease: 'Back.easeOut',
+      targets: img, scale: targetScale, alpha: 1, duration: 350, ease: 'Back.easeOut',
     });
     this.tweens.add({
       targets: goldNum, alpha: 1, scale: 1, duration: 450, delay: 300, ease: 'Back.easeOut',
@@ -2308,6 +2443,152 @@ class MainScene extends Phaser.Scene {
   }
 
   delay(ms) { return new Promise(r => this.time.delayedCall(ms, r)); }
+
+  // ============================================================
+  // Layout 編輯模式：D 鍵 → DEV 面板 → 🔧 Layout 編輯
+  // 所有可調元件顯示紅色把手，拖曳後匯出 JSON 給 Claude 貼回
+  // ============================================================
+  enterLayoutEdit() {
+    if (this._leActive) { this._exitLayoutEdit(); return; }
+    this._leActive = true;
+    this._leVals = {};
+    this._leCont = this.add.container(0, 0).setDepth(9800);
+    const L = this.L;
+
+    // ── 工具函式：建一個可拖曳把手（一個主要物件 + 同步跟隨的其他物件） ──
+    const handle = (label, key, primary, companions = [], axis = 'both') => {
+      if (!primary?.active) return;
+      const ox = primary.x, oy = primary.y;
+      this._leVals[key] = { x: Math.round(ox), y: Math.round(oy) };
+
+      // 紅色十字把手（Graphics）
+      const g = this.make.graphics({ add: false });
+      g.lineStyle(2.5, 0xff2222, 1);
+      g.fillStyle(0xff2222, 0.25);
+      g.fillCircle(0, 0, 20);
+      g.strokeCircle(0, 0, 20);
+      g.lineBetween(-26, 0, 26, 0);
+      g.lineBetween(0, -26, 0, 26);
+      g.x = ox; g.y = oy; g.depth = 9801;
+      this.children.add(g);
+
+      // 座標標籤
+      const lbl = this.add.text(ox, oy - 30,
+        `${label}\n${Math.round(ox)},${Math.round(oy)}`,
+        { fontFamily: 'monospace', fontSize: '11px', color: '#ff6666',
+          backgroundColor: '#000000dd', padding: { x: 4, y: 2 } }
+      ).setOrigin(0.5, 1).setDepth(9802);
+
+      // 不可見拖曳區域（比把手大，好抓）
+      const zone = this.add.zone(ox, oy, 60, 60).setOrigin(0.5).setDepth(9803)
+        .setInteractive({ draggable: true, cursor: 'move' });
+      this.input.setDraggable(zone);
+
+      zone.on('drag', (_, dx, dy) => {
+        const nx = axis === 'y' ? ox : dx;
+        const ny = axis === 'x' ? oy : dy;
+        primary.x = nx; primary.y = ny;
+        companions.forEach(o => { if (o?.active) { o.x = nx; o.y = ny; } });
+        g.x = nx; g.y = ny;
+        zone.x = nx; zone.y = ny;
+        lbl.x = nx; lbl.y = ny - 30;
+        lbl.setText(`${label}\n${Math.round(nx)},${Math.round(ny)}`);
+        this._leVals[key] = { x: Math.round(nx), y: Math.round(ny) };
+        window.__layoutEdit = this._leVals;
+      });
+
+      this._leCont.add([g, lbl, zone]);
+    };
+
+    // ── 各元件把手 ──
+    // SPIN 按鈕
+    if (this.btnSpin) handle('SPIN', 'spinBtn', this.btnSpin,
+      [this.btnSpinIcon, this.btnSpinIdleTween ? null : null].filter(Boolean));
+
+    // AUTO 按鈕
+    if (this.btnAutoHud) handle('AUTO', 'autoBtn', this.btnAutoHud, [this.btnAutoRing]);
+
+    // Scatter / Win 資訊條（Y 軸拖曳）
+    if (this.infoText) handle('SCATTER BAR', 'scatterBarY', this.infoText,
+      [this.txtWin, this.txtFG], 'y');
+
+    // HUD 文字群（Y 軸）— 以 txtBalance 為錨點
+    if (this.txtBalance) handle('HUD ROW', 'hudY', this.txtBalance,
+      [this.txtWinHud, this.txtBet], 'y');
+
+    // ── 轉盤 Y 微調（無法直接拖曳，用 ↑↓ 按鈕逐 5px 移動並重繪參考線） ──
+    this._leReelCy = L.reelCy;
+    const rW = L.reelW || 504;
+    const rH = L.reelH || 410;
+
+    // 參考框線（跟著 _leReelCy 更新）
+    const refG = this.make.graphics({ add: false });
+    refG.depth = 9801;
+    this.children.add(refG);
+    const drawRef = () => {
+      refG.clear();
+      refG.lineStyle(2, 0xff2222, 0.8);
+      refG.strokeRect(L.reelCx - rW/2, this._leReelCy - rH/2, rW, rH);
+      refG.lineStyle(1, 0xff2222, 0.4);
+      refG.lineBetween(L.reelCx - rW/2, this._leReelCy, L.reelCx + rW/2, this._leReelCy);
+    };
+    drawRef();
+
+    const reelLbl = this.add.text(L.reelCx, this._leReelCy - rH/2 - 8,
+      `REEL CY: ${this._leReelCy}`, {
+      fontFamily: 'monospace', fontSize: '12px', color: '#ff6666',
+      backgroundColor: '#000000dd', padding: { x: 4, y: 2 },
+    }).setOrigin(0.5, 1).setDepth(9802);
+
+    const mkReelBtn = (label, dx, dy) => {
+      const btn = this.add.text(dx, dy, label, {
+        fontFamily: 'monospace', fontSize: '22px', color: '#fff',
+        backgroundColor: '#cc0000', padding: { x: 10, y: 4 },
+      }).setOrigin(0.5).setDepth(9803).setInteractive({ useHandCursor: true });
+      btn.on('pointerdown', () => {
+        this._leReelCy += (label === '▲' ? -5 : 5);
+        this._leVals['reelCy'] = this._leReelCy;
+        window.__layoutEdit = this._leVals;
+        drawRef();
+        reelLbl.y = this._leReelCy - rH/2 - 8;
+        reelLbl.setText(`REEL CY: ${this._leReelCy}`);
+      });
+      return btn;
+    };
+    const upBtn   = mkReelBtn('▲', L.reelCx - 40, this._leReelCy - rH/2 - 40);
+    const downBtn = mkReelBtn('▼', L.reelCx + 40, this._leReelCy - rH/2 - 40);
+    this._leCont.add([refG, reelLbl, upBtn, downBtn]);
+
+    // ── 匯出面板（固定在畫面底部）──
+    const expBg = this.add.rectangle(L.W/2, L.H - 30, L.W - 20, 52, 0x000000, 0.88)
+      .setDepth(9810).setStrokeStyle(1, 0xd4a54a, 1);
+    const expBtn = this.add.text(L.W/2, L.H - 30, '💾 匯出座標 → 複製到剪貼簿', {
+      fontFamily: 'Noto Sans TC, sans-serif', fontSize: '15px', fontStyle: '900',
+      color: '#0a0604', backgroundColor: '#d4a54a', padding: { x: 14, y: 8 },
+    }).setOrigin(0.5).setDepth(9811).setInteractive({ useHandCursor: true });
+    const closeBtn = this.add.text(L.W - 20, 20, '✕ 離開編輯', {
+      fontFamily: 'Noto Sans TC, sans-serif', fontSize: '13px', color: '#ff8888',
+      backgroundColor: '#000000cc', padding: { x: 8, y: 4 },
+    }).setOrigin(1, 0).setDepth(9811).setInteractive({ useHandCursor: true });
+
+    expBtn.on('pointerdown', () => {
+      const out = JSON.stringify(window.__layoutEdit, null, 2);
+      console.log('=== LAYOUT EDIT ===\n', out);
+      try {
+        navigator.clipboard?.writeText(out).then(() => alert('已複製！\n' + out));
+      } catch (e) { alert(out); }
+    });
+    closeBtn.on('pointerdown', () => this._exitLayoutEdit());
+
+    this._leCont.add([expBg, expBtn, closeBtn]);
+    window.__layoutEdit = this._leVals;
+  }
+
+  _exitLayoutEdit() {
+    this._leActive = false;
+    this._leCont?.destroy();
+    this._leCont = null;
+  }
 }
 
 // ============================================================

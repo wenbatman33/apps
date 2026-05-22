@@ -57,6 +57,15 @@
     <div id="game"></div>
 
     <!-- ============== DEV 微調 / 狀態測試面板 ============== -->
+    <!-- 手機版用浮動 D 按鈕（PC 用 D 鍵） -->
+    <button id="dev-toggle-btn" style="
+      position: fixed; right: 8px; bottom: 8px; z-index: 1001;
+      width: 48px; height: 48px; border-radius: 50%;
+      background: rgba(15,10,8,0.92); border: 2px solid #d4a54a;
+      color: #f5d27a; font-size: 22px; cursor: pointer;
+      display: none;
+    ">🛠️</button>
+
     <div id="dev-panel" style="
       position: fixed; right: 12px; top: 12px; z-index: 1000;
       background: rgba(15,10,8,0.92); border: 1px solid #d4a54a;
@@ -110,6 +119,12 @@
       </div>
       <button class="dev-btn" data-action="page-next">⏭ 下一頁</button>
 
+      <div style="border-top:1px solid #5a4020; padding-top:8px; margin:8px 0 6px; font-weight:700;">🔧 Layout 編輯</div>
+      <button class="dev-btn" data-action="layout-edit" style="background:linear-gradient(180deg,#1a3a1a,#0e2010);border-color:#4a8a4a;font-size:13px;padding:10px;">
+        🔧 進入 / 離開 元件拖曳編輯模式
+      </button>
+      <div style="font-size:10px;color:#888;margin-bottom:6px;">拖紅色把手 → 移動元件 → 💾 匯出座標</div>
+
       <div style="border-top:1px solid #5a4020; padding-top:8px; margin:8px 0 6px; font-weight:700;">🎰 Spin 控制</div>
       <button class="dev-btn" data-action="spin">立即 Spin</button>
       <button class="dev-btn" data-action="reload">重整頁面</button>
@@ -127,6 +142,19 @@
           background: linear-gradient(180deg, #4a2e14, #2a1a08);
           border-color: #d4a54a;
         }
+        /* 手機版：DEV 面板變底部抽屜 + 大按鈕，浮動按鈕顯示 */
+        @media (max-width: 600px) {
+          #dev-toggle-btn { display: block !important; }
+          #dev-panel {
+            right: 0 !important; top: auto !important; bottom: 0 !important;
+            max-width: 100% !important; width: 100% !important;
+            max-height: 60vh !important;
+            border-radius: 12px 12px 0 0 !important;
+            padding: 16px !important;
+          }
+          #dev-panel .dev-btn { padding: 12px !important; font-size: 14px !important; }
+          #dev-panel .dev-btn-mini { padding: 10px 0 !important; font-size: 13px !important; }
+        }
       </style>
     </div>
     <script>
@@ -140,6 +168,9 @@
         }
       });
       document.getElementById('dev-close').onclick = () => panel.style.display = 'none';
+      document.getElementById('dev-toggle-btn').onclick = () => {
+        panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+      };
 
       // 按鈕事件路由
       panel.addEventListener('click', e => {
@@ -162,15 +193,15 @@
             case 'overlay-scatter':
               scene.showMangaOverlay?.('mo_scatter', {
                 text: '6', textX: -326, textY: -240, holdMs: 1500,
-                useGoldDigits: true, digitW: 50, digitH: 72, gap: -4,
+                useGoldDigits: true, digitW: 80, digitH: 115, gap: -4,
               });
               break;
             case 'overlay-scatter-edit':
               // 預設座標
-              window.__lastDragCoord = { x: -250, y: -230 };
+              window.__lastDragCoord = { x: -326, y: -240 };
               scene.showMangaOverlay?.('mo_scatter', {
-                text: '6', textX: -250, textY: -230, holdMs: 999999,
-                useGoldDigits: true, digitW: 50, digitH: 72, gap: -4,
+                text: '6', textX: -326, textY: -240, holdMs: 999999,
+                useGoldDigits: true, digitW: 80, digitH: 115, gap: -4,
                 editable: true,
               });
               document.getElementById('coord-display').style.display = 'block';
@@ -205,15 +236,33 @@
               });
               break;
             case 'page':
-              if (scene._setPage) scene._setPage(parseInt(arg) - 1);
-              else if (scene.chapterBg) {
-                const k = String(parseInt(arg)).padStart(2, '0');
-                scene.chapterBg.setTexture(`v6_page_${k}`);
-                scene._currentPageIdx = parseInt(arg) - 1;
+              if (scene.chapterBg) {
+                const idx = Math.min(parseInt(arg), 10);
+                const isMobile = scene.L?.mode === 'mobile';
+                const k = String(idx).padStart(2, '0');
+                const key = isMobile ? `mbl_panel_${k}` : `v6_page_${k}`;
+                if (scene.textures.exists(key)) {
+                  scene.chapterBg.setTexture(key);
+                  if (isMobile) {
+                    scene._mobileBgIdx = idx - 1;
+                  } else {
+                    scene._currentPageIdx = idx - 1;
+                  }
+                }
               }
               break;
             case 'page-next':
-              scene.advanceTopStoryPanels?.();
+              if (scene.L?.mode === 'mobile') {
+                const next = ((scene._mobileBgIdx ?? 0) + 1) % (scene._mobileBgCount ?? 10);
+                scene._mobileBgIdx = next;
+                const k = String(next + 1).padStart(2, '0');
+                scene.chapterBg?.setTexture(`mbl_panel_${k}`);
+              } else {
+                scene.advanceTopStoryPanels?.();
+              }
+              break;
+            case 'layout-edit':
+              scene.enterLayoutEdit?.();
               break;
             case 'spin':
               scene.onSpin?.();
