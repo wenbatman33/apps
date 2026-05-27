@@ -11,6 +11,7 @@ export type Slot = {
   anchor?: "center" | "bottom";
   gunOffsetX?: number;
   gunOffsetY?: number;
+  rotation?: number;  // 顯示旋轉角度（degrees；逆時針為負）
 };
 
 // ============================================================
@@ -45,32 +46,28 @@ export const SLOTS: Record<string, Slot> = {
   "dyn/4": { x: 0.5284, y: 0.1297, w: 0.0742, h: 0.0654, anchor: "bottom" },
   "dyn/5": { x: 0.6852, y: 0.1403, w: 0.0742, h: 0.0654, anchor: "bottom" },
   "dyn/6": { x: 0.7974, y: 0.1564, w: 0.0742, h: 0.0654, anchor: "bottom" },
-  "dyn/7": { x: 0.9062, y: 0.3311, w: 0.0742, h: 0.0654, anchor: "bottom" },
-  "dyn/8": { x: 0.9811, y: 0.5537, w: 0.0742, h: 0.0654, anchor: "bottom" },
-  "dyn/9": { x: 0.9508, y: 0.9785, w: 0.0658, h: 0.0752, anchor: "bottom" },
-  "dyn/10": { x: 0.955, y: 0.705, w: 0.0808, h: 0.069, anchor: "bottom" },
-  "dyn/11": { x: 0.7956, y: 1, w: 0.0901, h: 0.046, anchor: "bottom" },
+  "dyn/7": { x: 0.9309, y: 0.2859, w: 0.0742, h: 0.0654, anchor: "bottom" },
+  "dyn/8": { x: 0.979, y: 0.6722, w: 0.0742, h: 0.0654, anchor: "bottom" },
+  "dyn/9": { x: 0.8852, y: 0.9878, w: 0.0658, h: 0.0752, anchor: "bottom" },
+  "dyn/10": { x: 0.9685, y: 0.8717, w: 0.0808, h: 0.069, anchor: "bottom" },
   "plate/send": { x: 0.93, y: 0.0811, w: 0.0495, h: 0.0742, anchor: "bottom" },
   "plate/0": { x: 0.7902, y: 0.0811, w: 0.0495, h: 0.0742, anchor: "bottom" },
   "plate/1": { x: 0.6865, y: 0.0737, w: 0.0495, h: 0.0742, anchor: "bottom" },
   "plate/2": { x: 0.5211, y: 0.083, w: 0.0495, h: 0.0742, anchor: "bottom" },
   "plate/3": { x: 0.3931, y: 0.082, w: 0.0495, h: 0.0742, anchor: "bottom" },
-  "plate/4": { x: 0.2956, y: 0.167, w: 0.0495, h: 0.0742, anchor: "bottom" },
-  "plate/5": { x: 0.15, y: 0.167, w: 0.0495, h: 0.0742, anchor: "bottom" },
+  "plate/4": { x: 0.2956, y: 0.167, w: 0.0495, h: 0.0742, anchor: "bottom", rotation: -30 },
   "bottle/send": { x: 0.93, y: 0.3213, w: 0.0267, h: 0.0957, anchor: "bottom" },
   "bottle/0": { x: 0.7821, y: 0.2926, w: 0.0267, h: 0.0957, anchor: "bottom" },
   "bottle/1": { x: 0.694, y: 0.2944, w: 0.0267, h: 0.0957, anchor: "bottom" },
   "bottle/2": { x: 0.5165, y: 0.2889, w: 0.0267, h: 0.0957, anchor: "bottom" },
   "bottle/3": { x: 0.389, y: 0.2852, w: 0.0267, h: 0.0957, anchor: "bottom" },
-  "bottle/4": { x: 0.3018, y: 0.3369, w: 0.0267, h: 0.0957, anchor: "bottom" },
-  "bottle/5": { x: 0.17, y: 0.3369, w: 0.0267, h: 0.0957, anchor: "bottom" },
+  "bottle/4": { x: 0.3018, y: 0.3369, w: 0.0267, h: 0.0957, anchor: "bottom", rotation: -30 },
   "cup/send": { x: 0.93, y: 0.3379, w: 0.0293, h: 0.0566, anchor: "bottom" },
   "cup/0": { x: 0.7745, y: 0.3185, w: 0.0293, h: 0.0566, anchor: "bottom" },
   "cup/1": { x: 0.6808, y: 0.3129, w: 0.0293, h: 0.0566, anchor: "bottom" },
   "cup/2": { x: 0.5064, y: 0.3138, w: 0.0293, h: 0.0566, anchor: "bottom" },
   "cup/3": { x: 0.3801, y: 0.3175, w: 0.0293, h: 0.0566, anchor: "bottom" },
-  "cup/4": { x: 0.2972, y: 0.3535, w: 0.0293, h: 0.0566, anchor: "bottom" },
-  "cup/5": { x: 0.175, y: 0.3535, w: 0.0293, h: 0.0566, anchor: "bottom" },
+  "cup/4": { x: 0.2972, y: 0.3535, w: 0.0293, h: 0.0566, anchor: "bottom", rotation: -30 },
   "husband/1": { x: 0.4688, y: 0.6104, w: 0.0938, h: 0.2227, anchor: "bottom" },
   "husband/2": { x: 0.4163, y: 0.5811, w: 0.127, h: 0.251, anchor: "bottom" },
   "husband/3": { x: 0.4688, y: 0.6104, w: 0.0938, h: 0.2402, anchor: "bottom" },
@@ -92,8 +89,8 @@ export const SLOTS: Record<string, Slot> = {
   "apple/z4_1": { x: 0.7799, y: 0.6211, w: 0.0221, h: 0.0342, anchor: "bottom" },
   "apple/z4_2": { x: 0.8125, y: 0.7285, w: 0.0221, h: 0.0342, anchor: "bottom" },
   "explosion": { x: 0.4942, y: 0.7778, w: 0.1386, h: 0.2337, anchor: "bottom" },
-  "barman/idle": { x: 0.97, y: 0.35, w: 0.1, h: 0.23, anchor: "bottom" },
-  "barman/slide": { x: 0.97, y: 0.35, w: 0.1, h: 0.23, anchor: "bottom" },
+  "barman/idle": { x: 0.9668, y: 0.3316, w: 0.1, h: 0.23, anchor: "bottom" },
+  "barman/slide": { x: 0.9676, y: 0.3302, w: 0.1, h: 0.23, anchor: "bottom" },
 
 };
 
@@ -109,10 +106,13 @@ export const ACTORS: Record<string, ActorDef> = {
   sheriff_walk:  { slots: ["sheriff/action1", "sheriff/action2", "sheriff/action3", "sheriff/action4"] },
   bandit_intro:  { slots: ["bandit/at_door", "bandit/enter"] },
   bandit_duel:   { slots: ["bandit/hide", "bandit/peek", "bandit/fire"], loop: true },
-  cup_flow:      { slots: ["cup/send", "cup/0", "cup/1", "cup/2", "cup/3", "cup/4", "cup/5"] },
-  bottle_flow:   { slots: ["bottle/send", "bottle/0", "bottle/1", "bottle/2", "bottle/3", "bottle/4", "bottle/5"] },
-  plate_flow:    { slots: ["plate/send", "plate/0", "plate/1", "plate/2", "plate/3", "plate/4", "plate/5"] },
-  dynamite:      { slots: ["dyn/1","dyn/2","dyn/3","dyn/4","dyn/5","dyn/6","dyn/7","dyn/8","dyn/9","dyn/10","dyn/11"] },
+  cup_flow:      { slots: ["cup/0", "cup/1", "cup/2", "cup/3", "cup/4"] },
+  bottle_flow:   { slots: ["bottle/0", "bottle/1", "bottle/2", "bottle/3", "bottle/4"] },
+  plate_flow:    { slots: ["plate/0", "plate/1", "plate/2", "plate/3", "plate/4"] },
+  // 1-2：barman 接到後逆向送回門外（dyn/7 起折返）
+  dynamite_back: { slots: ["dyn/1","dyn/2","dyn/3","dyn/4","dyn/5","dyn/6","dyn/7","dyn/6","dyn/5","dyn/4","dyn/3","dyn/2","dyn/1"] },
+  // 1-3：barman 丟到地上（dyn/7 後走 dyn/8 → 9 → 10）
+  dynamite_drop: { slots: ["dyn/1","dyn/2","dyn/3","dyn/4","dyn/5","dyn/6","dyn/7","dyn/8","dyn/9","dyn/10"] },
   ash_to_z1:     { slots: ["ash/origin", "ash/z1_1", "ash/z1_2"] },
   ash_to_z2:     { slots: ["ash/origin", "ash/z2_1", "ash/z2_2"] },
   apple_to_z3:   { slots: ["apple/origin", "apple/z3_1", "apple/z3_2"] },

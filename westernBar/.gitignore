@@ -7,3 +7,4 @@ node_modules/
 analysis/
 public/assets/lcd_color/_backup_*/
 *.bak
+tsconfig.tsbuildinfo

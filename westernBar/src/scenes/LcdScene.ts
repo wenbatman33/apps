@@ -36,14 +36,32 @@ export class LcdScene extends Phaser.Scene {
   private nextTickAt = 0;
   private nextSpawnAt = 0;
   // 每軌獨立 spawn 計時（同一軌一次只允許 1 個）
-  private trackNextSpawnAt: Record<string, number> = { cup: 0, bottle: 0, plate: 0 };
+  private trackNextSpawnAt: Record<string, number> = { cup: 0, bottle: 0, plate: 0, dynamite: 0 };
   private lives = 3;
   private score = 0;
   private hits = 0;  // 累積擊中物品數，達標進對決
-  private hitsToDuel = 12;
+  private hitsToDuel = 20;
   private hudText!: Phaser.GameObjects.Text;
-  private bulletFlash?: Phaser.GameObjects.Line;
+  private hudLevelText?: Phaser.GameObjects.Text;
+  private hudScoreText?: Phaser.GameObjects.Text;
+  private hudLivesText?: Phaser.GameObjects.Text;
+  private hudLabels?: Phaser.GameObjects.Text[];
+  private prevSubLevel: 1 | 2 | 3 = 1;
+  private levelBannerHideUntil = 0;  // 大字關卡橫幅顯示到此時間（毫秒）
   private gunDebug = false;
+  private barmanSprite?: Phaser.GameObjects.Sprite;
+  /** 關卡：1-10 為大等級，1-3 為子關卡（共 30 關）
+   *  X-1: 無炸彈 / X-2: barman 折返 / X-3: barman 丟地
+   *  outerLevel 越高，物品出得越密、夫妻動作越頻繁 */
+  private _outerLevel: number = 1;   // 1..10
+  private _subLevel: 1 | 2 | 3 = 1;  // 1..3
+  private subLevel(): 1 | 2 | 3 { return this._subLevel; }
+  private outerLevel(): number { return this._outerLevel; }
+  /** 1 (1-1) → 10 (10-3) 的難度線性係數 */
+  private difficultyFactor(): number {
+    const idx = (this._outerLevel - 1) * 3 + (this._subLevel - 1);  // 0..29
+    return idx / 29;
+  }
 
   // === 夫妻 ===
   private husbandSprite!: Phaser.GameObjects.Sprite;
@@ -52,6 +70,11 @@ export class LcdScene extends Phaser.Scene {
   private wifeState: "eat" | "alert" | "throw" = "eat";
   private husbandNextAt = 0;
   private wifeNextAt = 0;
+  // 吃飯時的隨機姿勢：1 = 低頭吃 / 3 = 抬頭看
+  private husbandEatPose: 1 | 3 = 1;
+  private wifeEatPose: 1 | 3 = 1;
+  private husbandPoseNextAt = 0;
+  private wifePoseNextAt = 0;
   // 投擲中的暗器 actor（origin → wp1 → wp2 → 命中或落空）
   private projectiles: Array<{ actor: ActorState; sprite: Phaser.GameObjects.Sprite; targetZone: number; landed?: boolean }> = [];
 
@@ -123,6 +146,23 @@ export class LcdScene extends Phaser.Scene {
     this.stepBgmActive = false;
     if (this.stepTimer) { this.stepTimer.remove(false); this.stepTimer = undefined; }
   }
+  /** 播 sound 期間暫停 step BGM，sound complete 後等一拍再恢復 */
+  private playOverStepBgm(key: string, volume = 0.7, onComplete?: () => void) {
+    const wasActive = this.stepBgmActive;
+    this.stopStepBgm();
+    const s = this.addSfx(key, { volume });
+    let done = false;
+    const finish = () => {
+      if (done) return; done = true;
+      // 等一拍再恢復 step BGM（讓中彈音樂收尾不被切）
+      if (wasActive) this.time.delayedCall(TICK_MS, () => this.startStepBgm());
+      onComplete?.();
+    };
+    s.once("complete", finish);
+    s.play();
+    const dur = (s.duration && s.duration > 0) ? s.duration * 1000 + 500 : 3000;
+    this.time.delayedCall(dur, finish);
+  }
 
   create() {
     this.drawBackdrop();
@@ -144,7 +184,9 @@ export class LcdScene extends Phaser.Scene {
     this.wifeSprite = this.add.sprite(wp.x, wp.cy, this.texKeyForSlot("wife/1")).setDepth(7);
     this.fitSprite(this.wifeSprite, wp.w, wp.h);
 
-    this.hudText = this.add.text(10, 10, "", { fontSize: "16px", color: "#222", fontFamily: "monospace" }).setDepth(100);
+    // 舊 HUD（暫保留為隱藏，避免別處引用）
+    this.hudText = this.add.text(0, 0, "", { fontSize: "1px" }).setVisible(false).setDepth(100);
+    this.createLcdHud();
     this.refreshHud();
     this.createMuteButton();
     this.createDevPanel();
@@ -164,7 +206,7 @@ export class LcdScene extends Phaser.Scene {
     kb.on("keydown-SPACE", handleFire);
     kb.on("keydown-F",     handleFire);
     // 測試：按 D 直接進對決
-    kb.on("keydown-D", () => { if (this.phase === "play") this.enterDuel(); });
+    kb.on("keydown-D", () => this.toggleDevPanel());
     // 編輯模式：E 切換
     kb.on("keydown-E", () => this.toggleEditMode());
     // 槍口 debug：G 切換（紅點顯示子彈起點）
@@ -241,6 +283,10 @@ export class LcdScene extends Phaser.Scene {
 
   override update(_t: number, _dt: number) {
     const now = this.time.now;
+    // banner 結束時切回正常 HUD 顯示
+    if (this.hudScoreText && !this.hudScoreText.visible && now >= this.levelBannerHideUntil) {
+      this.refreshHud();
+    }
 
     if (this.phase === "play") {
       // 每個物品依自己的 nextTickAt 推進（不同軌道速度不同）
@@ -254,6 +300,7 @@ export class LcdScene extends Phaser.Scene {
       this.maybeSpawnTrack("cup");
       this.maybeSpawnTrack("bottle");
       this.maybeSpawnTrack("plate");
+      this.maybeSpawnTrack("dynamite");
     }
     // 對決週期改用 scheduleBanditAction 隨機延遲，不在 update 裡跑
   }
@@ -359,6 +406,7 @@ export class LcdScene extends Phaser.Scene {
     spr.setTexture(this.texKeyForSlot(slotKey));
     spr.setPosition(p.x, p.cy);
     this.fitSprite(spr, p.w, p.h);
+    spr.setAngle(p.slot.rotation ?? 0);
   }
 
   // === 背景 ===
@@ -380,6 +428,7 @@ export class LcdScene extends Phaser.Scene {
       if (tex === "__missing__" || !this.textures.exists(tex)) continue;
       const spr = this.add.sprite(p.x, p.cy, tex).setDepth(depth);
       this.fitSprite(spr, p.w, p.h);
+      if (key === "barman/idle") this.barmanSprite = spr;
     }
   }
 
@@ -402,14 +451,27 @@ export class LcdScene extends Phaser.Scene {
 
   // === 玩家 ===
 
+  private pourRevertTimer?: Phaser.Time.TimerEvent;
   private movePlayer(dir: number) {
-    // 玩家 zone：1..4，按右到 4 還再右 → 切到 5 (pour 倒酒姿勢)
+    // 玩家 zone：1..4，按右到 4 還再右 → 切到 5 (pour 倒酒姿勢，短暫顯示後自動回 zone 4)
     const next = Phaser.Math.Clamp(this.playerZone + dir, 1, 5);
     if (next === this.playerZone) return;
     this.playerZone = next;
-    // zone 5 = pour（倒酒姿勢），其他 1-4 = walk_1..4
     const slot = this.playerZone === 5 ? "sheriff/pour" : ACTORS.sheriff_walk.slots[this.playerZone - 1];
     this.renderActor(this.playerSprite, slot);
+    // 取消舊的還原計時
+    this.pourRevertTimer?.remove(false);
+    this.pourRevertTimer = undefined;
+    // pour 是「快閃」動作，200ms 後自動回 zone 4
+    if (this.playerZone === 5) {
+      this.pourRevertTimer = this.time.delayedCall(200, () => {
+        if (this.playerZone === 5) {
+          this.playerZone = 4;
+          this.renderActor(this.playerSprite, ACTORS.sheriff_walk.slots[3]);
+        }
+        this.pourRevertTimer = undefined;
+      });
+    }
   }
 
   private fire(introMode = false) {
@@ -422,11 +484,7 @@ export class LcdScene extends Phaser.Scene {
     const gx = p.x + dx * this.playerSprite.displayWidth;
     const gy = p.cy + dy * this.playerSprite.displayHeight;
 
-    // 子彈 = 從槍口往上的閃光線（無 tween，瞬間消失）
-    this.bulletFlash?.destroy();
-    this.bulletFlash = this.add.line(0, 0, gx, gy, gx, 0, 0xffffff, 1).setOrigin(0, 0).setLineWidth(2).setDepth(20);
-    this.time.delayedCall(100, () => { this.bulletFlash?.destroy(); this.bulletFlash = undefined; });
-    // Debug: 槍口位置紅點（按 G 切換）
+    // Debug: 槍口位置紅點（按 G 切換）— 白色射線已移除
     if (this.gunDebug) {
       const dot = this.add.circle(gx, gy, 5, 0xff0000).setDepth(30);
       this.time.delayedCall(600, () => dot.destroy());
@@ -435,31 +493,45 @@ export class LcdScene extends Phaser.Scene {
 
     if (introMode) return;  // intro 的兩聲只是視覺，無命中判定
 
-    // 命中判定：子彈 x = gx；任何 item 當前 slot 的 x 在 ±tolerance 內 + 在玩家上方 = 命中
-    const tolerance = 0.06 * GAME_WIDTH;
+    // 命中判定（純 LCD 邏輯）：zone N 只能打 column (4-N)；MISS 列 (column 4) 永遠打不到
+    //   zone 4 ↔ col 0、zone 3 ↔ col 1、zone 2 ↔ col 2、zone 1 ↔ col 3
+    //   zone 5 (pour) 視同 zone 4
+    const playerZ = this.playerZone === 5 ? 4 : this.playerZone;
+    const catchCol = 4 - playerZ;
     let hits = 0;
     for (const it of [...this.items]) {
       const currentSlot = actorCurrentSlot(it.actor);
       if (!currentSlot) continue;
       const sp = slotPx(currentSlot);
       if (!sp) continue;
-      if (Math.abs(sp.x - gx) <= tolerance && sp.y < p.cy - 30) {
+      // 解析 column index（"cup/3" → 3、"dyn/N" 走另一條判定）
+      const m = /^(cup|bottle|plate)\/(\d+)$/.exec(currentSlot);
+      const dynMatch = /^dyn\/(\d+)$/.exec(currentSlot);
+      // 一般物品：column 必須等於 catchCol；炸彈：放寬用位置容差
+      const isHit = m
+        ? parseInt(m[2], 10) === catchCol
+        : dynMatch
+        ? Math.abs(sp.x - gx) <= 0.06 * GAME_WIDTH && sp.y < p.cy - 30
+        : false;
+      if (isHit) {
         // 命中
         if (it.kind === "dynamite") {
           this.explodeAt(sp.x, sp.y);
           this.removeItem(it);
           this.lives--;
           this.refreshHud();
+          // 警長被炸：換 down 姿勢 + 等 miss 音樂播完
+          this.hitByProjectileFx(sp.x, sp.y);
           continue;
         }
+        // 已擊碎 → 跳過（不再播音效、不再加分）
+        if (it.broken) continue;
         const hitSfx = it.kind === "cup" ? "sfx_hit1"
                      : it.kind === "bottle" ? "sfx_hit2"
                      : it.kind === "plate" ? "sfx_hit3" : null;
         if (hitSfx) this.playSfx(hitSfx, 0.6);
-        this.score += 10;
-        this.hits++;
-        // 不立刻移除：換成擊碎紋理，下一拍再消失
-        if (!it.broken) {
+        // 不在迴圈裡加分 — 統一在迴圈外依擊中數查表
+        {
           it.broken = true;
           const brokenKey = it.kind === "cup" ? this.resolveTex("lcd_cup_broken", "lcd_sil_cup_broken")
                           : it.kind === "bottle" ? this.resolveTex("lcd_bottle_broken", "lcd_sil_bottle_broken")
@@ -473,48 +545,134 @@ export class LcdScene extends Phaser.Scene {
         hits++;
       }
     }
-    if (hits >= 2) this.score += 30;
     if (hits > 0) {
+      // 分數查表：1 個 10、2 個 50、3 個 150（最多 3 軌，理論上不會 4 個）
+      const scoreMap: Record<number, number> = { 1: 10, 2: 50, 3: 150 };
+      this.score += scoreMap[hits] ?? 0;
+      this.hits++;  // 每次開槍最多計 1 hit（控制 subLevel 進度）
       this.refreshHud();
       if (this.hits >= this.hitsToDuel) this.enterDuel();
     }
   }
 
+  /** 被夫妻投擲物砸到：警長換 down 姿勢 + 等 miss 音樂播完才復原 */
+  private hitByProjectileFx(_x: number, _y: number) {
+    // 被砸到懲罰：對決門檻 +10（必須多打 10 個才能進對決）
+    this.hitsToDuel += 10;
+    // 取消可能進行中的 pour 還原計時，避免覆寫 down 姿勢
+    this.pourRevertTimer?.remove(false);
+    this.pourRevertTimer = undefined;
+    // 警長換 down 姿勢
+    this.renderActor(this.playerSprite, "sheriff/down");
+    // 暫鎖移動／開槍（借用 intro 階段封鎖輸入）
+    const prevPhase = this.phase;
+    this.phase = "intro";
+
+    // miss 音樂期間暫停 step BGM，播完後等一拍才恢復 + 解鎖
+    this.playOverStepBgm("sfx_miss", 0.7, () => {
+      this.phase = prevPhase;
+      if (this.lives > 0) {
+        const zone = Math.max(1, Math.min(4, this.playerZone));
+        this.playerZone = zone;
+        this.renderActor(this.playerSprite, ACTORS.sheriff_walk.slots[zone - 1]);
+      }
+    });
+  }
+
   private explodeAt(x: number, y: number) {
-    const c = this.add.circle(x, y, 8, 0x000000).setDepth(30);
-    this.time.delayedCall(300, () => c.destroy());
+    const tex = this.resolveTex("lcd_explosion", "lcd_sil_explosion");
+    let spr: Phaser.GameObjects.GameObject;
+    if (tex !== "__missing__" && this.textures.exists(tex)) {
+      // 用爆炸圖（從 explosion slot 拿尺寸）
+      const exp = slotPx("explosion");
+      const w = exp?.w ?? 130;
+      const h = exp?.h ?? 130;
+      const s = this.add.sprite(x, y, tex).setDepth(30);
+      this.fitSprite(s, w, h);
+      spr = s;
+    } else {
+      spr = this.add.circle(x, y, 8, 0x000000).setDepth(30);
+    }
+    this.time.delayedCall(500, () => spr.destroy());
     this.playSfx("sfx_bomb", 0.7);
   }
 
   // ========== 夫妻 ==========
 
   private setCoupleSprite(who: "husband" | "wife", state: "eat" | "alert" | "throw") {
-    const slotKey = `${who}/${state === "eat" ? 1 : state === "alert" ? 2 : 3}`;
+    // slot 對應：
+    //   eat 狀態 → 用 husbandEatPose / wifeEatPose（1=低頭吃 / 3=抬頭看，隨機切換，都坐著）
+    //   alert / throw → 統一用 /2（生氣站立，站在椅子後面）
+    let slotIdx: 1 | 2 | 3;
+    if (state === "eat") {
+      slotIdx = who === "husband" ? this.husbandEatPose : this.wifeEatPose;
+    } else {
+      slotIdx = 2;
+    }
+    const slotKey = `${who}/${slotIdx}`;
     const spr = who === "husband" ? this.husbandSprite : this.wifeSprite;
-    this.renderActor(spr, slotKey);
-    // 生氣站立 → 退到椅子後面（depth 4 < 椅子 5）；吃飯/投擲 → 椅子前 (7)
-    spr.setDepth(state === "alert" ? 4 : 7);
+    spr.setTexture(this.texKeyForSlot(slotKey));
+    const anchorSlot = slotPx(`${who}/1`);
+    const sizeSlot = slotPx(slotKey);
+    if (anchorSlot && sizeSlot) {
+      // 坐著狀態（1/3）鎖定在 /1 位置；站起來（2）用 /2 的位置（生氣可能稍偏）
+      const useAnchor = (slotIdx === 2) ? sizeSlot : anchorSlot;
+      spr.setPosition(useAnchor.x, useAnchor.cy);
+      this.fitSprite(spr, sizeSlot.w, sizeSlot.h);
+      spr.setAngle(sizeSlot.slot.rotation ?? 0);
+    }
+    spr.setVisible(true);
+    // depth：站立 (alert/throw) = 4 在椅子(5)後面；坐著吃飯 = 7 在椅子前
+    spr.setDepth(state === "eat" ? 7 : 4);
     if (who === "husband") this.husbandState = state;
     else this.wifeState = state;
   }
 
   private tickCouple(now: number) {
-    // 隨機發怒：每 ~3-5 拍檢查一次
+    // (1) 坐著吃飯時隨機切換低頭/抬頭姿勢
+    if (this.husbandState === "eat" && now >= this.husbandPoseNextAt) {
+      this.husbandEatPose = (Math.random() < 0.5 ? 1 : 3) as 1 | 3;
+      this.setCoupleSprite("husband", "eat");
+      this.husbandPoseNextAt = now + (1200 + Math.random() * 2000);  // 1.2-3.2s
+    }
+    if (this.wifeState === "eat" && now >= this.wifePoseNextAt) {
+      this.wifeEatPose = (Math.random() < 0.5 ? 1 : 3) as 1 | 3;
+      this.setCoupleSprite("wife", "eat");
+      this.wifePoseNextAt = now + (1500 + Math.random() * 2000);
+    }
+    // (2) 隨機進入生氣 → 投擲（1-1 最舒緩、10-3 最頻繁）
+    const d = this.difficultyFactor();  // 0..1
+    //   1-1：丈夫 5-9s / 妻子 6-10s
+    //   10-3：丈夫 1-2s / 妻子 1.2-2.5s
+    const husbandLo = 5000 + (1000 - 5000) * d;
+    const husbandHi = 9000 + (2000 - 9000) * d;
+    const wifeLo = 6000 + (1200 - 6000) * d;
+    const wifeHi = 10000 + (2500 - 10000) * d;
     if (now >= this.husbandNextAt) {
       this.cycleCoupleMember("husband");
-      this.husbandNextAt = now + (3000 + Math.random() * 3000);
+      this.husbandNextAt = now + (husbandLo + Math.random() * (husbandHi - husbandLo));
     }
     if (now >= this.wifeNextAt) {
       this.cycleCoupleMember("wife");
-      this.wifeNextAt = now + (3500 + Math.random() * 3500);
+      this.wifeNextAt = now + (wifeLo + Math.random() * (wifeHi - wifeLo));
     }
   }
 
   private cycleCoupleMember(who: "husband" | "wife") {
     const state = who === "husband" ? this.husbandState : this.wifeState;
+    const partnerState = who === "husband" ? this.wifeState : this.husbandState;
     if (state === "eat") {
-      // 60% 機率不動，40% 進警戒
-      if (Math.random() < 0.4) this.setCoupleSprite(who, "alert");
+      // 另一半已在動作中（alert/throw）→ 強制繼續吃，不會兩人同時站起來
+      if (partnerState !== "eat") return;
+      // 站起來機率隨難度遞增：1-1 = 20% / 10-3 = 90%
+      const d = this.difficultyFactor();
+      const alertChance = 0.2 + 0.7 * d;
+      if (Math.random() < alertChance) {
+        this.setCoupleSprite(who, "alert");
+        // 站起來後 1-1.5 秒就丟（不等下次 husbandNextAt 週期）
+        if (who === "husband") this.husbandNextAt = this.time.now + (1000 + Math.random() * 500);
+        else this.wifeNextAt = this.time.now + (1000 + Math.random() * 500);
+      }
     } else if (state === "alert") {
       // 警戒 → 投擲（再 1 拍）
       this.setCoupleSprite(who, "throw");
@@ -531,33 +689,34 @@ export class LcdScene extends Phaser.Scene {
     const actor = makeActor(actorKey);
     const slot = actorCurrentSlot(actor)!;
     const p = slotPx(slot)!;
-    const sprite = this.add.sprite(p.x, p.cy, this.texKeyForSlot(slot)).setDepth(9);
+    // 投擲物 depth 16：高過桌子 (14) 和警長 (15)，才不會被桌子遮住
+    const sprite = this.add.sprite(p.x, p.cy, this.texKeyForSlot(slot)).setDepth(16);
     this.fitSprite(sprite, p.w, p.h);
     this.projectiles.push({ actor, sprite, targetZone: target });
     this.playSfx("sfx_beep", 0.4);
   }
 
   private tickProjectiles() {
+    // 時序：beat 1 = z*_1（warning）→ beat 2 = z*_2（landed）→ beat 3 判定 + 消失
     for (const p of [...this.projectiles]) {
-      // 已落地：再下一拍才判定 — 給玩家一拍的反應時間逃離 target zone
-      if (p.landed) {
-        if (this.playerZone === p.targetZone) {
+      const status = actorAdvance(p.actor);
+      if (status === "ended") {
+        // zone 5 (pour) 視同 zone 4：sheriff 還在吧台同一側，不能靠倒酒姿勢免疫
+        const effectivePlayerZone = this.playerZone === 5 ? 4 : this.playerZone;
+        const hit = effectivePlayerZone === p.targetZone;
+        console.log(`[projectile] target=z${p.targetZone}  player=z${this.playerZone} (eff ${effectivePlayerZone})  → ${hit ? "HIT 扣命" : "miss"}`);
+        if (hit) {
           this.lives--;
           this.refreshHud();
-          this.explodeAt(p.sprite.x, p.sprite.y);
+          // 蘋果/煙灰缸不是炸彈：用 miss 音效 + 簡單擊中閃爍，不出爆炸圖
+          this.hitByProjectileFx(p.sprite.x, p.sprite.y);
         }
         p.sprite.destroy();
         const i = this.projectiles.indexOf(p);
         if (i >= 0) this.projectiles.splice(i, 1);
         continue;
       }
-      const status = actorAdvance(p.actor);
       const slot = actorCurrentSlot(p.actor);
-      if (status === "ended") {
-        // 飛到最後落點 slot — 標記 landed，sprite 停在原地，下一拍才判定
-        p.landed = true;
-        continue;
-      }
       this.renderActor(p.sprite, slot!);
     }
   }
@@ -764,14 +923,6 @@ export class LcdScene extends Phaser.Scene {
     this.renderActor(this.playerSprite, "sheriff/fire");
     this.playSfx("sfx_fire", 0.5);
 
-    // 子彈視覺
-    const sp = slotPx("sheriff/fire")!;
-    if (this.banditSprite) {
-      const flash = this.add.line(0, 0, sp.x, sp.cy, this.banditSprite.x, this.banditSprite.y, 0xffffff, 1)
-        .setOrigin(0, 0).setLineWidth(2).setDepth(20);
-      this.time.delayedCall(120, () => flash.destroy());
-    }
-
     // 命中判定（快槍對決）：
     //   • 必須是「通緝犯探頭完、舉槍開火」的那一瞬間（fire pose 期間）
     //   • 玩家比通緝犯【晚】開槍，但在通緝犯退回 hide 之前按 → 算擊中
@@ -827,7 +978,14 @@ export class LcdScene extends Phaser.Scene {
 
   private exitDuel(won: boolean) {
     if (won) {
-      // 打死通緝犯不加分（只是過關）
+      // 打贏 → 進下一關。X-3 完 → (X+1)-1；10-3 完 → 仍循環在 10-3
+      if (this._subLevel < 3) {
+        this._subLevel = (this._subLevel + 1) as 1 | 2 | 3;
+      } else if (this._outerLevel < 10) {
+        this._outerLevel++;
+        this._subLevel = 1;
+      }
+      // 若已破到 10-3 則保持
       this.playSfx("sfx_stage", 0.7);
     }
     this.banditFireTimer?.remove(false); this.banditFireTimer = undefined;
@@ -844,6 +1002,7 @@ export class LcdScene extends Phaser.Scene {
     this.husbandSprite.setVisible(true);
     this.wifeSprite.setVisible(true);
     this.hits = 0;
+    this.hitsToDuel = 20;  // 重置門檻（被砸到累加的 +10 也清零）
     this.phase = "play";
     // 警長回到 zone 2
     this.playerZone = 2;
@@ -867,29 +1026,75 @@ export class LcdScene extends Phaser.Scene {
       const status = actorAdvance(it.actor);
       const slot = actorCurrentSlot(it.actor);
       if (status === "ended") {
+        // 炸彈 1-3：走到 dyn/10 (落地) → 爆炸 + 扣命 + 警長 down
+        if (it.kind === "dynamite" && slot === "dyn/10") {
+          const sp = slotPx(slot);
+          if (sp) this.explodeAt(sp.x, sp.cy);
+          this.lives--;
+          this.refreshHud();
+          this.hitByProjectileFx(sp?.x ?? 0, sp?.cy ?? 0);
+        }
         this.removeItem(it);
         continue;
       }
       this.renderActor(it.sprite, slot!);
       it.nextTickAt = now + (TRACK_TICK_MS[it.kind] || TICK_MS);
+      // 炸彈走到 dyn/7 時 barman 接手 → 換 slide 姿勢
+      if (it.kind === "dynamite" && slot === "dyn/7") this.flashBarmanSlide();
     }
+  }
+
+  /** barman 短暫切換到 slide pose（接 / 丟炸彈）然後復原 */
+  private flashBarmanSlide() {
+    if (!this.barmanSprite) return;
+    const slideKey = this.resolveTex("lcd_barman_slide", "lcd_sil_barman_slide");
+    const idleKey = this.resolveTex("lcd_barman_idle", "lcd_sil_barman_idle");
+    if (this.textures.exists(slideKey)) this.barmanSprite.setTexture(slideKey);
+    this.time.delayedCall(800, () => {
+      if (this.textures.exists(idleKey)) this.barmanSprite?.setTexture(idleKey);
+    });
   }
 
   /** 檢查指定軌道是否該 spawn 新物品（每軌一次最多 1 個） */
   private maybeSpawnTrack(kind: ActiveItem["kind"]) {
     const now = this.time.now;
     if (now < (this.trackNextSpawnAt[kind] || 0)) return;
+    // 1-1 子關卡無炸彈（持續推遲 timer，避免進 1-2 瞬間爆量）
+    if (kind === "dynamite" && this.subLevel() === 1) {
+      this.trackNextSpawnAt[kind] = now + 3000;
+      return;
+    }
     // 軌道上已經有同類物品 → 跳過
     if (this.items.some(it => it.kind === kind)) return;
+    // 反 3 連擊：cup/bottle/plate 中若已有「剛出生」的（stateIndex 0-1），就延後此軌
+    if (kind !== "dynamite") {
+      const justSpawned = this.items.some(it =>
+        it.kind !== kind && it.kind !== "dynamite" && it.actor.stateIndex <= 1
+      );
+      if (justSpawned) {
+        this.trackNextSpawnAt[kind] = now + TICK_MS * 2;
+        return;
+      }
+    }
     this.spawnItem(kind);
-    // 下一次 spawn 等 6-10 拍（隨機，跟軌道無關，給玩家反應時間）
-    this.trackNextSpawnAt[kind] = now + TICK_MS * (6 + Math.random() * 4);
+    // 下一次 spawn 間隔（依難度縮短：1-1 最寬鬆、10-3 最頻繁）
+    //   1-1 base: 物品 6-10 拍 / 炸彈 12-20 拍
+    //   10-3 加速：物品 2-4 拍 / 炸彈 5-10 拍
+    const d = this.difficultyFactor();  // 0..1
+    const baseRange = kind === "dynamite" ? [12, 20] : [6, 10];
+    const fastRange = kind === "dynamite" ? [5, 10]  : [2, 4];
+    const lo = baseRange[0] + (fastRange[0] - baseRange[0]) * d;
+    const hi = baseRange[1] + (fastRange[1] - baseRange[1]) * d;
+    this.trackNextSpawnAt[kind] = now + TICK_MS * (lo + Math.random() * (hi - lo));
   }
 
   private spawnItem(forceKind?: ItemKind) {
     const kind: ItemKind = forceKind
       ?? (["cup", "bottle", "plate"] as const)[Math.floor(Math.random() * 3)];
-    const actorKey = `${kind}_flow`;
+    // dynamite 依子關卡選 flow：1-2 折返、1-3 丟地（1-1 不該到這）
+    const actorKey = kind === "dynamite"
+      ? (this.subLevel() === 3 ? "dynamite_drop" : "dynamite_back")
+      : `${kind}_flow`;
     const actor = makeActor(actorKey);
     const slot = actorCurrentSlot(actor)!;
     const p = slotPx(slot)!;
@@ -909,8 +1114,58 @@ export class LcdScene extends Phaser.Scene {
     if (i >= 0) this.items.splice(i, 1);
   }
 
+  /** 左下角 LCD 風格分數面板 */
+  private createLcdHud() {
+    const baseX = 10;
+    const baseY = GAME_HEIGHT - 70;
+    const box = this.add.rectangle(baseX, baseY, 140, 60, 0x000000, 0.6)
+      .setOrigin(0, 0).setStrokeStyle(1, 0x444444, 0.8).setDepth(99);
+    const labelStyle = { fontSize: "10px", color: "#888", fontFamily: "monospace" } as Phaser.Types.GameObjects.Text.TextStyle;
+    const digitStyle = { fontSize: "22px", color: "#ffd166", fontFamily: "monospace", fontStyle: "bold" } as Phaser.Types.GameObjects.Text.TextStyle;
+    const lblLevel = this.add.text(baseX + 8, baseY + 4,  "LEVEL", labelStyle).setDepth(100);
+    this.hudLevelText = this.add.text(baseX + 8, baseY + 14, "1-1", digitStyle).setDepth(101);
+    const lblScore = this.add.text(baseX + 70, baseY + 4, "SCORE", labelStyle).setDepth(100);
+    this.hudScoreText = this.add.text(baseX + 70, baseY + 14, "00000", digitStyle).setDepth(101);
+    this.hudLivesText = this.add.text(baseX + 8, baseY + 42, "♥♥♥", { fontSize: "12px", color: "#ff4d4d", fontFamily: "monospace" }).setDepth(101);
+    this.hudLabels = [lblLevel, lblScore];
+    // box 是參考，不需要單獨變數
+    void box;
+  }
+
+  private showLevelBanner(text: string) {
+    // 暫時隱藏 LEVEL 數字 + 顯示大關卡文字
+    if (this.hudLevelText) this.hudLevelText.setText(text);
+    this.levelBannerHideUntil = this.time.now + 2000;
+    // 也在畫面中央顯示一個大字 banner
+    const banner = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2, text, {
+      fontSize: "72px", color: "#ffd166", fontFamily: "monospace", fontStyle: "bold",
+      stroke: "#000", strokeThickness: 6,
+    }).setOrigin(0.5).setDepth(200);
+    this.time.delayedCall(2000, () => banner.destroy());
+  }
+
   private refreshHud() {
-    this.hudText.setText(`SCORE ${this.score}    LIVES ${this.lives}    ZONE ${this.playerZone}`);
+    const lvl = this.subLevel();
+    // 偵測 sub-level 轉換 → 顯示 2 秒 banner（只在 play 階段，intro/duel/over 不彈）
+    if (lvl !== this.prevSubLevel) {
+      const wasFirstSync = this.prevSubLevel === 0 as any;
+      this.prevSubLevel = lvl;
+      if (this.phase === "play" && !wasFirstSync) {
+        this.showLevelBanner(`${this._outerLevel}-${lvl}`);
+      }
+    }
+    if (this.hudScoreText) {
+      // 顯示 banner 期間 score 也藏起來
+      const showLevelText = this.time.now < this.levelBannerHideUntil;
+      this.hudScoreText.setVisible(!showLevelText);
+      if (this.hudLabels) this.hudLabels[1]?.setVisible(!showLevelText);  // 隱藏 SCORE 標籤
+      if (!showLevelText && this.hudLevelText) this.hudLevelText.setText(`${this._outerLevel}-${lvl}`);
+      this.hudScoreText.setText(this.score.toString().padStart(5, "0"));
+    }
+    if (this.hudLivesText) {
+      this.hudLivesText.setText("♥".repeat(Math.max(0, this.lives)) || "—");
+    }
+
     if (this.lives <= 0 && this.phase !== "over") {
       this.phase = "over";
       this.stopStepBgm();
@@ -959,6 +1214,12 @@ export class LcdScene extends Phaser.Scene {
     this.muteBtnWidth = w + 6;
   }
 
+  private devPanelObjects: Phaser.GameObjects.GameObject[] = [];
+  private devPanelVisible = false;
+  private toggleDevPanel() {
+    this.devPanelVisible = !this.devPanelVisible;
+    for (const o of this.devPanelObjects) (o as any).setVisible?.(this.devPanelVisible);
+  }
   private createDevPanel() {
     const labels: Array<[string, () => void]> = [
       ["⚔ 對決",    () => { if (this.phase === "play") this.enterDuel(); }],
@@ -978,16 +1239,18 @@ export class LcdScene extends Phaser.Scene {
     for (let i = labels.length - 1; i >= 0; i--) {
       const [text, fn] = labels[i];
       const btn = this.add.rectangle(bx, by, 1, 22, 0x222222, 0.7)
-        .setOrigin(1, 0).setDepth(150).setInteractive({ useHandCursor: true });
+        .setOrigin(1, 0).setDepth(150).setInteractive({ useHandCursor: true })
+        .setVisible(false);
       const t = this.add.text(bx - 4, by + 11, text, {
         fontSize: "11px", color: "#ffd166", fontFamily: "monospace"
-      }).setOrigin(1, 0.5).setDepth(151);
+      }).setOrigin(1, 0.5).setDepth(151).setVisible(false);
       const w = t.width + 12;
       btn.setSize(w, 22);
       btn.setPosition(bx, by);
       btn.on("pointerover", () => btn.setFillStyle(0x444444, 0.9));
       btn.on("pointerout",  () => btn.setFillStyle(0x222222, 0.7));
       btn.on("pointerup", fn);
+      this.devPanelObjects.push(btn, t);
       bx -= (w + 4);
     }
   }
