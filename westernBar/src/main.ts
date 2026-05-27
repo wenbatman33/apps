@@ -1,9 +1,6 @@
 import Phaser from "phaser";
 import { GAME_WIDTH, GAME_HEIGHT } from "./config";
 import { BootScene } from "./scenes/BootScene";
-import { TitleScene } from "./scenes/TitleScene";
-import { GameScene } from "./scenes/GameScene";
-import { GameOverScene } from "./scenes/GameOverScene";
 import { LcdScene } from "./scenes/LcdScene";
 
 const game: any = new Phaser.Game({
@@ -28,7 +25,7 @@ const game: any = new Phaser.Game({
   // 失焦時自動暫停 game loop（含 update / 動畫 / 物理）
   // Phaser 預設 autoPause = true，但要顯式設保險
   autoFocus: true,
-  scene: [BootScene, TitleScene, GameScene, GameOverScene, LcdScene]
+  scene: [BootScene, LcdScene]
 });
 (window as any).WB_GAME = game;  // debug 用，preview eval 拿得到
 

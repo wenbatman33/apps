@@ -1,0 +1,778 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Western Bar Figma 圖層素材提示詞</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f3efe6;
+      --ink: #191512;
+      --muted: #63584c;
+      --line: #d5c7b3;
+      --card: #fffaf1;
+      --accent: #9f6a28;
+      --accent-2: #1e5a57;
+      --danger: #8d2e22;
+      --code: #26201b;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--ink);
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Noto Sans TC", "PingFang TC", sans-serif;
+      line-height: 1.58;
+    }
+
+    header {
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      padding: 18px 24px;
+      border-bottom: 2px solid var(--line);
+      background: rgba(243, 239, 230, 0.96);
+      backdrop-filter: blur(8px);
+    }
+
+    h1 {
+      margin: 0 0 6px;
+      font-size: 28px;
+      line-height: 1.2;
+    }
+
+    .subtitle {
+      margin: 0;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    main {
+      width: min(1180px, calc(100% - 32px));
+      margin: 22px auto 72px;
+    }
+
+    .toolbar {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    input {
+      width: 100%;
+      min-height: 42px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 0 12px;
+      background: #fffdf8;
+      color: var(--ink);
+      font-size: 16px;
+    }
+
+    button {
+      min-height: 42px;
+      border: 0;
+      border-radius: 8px;
+      padding: 0 14px;
+      background: var(--accent);
+      color: white;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    button.secondary {
+      background: var(--accent-2);
+    }
+
+    section {
+      margin: 18px 0 28px;
+    }
+
+    h2 {
+      margin: 26px 0 12px;
+      padding-bottom: 8px;
+      border-bottom: 2px solid var(--line);
+      font-size: 22px;
+    }
+
+    .note {
+      padding: 14px 16px;
+      border: 1px solid var(--line);
+      border-left: 6px solid var(--accent);
+      border-radius: 8px;
+      background: #fff8ea;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 14px;
+    }
+
+    article {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      min-height: 100%;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 14px;
+      background: var(--card);
+      box-shadow: 0 1px 0 rgba(40, 25, 10, 0.08);
+    }
+
+    article h3 {
+      margin: 0;
+      font-size: 18px;
+      line-height: 1.28;
+    }
+
+    .meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    .tag {
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      padding: 2px 8px;
+      background: #f6ead8;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    pre {
+      overflow: auto;
+      min-height: 140px;
+      margin: 0;
+      border-radius: 8px;
+      padding: 12px;
+      background: var(--code);
+      color: #fff6e6;
+      white-space: pre-wrap;
+      word-break: break-word;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+      font-size: 13px;
+    }
+
+    .preview {
+      display: grid;
+      place-items: center;
+      min-height: 180px;
+      border: 1px dashed var(--line);
+      border-radius: 8px;
+      background:
+        linear-gradient(45deg, #e8dfd1 25%, transparent 25%),
+        linear-gradient(-45deg, #e8dfd1 25%, transparent 25%),
+        linear-gradient(45deg, transparent 75%, #e8dfd1 75%),
+        linear-gradient(-45deg, transparent 75%, #e8dfd1 75%);
+      background-position: 0 0, 0 10px, 10px -10px, -10px 0;
+      background-size: 20px 20px;
+      overflow: hidden;
+    }
+
+    .preview img {
+      max-width: 100%;
+      max-height: 220px;
+      object-fit: contain;
+      display: block;
+    }
+
+    .missing-preview {
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .avoid {
+      margin: 0;
+      color: var(--danger);
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .actions {
+      margin-top: auto;
+      display: flex;
+      gap: 8px;
+      justify-content: flex-end;
+    }
+
+    @media (max-width: 720px) {
+      header {
+        position: static;
+      }
+
+      .toolbar {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Western Bar Figma 圖層素材提示詞</h1>
+    <p class="subtitle">依照目前 Figma 的 LCD 圖層拆成單張 PNG 素材用提示詞。建議每張獨立生成，不要再做整張合成圖。</p>
+  </header>
+
+  <main>
+    <div class="note">
+      <strong>通用生成規則：</strong>
+      每張素材都用單一物件、完整顯示、不要裁切、不要背景、不要速度線、不要文字標籤。若需要透明圖，先生成在純色 <code>#00ff00</code> 綠幕背景，再去背成 PNG。角色和物件都使用同一套「3D 手持 LCD 復刻版」風格：Q 版西部酒吧、玩具感 3D、黑色描邊、正面或四分之三側視、適合 Phaser sprite。
+    </div>
+
+    <div class="toolbar">
+      <input id="search" type="search" placeholder="搜尋：警長、Boss、酒杯、掩體、夫妻、炸彈...">
+      <button class="secondary" type="button" onclick="copyAll()">複製全部提示詞</button>
+    </div>
+
+    <section>
+      <h2>背景與場景層</h2>
+      <div class="grid" id="scene-grid"></div>
+    </section>
+
+    <section>
+      <h2>警長動作</h2>
+      <div class="grid" id="sheriff-grid"></div>
+    </section>
+
+    <section>
+      <h2>Boss / 通緝犯動作</h2>
+      <div class="grid" id="boss-grid"></div>
+    </section>
+
+    <section>
+      <h2>夫妻與桌邊狀態</h2>
+      <div class="grid" id="couple-grid"></div>
+    </section>
+
+    <section>
+      <h2>投擲物 / 擊碎 / 爆炸</h2>
+      <div class="grid" id="object-grid"></div>
+    </section>
+
+    <section>
+      <h2>決鬥掩體</h2>
+      <div class="grid" id="cover-grid"></div>
+    </section>
+  </main>
+
+  <script>
+    const common = "單張遊戲素材 PNG，純 #00ff00 綠幕背景，主體置中且完整顯示，保留透明切圖安全邊距。風格為 3D Q 版西部酒吧掌機遊戲復刻，玩具感模型、手繪貼圖、黑色描邊、清楚輪廓、正面或四分之三側視、同一光源、同一比例。不要文字標籤、不要 UI 外框、不要整張遊戲畫面、不要陰影落在背景上、不要速度線、不要多餘角色。";
+
+    const prompts = [
+      {
+        group: "scene",
+        name: "lcd_bg 1 / 酒吧背景底圖",
+        size: "1536x896 或 1024x600",
+        purpose: "主遊戲 LCD 空背景，只保留牆面、吧台與地板",
+        prompt: "生成 Western Bar 酒吧內部空背景底圖。整個公共空間必須水平正交呈現：吧台上緣、吧台前板、地板木板線、牆面層板與酒架都要保持水平，不要斜向吧台，不要魚眼透視。門必須在畫面最左側牆面上，像原版場景左上角的側牆入口，不是在畫面上方；左牆可保留輕微側牆深度，但主吧台與地板線必須水平。吧台左端位置要落在 WANTED 通緝海報右側邊緣附近，不能貼到左牆，也不能短到只從畫面中央開始；左側仍要留下可讓通緝犯躲在吧台左邊緣探頭的空間。吧台仍然是水平長吧台，後方有酒架、WANTED 通緝海報、SALOON 招牌與右側酒保站位空間，前景是水平木地板。底圖必須移除中央圓桌、所有椅子、酒桶、右側決鬥掩體、蘋果盆、警長、Boss、夫妻、酒杯、酒瓶、炸彈與任何動態物件。這張只做空場景，桌椅、酒桶、掩體都另外用獨立素材疊上。"
+      },
+      {
+        group: "scene",
+        name: "桌椅-空景獨立",
+        size: "768x384",
+        purpose: "夫妻座位的獨立桌椅空景",
+        prompt: "依照夫妻同桌素材風格，生成一組獨立的圓形木桌與左右兩張椅子空景。中央圓桌上有食物、盤子、杯子與餐具，左椅與右椅都空著，不要有人物。桌椅比例要能直接放回酒吧場景中，透明切圖用。"
+      },
+      {
+        group: "scene",
+        name: "酒桶-獨立",
+        size: "256x256",
+        purpose: "從背景拆出的左側酒桶",
+        prompt: "生成單張西部酒吧木酒桶獨立素材。圓木桶、金屬箍、黑色描邊、和酒吧場景同一 3D Q 版手繪風格。不要背景，不要人物。"
+      },
+      {
+        group: "scene",
+        name: "門-緊閉",
+        size: "1536x1024 overlay",
+        purpose: "Boss 進場前左側大門關閉狀態，可直接疊回背景",
+        prompt: "生成與 lcd_bg 背景同尺寸的透明 overlay。只有畫面左上角左偏牆面入口的關閉百葉木門可見，其它區域完全透明。合成時座標固定放在 0,0，必須能直接對齊 lcd_bg 背景左牆門位置。"
+      },
+      {
+        group: "scene",
+        name: "門-開啟",
+        size: "1536x1024 overlay",
+        purpose: "Boss 開門進場瞬間，可直接疊回背景",
+        prompt: "生成與 lcd_bg 背景同尺寸的透明 overlay。只有畫面左上角左偏牆面入口的開啟百葉木門可見，其它區域完全透明。合成時座標固定放在 0,0，必須能直接對齊 lcd_bg 背景左牆門位置。"
+      },
+      {
+        group: "scene",
+        name: "WANTED 通緝海報",
+        size: "256x256",
+        purpose: "牆上通緝犯海報",
+        prompt: "生成單張西部通緝海報素材。羊皮紙質感，黑色通緝犯帽子剪影，標題 WANTED，底部賞金 $25,000，復古印刷風格，邊緣略破損但文字清楚。"
+      },
+      {
+        group: "scene",
+        name: "吧台老闆-上半身",
+        size: "384x384",
+        purpose: "吧台右側酒保，只露出上半身",
+        prompt: "生成單張酒吧老闆上半身素材。中年男酒保，八字鬍，白襯衫、黑背心、紅領結，只露出人物上半身、肩膀、頭與手臂，手上正在準備丟出酒瓶或酒杯。不要畫下面的吧台檯面、不要桌面、不要腿、不要背景，必須是乾淨人物切圖。"
+      },
+
+      {
+        group: "sheriff",
+        name: "警長-action-0 開場繞場",
+        size: "384x384",
+        purpose: "開場或一般待機",
+        prompt: "生成喝醉警長待機姿勢。矮胖 Q 版西部警長，黑帽金星徽章、黃色襯衫、棕色背心、槍套與靴子，表情微醉但專注，身體正面偏右，雙腳站穩，沒有開槍火光。"
+      },
+      {
+        group: "sheriff",
+        name: "警長-action-1 左站位",
+        size: "384x384",
+        purpose: "左側站位射擊",
+        prompt: "生成喝醉警長左站位向上射擊姿勢。這是 BAR 階段用來射擊吧台上方飛來物件，不是決鬥射人。警長頭部與眼神必須朝上看，槍口必須朝正上方或微斜上方，槍口有小火光。腳部要和其他站位不同但不要誇張：雙腿有一點交叉的感覺，像喝醉後左右移動時腳步交錯，膝蓋微彎、重心偏左，不要大跨步。"
+      },
+      {
+        group: "sheriff",
+        name: "警長-action-2 中左站位",
+        size: "384x384",
+        purpose: "中左站位射擊",
+        prompt: "生成喝醉警長中左站位向上射擊姿勢。這是 BAR 階段射擊酒杯、酒瓶、湯碗等上方飛行物件。警長頭部與眼神必須朝上看，手槍舉高，槍口必須朝正上方或微斜上方，不能朝水平射擊。身體正面偏右，另一隻手保持平衡，腿部呈移動中的步伐，必須和左站位不同。"
+      },
+      {
+        group: "sheriff",
+        name: "警長-action-3 中右站位",
+        size: "384x384",
+        purpose: "中右站位射擊",
+        prompt: "生成喝醉警長中右站位向上射擊姿勢。這是 BAR 階段射擊吧台上方物件。警長頭部與眼神必須朝上看，槍口必須朝正上方或微斜上方，不能朝 Boss 或水平方向射擊。腳部要明顯不同：右腳向右大跨步、左腳踮起或滑步跟進，身體重心偏右，呈現快速橫移中的站位差異，不能和 action-1/action-2/action-4 相同。"
+      },
+      {
+        group: "sheriff",
+        name: "警長-action-4 右站位",
+        size: "384x384",
+        purpose: "右側站位射擊",
+        prompt: "生成喝醉警長右站位向上射擊姿勢。這是 BAR 階段用來打掉上方飛來的酒杯、酒瓶與湯碗。警長頭部與眼神必須朝上看，手槍高舉，槍口必須朝正上方或微斜上方，不能水平開槍。身體大幅偏右，表情緊張，腳步跨出，與前幾張姿勢明顯不同。"
+      },
+      {
+        group: "sheriff",
+        name: "警長-熄滅炸彈",
+        size: "384x384",
+        purpose: "腳邊炸彈需要連按右鍵熄火",
+        prompt: "生成警長用威士忌熄滅炸彈姿勢。警長一手拿酒瓶往地上燃燒炸彈倒酒，另一手保持平衡，表情慌張，腳邊有小型點燃炸彈但不要爆炸。"
+      },
+      {
+        group: "sheriff",
+        name: "警長-中槍或被砸到或爆炸",
+        size: "384x384",
+        purpose: "失誤死亡/受擊",
+        prompt: "生成警長受擊倒下姿勢。警長向後或側邊摔倒，帽子飛起，表情驚嚇，身體失衡，適合表示被子彈、蘋果、煙灰缸或爆炸擊中。"
+      },
+      {
+        group: "sheriff",
+        name: "警長-決鬥準備進場",
+        size: "384x384",
+        purpose: "Boss 階段走向右側掩體",
+        prompt: "生成警長在決鬥階段移動到右側掩體的姿勢。警長側身往右走，手握槍但尚未射擊，姿勢低伏謹慎，服裝可偏淺色以符合 LCD 決鬥階段。"
+      },
+      {
+        group: "sheriff",
+        name: "警長-決鬥躲在掩體",
+        size: "384x384",
+        purpose: "躲在右側黑色掩體後",
+        prompt: "生成警長蹲在右側黑色三段掩體後的姿勢。只露出上半身或半個身體，槍握在手中，面向左側 Boss，掩體不可變成普通桌子。"
+      },
+      {
+        group: "sheriff",
+        name: "警長-決鬥開槍",
+        size: "384x384",
+        purpose: "從右側掩體往左射 Boss",
+        prompt: "生成警長在決鬥階段挺身而出開槍姿勢。警長必須站在右側三段掩體的左側，整個人從掩體左邊站出來，面向左側 Boss，手槍水平朝左射擊，有清楚槍口火光。姿勢是站立挺身開槍，不是躲在掩體後、不只是露半身；掩體可在人物右側作為邊緣參考。"
+      },
+
+      {
+        group: "boss",
+        name: "通緝犯-準備開門",
+        size: "384x384",
+        purpose: "左側門口開門前",
+        prompt: "生成通緝犯 Boss 在畫面最左側牆面入口準備開門的姿勢。左牆百葉門在他身旁，Boss 黑色西裝、黑帽、鬍渣、凶狠表情，一手推開左牆門，身體面向右側酒吧內部。此素材方向需要符合左牆門進場，不能像從上方門口進來。"
+      },
+      {
+        group: "boss",
+        name: "通緝犯-進場2",
+        size: "384x384",
+        purpose: "Boss 從左側跑入",
+        prompt: "生成通緝犯 Boss 從左側跑進酒吧的動作。黑帽黑衣，身體朝右奔跑，腳步誇張，帶一點煙塵，不能背對玩家。"
+      },
+      {
+        group: "boss",
+        name: "通緝犯-隱藏",
+        size: "384x384",
+        purpose: "躲在吧台角落，不是門後",
+        prompt: "生成通緝犯 Boss 躲在水平吧台左側角落的低伏姿勢。吧台參考邊緣必須是水平直線，不要斜向吧台；Boss 只露出頭和手或半個身體，利用吧台角落遮蔽，不要躲在門後。"
+      },
+      {
+        group: "boss",
+        name: "通緝犯-刺探",
+        size: "384x384",
+        purpose: "從角落探出準備開槍",
+        prompt: "生成通緝犯 Boss 從水平吧台角落探頭出去查看的姿勢。吧台參考邊緣必須是水平直線，不要斜向吧台；Boss 從吧台角落慢慢探出頭、肩膀與手槍，面向右側警長，表情狡猾，像偵查查看，不是已經全身站出開槍。"
+      },
+      {
+        group: "boss",
+        name: "通緝犯-開槍",
+        size: "384x384",
+        purpose: "面向右側警長開槍",
+        prompt: "生成通緝犯 Boss 開槍姿勢。Boss 站在左側，面向右側警長，手槍朝右射擊，有清楚槍口火光，不能背對警長。"
+      },
+      {
+        group: "boss",
+        name: "通緝犯-中槍",
+        size: "384x384",
+        purpose: "被警長擊中",
+        prompt: "生成通緝犯 Boss 中槍倒下姿勢。身體往後彈開或側倒，帽子飛起，表情驚訝，黑色服裝清楚，適合一擊命中反饋。"
+      },
+
+      {
+        group: "couple",
+        name: "夫妻-同桌一般狀態",
+        size: "768x384",
+        purpose: "夫妻坐在同一張桌子左右兩側，中間有食物",
+        prompt: "生成夫妻同桌一般狀態完整素材。畫面中央是一張圓形木桌，桌上有盤子、食物、杯子或餐具；丈夫坐在桌子左側椅子上，妻子坐在桌子右側椅子上，兩人隔著桌子面對面坐著，身體都朝向桌子。兩人表情普通，不攻擊，不低頭，不躲避。整組要能直接放進酒吧場景。"
+      },
+      {
+        group: "couple",
+        name: "夫妻-同桌一般人物層",
+        size: "768x384",
+        purpose: "夫妻一般坐姿人物層，不包含桌椅",
+        prompt: "生成夫妻一般坐姿的人物層素材。只包含丈夫與妻子兩個角色，不要桌子、不要椅子、不要餐具、不要食物、不要背景。丈夫位於左側，身體朝右、一般坐姿、表情普通；妻子位於右側，身體朝左、一般坐姿、表情普通。兩人之間保留空間，方便把獨立桌椅素材放在中間。這是一般狀態，不是用餐、不是躲避、不是生氣攻擊。"
+      },
+      {
+        group: "couple",
+        name: "夫妻-同桌低頭用餐",
+        size: "768x384",
+        purpose: "夫妻低頭用餐人物層，不包含桌椅",
+        prompt: "生成夫妻低頭用餐的人物層素材。只包含丈夫與妻子兩個角色，不要桌子、不要椅子、不要餐具、不要食物、不要背景。丈夫位於左側，身體朝右、低頭像正在吃飯；妻子位於右側，身體朝左、低頭像正在吃飯。兩人之間保留空間，方便把獨立桌椅素材放在中間。這是用餐狀態，不是躲避狀態，也不是生氣攻擊。"
+      },
+      {
+        group: "couple",
+        name: "夫妻-同桌生氣站立",
+        size: "768x384",
+        purpose: "夫妻被玩家惹怒後站起來的人物層",
+        prompt: "生成夫妻一起生氣站立的人物層素材。只包含丈夫與妻子兩個角色，不要桌子、不要椅子、不要餐具、不要食物、不要背景。丈夫位於左側，站起來面向右側桌心方向，憤怒表情，可握拳或準備拿煙灰缸；妻子位於右側，站起來面向左側桌心方向，憤怒表情，可抬手準備拿蘋果。兩人之間保留空間，方便把獨立桌椅素材放在中間。這是生氣站立預備攻擊狀態。"
+      },
+      {
+        group: "couple",
+        name: "夫妻-同桌Boss進場躲避",
+        size: "768x384",
+        purpose: "Boss 決鬥階段夫妻躲到桌下",
+        prompt: "生成夫妻同桌躲避 Boss 的完整素材。中央是圓形木桌，桌上仍有食物和餐具；丈夫與妻子都躲到桌子下方或椅子旁低伏，只露出部分身體與害怕表情。這是 Boss 進場後躲避，不是低頭用餐。"
+      },
+      {
+        group: "couple",
+        name: "男人-1 一般坐著",
+        size: "384x384",
+        purpose: "夫妻桌左側男性，一般狀態",
+        prompt: "生成坐在圓桌左側的丈夫單人素材。中年西部男客人坐在椅子上，身體朝向右側與桌子中心，像是隔著桌子面對妻子；桌子邊緣與桌上食物可以少量出現在右側作為對位參考。表情普通或有點不滿，雙手靠近桌面，不攻擊。"
+      },
+      {
+        group: "couple",
+        name: "男人-2 低頭用餐",
+        size: "384x384",
+        purpose: "低頭吃飯，這時開槍不會生氣",
+        prompt: "生成丈夫低頭用餐單人素材。人物坐在圓桌左側椅子上，身體朝向右側桌子中心，頭低下看桌上的盤子與食物或正在吃東西；桌面與食物要出現在右側邊緣作為對位參考。明確是用餐，不是躲避。"
+      },
+      {
+        group: "couple",
+        name: "男人-3 生氣投擲煙灰缸",
+        size: "384x384",
+        purpose: "被玩家開槍惹怒後攻擊",
+        prompt: "生成丈夫生氣站起來投擲煙灰缸姿勢。西部男客人從椅子旁站起，一手指向警長，一手用力丟出灰色煙灰缸，臉部憤怒。"
+      },
+      {
+        group: "couple",
+        name: "男人-Boss進場躲桌下",
+        size: "384x384",
+        purpose: "Boss 決鬥階段躲到桌下",
+        prompt: "生成丈夫害怕躲在圓桌下方姿勢。丈夫原本坐在桌子左側，Boss 進場後躲到桌子底下或桌腳旁，只露出部分身體、頭或手，表情恐懼。桌子與桌上食物可以出現在右上方作為對位參考，明確是躲避 Boss 決鬥。"
+      },
+      {
+        group: "couple",
+        name: "女人-1 一般坐著",
+        size: "384x384",
+        purpose: "夫妻桌右側女性，一般狀態",
+        prompt: "生成坐在圓桌右側的妻子單人素材。西部酒吧女客人，粉色長裙白圍裙，坐在椅子上，身體朝向左側與桌子中心，像是隔著桌子面對丈夫；桌子邊緣與桌上食物可以少量出現在左側作為對位參考。不要背對桌子。"
+      },
+      {
+        group: "couple",
+        name: "女人-2 低頭用餐",
+        size: "384x384",
+        purpose: "低頭吃飯，這時開槍不會生氣",
+        prompt: "生成妻子低頭用餐單人素材。粉色裙子女性坐在圓桌右側椅子上，身體朝向左側桌子中心，頭低下看桌上的餐盤與食物或正在吃東西；桌面與食物要出現在左側邊緣作為對位參考。明確是用餐，不是躲避。"
+      },
+      {
+        group: "couple",
+        name: "女人-3 生氣投擲蘋果",
+        size: "384x384",
+        purpose: "被玩家開槍惹怒後攻擊",
+        prompt: "生成妻子生氣站起來投擲蘋果姿勢。粉色裙子女性從椅子旁站起，表情憤怒，一手拿紅蘋果準備丟向警長。"
+      },
+      {
+        group: "couple",
+        name: "女人-Boss進場躲桌下",
+        size: "384x384",
+        purpose: "Boss 決鬥階段躲到桌下",
+        prompt: "生成妻子害怕躲在圓桌下方姿勢。妻子原本坐在桌子右側，Boss 進場後躲到桌子底下或桌腳旁，粉色裙子女性低伏，只露出部分身體和驚恐表情。桌子與桌上食物可以出現在左上方作為對位參考，適合 Boss 進場後背景狀態。"
+      },
+
+      {
+        group: "object",
+        name: "飛盤-酒保發射 / 飛盤標靶",
+        size: "256x256",
+        purpose: "吧台老闆丟出的可射擊物",
+        prompt: "生成垂直正面朝前的飛盤標靶素材。圓形標靶盤像可射擊的飛盤，正面面向玩家，外圈深色描邊，內圈有簡單同心圓或靶心，不能是湯碗、盤子、碗口、食物或湯。物件必須直立正面，不可橫躺，不要速度線。"
+      },
+      {
+        group: "object",
+        name: "飛盤-0~5 軌道格",
+        size: "256x256",
+        purpose: "飛盤標靶沿吧台右到左移動",
+        prompt: "生成垂直正面朝前的飛盤標靶軌道變體。保持圓形標靶正面面向玩家，可有極輕微角度差，但不能變成湯碗、餐盤、食物容器或橫躺物。沒有速度線，沒有背景。"
+      },
+      {
+        group: "object",
+        name: "飛盤擊碎-1~4",
+        size: "256x256",
+        purpose: "玩家射中飛盤標靶後碎裂",
+        prompt: "生成飛盤標靶被子彈擊碎的效果素材。破碎物必須看得出原本是垂直正面飛盤標靶，包含圓形標靶碎片、靶心碎片、裂痕與小爆裂火花；碎片集中在單一物件區域，不能變成湯碗、餐盤、食物或玻璃杯，不能有背景或速度線。"
+      },
+      {
+        group: "object",
+        name: "酒瓶-酒保發射",
+        size: "256x256",
+        purpose: "酒保丟出酒瓶起點",
+        prompt: "生成垂直正面朝前的威士忌酒瓶投擲物。棕色玻璃瓶、淺色標籤、瓶口朝正上方，瓶底朝下，整瓶直立，不能橫躺、不能斜到像倒下，沒有速度線。"
+      },
+      {
+        group: "object",
+        name: "酒瓶-0~5 軌道格",
+        size: "256x256",
+        purpose: "酒瓶沿吧台右到左移動",
+        prompt: "生成垂直正面朝前的威士忌酒瓶軌道變體。酒瓶必須保持直立，瓶口朝上、瓶底朝下，正面標籤可見，不可橫向、不可倒下、不可速度線。"
+      },
+      {
+        group: "object",
+        name: "酒瓶擊碎-1~4",
+        size: "256x256",
+        purpose: "玩家射中酒瓶後碎裂撒出",
+        prompt: "生成酒瓶被子彈擊碎的效果素材。棕色玻璃碎片、酒液潑灑、小爆裂感，保留主體集中，不能有速度線或背景。"
+      },
+      {
+        group: "object",
+        name: "酒杯-酒保發射",
+        size: "256x256",
+        purpose: "酒保丟出酒杯起點",
+        prompt: "生成垂直正面朝前的玻璃杯投擲物。透明玻璃杯，杯口朝正上方、杯底朝下，厚底與杯口輪廓清楚，整杯直立，不能橫躺，沒有速度線。"
+      },
+      {
+        group: "object",
+        name: "酒杯-0~5 軌道格",
+        size: "256x256",
+        purpose: "酒杯沿吧台右到左移動",
+        prompt: "生成垂直正面朝前的玻璃杯軌道變體。杯子必須保持直立，杯口朝上、杯底朝下，透明材質清楚，不可橫向、不可倒下、不可速度線。"
+      },
+      {
+        group: "object",
+        name: "酒杯擊碎-1~4",
+        size: "256x256",
+        purpose: "玩家射中酒杯後碎裂",
+        prompt: "生成玻璃杯被子彈擊碎效果素材。透明碎片向外散開，少量液體或白色高光，集中在單一物件區域，不能有背景。"
+      },
+      {
+        group: "object",
+        name: "炸彈-1~11",
+        size: "256x256",
+        purpose: "空中炸藥軌道與落地前狀態",
+        prompt: "生成點燃的黑紅色炸藥棒素材。短圓柱形 dynamite，黑色綁帶或紅色筒身，導火線有小火花，適合空中飛行或落地狀態。"
+      },
+      {
+        group: "object",
+        name: "炸彈-腳邊導火線",
+        size: "256x256",
+        purpose: "玩家需連按右鍵熄滅",
+        prompt: "生成落在地上的點燃炸藥素材。炸藥橫躺在地面但不要畫地板背景，導火線正在燃燒，有小火花，主體完整清楚。"
+      },
+      {
+        group: "object",
+        name: "大爆炸",
+        size: "384x384",
+        purpose: "射到炸藥或失敗爆炸",
+        prompt: "生成 Q 版遊戲爆炸效果素材。黑色外輪廓，橘黃色火光核心，煙塵碎片向外擴散，可以含有 BOOM 字樣但字樣必須清楚，適合主角死亡或炸彈爆炸。"
+      },
+      {
+        group: "object",
+        name: "蘋果-女人投擲原點 / 蘋果軌道",
+        size: "192x192",
+        purpose: "妻子攻擊警長的投擲物",
+        prompt: "生成紅蘋果投擲物素材。圓潤紅蘋果，綠葉，小尺寸也清楚，單顆物件，沒有背景和速度線。"
+      },
+      {
+        group: "object",
+        name: "煙灰缸-男人投擲原點 / 煙灰缸軌道",
+        size: "192x192",
+        purpose: "丈夫攻擊警長的投擲物",
+        prompt: "生成灰色金屬煙灰缸投擲物素材。圓形厚重煙灰缸，帶凹槽，銀灰色高光，單一物件，沒有背景和速度線。"
+      },
+
+      {
+        group: "cover",
+        name: "掩體1 完整三段",
+        size: "256x384",
+        purpose: "決鬥初始掩體",
+        prompt: "生成右側決鬥掩體完整三段狀態。透視必須更接近原版平面側視：三塊黑色橫向擋板上下垂直堆疊，正面幾乎平行畫面，不要強烈 3D 透視或斜角。灰色金屬支架與底座在下方/後方固定，三節板子清楚分離。這是初始狀態，三節都存在。"
+      },
+      {
+        group: "cover",
+        name: "掩體2 被打一槍",
+        size: "256x384",
+        purpose: "Boss 子彈命中一次",
+        prompt: "生成右側決鬥掩體被打一槍後狀態。必須和完整狀態同位置同尺寸同透視，但第一槍後上方第一節黑色擋板整節消失，只剩中段與下段兩節擋板，灰色支架與底座保留。不是彈孔，不是裂痕，是整節消失。"
+      },
+      {
+        group: "cover",
+        name: "掩體3 被打兩槍",
+        size: "256x384",
+        purpose: "Boss 子彈命中兩次",
+        prompt: "生成右側決鬥掩體被打兩槍後狀態。必須和完整狀態同位置同尺寸同透視，但上方第一節與中間第二節黑色擋板都整節消失，只剩最下方一節擋板，灰色支架與底座保留。不是彈孔，不是裂痕，是一節一節消失。"
+      },
+      {
+        group: "cover",
+        name: "掩體4 第三槍碎裂",
+        size: "256x384",
+        purpose: "掩體被摧毀",
+        prompt: "生成右側決鬥掩體第三槍後完全破壞狀態。必須和完整狀態同位置同尺寸同透視，但三節黑色擋板都消失，只剩灰色支架、底座與少量黑色碎片掉落。重點是一槍消失一節後最後沒有完整擋板。"
+      }
+    ];
+
+    const groupMap = {
+      scene: document.getElementById("scene-grid"),
+      sheriff: document.getElementById("sheriff-grid"),
+      boss: document.getElementById("boss-grid"),
+      couple: document.getElementById("couple-grid"),
+      object: document.getElementById("object-grid"),
+      cover: document.getElementById("cover-grid")
+    };
+
+    const assetMap = {
+      "lcd_bg 1 / 酒吧背景底圖": "assets/generated/sprites/lcd_bg_3d.png",
+      "桌椅-空景獨立": "assets/generated/sprites/table_chairs_empty.png",
+      "酒桶-獨立": "assets/generated/sprites/barrel_standalone.png",
+      "門-緊閉": "assets/generated/sprites/door_closed.png",
+      "門-開啟": "assets/generated/sprites/door_open.png",
+      "吧台老闆-上半身": "assets/generated/sprites/bartender_upper.png",
+      "WANTED 通緝海報": "assets/generated/sprites/wanted_poster.png",
+      "警長-action-0 開場繞場": "assets/generated/sprites/sheriff_idle.png",
+      "警長-action-1 左站位": "assets/generated/sprites/sheriff_action_1_up.png",
+      "警長-action-2 中左站位": "assets/generated/sprites/sheriff_action_2_up.png",
+      "警長-action-3 中右站位": "assets/generated/sprites/sheriff_action_3_up.png",
+      "警長-action-4 右站位": "assets/generated/sprites/sheriff_action_4_up.png",
+      "警長-熄滅炸彈": "assets/generated/sprites/sheriff_defuse_dynamite.png",
+      "警長-中槍或被砸到或爆炸": "assets/generated/sprites/sheriff_hit.png",
+      "警長-決鬥準備進場": "assets/generated/sprites/sheriff_duel_enter.png",
+      "警長-決鬥躲在掩體": "assets/generated/sprites/sheriff_duel_cover.png",
+      "警長-決鬥開槍": "assets/generated/sprites/sheriff_duel_shoot_left.png",
+      "通緝犯-準備開門": "assets/generated/sprites/boss_prepare_door.png",
+      "通緝犯-進場2": "assets/generated/sprites/boss_enter_run.png",
+      "通緝犯-隱藏": "assets/generated/sprites/boss_hide_bar_corner.png",
+      "通緝犯-刺探": "assets/generated/sprites/boss_peek.png",
+      "通緝犯-開槍": "assets/generated/sprites/boss_shoot_right.png",
+      "通緝犯-中槍": "assets/generated/sprites/boss_hit.png",
+      "夫妻-同桌一般狀態": "assets/generated/sprites/couple_table_neutral.png",
+      "夫妻-同桌一般人物層": "assets/generated/sprites/couple_people_neutral.png",
+      "夫妻-同桌低頭用餐": "assets/generated/sprites/couple_table_eating.png",
+      "夫妻-同桌生氣站立": "assets/generated/sprites/couple_angry_standing.png",
+      "夫妻-同桌Boss進場躲避": "assets/generated/sprites/couple_table_hide.png",
+      "男人-1 一般坐著": "assets/generated/sprites/husband_sitting.png",
+      "男人-2 低頭用餐": "assets/generated/sprites/husband_eating.png",
+      "男人-3 生氣投擲煙灰缸": "assets/generated/sprites/husband_throw_ashtray.png",
+      "男人-Boss進場躲桌下": "assets/generated/sprites/husband_hide_under_table.png",
+      "女人-1 一般坐著": "assets/generated/sprites/wife_sitting.png",
+      "女人-2 低頭用餐": "assets/generated/sprites/wife_eating.png",
+      "女人-3 生氣投擲蘋果": "assets/generated/sprites/wife_throw_apple.png",
+      "女人-Boss進場躲桌下": "assets/generated/sprites/wife_hide_under_table.png",
+      "飛盤-酒保發射 / 飛盤標靶": "assets/generated/sprites/soup_bowl.png",
+      "飛盤-0~5 軌道格": "assets/generated/sprites/soup_bowl_variant.png",
+      "飛盤擊碎-1~4": "assets/generated/sprites/target_disc_break.png",
+      "酒瓶-酒保發射": "assets/generated/sprites/whiskey_bottle.png",
+      "酒瓶-0~5 軌道格": "assets/generated/sprites/whiskey_bottle_variant.png",
+      "酒瓶擊碎-1~4": "assets/generated/sprites/whiskey_bottle_break.png",
+      "酒杯-酒保發射": "assets/generated/sprites/glass_cup.png",
+      "酒杯-0~5 軌道格": "assets/generated/sprites/glass_cup_variant.png",
+      "酒杯擊碎-1~4": "assets/generated/sprites/glass_cup_break.png",
+      "炸彈-1~11": "assets/generated/sprites/dynamite_lit.png",
+      "炸彈-腳邊導火線": "assets/generated/sprites/dynamite_floor_fuse.png",
+      "大爆炸": "assets/generated/sprites/explosion_boom.png",
+      "蘋果-女人投擲原點 / 蘋果軌道": "assets/generated/sprites/apple_projectile.png",
+      "煙灰缸-男人投擲原點 / 煙灰缸軌道": "assets/generated/sprites/ashtray_projectile.png",
+      "掩體1 完整三段": "assets/generated/sprites/cover_state_1_full.png",
+      "掩體2 被打一槍": "assets/generated/sprites/cover_state_2_hit1.png",
+      "掩體3 被打兩槍": "assets/generated/sprites/cover_state_3_hit2.png",
+      "掩體4 第三槍碎裂": "assets/generated/sprites/cover_state_4_destroyed.png"
+    };
+
+    function fullPrompt(item) {
+      return `${common}\n\n素材名稱：${item.name}\n用途：${item.purpose}\n建議尺寸：${item.size}\n中文提示詞：${item.prompt}`;
+    }
+
+    function render(list) {
+      Object.values(groupMap).forEach(node => node.innerHTML = "");
+
+      list.forEach((item, index) => {
+        const article = document.createElement("article");
+        article.dataset.name = item.name;
+        article.dataset.prompt = fullPrompt(item);
+        article.innerHTML = `
+          <h3>${String(index + 1).padStart(2, "0")}｜${item.name}</h3>
+          <div class="meta">
+            <span class="tag">${item.purpose}</span>
+            <span class="tag">${item.size}</span>
+          </div>
+          <div class="preview">
+            ${assetMap[item.name]
+              ? `<img src="${assetMap[item.name]}" alt="${item.name}" onerror="this.remove(); this.parentElement.insertAdjacentHTML('beforeend', '<span class=&quot;missing-preview&quot;>尚未生成或檔名未對應</span>');">`
+              : `<span class="missing-preview">尚未設定圖片對應</span>`}
+          </div>
+          <pre>${fullPrompt(item)}</pre>
+          <p class="avoid">避免：整張遊戲畫面、方塊 placeholder、橫倒酒杯酒瓶、裁切、速度線、文字標籤。</p>
+          <div class="actions">
+            <button type="button">複製這張提示詞</button>
+          </div>
+        `;
+        article.querySelector("button").addEventListener("click", () => copyText(fullPrompt(item)));
+        groupMap[item.group].appendChild(article);
+      });
+    }
+
+    async function copyText(text) {
+      await navigator.clipboard.writeText(text);
+    }
+
+    async function copyAll() {
+      await copyText(prompts.map(fullPrompt).join("\n\n---\n\n"));
+    }
+
+    document.getElementById("search").addEventListener("input", event => {
+      const q = event.target.value.trim().toLowerCase();
+      if (!q) {
+        render(prompts);
+        return;
+      }
+      render(prompts.filter(item => {
+        return [item.name, item.purpose, item.prompt, item.size].join(" ").toLowerCase().includes(q);
+      }));
+    });
+
+    render(prompts);
+  </script>
+</body>
+</html>
