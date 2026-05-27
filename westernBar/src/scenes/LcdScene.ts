@@ -50,6 +50,10 @@ export class LcdScene extends Phaser.Scene {
   private levelBannerHideUntil = 0;  // 大字關卡橫幅顯示到此時間（毫秒）
   private gunDebug = false;
   private barmanSprite?: Phaser.GameObjects.Sprite;
+  private tableSprite?: Phaser.GameObjects.Sprite;
+  private coupleHideSprite?: Phaser.GameObjects.Sprite;
+  private chairLeftSprite?: Phaser.GameObjects.Sprite;
+  private chairRightSprite?: Phaser.GameObjects.Sprite;
   /** 關卡：1-10 為大等級，1-3 為子關卡（共 30 關）
    *  X-1: 無炸彈 / X-2: barman 折返 / X-3: barman 丟地
    *  outerLevel 越高，物品出得越密、夫妻動作越頻繁 */
@@ -91,7 +95,6 @@ export class LcdScene extends Phaser.Scene {
   private duelReady = false;  // boss1 音樂播完 + 警長就位後才可以開槍
   private banditTimer?: Phaser.Time.TimerEvent;  // 隨機週期的下一動作
   private duelPaused = false;  // 中槍音樂播放期間暫停
-  private doorSprite?: Phaser.GameObjects.Sprite;
 
   // === 編輯模式 ===
   private editMode = false;
@@ -429,6 +432,9 @@ export class LcdScene extends Phaser.Scene {
       const spr = this.add.sprite(p.x, p.cy, tex).setDepth(depth);
       this.fitSprite(spr, p.w, p.h);
       if (key === "barman/idle") this.barmanSprite = spr;
+      if (key === "couple_table") this.tableSprite = spr;
+      if (key === "chair_left") this.chairLeftSprite = spr;
+      if (key === "chair_right") this.chairRightSprite = spr;
     }
   }
 
@@ -539,7 +545,11 @@ export class LcdScene extends Phaser.Scene {
                           : null;
           if (brokenKey && this.textures.exists(brokenKey)) {
             it.sprite.setTexture(brokenKey);
-            this.fitSprite(it.sprite, sp.w * 1.3, sp.h * 1.3);
+            // 擊碎圖放大：酒瓶 2.5x、酒杯 1.8x、飛靶 1.5x
+            const brokenScale = it.kind === "bottle" ? 2.5
+                              : it.kind === "cup" ? 1.8
+                              : 1.5;
+            this.fitSprite(it.sprite, sp.w * brokenScale, sp.h * brokenScale);
           }
         }
         hits++;
@@ -669,17 +679,23 @@ export class LcdScene extends Phaser.Scene {
       const alertChance = 0.2 + 0.7 * d;
       if (Math.random() < alertChance) {
         this.setCoupleSprite(who, "alert");
-        // 站起來後 1-1.5 秒就丟（不等下次 husbandNextAt 週期）
-        if (who === "husband") this.husbandNextAt = this.time.now + (1000 + Math.random() * 500);
-        else this.wifeNextAt = this.time.now + (1000 + Math.random() * 500);
+        // 整個 alert → throw 的時序用 delayedCall 鎖定，避免 tickCouple 週期落差
+        // 一個 TICK_MS 後丟 → 再一個 TICK_MS 後回吃飯
+        this.time.delayedCall(TICK_MS, () => {
+          const st = who === "husband" ? this.husbandState : this.wifeState;
+          if (st !== "alert" || this.phase !== "play") return;
+          this.setCoupleSprite(who, "throw");
+          this.spawnCoupleProjectile(who);
+          this.time.delayedCall(TICK_MS, () => {
+            if (this.phase === "play") this.setCoupleSprite(who, "eat");
+          });
+        });
+        // 推遲下次週期，免得這人剛丟完又立刻 alert
+        if (who === "husband") this.husbandNextAt = this.time.now + 4000;
+        else this.wifeNextAt = this.time.now + 4000;
       }
-    } else if (state === "alert") {
-      // 警戒 → 投擲（再 1 拍）
-      this.setCoupleSprite(who, "throw");
-      this.spawnCoupleProjectile(who);
-      // 投完回吃飯
-      this.time.delayedCall(TICK_MS, () => this.setCoupleSprite(who, "eat"));
     }
+    // alert → throw 不再由 cycleCoupleMember 推動（已用 delayedCall 鎖時序）
   }
 
   private spawnCoupleProjectile(who: "husband" | "wife") {
@@ -735,9 +751,24 @@ export class LcdScene extends Phaser.Scene {
     for (const p of this.projectiles) p.sprite.destroy();
     this.projectiles = [];
 
-    // 對決期間夫妻消失（躲到桌下不出場）
+    // 對決期間：桌子保留（壓在夫妻上方），椅子隱藏（hide sprite 內含椅子）
+    this.chairLeftSprite?.setVisible(false);
+    this.chairRightSprite?.setVisible(false);
     this.husbandSprite.setVisible(false);
     this.wifeSprite.setVisible(false);
+    const hideTex = this.resolveTex("lcd_couple_hide", "lcd_couple_hide");
+    const hp = slotPx("couple_hide");
+    if (hp && this.textures.exists(hideTex)) {
+      if (!this.coupleHideSprite) {
+        this.coupleHideSprite = this.add.sprite(hp.x, hp.cy, hideTex);
+      } else {
+        this.coupleHideSprite.setTexture(hideTex).setPosition(hp.x, hp.cy);
+      }
+      // depth 13：桌子 (14) 之下 → 桌子壓著夫妻
+      this.coupleHideSprite.setDepth(13);
+      this.fitSprite(this.coupleHideSprite, hp.w, hp.h);
+      this.coupleHideSprite.setVisible(true);
+    }
 
     // 警長 duel_in（走向掩體）→ hide
     this.renderActor(this.playerSprite, "sheriff/duel_in");
@@ -751,19 +782,6 @@ export class LcdScene extends Phaser.Scene {
     const cp = slotPx("cover/intact")!;
     this.coverSprite = this.add.sprite(cp.x, cp.cy, this.texKeyForSlot("cover/intact")).setDepth(17);
     this.fitSprite(this.coverSprite, cp.w, cp.h);
-
-    // === 彈簧門開兩次震盪 ===
-    const dp = slotPx("door/open")!;
-    this.doorSprite = this.add.sprite(dp.x, dp.cy, this.texKeyForSlot("door/open")).setDepth(7);
-    this.fitSprite(this.doorSprite, dp.w, dp.h);
-    const swing = (slotKey: string) => {
-      if (!this.doorSprite || this.phase !== "duel") return;
-      this.renderActor(this.doorSprite, slotKey);
-    };
-    this.time.delayedCall(0,   () => swing("door/open"));
-    this.time.delayedCall(250, () => swing("door/closed"));
-    this.time.delayedCall(500, () => swing("door/open"));
-    this.time.delayedCall(800, () => swing("door/closed"));
 
     // 通緝犯：at_door（門口出現）→ enter（短暫走入）→ 停在「等待位置」(enter pose)
     // 直到 boss1 音樂結束才切到 hide pose 並開始 cycle
@@ -865,25 +883,28 @@ export class LcdScene extends Phaser.Scene {
   private handleBanditShot() {
     const sheriffHit = this.duelSheriffExposed || this.coverHp <= 0;
     if (sheriffHit) {
-      // 警長中槍：暫停對決週期 → 播 miss 音 → 復原（桌子重置 + 警長回 hide）
+      // 警長中槍：全部停 → 警長維持 sheriff/down → 等 miss 音樂播完才復原
       this.lives--;
       this.refreshHud();
       this.duelPaused = true;
+      // 取消所有排程：通緝犯動作、開槍 timer、警長 expose 復原 timer
+      this.banditTimer?.remove(false);     this.banditTimer = undefined;
+      this.banditFireTimer?.remove(false); this.banditFireTimer = undefined;
+      this.banditFireWindowOpen = false;
+      // 警長直接倒地，不歸位
       this.renderActor(this.playerSprite, "sheriff/down");
-      // miss 音樂長度
-      let missMs = 1200;
-      if (this.cache.audio.exists("sfx_miss")) {
-        try {
-          const s = this.addSfx("sfx_miss", { volume: 0.7 });
-          s.play();
-          const dur = (s as any).duration;
-          if (typeof dur === "number" && dur > 0) missMs = dur * 1000;
-        } catch (_) {}
-      }
-      this.time.delayedCall(missMs + 200, () => {
+      // 播 miss 音樂並等播完才復原
+      let missMs = 1500;
+      try {
+        const s = this.addSfx("sfx_miss", { volume: 0.7 });
+        s.play();
+        const dur = (s as any).duration;
+        if (typeof dur === "number" && dur > 0) missMs = dur * 1000;
+      } catch (_) {}
+      this.time.delayedCall(missMs + 300, () => {
         if (this.phase !== "duel") return;
-        if (this.lives <= 0) return;  // GAME OVER 自動處理
-        // 復原：桌子重置成 3 階段、警長回 hide
+        if (this.lives <= 0) return;  // GAME OVER
+        // 音樂播完才復原：桌子重置 + 警長回 hide
         this.coverHp = 3;
         this.updateCover("cover/intact");
         this.coverSprite?.setVisible(true);
@@ -919,27 +940,37 @@ export class LcdScene extends Phaser.Scene {
     if (!this.duelReady) return;
     if (this.duelPaused) return;  // 中槍音樂期間封鎖
 
-    this.duelSheriffExposed = true;
-    this.renderActor(this.playerSprite, "sheriff/fire");
+    // 命中判定（純快槍 — 必須通緝犯處於 fire pose + window 開著時）
+    const validShot = this.banditState === "fire" && this.banditFireWindowOpen;
     this.playSfx("sfx_fire", 0.5);
 
-    // 命中判定（快槍對決）：
-    //   • 必須是「通緝犯探頭完、舉槍開火」的那一瞬間（fire pose 期間）
-    //   • 玩家比通緝犯【晚】開槍，但在通緝犯退回 hide 之前按 → 算擊中
-    //   • 在 hide / peek 期間按 → 打空（白費一次跳出）
-    if (this.banditState === "fire" && this.banditFireWindowOpen) {
+    // 開槍動作顯示 200ms（看得到 fire 姿勢）後立刻回 hide
+    this.renderActor(this.playerSprite, "sheriff/fire");
+    this.time.delayedCall(200, () => {
+      if (this.phase === "duel" && this.lives > 0) {
+        this.renderActor(this.playerSprite, "sheriff/hide");
+      }
+    });
+
+    if (validShot) {
+      // 命中：通緝犯走 hit + 音樂流程
       this.banditFireTimer?.remove(false);
       this.banditFireTimer = undefined;
       this.banditFireWindowOpen = false;
       this.onBanditHit();
+    } else {
+      // 早開槍 / 假動作中計：邏輯上仍裸露 1.5 秒（通緝犯這時開槍會打中）
+      // 但警長視覺上已經回 hide（不會看起來呆站）
+      this.duelSheriffExposed = true;
+      if (this.banditState !== "fire") {
+        this.banditTimer?.remove(false);
+        this.scheduleBanditAction(600 + Math.random() * 300);
+      }
+      this.time.delayedCall(1500, () => {
+        if (this.phase !== "duel") return;
+        this.duelSheriffExposed = false;
+      });
     }
-
-    // 跳回 hide
-    this.time.delayedCall(350, () => {
-      if (this.phase !== "duel") return;
-      this.duelSheriffExposed = false;
-      if (this.lives > 0) this.renderActor(this.playerSprite, "sheriff/hide");
-    });
   }
 
   private onBanditHit() {
@@ -947,30 +978,33 @@ export class LcdScene extends Phaser.Scene {
     if (this.banditSprite) {
       this.renderActor(this.banditSprite, "bandit/hit");
     }
-    // 取消任何排程的下一個動作
-    this.banditTimer?.remove(false); this.banditTimer = undefined;
+    // 取消所有排程：通緝犯動作、開槍 window timer
+    this.banditTimer?.remove(false);     this.banditTimer = undefined;
+    this.banditFireTimer?.remove(false); this.banditFireTimer = undefined;
+    this.banditFireWindowOpen = false;
     this.duelPaused = true;
 
-    // 取得 boss4 音樂長度，播完才繼續對決
-    let hitMs = 800;
-    if (this.cache.audio.exists("sfx_boss4")) {
-      try {
-        const s = this.addSfx("sfx_boss4", { volume: 0.7 });
-        s.play();
-        const dur = (s as any).duration;
-        if (typeof dur === "number" && dur > 0) hitMs = dur * 1000;
-      } catch (_) {}
-    }
+    // 取得 boss4 音樂長度，全部停 → 音樂播完才一起歸位
+    let hitMs = 1200;
+    try {
+      const s = this.addSfx("sfx_boss4", { volume: 0.7 });
+      s.play();
+      const dur = (s as any).duration;
+      if (typeof dur === "number" && dur > 0) hitMs = dur * 1000;
+    } catch (_) {}
 
-    this.time.delayedCall(hitMs + 200, () => {
+    this.time.delayedCall(hitMs + 300, () => {
       if (this.phase !== "duel") return;
       if (this.banditHits >= 3) {
         this.exitDuel(true);
         return;
       }
-      // 通緝犯回 hide，繼續週期
+      // 音樂播完歸位：通緝犯回 hide + 掩體重置完整（雙方有人中槍都重置）
       this.banditState = "hide";
       if (this.banditSprite) this.renderActor(this.banditSprite, "bandit/hide");
+      this.coverHp = 3;
+      this.updateCover("cover/intact");
+      this.coverSprite?.setVisible(true);
       this.duelPaused = false;
       this.scheduleBanditAction(600 + Math.random() * 800);
     });
@@ -995,7 +1029,10 @@ export class LcdScene extends Phaser.Scene {
     this.duelReady = false;
     this.banditSprite?.destroy(); this.banditSprite = undefined;
     this.coverSprite?.destroy();  this.coverSprite  = undefined;
-    this.doorSprite?.destroy();   this.doorSprite   = undefined;
+    // 椅子恢復顯示，hide sprite 隱藏（桌子對決中沒隱藏，不用復原）
+    this.chairLeftSprite?.setVisible(true);
+    this.chairRightSprite?.setVisible(true);
+    this.coupleHideSprite?.setVisible(false);
     // 夫妻復原（重新坐回桌子吃飯）
     this.setCoupleSprite("husband", "eat");
     this.setCoupleSprite("wife", "eat");
@@ -1133,15 +1170,9 @@ export class LcdScene extends Phaser.Scene {
   }
 
   private showLevelBanner(text: string) {
-    // 暫時隱藏 LEVEL 數字 + 顯示大關卡文字
+    // 只更新左下 HUD（畫面中央大字 banner 已移除）
     if (this.hudLevelText) this.hudLevelText.setText(text);
     this.levelBannerHideUntil = this.time.now + 2000;
-    // 也在畫面中央顯示一個大字 banner
-    const banner = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2, text, {
-      fontSize: "72px", color: "#ffd166", fontFamily: "monospace", fontStyle: "bold",
-      stroke: "#000", strokeThickness: 6,
-    }).setOrigin(0.5).setDepth(200);
-    this.time.delayedCall(2000, () => banner.destroy());
   }
 
   private refreshHud() {

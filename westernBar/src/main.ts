@@ -6,7 +6,7 @@ import { GameScene } from "./scenes/GameScene";
 import { GameOverScene } from "./scenes/GameOverScene";
 import { LcdScene } from "./scenes/LcdScene";
 
-const game = new Phaser.Game({
+const game: any = new Phaser.Game({
   type: Phaser.WEBGL,
   parent: "game",
   width: GAME_WIDTH,
@@ -30,12 +30,13 @@ const game = new Phaser.Game({
   autoFocus: true,
   scene: [BootScene, TitleScene, GameScene, GameOverScene, LcdScene]
 });
+(window as any).WB_GAME = game;  // debug 用，preview eval 拿得到
 
 // 視窗焦點切換時：暫停/恢復場景與音效
 document.addEventListener("visibilitychange", () => {
   const hidden = document.hidden;
   if (hidden) {
-    game.scene.scenes.forEach(s => {
+    game.scene.scenes.forEach((s: any) => {
       if (s.scene.isActive() && !s.scene.isPaused()) s.scene.pause();
     });
     if (game.sound && !game.sound.mute) {
@@ -44,7 +45,7 @@ document.addEventListener("visibilitychange", () => {
       game.sound.mute = true;
     }
   } else {
-    game.scene.scenes.forEach(s => {
+    game.scene.scenes.forEach((s: any) => {
       if (s.scene.isPaused()) s.scene.resume();
     });
     // 還原 mute（但不覆蓋使用者主動靜音）

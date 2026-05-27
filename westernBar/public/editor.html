@@ -136,7 +136,7 @@ const GROUPS = {
   "酒瓶":   { color: "#27ae60", test: k => k.startsWith("bottle/") },
   "酒杯":   { color: "#f1c40f", test: k => k.startsWith("cup/") },
   "飛靶":   { color: "#e67e22", test: k => k.startsWith("plate/") },
-  "夫妻":   { color: "#9b59b6", test: k => k.startsWith("husband/") || k.startsWith("wife/") },
+  "夫妻":   { color: "#9b59b6", test: k => k.startsWith("husband/") || k.startsWith("wife/") || k === "couple_hide" || k === "couple_table" || k === "chair_left" || k === "chair_right" },
   "炸彈":   { color: "#c0392b", test: k => k.startsWith("dyn/") || k === "explosion" },
   "投擲物": { color: "#7f8c8d", test: k => k.startsWith("ash/") || k.startsWith("apple/") },
   "場景":   { color: "#95a5a6", test: k => k.startsWith("door/") || k.startsWith("cover/") || k.startsWith("barman/") },
@@ -181,6 +181,11 @@ function texFile(key) {
   if (key === "explosion") return "assets/lcd_color/explosion.png";
   if (key === "barman/idle") return "assets/lcd_color/barman_idle.png";
   if (key === "barman/slide") return "assets/lcd_color/barman_slide.png";
+  if (key === "couple_hide") return "assets/lcd_figma/couple_table_hide.png";
+  if (key === "couple_table") return "assets/lcd_figma/couple_table.png";
+  if (key === "chair_left") return "assets/lcd_figma/chair_left.png";
+  if (key === "chair_right") return "assets/lcd_figma/chair_right.png";
+  if (key === "barrel") return "assets/lcd_figma/barrel.png";
   return null;
 }
 

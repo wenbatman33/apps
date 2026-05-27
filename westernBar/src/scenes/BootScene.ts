@@ -152,6 +152,9 @@ export const LCD_ASSETS: Array<{ key: string; file: string }> = [
   { key: "lcd_chair_left",     file: "lcd_figma/chair_left.png" },
   { key: "lcd_chair_right",    file: "lcd_figma/chair_right.png" },
   { key: "lcd_barrel",         file: "lcd_figma/barrel.png" },
+  { key: "lcd_husband_hide",   file: "lcd_color/husband_hide.png" },
+  { key: "lcd_wife_hide",      file: "lcd_color/wife_hide.png" },
+  { key: "lcd_couple_hide",    file: "lcd_figma/couple_table_hide.png" },
 ];
 
 // 同名黑剪影 fallback（彩色沒生好時用）— key 前綴 lcd_sil_
