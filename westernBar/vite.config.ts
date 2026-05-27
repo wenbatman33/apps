@@ -59,6 +59,7 @@ function slotsApiPlugin() {
 }
 
 export default defineConfig({
+  base: "./",  // 部署在子路徑（github pages /westernBar/dist/）需相對路徑
   server: { host: true, port: 5173 },
   build: { target: "es2020", sourcemap: true },
   plugins: [slotsApiPlugin()],
