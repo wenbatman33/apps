@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<title>Western Bar — 槍口位置編輯器</title>
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: -apple-system, "PingFang TC", monospace; background: #1a1410; color: #eee; }
+  header {
+    background: #000; padding: 8px 12px; border-bottom: 1px solid #333;
+    display: flex; gap: 10px; align-items: center; flex-wrap: wrap;
+  }
+  header h1 { margin: 0; font-size: 14px; color: #ff6b6b; }
+  button { background: #222; color: #ffd166; border: 1px solid #555; padding: 6px 12px; font-family: monospace; font-size: 12px; cursor: pointer; border-radius: 3px; }
+  button:hover { background: #444; }
+  button.primary { background: #c0392b; color: #fff; border-color: #c0392b; }
+  button.primary:hover { background: #e74c3c; }
+  .hint { color: #888; font-size: 11px; }
+
+  #grid {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px;
+    padding: 12px; max-width: 1200px; margin: 0 auto;
+  }
+  .card {
+    background: #222; border: 1px solid #444; border-radius: 4px; padding: 8px;
+  }
+  .card h3 { margin: 0 0 6px 0; font-size: 13px; color: #ffd166; }
+  .canvas-wrap {
+    position: relative; background: #000; border: 1px solid #555;
+    overflow: hidden; user-select: none;
+  }
+  .canvas-wrap img.sprite {
+    display: block; width: 100%; height: auto;
+  }
+  .gun-dot {
+    position: absolute; width: 14px; height: 14px; border-radius: 50%;
+    background: #ff3030; border: 2px solid #fff; box-shadow: 0 0 8px #ff0000;
+    cursor: move; z-index: 20; transform: translate(-50%, -50%);
+  }
+  .gun-line {
+    position: absolute; width: 2px; background: rgba(255,48,48,0.7);
+    transform: translateX(-50%); z-index: 19; pointer-events: none;
+  }
+  .crosshair {
+    position: absolute; pointer-events: none; z-index: 18;
+    border: 0; opacity: 0.4;
+  }
+  .crosshair.h { width: 100%; height: 1px; background: #4af; left: 0; }
+  .crosshair.v { width: 1px; background: #4af; top: 0; height: 100%; }
+  .controls { margin-top: 6px; font-size: 11px; }
+  .controls .row { display: flex; gap: 4px; align-items: center; margin: 2px 0; }
+  .controls .row label { width: 28px; color: #aaa; }
+  .controls input[type="number"] { width: 70px; background: #111; color: #fff; border: 1px solid #444; padding: 2px 4px; font-family: monospace; }
+  .pose-label { color: #aaa; font-size: 10px; margin-top: 2px; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>🔫 槍口位置編輯器</h1>
+  <button id="btn-write" class="primary">💾 直接寫入專案</button>
+  <button id="btn-copy">📋 全套用到所有 action</button>
+  <button id="btn-reload">↻ 重新載入</button>
+  <span class="hint">拖紅點 → 調槍口；紅線 = 子彈軌跡。Shift+拖 = 鎖定 Y 軸；Alt+拖 = 鎖定 X 軸。每個 sprite 可分別調。</span>
+</header>
+
+<div id="grid"></div>
+
+<script>
+const W_GAME = 960, H_GAME = 540;
+const FW = 1536, FH = 1024;  // Figma frame
+
+// 要編輯的 sprite key（會顯示出槍口紅點）
+const SHOOTERS = [
+  { key: "sheriff/action1", img: "assets/lcd_color/sheriff_walk_1.png", label: "Zone 1（最左）" },
+  { key: "sheriff/action2", img: "assets/lcd_color/sheriff_walk_2.png", label: "Zone 2" },
+  { key: "sheriff/action3", img: "assets/lcd_color/sheriff_walk_3.png", label: "Zone 3" },
+  { key: "sheriff/action4", img: "assets/lcd_color/sheriff_walk_4.png", label: "Zone 4（最右）" },
+  { key: "sheriff/fire",    img: "assets/lcd_color/sheriff_fire.png",   label: "對決開槍" },
+  { key: "sheriff/duel_in", img: "assets/lcd_color/sheriff_duel_in.png",label: "對決就位" },
+];
+
+let SLOTS = {};
+
+async function load() {
+  const r = await fetch("slots.json");
+  SLOTS = await r.json();
+  render();
+}
+
+function render() {
+  const grid = document.getElementById("grid");
+  grid.innerHTML = "";
+  for (const sh of SHOOTERS) {
+    const s = SLOTS[sh.key]; if (!s) continue;
+    const card = makeCard(sh, s);
+    grid.appendChild(card);
+  }
+}
+
+function makeCard(sh, s) {
+  const card = document.createElement("div");
+  card.className = "card";
+  card.innerHTML = `<h3>${sh.key}</h3><div class="pose-label">${sh.label}</div>`;
+
+  const wrap = document.createElement("div");
+  wrap.className = "canvas-wrap";
+  // 卡片內 canvas 寬度自適應；圖等比例顯示
+  const img = document.createElement("img");
+  img.src = sh.img;
+  img.className = "sprite";
+  img.onerror = () => { img.style.display = "none"; };
+  wrap.appendChild(img);
+
+  // 等圖載入後再放紅點（要拿 displayed 尺寸）
+  const place = () => {
+    const wpx = wrap.clientWidth;
+    const hpx = wrap.clientHeight || (img.naturalHeight / img.naturalWidth * wpx);
+    wrap.style.height = hpx + "px";
+
+    // 槍口位置（相對 sprite 中心，sprite 撐滿卡片）
+    const gx = s.gunOffsetX ?? -0.23;
+    const gy = s.gunOffsetY ?? -0.42;
+    const cx = wpx / 2 + gx * wpx;
+    const cy = hpx / 2 + gy * hpx;
+
+    // 子彈軌跡線（從槍口往上到頂）
+    const line = document.createElement("div");
+    line.className = "gun-line";
+    line.style.left = cx + "px";
+    line.style.top = "0px";
+    line.style.height = cy + "px";
+    wrap.appendChild(line);
+
+    // 十字定位線（垂直中心）— 幫助對準
+    const vline = document.createElement("div");
+    vline.className = "crosshair v"; vline.style.left = (wpx/2) + "px";
+    wrap.appendChild(vline);
+    const hline = document.createElement("div");
+    hline.className = "crosshair h"; hline.style.top = (hpx/2) + "px";
+    wrap.appendChild(hline);
+
+    // 紅點
+    const dot = document.createElement("div");
+    dot.className = "gun-dot";
+    dot.style.left = cx + "px";
+    dot.style.top = cy + "px";
+    wrap.appendChild(dot);
+
+    const updateUI = () => {
+      const wpx2 = wrap.clientWidth, hpx2 = wrap.clientHeight;
+      const ngx = s.gunOffsetX ?? -0.23;
+      const ngy = s.gunOffsetY ?? -0.42;
+      const ncx = wpx2 / 2 + ngx * wpx2;
+      const ncy = hpx2 / 2 + ngy * hpx2;
+      dot.style.left = ncx + "px"; dot.style.top = ncy + "px";
+      line.style.left = ncx + "px"; line.style.height = ncy + "px";
+      inGx.value = ngx.toFixed(3); inGy.value = ngy.toFixed(3);
+    };
+
+    dot.addEventListener("mousedown", (e) => {
+      e.preventDefault();
+      const sx = e.clientX, sy = e.clientY;
+      const startGx = s.gunOffsetX ?? -0.23;
+      const startGy = s.gunOffsetY ?? -0.42;
+      const wpx2 = wrap.clientWidth, hpx2 = wrap.clientHeight;
+      const onMove = (ev) => {
+        const dxFrac = (ev.clientX - sx) / wpx2;
+        const dyFrac = (ev.clientY - sy) / hpx2;
+        if (!ev.altKey)   s.gunOffsetX = +(startGx + dxFrac).toFixed(3);
+        if (!ev.shiftKey) s.gunOffsetY = +(startGy + dyFrac).toFixed(3);
+        updateUI();
+      };
+      const onUp = () => { document.removeEventListener("mousemove", onMove); document.removeEventListener("mouseup", onUp); };
+      document.addEventListener("mousemove", onMove);
+      document.addEventListener("mouseup", onUp);
+    });
+
+    // 數字輸入
+    inGx.addEventListener("input", (e) => { const v = parseFloat(e.target.value); if (!isNaN(v)) { s.gunOffsetX = v; updateUI(); }});
+    inGy.addEventListener("input", (e) => { const v = parseFloat(e.target.value); if (!isNaN(v)) { s.gunOffsetY = v; updateUI(); }});
+  };
+
+  if (img.complete && img.naturalWidth) place();
+  else img.addEventListener("load", place);
+
+  card.appendChild(wrap);
+
+  // 控制
+  const controls = document.createElement("div");
+  controls.className = "controls";
+  controls.innerHTML = `
+    <div class="row"><label>gx</label><input type="number" step="0.01" class="in-gx"></div>
+    <div class="row"><label>gy</label><input type="number" step="0.01" class="in-gy"></div>
+  `;
+  card.appendChild(controls);
+  const inGx = controls.querySelector(".in-gx");
+  const inGy = controls.querySelector(".in-gy");
+  inGx.value = (s.gunOffsetX ?? -0.23).toFixed(3);
+  inGy.value = (s.gunOffsetY ?? -0.42).toFixed(3);
+
+  return card;
+}
+
+// === 寫回專案 ===
+document.getElementById("btn-write").onclick = async () => {
+  const r = await fetch("/api/slots", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(SLOTS),
+  });
+  const j = await r.json();
+  if (j.ok) alert(`✓ 已寫回 LCD_LAYOUT.ts (${j.count} slots) — 遊戲 HMR 自動生效`);
+  else alert("失敗：" + j.error);
+};
+
+// 一鍵套用 action1 的 offset 到所有 sheriff/action* + fire + duel_in
+document.getElementById("btn-copy").onclick = () => {
+  const src = SLOTS["sheriff/action1"];
+  if (!src || src.gunOffsetX == null) { alert("先調好 sheriff/action1"); return; }
+  if (!confirm(`把 action1 的 offset (${src.gunOffsetX}, ${src.gunOffsetY}) 套用到所有 6 個 sprite？`)) return;
+  for (const sh of SHOOTERS) {
+    if (SLOTS[sh.key]) {
+      SLOTS[sh.key].gunOffsetX = src.gunOffsetX;
+      SLOTS[sh.key].gunOffsetY = src.gunOffsetY;
+    }
+  }
+  render();
+};
+
+document.getElementById("btn-reload").onclick = load;
+
+load();
+</script>
+</body>
+</html>

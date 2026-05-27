@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<title>Sprite 檢核清單</title>
+<style>
+  body { background:#222; color:#eee; font-family: -apple-system, "Microsoft JhengHei", sans-serif; margin:0; padding:16px; }
+  h1 { margin:0 0 12px; font-size:18px; }
+  .toolbar { background:#1a1a1a; padding:10px; border-radius:6px; margin-bottom:12px; display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
+  .toolbar button { padding:6px 12px; background:#c9842f; border:none; color:#fff; border-radius:4px; cursor:pointer; font-weight:bold; }
+  .toolbar button:hover { background:#e8a040; }
+  .toolbar .stats { color:#aaa; font-size:12px; }
+  .grid { display:grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap:12px; }
+  .card { background:#2a2a2a; border:2px solid #444; border-radius:6px; padding:8px; }
+  .card.pass { border-color:#4caf50; background:#1f2a1f; }
+  .card.fail { border-color:#e53935; background:#2a1a1a; }
+  .card .title { font-size:12px; color:#ffd166; margin-bottom:4px; word-break:break-all; }
+  .card .desc  { font-size:10px; color:#888; margin-bottom:6px; line-height:1.3; min-height:24px; }
+  .card .prompt { font-size:10px; color:#88aacc; background:#1a1a1a; border-left:2px solid #4488aa; padding:4px 6px; margin-bottom:6px; line-height:1.4; max-height:80px; overflow-y:auto; }
+  .card .img-wrap { background: repeating-conic-gradient(#444 0% 25%, #555 0% 50%) 50% / 12px 12px; border-radius:4px; text-align:center; padding:4px; min-height:128px; display:flex; align-items:center; justify-content:center; }
+  .card img { max-width:100%; max-height:128px; image-rendering:auto; }
+  .card .actions { display:flex; gap:6px; margin-top:8px; }
+  .card .actions button { flex:1; padding:6px; border:none; border-radius:4px; cursor:pointer; font-size:12px; font-weight:bold; }
+  .card .actions .ok   { background:#4caf50; color:#fff; }
+  .card .actions .ng   { background:#e53935; color:#fff; }
+  .card .actions .ok.active { background:#2e7d32; }
+  .card .actions .ng.active { background:#b71c1c; }
+  .card .missing { color:#e53935; text-align:center; padding:30px 8px; font-size:11px; }
+  .card .feedback { width:100%; margin-top:6px; background:#1a1a1a; color:#eee; border:1px solid #444; border-radius:3px; padding:4px; font-size:11px; font-family:inherit; resize:vertical; min-height:48px; box-sizing:border-box; }
+  .card .feedback::placeholder { color:#666; }
+  textarea { width:100%; height:120px; background:#111; color:#eee; border:1px solid #444; padding:6px; font-family:monospace; font-size:11px; }
+</style>
+</head>
+<body>
+
+<h1>🎯 Sprite 檢核清單（LCD 全彩 chibi 版）</h1>
+
+<div class="toolbar">
+  <button id="btn-reload">🔄 重整圖檔</button>
+  <button id="btn-pass-all">全部通過</button>
+  <button id="btn-clear">清空狀態</button>
+  <button id="btn-export-fail">📋 匯出「需重生清單」</button>
+  <span class="stats" id="stats">—</span>
+</div>
+
+<div id="grid" class="grid"></div>
+
+<h3>需要重生的清單（複製貼給 Claude）：</h3>
+<textarea id="export-area" readonly placeholder="按「匯出需重生清單」會把不通過的填到這裡"></textarea>
+
+<script>
+const BASE = "/assets/lcd_color/";
+
+// 依 LCD_LAYOUT slot 排序 — 角色 / 物件分組
+const SPRITES = [
+  // 警長 10 pose
+  { key:"sheriff_action0", desc:"開場遊行（無持槍）", prompt:"Opening parade walk, side view, leaning slightly forward mid-stride, one leg forward one back, revolver holstered on hip (no gun in hand), arms swinging naturally, head facing forward." },
+  { key:"sheriff_walk_1",  desc:"Zone 1 站姿", prompt:"Body facing front, right arm raised holding silver revolver pointed straight up overhead, left arm relaxed, feet shoulder-width apart with knees slightly bent. HEAD TILTED UP looking at the gun barrel (chin pointing up, eyes looking at ceiling)." },
+  { key:"sheriff_walk_2",  desc:"Zone 2 X 形腳", prompt:"Walking pose, right leg crossing in front of left leg forming X shape, body slightly tilted, right arm raised with revolver pointed straight up, left arm swinging. HEAD TILTED UP looking at gun barrel." },
+  { key:"sheriff_walk_3",  desc:"Zone 3 V 形腳", prompt:"Sidestep stance, both legs spread wide in V shape with knees turned outward, right arm raised with revolver pointed straight up. HEAD TILTED UP looking at gun barrel." },
+  { key:"sheriff_walk_4",  desc:"Zone 4 劈腿", prompt:"Action stance, legs split very wide like karate stance, right arm raised with revolver pointed straight up overhead, chest puffed out. HEAD TILTED UP looking at gun barrel." },
+  { key:"sheriff_pour",    desc:"高舉酒瓶倒酒", prompt:"Tilting brown whiskey bottle high above head with right hand, pouring amber liquid stream toward the ground, head tilted back looking up at the bottle, satisfied gleeful expression." },
+  { key:"sheriff_duel_in", desc:"潛行進掩體", prompt:"Sneaking sideways toward cover, body crouched slightly, revolver in right hand pointing down at hip level, head turned alertly toward screen left, knees bent." },
+  { key:"sheriff_hide",    desc:"蹲掩體後", prompt:"Crouching down behind low cover, only head with hat and one arm holding the revolver visible above the cover edge, alert wide eyes peering left." },
+  { key:"sheriff_fire",    desc:"對決射擊左方", prompt:"Sideways shooting stance facing screen left, both hands gripping revolver extended horizontally, muzzle flash sparks at the gun barrel, gritted teeth determined." },
+  { key:"sheriff_down",    desc:"倒地 KO", prompt:"Lying flat on back on the ground, arms and legs splayed out, hat fallen beside him, X-shaped closed eyes, tongue sticking out, small yellow stars circling above the head." },
+  // 通緝犯 6 pose
+  { key:"bandit_at_door",  desc:"門口探出", prompt:"Peeking through gap of double saloon swing doors, only upper body and one shoulder visible behind door panels, peering forward with menacing eyes, one hand on the door." },
+  { key:"bandit_enter",    desc:"走進酒吧", prompt:"Striding forward into the saloon, one foot forward one back, body facing screen right, arms swinging naturally, determined expression." },
+  { key:"bandit_hide",     desc:"完全蹲低", prompt:"Fully crouched down behind cover, body compacted small, only the very top of the black hat visible, arms hugging knees." },
+  { key:"bandit_peek",     desc:"探頭刺探", prompt:"Half-rising from behind cover, head and shoulders visible over the cover edge, eyes scanning, one hand on the cover." },
+  { key:"bandit_fire",     desc:"開槍射右方", prompt:"Sideways shooting stance facing screen right, both hands gripping silver revolver extended horizontally, muzzle flash with smoke at the barrel, snarling expression." },
+  { key:"bandit_hit",      desc:"中彈後仰", prompt:"Reeling backward, arms flung out sideways, hat flying off the head, body arched back, eyes wide with shock, mouth open in cry." },
+  // 夫妻 6 pose
+  { key:"husband_eat",     desc:"吃飯", prompt:"Seated at small round saloon table, leaning forward, holding knife and fork eating a steak from a plate, content expression." },
+  { key:"husband_alert",   desc:"警戒被惹怒", prompt:"Seated at the table, suddenly alarmed and angry, fists raised at face height, eyebrows furrowed, mouth open shouting, vein on temple." },
+  { key:"husband_throw",   desc:"投擲煙灰缸", prompt:"Seated at the table, right arm cocked back high holding a small dark round ashtray, ready to hurl it forward, angry shouting." },
+  { key:"wife_eat",        desc:"喝茶", prompt:"Seated at small round saloon table opposite husband, holding teacup with pinky raised, sipping gracefully." },
+  { key:"wife_alert",      desc:"驚訝", prompt:"Seated at the table, sitting up straight, hands raised to mouth in shocked gesture, eyes wide in surprise." },
+  { key:"wife_throw",      desc:"投擲蘋果", prompt:"Seated at the table, right arm cocked back holding a red apple, ready to throw it, angry pursed lips." },
+  // 物品
+  { key:"cup_intact",      desc:"完整啤酒杯", prompt:"Wooden beer tankard with curved handle on the side, full of foamy beer at the top." },
+  { key:"cup_broken",      desc:"碎啤酒杯", prompt:"Wooden beer tankard shattered into 4-5 large chunky pieces flying outward, foamy beer splashing." },
+  { key:"bottle_intact",   desc:"完整酒瓶", prompt:"Tall whiskey bottle, dark brown glass with long neck, paper label with star emblem." },
+  { key:"bottle_broken",   desc:"碎酒瓶", prompt:"Whiskey bottle shattered into chunky glass pieces flying outward, amber liquid splashing." },
+  { key:"plate_intact",    desc:"完整標靶", prompt:"Round bullseye target board, three concentric rings red center white middle red outer, on a small wooden stand." },
+  { key:"plate_broken",    desc:"碎標靶", prompt:"Target board shattered into 4-5 chunky wooden pieces flying outward, bullet hole in center fragment." },
+  // 投擲物
+  { key:"dynamite",        desc:"沖天炮", prompt:"Single chunky red stick of dynamite with lit fuse on top sparking with yellow flame." },
+  { key:"explosion",       desc:"星爆炸開", prompt:"Cartoon explosion burst, jagged yellow-orange-red star shape with smoke wisps." },
+  { key:"apple",           desc:"紅蘋果（妻子丟）", prompt:"Glossy red apple with a small brown stem and one green leaf." },
+  { key:"ashtray",         desc:"煙灰缸（丈夫丟）", prompt:"Round dark glass ashtray with one half-smoked cigarette resting on the rim, small wisp of smoke." },
+  // 場景元件
+  { key:"door_open",       desc:"彈簧門打開", prompt:"Two wooden saloon swing doors, both panels open wide showing gap between them, visible wood slats and metal hinges." },
+  { key:"door_closed",     desc:"彈簧門關閉", prompt:"Two wooden saloon swing doors closed together in the middle, panels meeting straight, visible wood slats and hinges." },
+  { key:"cover_intact",    desc:"掩體完好", prompt:"Small round wooden bar table flipped on its side, top facing screen left as shield, four legs sticking out to screen right, intact." },
+  { key:"cover_damaged",   desc:"掩體破損", prompt:"Same flipped wooden bar table but with chunky bullet holes and cracks across the tabletop, some splinters missing." },
+  { key:"cover_destroyed", desc:"掩體毀壞", prompt:"Same flipped wooden bar table now badly broken, large pieces missing from the top, only a short jagged stump remaining." },
+  // 酒保
+  { key:"barman_idle",     desc:"酒保擦杯", prompt:"Chibi bartender behind bar counter, visible from waist up only. Bald shiny head with thin black mustache, white collared shirt with small black bowtie, white apron strap over shoulder. Standing patiently wiping a glass." },
+  { key:"barman_slide",    desc:"酒保滑送杯", prompt:"Same chibi bartender, leaning forward sliding a beer mug across the counter with one arm extended toward screen left, motion lines behind the mug." },
+  // 背景
+  { key:"background",      desc:"空酒吧內景 1536x1024", prompt:"45-degree top-down view of empty old west saloon interior. Top 22 percent back wall with bottle shelf and WANTED poster and SALOON sign and oil lamp. 22-32 percent bartender walkway (floor strip). 32-50 percent bar counter top long horizontal walnut. 50-58 percent bar front panel. 58-100 percent wood plank floor. Left side: arched opening with sky and distant town. No characters, no chairs/tables, no swing door panels (only opening). Warm afternoon lighting." },
+];
+
+const STORAGE_KEY = "wb_sprite_check_v2";
+let state = {};
+let feedback = {};
+try {
+  const raw = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
+  state    = raw.state    || {};
+  feedback = raw.feedback || {};
+} catch(e) {}
+
+function save() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify({ state, feedback }));
+}
+
+function render() {
+  const grid = document.getElementById("grid");
+  grid.innerHTML = "";
+  let pass = 0, fail = 0, pending = 0, missing = 0;
+  for (const sp of SPRITES) {
+    const status = state[sp.key]; // "pass" | "fail" | undefined
+    const card = document.createElement("div");
+    card.className = "card" + (status === "pass" ? " pass" : status === "fail" ? " fail" : "");
+    const url = BASE + sp.key + ".png?t=" + Date.now();
+    const fbVal = (feedback[sp.key] || "").replace(/"/g, "&quot;");
+    const promptText = (sp.prompt || "").replace(/</g, "&lt;");
+    card.innerHTML = `
+      <div class="title">${sp.key}</div>
+      <div class="desc">${sp.desc}</div>
+      <div class="prompt" title="點兩下複製">${promptText}</div>
+      <div class="img-wrap">
+        <img src="${url}" alt="${sp.key}"
+             onerror="this.parentNode.innerHTML='<div class=\\'missing\\'>檔案不存在<br>(等生成中)</div>'">
+      </div>
+      <div class="actions">
+        <button class="ok ${status === 'pass' ? 'active' : ''}" data-k="${sp.key}" data-v="pass">✓ 通過</button>
+        <button class="ng ${status === 'fail' ? 'active' : ''}" data-k="${sp.key}" data-v="fail">✗ 重生</button>
+      </div>
+      <textarea class="feedback" data-fb="${sp.key}" placeholder="意見回饋（重生需求說明，例如：頭再仰高一點 / 腳要更張開 / 帽子太大）">${fbVal}</textarea>
+    `;
+    grid.appendChild(card);
+    if (status === "pass") pass++;
+    else if (status === "fail") fail++;
+    else pending++;
+  }
+  document.getElementById("stats").textContent =
+    `共 ${SPRITES.length} 張：通過 ${pass} / 重生 ${fail} / 待檢 ${pending}`;
+}
+
+document.addEventListener("click", (e) => {
+  const t = e.target;
+  if (t.tagName === "BUTTON" && t.dataset.k) {
+    state[t.dataset.k] = t.dataset.v;
+    save(); render();
+  }
+});
+
+// 意見回饋 textarea 輸入時自動存
+document.addEventListener("input", (e) => {
+  const t = e.target;
+  if (t.tagName === "TEXTAREA" && t.dataset.fb) {
+    feedback[t.dataset.fb] = t.value;
+    save();
+  }
+});
+
+document.getElementById("btn-reload").onclick = () => render();
+document.getElementById("btn-pass-all").onclick = () => {
+  if (!confirm("把全部標成通過？")) return;
+  for (const sp of SPRITES) state[sp.key] = "pass";
+  save(); render();
+};
+document.getElementById("btn-clear").onclick = () => {
+  if (!confirm("清空所有狀態？")) return;
+  state = {}; save(); render();
+};
+document.getElementById("btn-export-fail").onclick = () => {
+  const fails = SPRITES.filter(s => state[s.key] === "fail");
+  let txt;
+  if (fails.length === 0) {
+    txt = "（沒有標記重生的項目）";
+  } else {
+    txt = "需要重生的 sprite（共 " + fails.length + " 張）：\n\n";
+    for (const s of fails) {
+      const fb = (feedback[s.key] || "").trim();
+      txt += "● " + s.key + "  — " + s.desc + "\n";
+      txt += "  意見：" + (fb || "(未填)") + "\n\n";
+    }
+  }
+  document.getElementById("export-area").value = txt;
+  if (fails.length) {
+    navigator.clipboard?.writeText(txt).catch(()=>{});
+  }
+};
+
+render();
+</script>
+</body>
+</html>
