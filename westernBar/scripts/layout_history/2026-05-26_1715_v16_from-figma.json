@@ -1,0 +1,23 @@
+{
+  "_meta": {
+    "savedAt": "2026-05-26 17:15",
+    "label": "v16 imported from user's Figma layout",
+    "description": "從使用者手動在 Figma 排好的 layout 全面導入。Frame 433x261 → 比例 LAYOUT。Sheriff 4 zone + Items 6 column 為不同網格，更貼近原版 LCD。",
+    "appliedTo": ["src/scenes/LAYOUT.ts"],
+    "source": "scripts/figma_import/layout_ratios.json"
+  },
+  "key_changes": {
+    "SHERIFF_ZONE_X_RATIOS": "[0.326, 0.454, 0.581, 0.717] (4 zones)",
+    "ITEM_COL_X_RATIOS": "[0.792, 0.664, 0.545, 0.411, 0.296, 0.220] (6 cols, 右→左)",
+    "ROW_TOP_Y_RATIO": "0.060 (plate 軌道)",
+    "ROW_BOTTLE_Y_RATIO": "0.230",
+    "ROW_CUP_Y_RATIO": "0.318",
+    "ROW_COUPLE_Y_RATIO": "0.560",
+    "ROW_PLAYER_Y_RATIO": "0.975",
+    "sheriff_poses": "10 個（action0-4, pour, down, duel_in, hide, fire）",
+    "bandit_poses": "6 個（at_door, enter, hide, peek, fire, hit）",
+    "couple_poses": "各 3 個（eat/alert/throw 動作）",
+    "dynamite_arc": "11 個 waypoint（原本 10 個）",
+    "throw_paths": "husband z1/z2 + wife z3/z4，3 點/條"
+  }
+}

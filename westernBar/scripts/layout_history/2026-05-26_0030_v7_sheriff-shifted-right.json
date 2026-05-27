@@ -1,0 +1,14 @@
+{
+  "_meta": {
+    "savedAt": "2026-05-26 00:30",
+    "label": "v7 sheriff 4 actions shifted right",
+    "description": "警長 action1-4 x 位置整體往右移（對齊 zone 2/3/4/5），其他保留 v6",
+    "appliedTo": ["src/scenes/LAYOUT.ts", "public/scene_editor.html DEFAULT_STATE"]
+  },
+  "key_changes": {
+    "sheriff_action1": "x=0.329 y=0.782",
+    "sheriff_action2": "x=0.460 y=0.788",
+    "sheriff_action3": "x=0.594 y=0.788",
+    "sheriff_action4": "x=0.723 y=0.793"
+  }
+}

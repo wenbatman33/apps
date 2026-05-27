@@ -1,0 +1,14 @@
+{
+  "_meta": {
+    "savedAt": "2026-05-26 02:00",
+    "label": "v10 sheriff gunOffset tuned to actual gun positions",
+    "description": "警長 4 個 pose 的槍口偏移調整到左上方（dx 全部變負，因為警長 sprite 左手舉槍）",
+    "appliedTo": ["src/scenes/LAYOUT.ts"]
+  },
+  "key_changes": {
+    "sheriff_action1_gun": "dx=-0.273 dy=-0.50",
+    "sheriff_action2_gun": "dx=-0.407 dy=-0.464",
+    "sheriff_action3_gun": "dx=-0.396 dy=-0.50",
+    "sheriff_action4_gun": "dx=-0.440 dy=-0.373"
+  }
+}

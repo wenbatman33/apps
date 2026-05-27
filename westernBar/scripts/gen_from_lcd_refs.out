@@ -1,0 +1,44 @@
+[11:10:48] ==== gen_from_lcd_refs start ====
+[11:10:48] ==== 主角 (8 actions) ====
+[11:10:49] ▶ gen B01_player_idle.png ← 主角動作1.png (try 1)
+[11:12:35] ✓ B01_player_idle.png
+[11:12:35] ▶ gen B02_player_walk1.png ← 主角動作2.png (try 1)
+[11:14:58] ✓ B02_player_walk1.png
+[11:14:58] ▶ gen B03_player_walk2.png ← 主角動作3.png (try 1)
+[11:18:35] ✓ B03_player_walk2.png
+[11:18:35] ▶ gen B04_player_walk3.png ← 主角動作4.png (try 1)
+[11:20:21] ✓ B04_player_walk3.png
+[11:20:21] ▶ gen B05_player_pour_whiskey.png ← 主角動作5 (try 1)
+[11:23:45] ✓ B05_player_pour_whiskey.png
+[11:23:45] ▶ gen B06_player_hide_table.png ← 主角動作6 (try 1)
+[11:25:32] ✓ B06_player_hide_table.png
+[11:25:32] ▶ gen B07_player_fire.png ← 主角動作7開槍.png (try 1)
+[11:27:24] ✓ B07_player_fire.png
+[11:27:24] ▶ gen B08_player_hit.png ← 主角動作8 (try 1)
+[11:29:07] ✓ B08_player_hit.png
+[11:29:07] ==== 通緝犯 (6 actions) ====
+[11:29:07] ▶ gen E01_bandit_at_door.png ← 通緝犯動作1 (try 1)
+[11:31:05] ✓ E01_bandit_at_door.png
+[11:31:05] ▶ gen E02_bandit_enter.png ← 通緝犯動作2 (try 1)
+[11:34:39] ✓ E02_bandit_enter.png
+[11:34:39] ▶ gen E03_bandit_hide.png ← 通緝犯動作3 (try 1)
+[11:36:46] ✓ E03_bandit_hide.png
+[11:36:46] ▶ gen E04_bandit_peek.png ← 通緝犯動作4 (try 1)
+[11:43:57] ✓ E04_bandit_peek.png
+[11:43:57] ▶ gen E05_bandit_fire.png ← 通緝犯動作5 (try 1)
+[11:45:56] ✓ E05_bandit_fire.png
+[11:45:56] ▶ gen E06_bandit_hit.png ← 通緝犯動作6 (try 1)
+[11:48:00] ✓ E06_bandit_hit.png
+[11:48:00] ==== 桌上男人 (4 actions) ====
+[11:48:00] ▶ gen D01_man_eat1.png ← 桌上男人動作1.png (try 1)
+[11:49:48] ✓ D01_man_eat1.png
+[11:49:48] ▶ gen D02_man_eat2.png ← 桌上男人動作2.png (try 1)
+[11:51:34] ✓ D02_man_eat2.png
+[11:51:34] ▶ gen D03_man_alert.png ← 桌上男人動作3 (try 1)
+[11:53:59] ✓ D03_man_alert.png
+[11:53:59] ▶ gen D04_man_hide.png ← 桌上男人動作4 (try 1)
+[11:56:41] ✓ D04_man_hide.png
+[11:56:41] ==== 桌上女人 (4 actions) ====
+[11:56:41] ▶ gen D05_woman_eat1.png ← 桌上女人動作1.png (try 1)
+[11:58:05] ✓ D05_woman_eat1.png
+[11:58:05] ▶ gen D06_woman_eat2.png ← 桌上女人動作2.png (try 1)

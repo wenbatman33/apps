@@ -1,0 +1,13 @@
+{
+  "_meta": {
+    "savedAt": "2026-05-26 00:10",
+    "label": "v6 barman poses sized",
+    "description": "酒保 slide/cheer 改大、catch 位置微調，其他保留 v5",
+    "appliedTo": ["src/scenes/LAYOUT.ts", "public/scene_editor.html DEFAULT_STATE"]
+  },
+  "key_changes": {
+    "barman_slide": "x=0.893 y=0.409 w=0.157 h=0.375",
+    "barman_catch": "x=0.909 y=0.326",
+    "barman_cheer": "x=0.894 y=0.354 w=0.164 h=0.306"
+  }
+}

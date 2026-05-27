@@ -1,0 +1,14 @@
+{
+  "_meta": {
+    "savedAt": "2026-05-26 02:20",
+    "label": "v11 bandit poses tuned + gunOffset reset",
+    "description": "通緝犯 hide/peek/down 位置與尺寸微調；警長 gunOffset 重置為正向預設",
+    "appliedTo": ["src/scenes/LAYOUT.ts"]
+  },
+  "key_changes": {
+    "sheriff_gun_all": "dx 0.20-0.25 dy=-0.5 (reset to positive)",
+    "bandit_hide": "x=0.200 y=0.403 w=0.067 h=0.170",
+    "bandit_peek": "x=0.221 y=0.445",
+    "bandit_down": "x=0.132 y=0.835"
+  }
+}

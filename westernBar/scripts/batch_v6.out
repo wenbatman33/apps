@@ -1,0 +1,150 @@
+[23:57:13] ==== v6 batch start ====
+[23:57:13] ==== 1/7 bandit sprite sheet ====
+[23:57:13] ▶ gen public/assets/E/bandit_spritesheet.png (try 1)
+[23:58:49] ✓ public/assets/E/bandit_spritesheet.png generated
+[23:58:49] ==== 2/7 couple sprite sheet ====
+[23:58:49] ▶ gen public/assets/D/couple_spritesheet.png (try 1)
+[00:00:51] ✓ public/assets/D/couple_spritesheet.png generated
+[00:00:51] ==== 3/7 barman sprite sheet ====
+[00:00:51] ▶ gen public/assets/C/barman_spritesheet.png (try 1)
+[00:03:10] ✓ public/assets/C/barman_spritesheet.png generated
+[00:03:10] ==== 4/7 items sprite sheet ====
+[00:03:10] ▶ gen public/assets/G/items_spritesheet.png (try 1)
+[00:04:43] ✓ public/assets/G/items_spritesheet.png generated
+[00:04:43] ==== 5/7 table cover sprite sheet ====
+[00:04:43] ▶ gen public/assets/F/table_spritesheet.png (no-ref, try 1)
+[00:05:47] ✓ public/assets/F/table_spritesheet.png generated
+[00:05:47] ==== 6/7 dynamite + effects sprite sheet ====
+[00:05:47] ▶ gen public/assets/I/effects_spritesheet.png (try 1)
+[00:07:14] ✓ public/assets/I/effects_spritesheet.png generated
+[00:07:14] ==== 7/7 empty backgrounds (10 levels) ====
+[00:07:14] ⏭  A01_bg_L1_day (exists)
+[00:07:14] ⏭  A02_bg_L2_afternoon (exists)
+[00:07:14] ⏭  A03_bg_L3_dusk (exists)
+[00:07:14] ⏭  A04_bg_L4_night (exists)
+[00:07:14] ⏭  A05_bg_L5_rain (exists)
+[00:07:14] ⏭  A06_bg_L6_dust (exists)
+[00:07:14] ⏭  A07_bg_L7_minetown (exists)
+[00:07:14] ⏭  A08_bg_L8_abandoned (exists)
+[00:07:14] ⏭  A09_bg_L9_storm (exists)
+[00:07:14] ⏭  A10_bg_L10_final (exists)
+[00:07:14] ==== v6 batch DONE ====
+[00:07:14] Generated sheets:
+public/assets/A/:
+total 56664
+drwxr-xr-x  16 batman_work  staff      512 May 23 22:27 .
+drwxr-xr-x  16 batman_work  staff      512 May 23 23:57 ..
+-rw-r--r--   1 batman_work  staff  2499592 May 23 21:55 A01_bg_L1_day.png
+-rw-r--r--   1 batman_work  staff  2427350 May 23 21:58 A02_bg_L2_afternoon.png
+-rw-r--r--   1 batman_work  staff  2576449 May 23 22:01 A03_bg_L3_dusk.png
+-rw-r--r--@  1 batman_work  staff  2408947 May 23 22:03 A04_bg_L4_night.png
+-rw-r--r--   1 batman_work  staff  2476894 May 23 22:05 A05_bg_L5_rain.png
+-rw-r--r--@  1 batman_work  staff  2682391 May 23 22:07 A06_bg_L6_dust.png
+-rw-r--r--   1 batman_work  staff  2770938 May 23 22:11 A07_bg_L7_minetown.png
+-rw-r--r--   1 batman_work  staff  2512000 May 23 22:12 A08_bg_L8_abandoned.png
+-rw-r--r--   1 batman_work  staff  2627840 May 23 22:15 A09_bg_L9_storm.png
+-rw-r--r--@  1 batman_work  staff  2554959 May 23 22:17 A10_bg_L10_final.png
+-rw-r--r--   1 batman_work  staff   967807 May 23 22:19 A11_swing_door.png
+-rw-r--r--   1 batman_work  staff   440351 May 23 22:20 A12_bar_counter.png
+-rw-r--r--   1 batman_work  staff  1459700 May 23 22:23 A13_wanted_poster.png
+-rw-r--r--   1 batman_work  staff   574286 May 23 22:27 A14_couple_table.png
+
+public/assets/B/:
+total 8208
+drwxr-xr-x  21 batman_work  staff      672 May 23 23:53 .
+drwxr-xr-x  16 batman_work  staff      512 May 23 23:57 ..
+-rw-r--r--   1 batman_work  staff    69769 May 23 23:53 B01_player_idle.png
+-rw-r--r--@  1 batman_work  staff    70431 May 23 23:45 B02_player_run_bottle.png
+-rw-r--r--@  1 batman_work  staff    72116 May 23 23:53 B02_player_walk1.png
+-rw-r--r--   1 batman_work  staff    65770 May 23 23:45 B03_player_run_alt.png
+-rw-r--r--@  1 batman_work  staff    36865 May 23 23:53 B03_player_walk2.png
+-rw-r--r--   1 batman_work  staff    56596 May 23 23:45 B04_player_dash.png
+-rw-r--r--   1 batman_work  staff    76878 May 23 23:53 B04_player_fire_up.png
+-rw-r--r--   1 batman_work  staff    65310 May 23 23:53 B05_player_hit.png
+-rw-r--r--@  1 batman_work  staff    67975 May 23 23:45 B06_player_hide_table.png
+-rw-r--r--@  1 batman_work  staff   872179 May 23 22:41 B07_player_expose_fire.png
+-rw-r--r--@  1 batman_work  staff    55261 May 23 23:45 B07_player_jump_fire.png
+-rw-r--r--@  1 batman_work  staff    36935 May 23 23:53 B08_player_pour_whiskey.png
+-rw-r--r--@  1 batman_work  staff   754590 May 23 22:46 B09_player_opening.png
+-rw-r--r--@  1 batman_work  staff    34733 May 23 23:45 B10_player_down.png
+-rw-r--r--   1 batman_work  staff    73711 May 23 23:53 B11_player_drink.png
+-rw-r--r--   1 batman_work  staff    36352 May 23 23:53 B12_player_drunk_lean.png
+-rw-r--r--   1 batman_work  staff    65109 May 23 23:53 B13_player_combat_ready.png
+-rw-r--r--   1 batman_work  staff    39793 May 23 23:53 B14_player_run_combat.png
+-rw-r--r--   1 batman_work  staff  1613972 May 23 23:52 sheriff_spritesheet.png
+
+public/assets/C/:
+total 6952
+drwxr-xr-x   6 batman_work  staff      192 May 24 00:02 .
+drwxr-xr-x  16 batman_work  staff      512 May 23 23:57 ..
+-rw-r--r--@  1 batman_work  staff   719220 May 23 22:52 C01_barman_idle.png
+-rw-r--r--@  1 batman_work  staff   700431 May 23 22:54 C02_barman_throw.png
+-rw-r--r--@  1 batman_work  staff  1128237 May 23 22:57 C03_barman_catch_bomb.png
+-rw-r--r--   1 batman_work  staff   999779 May 24 00:02 barman_spritesheet.png
+
+public/assets/D/:
+total 18680
+drwxr-xr-x   9 batman_work  staff      288 May 24 00:00 .
+drwxr-xr-x  16 batman_work  staff      512 May 23 23:57 ..
+-rw-r--r--   1 batman_work  staff   935016 May 23 23:04 D02_man_alert.png
+-rw-r--r--@  1 batman_work  staff   909973 May 23 23:06 D03_man_throw.png
+-rw-r--r--@  1 batman_work  staff  1737345 May 23 23:06 D03_man_throw_chroma.png
+-rw-r--r--@  1 batman_work  staff  1044814 May 23 23:09 D04_woman_eat.png
+-rw-r--r--   1 batman_work  staff  1464733 May 23 23:11 D05_woman_alert.png
+-rw-r--r--   1 batman_work  staff   965670 May 23 23:13 D06_woman_throw.png
+-rw-r--r--   1 batman_work  staff  1855426 May 24 00:00 couple_spritesheet.png
+
+public/assets/E/:
+total 9712
+drwxr-xr-x   7 batman_work  staff      224 May 23 23:58 .
+drwxr-xr-x  16 batman_work  staff      512 May 23 23:57 ..
+-rw-r--r--@  1 batman_work  staff   731568 May 23 23:15 E01_bandit_basic_enter.png
+-rw-r--r--@  1 batman_work  staff   915475 May 23 23:19 E02_bandit_basic_peek_hi.png
+-rw-r--r--   1 batman_work  staff   816110 May 23 23:21 E03_bandit_basic_peek_lo.png
+-rw-r--r--@  1 batman_work  staff   828911 May 23 21:47 E04_bandit_basic_aim.png
+-rw-r--r--   1 batman_work  staff  1668134 May 23 23:58 bandit_spritesheet.png
+
+public/assets/F/:
+total 1440
+drwxr-xr-x   3 batman_work  staff      96 May 24 00:05 .
+drwxr-xr-x  16 batman_work  staff     512 May 23 23:57 ..
+-rw-r--r--   1 batman_work  staff  734450 May 24 00:05 table_spritesheet.png
+
+public/assets/G/:
+total 2216
+drwxr-xr-x   3 batman_work  staff       96 May 24 00:04 .
+drwxr-xr-x  16 batman_work  staff      512 May 23 23:57 ..
+-rw-r--r--   1 batman_work  staff  1131451 May 24 00:04 items_spritesheet.png
+
+public/assets/H/:
+total 0
+drwxr-xr-x   2 batman_work  staff   64 May 23 23:57 .
+drwxr-xr-x  16 batman_work  staff  512 May 23 23:57 ..
+
+public/assets/I/:
+total 1552
+drwxr-xr-x   3 batman_work  staff      96 May 24 00:07 .
+drwxr-xr-x  16 batman_work  staff     512 May 23 23:57 ..
+-rw-r--r--   1 batman_work  staff  793575 May 24 00:07 effects_spritesheet.png
+
+public/assets/J/:
+total 0
+drwxr-xr-x   2 batman_work  staff   64 May 23 23:57 .
+drwxr-xr-x  16 batman_work  staff  512 May 23 23:57 ..
+
+public/assets/K/:
+total 2856
+drwxr-xr-x   3 batman_work  staff       96 May 23 20:24 .
+drwxr-xr-x  16 batman_work  staff      512 May 23 23:57 ..
+-rw-r--r--@  1 batman_work  staff  1459753 May 23 20:24 K15_gameover_text.png
+
+public/assets/L/:
+total 0
+drwxr-xr-x   2 batman_work  staff   64 May 23 23:57 .
+drwxr-xr-x  16 batman_work  staff  512 May 23 23:57 ..
+
+public/assets/M/:
+total 632
+drwxr-xr-x   3 batman_work  staff      96 May 23 20:23 .
+drwxr-xr-x  16 batman_work  staff     512 May 23 23:57 ..
+-rw-r--r--@  1 batman_work  staff  320254 May 23 20:23 M01_alert_mark.png

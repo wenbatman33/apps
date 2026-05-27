@@ -1,0 +1,14 @@
+{
+  "_meta": {
+    "savedAt": "2026-05-26 01:45",
+    "label": "v9 barman 4 pose positions tuned",
+    "description": "酒保 4 個 pose 位置 + slide 尺寸微調，其他保留 v8",
+    "appliedTo": ["src/scenes/LAYOUT.ts"]
+  },
+  "key_changes": {
+    "barman_idle":  "x=0.924 y=0.332",
+    "barman_slide": "x=0.910 y=0.388 w=0.140 h=0.352",
+    "barman_catch": "x=0.909 y=0.327",
+    "barman_cheer": "x=0.894 y=0.352 w=0.164 h=0.306"
+  }
+}

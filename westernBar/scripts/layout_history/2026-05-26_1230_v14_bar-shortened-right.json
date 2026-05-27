@@ -1,0 +1,18 @@
+{
+  "_meta": {
+    "savedAt": "2026-05-26 12:30",
+    "label": "v14 bar shortened right 5%",
+    "description": "吧台右端往左縮 5%：ZONE_X[6] 0.868→0.818、barman 0.927→0.877、3 條 flow path 起點 -0.05、dynamite_arc 右側 7-10 點 -0.05、barCounter/bottleShelf rect 寬縮 0.05",
+    "appliedTo": ["src/scenes/LAYOUT.ts"]
+  },
+  "key_changes": {
+    "ZONE_X[6]": "0.868 → 0.818",
+    "barman_all": "x=0.927 → 0.877",
+    "cup_flow_start": "0.896 → 0.846 (+ 中間點微調)",
+    "bottle_flow_start": "0.900 → 0.850",
+    "plate_flow_start": "0.906 → 0.856",
+    "dynamite_arc_right": "點 7-10 全部 -0.05",
+    "barCounter_w": "0.630 → 0.580",
+    "bottleShelf_w": "0.634 → 0.584"
+  }
+}

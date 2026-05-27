@@ -1,0 +1,18 @@
+{
+  "_meta": {
+    "savedAt": "2026-05-26 10:30",
+    "label": "v15 bar flush to right edge",
+    "description": "推翻 v14 的「縮右端」做法。改為吧台右端貼齊 LCD 右邊框，左端從 0.42 開始（縮短由左邊吃進）。所有 zone、barman、path、rect 全部對應重排",
+    "appliedTo": ["src/scenes/LAYOUT.ts"]
+  },
+  "key_changes": {
+    "ZONE_X_RATIOS": "[0.180, 0.270, 0.395, 0.520, 0.640, 0.760, 0.868]（整體右壓）",
+    "barCounter": "x=0.420 w=0.555（右端=0.975）",
+    "bottleShelf": "x=0.422 w=0.559",
+    "barman_all": "x=0.927（回到原右側位置）",
+    "cup_flow": "0.940 → 0.420（範圍縮在吧台內）",
+    "bottle_flow": "同上",
+    "plate_flow": "同上",
+    "dynamite_arc": "上空路徑右移、右側落地點 0.820"
+  }
+}

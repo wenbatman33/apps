@@ -1,0 +1,14 @@
+{
+  "_meta": {
+    "savedAt": "2026-05-26 02:40",
+    "label": "v12 sheriff gun offsets refined per pose",
+    "description": "警長 4 個 pose 的槍口偏移精確調整（負 dx，槍在左手），sheriff_action3 位置也微調",
+    "appliedTo": ["src/scenes/LAYOUT.ts"]
+  },
+  "key_changes": {
+    "sheriff_action1_gun": "dx=-0.292 dy=-0.435",
+    "sheriff_action2_gun": "dx=-0.368 dy=-0.346",
+    "sheriff_action3":      "pos=(0.583,0.893) gun=(-0.405,-0.500)",
+    "sheriff_action4_gun": "dx=-0.447 dy=-0.342"
+  }
+}

@@ -1,0 +1,73 @@
+⏭  [1/95] A01_bg_L1_day (exists)
+▶ [2/95] A02_bg_L2_afternoon  (1536x1024) +ref
+✓ [2/95] A02_bg_L2_afternoon  109.6s
+▶ [3/95] A03_bg_L3_dusk  (1536x1024) +ref
+✓ [3/95] A03_bg_L3_dusk  188.9s
+▶ [4/95] A04_bg_L4_night  (1536x1024) +ref
+✓ [4/95] A04_bg_L4_night  97.6s
+▶ [5/95] A05_bg_L5_rain  (1536x1024) +ref
+✓ [5/95] A05_bg_L5_rain  97.1s
+▶ [6/95] A06_bg_L6_dust  (1536x1024) +ref
+✓ [6/95] A06_bg_L6_dust  130.8s
+▶ [7/95] A07_bg_L7_minetown  (1536x1024) +ref
+✓ [7/95] A07_bg_L7_minetown  212.6s
+▶ [8/95] A08_bg_L8_abandoned  (1536x1024) +ref
+✓ [8/95] A08_bg_L8_abandoned  105.0s
+▶ [9/95] A09_bg_L9_storm  (1536x1024) +ref
+✓ [9/95] A09_bg_L9_storm  144.0s
+▶ [10/95] A10_bg_L10_final  (1536x1024) +ref
+✓ [10/95] A10_bg_L10_final  141.9s
+▶ [11/95] A11_swing_door  (1024x1024) +ref
+✓ [11/95] A11_swing_door  96.8s
+▶ [12/95] A12_bar_counter  (1024x1024) +ref
+✓ [12/95] A12_bar_counter  119.7s
+▶ [13/95] A13_wanted_poster  (1024x1024) +ref
+✓ [13/95] A13_wanted_poster  149.6s
+▶ [14/95] A14_couple_table  (1024x1024) +ref
+✓ [14/95] A14_couple_table  207.0s
+▶ [15/95] B01_player_idle  (1024x1024)
+✓ [15/95] B01_player_idle  162.9s
+▶ [16/95] B02_player_walk1  (1024x1024)
+✓ [16/95] B02_player_walk1  117.3s
+▶ [17/95] B03_player_walk2  (1024x1024)
+✓ [17/95] B03_player_walk2  103.1s
+▶ [18/95] B04_player_fire_up  (1024x1024)
+✓ [18/95] B04_player_fire_up  114.5s
+▶ [19/95] B05_player_hit  (1024x1024)
+✓ [19/95] B05_player_hit  136.2s
+▶ [20/95] B06_player_hide_table  (1024x1024)
+✓ [20/95] B06_player_hide_table  114.0s
+▶ [21/95] B07_player_expose_fire  (1024x1024)
+✓ [21/95] B07_player_expose_fire  150.8s
+▶ [22/95] B08_player_pour_whiskey  (1024x1024)
+✓ [22/95] B08_player_pour_whiskey  162.2s
+▶ [23/95] B09_player_opening  (1024x1024)
+✓ [23/95] B09_player_opening  116.9s
+▶ [24/95] B10_player_down  (1024x1024)
+✓ [24/95] B10_player_down  131.4s
+▶ [25/95] C01_barman_idle  (1024x1024)
+✓ [25/95] C01_barman_idle  209.2s
+▶ [26/95] C02_barman_throw  (1024x1024)
+✓ [26/95] C02_barman_throw  141.6s
+▶ [27/95] C03_barman_catch_bomb  (1024x1024)
+✓ [27/95] C03_barman_catch_bomb  142.7s
+▶ [28/95] D01_man_eat  (1024x1024)
+✗ [28/95] D01_man_eat  spawnSync /bin/sh ETIMEDOUT
+▶ [29/95] D02_man_alert  (1024x1024)
+✓ [29/95] D02_man_alert  150.7s
+▶ [30/95] D03_man_throw  (1024x1024)
+✓ [30/95] D03_man_throw  127.8s
+▶ [31/95] D04_woman_eat  (1024x1024)
+✓ [31/95] D04_woman_eat  168.9s
+▶ [32/95] D05_woman_alert  (1024x1024)
+✓ [32/95] D05_woman_alert  124.1s
+▶ [33/95] D06_woman_throw  (1024x1024)
+✓ [33/95] D06_woman_throw  112.7s
+▶ [34/95] E01_bandit_basic_enter  (1024x1024)
+✓ [34/95] E01_bandit_basic_enter  162.5s
+▶ [35/95] E02_bandit_basic_peek_hi  (1024x1024)
+✓ [35/95] E02_bandit_basic_peek_hi  181.8s
+▶ [36/95] E03_bandit_basic_peek_lo  (1024x1024)
+✓ [36/95] E03_bandit_basic_peek_lo  114.6s
+⏭  [37/95] E04_bandit_basic_aim (exists)
+▶ [38/95] E05_bandit_basic_fire  (1024x1024)

@@ -1,0 +1,16 @@
+{
+  "_meta": {
+    "savedAt": "2026-05-26 01:20",
+    "label": "v8 sheriff Y lowered to match floor",
+    "description": "警長 action1-4/pour 的 Y 全部往下移到 ~0.88-0.90（更貼近木地板），barman_cheer y 微調",
+    "appliedTo": ["src/scenes/LAYOUT.ts", "public/scene_editor.html DEFAULT_STATE"]
+  },
+  "key_changes": {
+    "sheriff_action1": "x=0.328 y=0.876",
+    "sheriff_action2": "x=0.463 y=0.883",
+    "sheriff_action3": "x=0.592 y=0.876",
+    "sheriff_action4": "x=0.730 y=0.893",
+    "sheriff_pour":    "x=0.742 y=0.904",
+    "barman_cheer":    "y=0.352"
+  }
+}

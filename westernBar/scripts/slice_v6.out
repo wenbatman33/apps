@@ -1,0 +1,48 @@
+      76
+==== v6 slice start ====
+
+--- bandit ---
+  ✓ E01_bandit_enter.png
+  ✓ E02_bandit_peek_hi.png
+  ✓ E03_bandit_peek_lo.png
+  ✓ E04_bandit_aim.png
+  ✓ E06_bandit_hit.png
+  ✓ E07_bandit_down.png
+
+--- couple ---
+  ✓ D01_man_eat.png
+  ✓ D02_man_alert.png
+  ✓ D03_man_throw.png
+  ✓ D04_woman_eat.png
+  ✓ D05_woman_alert.png
+  ✓ D06_woman_throw.png
+
+--- barman ---
+  ✓ C01_barman_idle.png
+  ✓ C02_barman_throw.png
+  ✓ C03_barman_catch_bomb.png
+
+--- items ---
+  ✓ G01_cup_intact.png
+  ✓ G02_cup_broken.png
+  ✓ G03_bottle_intact.png
+  ✓ G04_bottle_broken.png
+  ✓ G05_plate_intact.png
+  ✓ G06_plate_broken.png
+  ✓ G07_bonus_bottle.png
+  ✓ H01_apple.png
+
+--- table ---
+  ✓ F01_table_intact.png
+  ✓ F02_table_damaged.png
+  ✓ F03_table_destroyed.png
+
+--- dynamite & effects ---
+  ✓ I01_dynamite_lit.png
+  ✓ I02_dynamite_ground.png
+  ✓ I03_explosion.png
+  ✓ J01_whiskey_bottle.png
+  → moved J01 to J/
+
+==== v6 slice DONE ====
+Total PNGs:

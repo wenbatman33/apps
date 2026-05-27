@@ -1,0 +1,8 @@
+{
+  "_meta": {
+    "savedAt": "2026-05-25 23:50",
+    "label": "v5 paths tuned + sheriff/bandit/cover sizes adjusted",
+    "description": "微調夫婦 4 條分岔路徑、警長各 pose 顯示大小、通緝犯各 pose 位置與大小、cover_damaged/destroyed 位置、夫婦起點位置與圓桌對齊",
+    "appliedTo": ["src/scenes/LAYOUT.ts", "public/scene_editor.html DEFAULT_STATE"]
+  }
+}

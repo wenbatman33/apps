@@ -1,0 +1,588 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<title>Western Bar — Slot 編輯器</title>
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: -apple-system, "PingFang TC", monospace; background: #1a1410; color: #eee; }
+  header {
+    position: sticky; top: 0; background: #000; padding: 8px 12px; z-index: 1000;
+    display: flex; gap: 8px; flex-wrap: wrap; align-items: center; border-bottom: 1px solid #333;
+  }
+  header h1 { margin: 0; font-size: 14px; color: #ffd166; }
+  button, input, select {
+    background: #222; color: #ffd166; border: 1px solid #555; padding: 4px 10px;
+    font-family: monospace; font-size: 12px; cursor: pointer; border-radius: 3px;
+  }
+  button:hover { background: #444; }
+  button.primary { background: #c0392b; color: #fff; border-color: #c0392b; }
+  button.primary:hover { background: #e74c3c; }
+  input[type="text"] { width: 140px; cursor: text; }
+  .hint { color: #888; font-size: 11px; }
+
+  #stage-wrap { margin: 10px auto; width: max-content; }
+  #stage {
+    position: relative; width: 960px; height: 540px;
+    background: #000; box-shadow: 0 0 0 1px #444;
+    overflow: hidden;
+    transform-origin: top left;
+  }
+  #bg { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; pointer-events: none; user-select: none; }
+
+  .slot {
+    position: absolute; border: 1px solid currentColor; background: rgba(255,255,255,0.05);
+    color: rgba(0,255,136,0.7); cursor: move; user-select: none;
+  }
+  .slot:hover { background: rgba(255,255,255,0.15); }
+  .slot.selected { border-width: 2px !important; outline: 2px solid #ff3366; z-index: 10; }
+  .slot.hidden { display: none; }
+  .gun-dot {
+    position: absolute; width: 12px; height: 12px; border-radius: 50%;
+    background: #ff3030; border: 2px solid #fff; box-shadow: 0 0 6px #ff0000;
+    cursor: move; z-index: 30; transform: translate(-50%, -50%);
+  }
+  .gun-line {
+    position: absolute; width: 2px; background: #ff3030; opacity: 0.7;
+    transform: translateX(-50%); z-index: 29; pointer-events: none;
+  }
+  .slot .lbl {
+    position: absolute; top: -14px; left: 0; font-size: 9px; color: #fff;
+    background: rgba(0,0,0,0.75); padding: 1px 3px; white-space: nowrap; pointer-events: none;
+  }
+  .slot .resize {
+    position: absolute; right: -5px; bottom: -5px; width: 10px; height: 10px;
+    background: #ffd166; border: 1px solid #000; cursor: nwse-resize;
+  }
+  .slot img {
+    position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain;
+    pointer-events: none; opacity: 0.85;
+  }
+  .slot.hide-preview img { display: none; }
+
+  #panel {
+    position: fixed; right: 12px; top: 60px; width: 260px;
+    background: rgba(0,0,0,0.85); border: 1px solid #555; padding: 10px; font-size: 12px;
+    max-height: 80vh; overflow-y: auto; border-radius: 4px;
+  }
+  #panel h3 { margin: 0 0 6px 0; font-size: 12px; color: #ffd166; }
+  #panel .row { display: flex; gap: 4px; align-items: center; margin: 3px 0; }
+  #panel .row label { width: 22px; color: #aaa; }
+  #panel input[type="number"] { width: 80px; }
+  #list {
+    max-height: 200px; overflow-y: auto; border: 1px solid #333; padding: 4px; margin-top: 8px;
+    background: #111;
+  }
+  #list .item { padding: 2px 4px; cursor: pointer; }
+  #list .item:hover { background: #333; }
+  #list .item.active { background: #c0392b; color: #fff; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>🎯 Slot Editor</h1>
+  <button id="btn-write" class="primary">💾 直接寫入專案</button>
+  <button id="btn-export">📋 複製 JSON</button>
+  <button id="btn-save">💿 存到 localStorage</button>
+  <button id="btn-load">📂 載入 localStorage</button>
+  <button id="btn-reset">↺ 重置</button>
+  <label>縮放 <input type="range" id="zoom" min="50" max="200" value="100" style="width:120px"> <span id="zoom-val">100%</span></label>
+  <label><input type="checkbox" id="toggle-preview" checked> 顯示 sprite</label>
+  <label><input type="checkbox" id="toggle-bg" checked> 顯示背景</label>
+  <input type="text" id="search" placeholder="搜尋 key (例 sheriff)">
+</header>
+<div id="groups" style="background:#000;padding:6px 12px;border-bottom:1px solid #333;display:flex;gap:6px;flex-wrap:wrap;align-items:center;font-size:12px;">
+  <span style="color:#aaa">群組顯示：</span>
+  <button class="gbtn" data-g="all" style="background:#444">全部</button>
+  <button class="gbtn" data-g="none">全關</button>
+  <span style="color:#666">|</span>
+</div>
+<div style="background:#000;padding:4px 12px;border-bottom:1px solid #333;color:#888;font-size:11px;">
+  拖曳=移動・拖右下=縮放・滾輪=等比・←→↑↓=微調1px・Shift+方向=10px
+</div>
+
+<div id="stage-wrap">
+  <div id="stage">
+    <img id="bg" src="assets/lcd_color/background.png" alt="">
+  </div>
+</div>
+
+<div id="panel">
+  <h3 id="sel-key">(未選取)</h3>
+  <div class="row"><label>x</label><input type="number" step="0.0001" id="in-x"></div>
+  <div class="row"><label>y</label><input type="number" step="0.0001" id="in-y"></div>
+  <div class="row"><label>w</label><input type="number" step="0.0001" id="in-w"></div>
+  <div class="row"><label>h</label><input type="number" step="0.0001" id="in-h"></div>
+  <div class="row hint">px: <span id="px-info"></span></div>
+  <div id="gun-fields" style="display:none; border-top:1px solid #444; margin-top:6px; padding-top:6px;">
+    <div style="color:#ff6b6b; margin-bottom:4px; font-size:11px;">🔫 槍口 offset（相對 sprite 中心）</div>
+    <div class="row"><label>gx</label><input type="number" step="0.01" id="in-gx"></div>
+    <div class="row"><label>gy</label><input type="number" step="0.01" id="in-gy"></div>
+    <div class="hint">範圍 -0.5～0.5；負=往左/上，紅點=槍口</div>
+  </div>
+  <div id="list"></div>
+</div>
+
+<script>
+const W = 960, H = 540;
+const STORE_KEY = "wb_slots_editor_v1";
+let zoom = 1;  // 縮放倍率
+
+// === 群組定義 ===
+const GROUPS = {
+  "警長":   { color: "#3498db", test: k => k.startsWith("sheriff/") },
+  "通緝犯": { color: "#e74c3c", test: k => k.startsWith("bandit/") },
+  "酒瓶":   { color: "#27ae60", test: k => k.startsWith("bottle/") },
+  "酒杯":   { color: "#f1c40f", test: k => k.startsWith("cup/") },
+  "飛靶":   { color: "#e67e22", test: k => k.startsWith("plate/") },
+  "夫妻":   { color: "#9b59b6", test: k => k.startsWith("husband/") || k.startsWith("wife/") },
+  "炸彈":   { color: "#c0392b", test: k => k.startsWith("dyn/") || k === "explosion" },
+  "投擲物": { color: "#7f8c8d", test: k => k.startsWith("ash/") || k.startsWith("apple/") },
+  "場景":   { color: "#95a5a6", test: k => k.startsWith("door/") || k.startsWith("cover/") || k.startsWith("barman/") },
+};
+function groupOf(key) {
+  for (const [name, g] of Object.entries(GROUPS)) if (g.test(key)) return name;
+  return "其他";
+}
+const visibleGroups = new Set(Object.keys(GROUPS).concat(["其他"]));  // 預設全開
+
+// === 把 slot key 對應到實際 PNG 檔名 ===
+function texFile(key) {
+  if (key.startsWith("sheriff/")) {
+    const p = key.split("/")[1];
+    const m = { action0: "sheriff_action0", action1: "sheriff_walk_1", action2: "sheriff_walk_2",
+                action3: "sheriff_walk_3", action4: "sheriff_walk_4", pour: "sheriff_pour",
+                hide: "sheriff_hide", fire: "sheriff_fire", down: "sheriff_down", duel_in: "sheriff_duel_in" };
+    return m[p] && `assets/lcd_color/${m[p]}.png`;
+  }
+  if (key.startsWith("bandit/")) return `assets/lcd_color/bandit_${key.split("/")[1]}.png`;
+  if (key === "door/open") return "assets/lcd_color/door_open.png";
+  if (key === "door/closed") return "assets/lcd_color/door_closed.png";
+  if (key === "cover/intact") return "assets/lcd_color/cover_intact.png";
+  if (key === "cover/damaged") return "assets/lcd_color/cover_damaged.png";
+  if (key === "cover/destroyed") return "assets/lcd_color/cover_destroyed.png";
+  if (key.startsWith("cup/")) return "assets/lcd_color/cup_intact.png";
+  if (key.startsWith("bottle/")) return "assets/lcd_color/bottle_intact.png";
+  if (key.startsWith("plate/")) return "assets/lcd_color/plate_intact.png";
+  if (key.startsWith("dyn/")) return "assets/lcd_color/dynamite.png";
+  if (key.startsWith("ash/")) return "assets/lcd_color/ashtray.png";
+  if (key.startsWith("apple/")) return "assets/lcd_color/apple.png";
+  if (key.startsWith("husband/")) {
+    const n = key.split("/")[1];
+    const role = n === "1" ? "eat" : n === "2" ? "alert" : "throw";
+    return `assets/lcd_color/husband_${role}.png`;
+  }
+  if (key.startsWith("wife/")) {
+    const n = key.split("/")[1];
+    const role = n === "1" ? "eat" : n === "2" ? "alert" : "throw";
+    return `assets/lcd_color/wife_${role}.png`;
+  }
+  if (key === "explosion") return "assets/lcd_color/explosion.png";
+  if (key === "barman/idle") return "assets/lcd_color/barman_idle.png";
+  if (key === "barman/slide") return "assets/lcd_color/barman_slide.png";
+  return null;
+}
+
+let SLOTS = {};
+let SLOTS_ORIG = {};  // 原始備份供「重置」用
+let selectedKey = null;
+const stage = document.getElementById("stage");
+const elements = new Map(); // key -> {el, img, lbl}
+
+function loadInitial() {
+  return fetch("slots.json").then(r => r.json()).then(data => {
+    SLOTS = data;
+    SLOTS_ORIG = JSON.parse(JSON.stringify(data));
+    // 若 localStorage 有存就疊上去（提示）
+    const saved = localStorage.getItem(STORE_KEY);
+    if (saved && confirm("發現 localStorage 有存檔，要載入嗎？")) {
+      try { SLOTS = JSON.parse(saved); } catch(e) {}
+    }
+  });
+}
+
+function render() {
+  // 清空舊
+  elements.forEach(o => o.el.remove());
+  elements.clear();
+
+  const keys = Object.keys(SLOTS);
+  for (const key of keys) {
+    const s = SLOTS[key];
+    const el = document.createElement("div");
+    el.className = "slot";
+    const grp = groupOf(key);
+    const gColor = (GROUPS[grp] && GROUPS[grp].color) || "#00ff88";
+    el.style.color = gColor;
+    el.dataset.group = grp;
+    if (!visibleGroups.has(grp)) el.classList.add("hidden");
+    const lbl = document.createElement("div");
+    lbl.className = "lbl"; lbl.textContent = key;
+    lbl.style.background = gColor; lbl.style.color = "#000";
+    el.appendChild(lbl);
+
+    const file = texFile(key);
+    if (file) {
+      const img = document.createElement("img");
+      img.src = file;
+      img.onerror = () => { img.style.display = "none"; };
+      el.appendChild(img);
+    }
+    const rs = document.createElement("div");
+    rs.className = "resize";
+    el.appendChild(rs);
+
+    stage.appendChild(el);
+    positionSlot(key, el);
+    elements.set(key, { el, lbl });
+
+    attachDrag(key, el, rs);
+  }
+  renderList();
+}
+
+function positionSlot(key, el) {
+  const s = SLOTS[key];
+  const wpx = s.w * W;
+  const hpx = s.h * H;
+  const xpx = s.x * W - wpx / 2;
+  // anchor: bottom → s.y 是底部位置；center → s.y 是中心
+  const ypx = s.anchor === "bottom" ? s.y * H - hpx : s.y * H - hpx / 2;
+  el.style.left = xpx + "px";
+  el.style.top = ypx + "px";
+  el.style.width = wpx + "px";
+  el.style.height = hpx + "px";
+}
+
+function attachDrag(key, el, resizeHandle) {
+  // 拖移
+  el.addEventListener("mousedown", (e) => {
+    if (e.target === resizeHandle) return;
+    e.preventDefault();
+    select(key);
+    const s = SLOTS[key];
+    const startX = e.clientX, startY = e.clientY;
+    const startSx = s.x, startSy = s.y;
+    const onMove = (ev) => {
+      const dx = (ev.clientX - startX) / (W * zoom);
+      const dy = (ev.clientY - startY) / (H * zoom);
+      s.x = startSx + dx;
+      s.y = startSy + dy;
+      positionSlot(key, el);
+      updatePanel();
+    };
+    const onUp = () => { document.removeEventListener("mousemove", onMove); document.removeEventListener("mouseup", onUp); };
+    document.addEventListener("mousemove", onMove);
+    document.addEventListener("mouseup", onUp);
+  });
+  // 縮放角
+  resizeHandle.addEventListener("mousedown", (e) => {
+    e.preventDefault(); e.stopPropagation();
+    select(key);
+    const s = SLOTS[key];
+    const startX = e.clientX, startY = e.clientY;
+    const startW = s.w, startH = s.h;
+    const onMove = (ev) => {
+      const dx = (ev.clientX - startX) / (W * zoom);
+      const dy = (ev.clientY - startY) / (H * zoom);
+      s.w = Math.max(0.005, startW + dx);
+      s.h = Math.max(0.005, startH + dy);
+      positionSlot(key, el);
+      updatePanel();
+    };
+    const onUp = () => { document.removeEventListener("mousemove", onMove); document.removeEventListener("mouseup", onUp); };
+    document.addEventListener("mousemove", onMove);
+    document.addEventListener("mouseup", onUp);
+  });
+  // 滾輪等比縮放
+  el.addEventListener("wheel", (e) => {
+    if (selectedKey !== key) return;
+    e.preventDefault();
+    const s = SLOTS[key];
+    const f = e.deltaY > 0 ? 0.97 : 1.03;
+    s.w = Math.max(0.005, s.w * f);
+    s.h = Math.max(0.005, s.h * f);
+    positionSlot(key, el);
+    updatePanel();
+  }, { passive: false });
+}
+
+function select(key) {
+  if (selectedKey) {
+    const old = elements.get(selectedKey);
+    if (old) old.el.classList.remove("selected");
+  }
+  selectedKey = key;
+  const cur = elements.get(key);
+  if (cur) cur.el.classList.add("selected");
+  // 把選中的放最上
+  if (cur) cur.el.style.zIndex = 20;
+  document.querySelectorAll("#list .item").forEach(li => {
+    li.classList.toggle("active", li.dataset.key === key);
+  });
+  updatePanel();
+}
+
+function updatePanel() {
+  const k = selectedKey;
+  document.getElementById("sel-key").textContent = k || "(未選取)";
+  if (!k) return;
+  const s = SLOTS[k];
+  document.getElementById("in-x").value = s.x.toFixed(4);
+  document.getElementById("in-y").value = s.y.toFixed(4);
+  document.getElementById("in-w").value = s.w.toFixed(4);
+  document.getElementById("in-h").value = s.h.toFixed(4);
+  document.getElementById("px-info").textContent =
+    `${Math.round(s.x*W)},${Math.round(s.y*H)} ${Math.round(s.w*W)}×${Math.round(s.h*H)}`;
+  // 槍口欄位：sheriff/action* 才顯示
+  const isShooter = /^sheriff\/(action[1-4]|fire|duel_in)$/.test(k);
+  document.getElementById("gun-fields").style.display = isShooter ? "" : "none";
+  if (isShooter) {
+    document.getElementById("in-gx").value = (s.gunOffsetX ?? -0.23).toFixed(3);
+    document.getElementById("in-gy").value = (s.gunOffsetY ?? -0.42).toFixed(3);
+  }
+  drawGunOverlay();
+}
+
+// === 槍口紅點 + 火線 overlay ===
+let gunDot, gunLine;
+function drawGunOverlay() {
+  if (gunDot) { gunDot.remove(); gunDot = null; }
+  if (gunLine) { gunLine.remove(); gunLine = null; }
+  const k = selectedKey; if (!k) return;
+  if (!/^sheriff\/(action[1-4]|fire|duel_in)$/.test(k)) return;
+  const s = SLOTS[k];
+  // 計算槍口 px 位置（同遊戲邏輯）
+  const slotCxPx = s.x * W;
+  const slotCyPx = s.anchor === "bottom" ? (s.y * H - s.h * H / 2) : (s.y * H);
+  const dispW = s.w * W;
+  const dispH = s.h * H;
+  const gx = s.gunOffsetX ?? -0.23;
+  const gy = s.gunOffsetY ?? -0.42;
+  const gunPxX = slotCxPx + gx * dispW;
+  const gunPxY = slotCyPx + gy * dispH;
+  // 火線（從槍口往上到 y=0）
+  gunLine = document.createElement("div");
+  gunLine.className = "gun-line";
+  gunLine.style.left = gunPxX + "px";
+  gunLine.style.top = "0px";
+  gunLine.style.height = gunPxY + "px";
+  stage.appendChild(gunLine);
+  // 紅點 + 拖拉
+  gunDot = document.createElement("div");
+  gunDot.className = "gun-dot";
+  gunDot.style.left = gunPxX + "px";
+  gunDot.style.top = gunPxY + "px";
+  gunDot.addEventListener("mousedown", (e) => {
+    e.preventDefault(); e.stopPropagation();
+    const startX = e.clientX, startY = e.clientY;
+    const startGx = s.gunOffsetX ?? -0.23;
+    const startGy = s.gunOffsetY ?? -0.42;
+    const onMove = (ev) => {
+      const dx = (ev.clientX - startX) / (dispW * zoom);
+      const dy = (ev.clientY - startY) / (dispH * zoom);
+      s.gunOffsetX = +(startGx + dx).toFixed(3);
+      s.gunOffsetY = +(startGy + dy).toFixed(3);
+      drawGunOverlay();
+      document.getElementById("in-gx").value = s.gunOffsetX.toFixed(3);
+      document.getElementById("in-gy").value = s.gunOffsetY.toFixed(3);
+    };
+    const onUp = () => { document.removeEventListener("mousemove", onMove); document.removeEventListener("mouseup", onUp); };
+    document.addEventListener("mousemove", onMove);
+    document.addEventListener("mouseup", onUp);
+  });
+  stage.appendChild(gunDot);
+}
+
+// gx / gy 數字輸入框
+["gx", "gy"].forEach(f => {
+  document.getElementById("in-" + f).addEventListener("input", (e) => {
+    if (!selectedKey) return;
+    const v = parseFloat(e.target.value); if (isNaN(v)) return;
+    SLOTS[selectedKey][f === "gx" ? "gunOffsetX" : "gunOffsetY"] = v;
+    drawGunOverlay();
+  });
+});
+
+function renderList() {
+  const list = document.getElementById("list");
+  const q = (document.getElementById("search").value || "").toLowerCase();
+  list.innerHTML = "";
+  // 依群組分組顯示
+  const byGroup = {};
+  Object.keys(SLOTS).forEach(k => {
+    if (q && !k.toLowerCase().includes(q)) return;
+    const g = groupOf(k);
+    if (!visibleGroups.has(g)) return;
+    (byGroup[g] = byGroup[g] || []).push(k);
+  });
+  const order = [...Object.keys(GROUPS), "其他"];
+  for (const g of order) {
+    if (!byGroup[g]) continue;
+    const h = document.createElement("div");
+    h.style.cssText = `color:${(GROUPS[g] && GROUPS[g].color) || "#888"};font-weight:bold;margin-top:6px;font-size:11px;`;
+    h.textContent = `■ ${g} (${byGroup[g].length})`;
+    list.appendChild(h);
+    byGroup[g].sort().forEach(k => {
+      const li = document.createElement("div");
+      li.className = "item" + (k === selectedKey ? " active" : "");
+      li.dataset.key = k;
+      li.textContent = "  " + k;
+      li.onclick = () => select(k);
+      list.appendChild(li);
+    });
+  }
+}
+
+function renderGroupButtons() {
+  const wrap = document.getElementById("groups");
+  // 移除動態（保留前兩顆 + 分隔線）
+  [...wrap.querySelectorAll(".gbtn-grp")].forEach(b => b.remove());
+  for (const [name, g] of Object.entries(GROUPS)) {
+    const b = document.createElement("button");
+    b.className = "gbtn gbtn-grp";
+    b.textContent = name;
+    b.dataset.g = name;
+    const on = visibleGroups.has(name);
+    b.style.background = on ? g.color : "#222";
+    b.style.color = on ? "#000" : g.color;
+    b.style.border = `1px solid ${g.color}`;
+    b.onclick = () => {
+      if (visibleGroups.has(name)) visibleGroups.delete(name);
+      else visibleGroups.add(name);
+      applyGroupVisibility(); renderGroupButtons(); renderList();
+    };
+    wrap.appendChild(b);
+  }
+}
+
+function applyGroupVisibility() {
+  elements.forEach((o, k) => {
+    const g = groupOf(k);
+    o.el.classList.toggle("hidden", !visibleGroups.has(g));
+  });
+}
+
+// === 控制 ===
+document.getElementById("btn-export").onclick = () => {
+  const out = buildExport();
+  const json = JSON.stringify(out, null, 2);
+  navigator.clipboard.writeText(json).then(() => {
+    alert("已複製 JSON 到剪貼簿 ✓（共 " + Object.keys(out).length + " 個 slot）\n貼給 Claude 即可寫回 LCD_LAYOUT.ts");
+  }, () => {
+    console.log(json);
+    alert("剪貼簿失敗，已 console.log，請手動複製");
+  });
+};
+document.getElementById("btn-save").onclick = () => {
+  localStorage.setItem(STORE_KEY, JSON.stringify(SLOTS));
+  alert("已存到 localStorage");
+};
+document.getElementById("btn-load").onclick = () => {
+  const s = localStorage.getItem(STORE_KEY);
+  if (!s) { alert("沒有存檔"); return; }
+  SLOTS = JSON.parse(s); render(); updatePanel();
+};
+document.getElementById("btn-reset").onclick = () => {
+  if (!confirm("重置為原始 slots.json？")) return;
+  SLOTS = JSON.parse(JSON.stringify(SLOTS_ORIG));
+  render(); updatePanel();
+};
+document.getElementById("toggle-preview").onchange = (e) => {
+  stage.classList.toggle("hide-preview", !e.target.checked);
+  document.querySelectorAll(".slot").forEach(s => s.classList.toggle("hide-preview", !e.target.checked));
+};
+document.getElementById("toggle-bg").onchange = (e) => {
+  document.getElementById("bg").style.display = e.target.checked ? "" : "none";
+};
+document.getElementById("search").oninput = () => renderList();
+
+// 縮放
+const zoomEl = document.getElementById("zoom");
+const zoomVal = document.getElementById("zoom-val");
+const stageWrap = document.getElementById("stage-wrap");
+function applyZoom() {
+  stage.style.transform = `scale(${zoom})`;
+  stageWrap.style.width = (W * zoom) + "px";
+  stageWrap.style.height = (H * zoom) + "px";
+  zoomVal.textContent = Math.round(zoom * 100) + "%";
+}
+zoomEl.oninput = (e) => { zoom = parseInt(e.target.value, 10) / 100; applyZoom(); };
+
+// 直接寫入專案
+document.getElementById("btn-write").onclick = async () => {
+  const out = buildExport();
+  try {
+    const r = await fetch("/api/slots", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(out),
+    });
+    const j = await r.json();
+    if (j.ok) alert(`✓ 已寫入 LCD_LAYOUT.ts (${j.count} slots) — 遊戲會自動 HMR`);
+    else alert("寫入失敗：" + j.error);
+  } catch (e) {
+    alert("寫入失敗（需在 vite dev server 開啟）：" + e);
+  }
+};
+function buildExport() {
+  const out = {};
+  for (const k of Object.keys(SLOTS)) {
+    const s = SLOTS[k];
+    out[k] = { x: +s.x.toFixed(4), y: +s.y.toFixed(4), w: +s.w.toFixed(4), h: +s.h.toFixed(4) };
+    if (s.anchor) out[k].anchor = s.anchor;
+    if (s.src) out[k].src = s.src;
+    if (s.gunOffsetX != null) out[k].gunOffsetX = s.gunOffsetX;
+    if (s.gunOffsetY != null) out[k].gunOffsetY = s.gunOffsetY;
+  }
+  return out;
+}
+
+// 數字輸入框
+["x","y","w","h"].forEach(f => {
+  document.getElementById("in-" + f).oninput = (e) => {
+    if (!selectedKey) return;
+    const v = parseFloat(e.target.value);
+    if (isNaN(v)) return;
+    SLOTS[selectedKey][f] = v;
+    positionSlot(selectedKey, elements.get(selectedKey).el);
+    const s = SLOTS[selectedKey];
+    document.getElementById("px-info").textContent =
+      `${Math.round(s.x*W)},${Math.round(s.y*H)} ${Math.round(s.w*W)}×${Math.round(s.h*H)}`;
+  };
+});
+
+// 鍵盤微調
+document.addEventListener("keydown", (e) => {
+  if (!selectedKey) return;
+  if (["INPUT","TEXTAREA"].includes(e.target.tagName)) return;
+  const s = SLOTS[selectedKey];
+  const step = e.shiftKey ? 10 : 1;
+  let handled = true;
+  if (e.key === "ArrowLeft")  s.x -= step / W;
+  else if (e.key === "ArrowRight") s.x += step / W;
+  else if (e.key === "ArrowUp")    s.y -= step / H;
+  else if (e.key === "ArrowDown")  s.y += step / H;
+  else handled = false;
+  if (handled) {
+    e.preventDefault();
+    positionSlot(selectedKey, elements.get(selectedKey).el);
+    updatePanel();
+  }
+});
+
+// 群組「全部 / 全關」按鈕
+document.querySelectorAll("#groups .gbtn[data-g='all'], #groups .gbtn[data-g='none']").forEach(b => {
+  b.onclick = () => {
+    visibleGroups.clear();
+    if (b.dataset.g === "all") Object.keys(GROUPS).forEach(n => visibleGroups.add(n));
+    applyGroupVisibility(); renderGroupButtons(); renderList();
+  };
+});
+
+// === 啟動 ===
+loadInitial().then(() => { render(); renderGroupButtons(); });
+</script>
+</body>
+</html>

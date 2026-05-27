@@ -1,0 +1,992 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<title>Western Bar - 場景編輯器 v3</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, "PingFang TC", sans-serif; background: #1a1a1a; color: #eee; overflow: hidden; height: 100vh; display: flex; }
+  #toolbar { width: 380px; background: #2a2a2a; padding: 10px; overflow-y: auto; border-right: 2px solid #444; flex-shrink: 0; }
+  #toolbar h2 { font-size: 14px; color: #ffd166; margin: 12px 0 5px; border-bottom: 1px solid #444; padding-bottom: 4px; cursor: pointer; user-select: none; }
+  #toolbar h2:first-child { margin-top: 0; }
+  #toolbar h2::before { content: "▼ "; font-size: 11px; }
+  #toolbar h2.collapsed::before { content: "▶ "; }
+  .layer-list { display: block; }
+  .layer-list.collapsed { display: none; }
+  .layer-row { display: flex; align-items: center; gap: 6px; padding: 5px 7px; margin: 2px 0; background: #333; border-radius: 3px; font-size: 13px; cursor: pointer; }
+  .layer-row:hover { background: #3d3d3d; }
+  .layer-row.active { background: #5a4017; border: 1px solid #ffd166; }
+  .layer-row input[type=checkbox] { cursor: pointer; flex-shrink: 0; transform: scale(1.05); }
+  .layer-row .name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .layer-row .swatch { width: 14px; height: 14px; border-radius: 2px; border: 1px solid #666; flex-shrink: 0; }
+  .layer-row .thumb { width: 24px; height: 24px; object-fit: contain; background: #555; border-radius: 2px; }
+  .group-actions { display: flex; gap: 5px; font-size: 12px; margin: 4px 0; }
+  .group-actions a { color: #ffd166; cursor: pointer; text-decoration: underline; }
+
+  /* Photoshop-like folders */
+  .group-folder { margin: 4px 0; border: 1px solid #3a3a3a; border-radius: 4px; overflow: hidden; }
+  .group-header {
+    display: flex; align-items: center; gap: 6px;
+    padding: 7px 8px; background: #303030; cursor: pointer;
+    user-select: none;
+  }
+  .group-header:hover { background: #383838; }
+  .group-header .arrow { width: 12px; color: #aaa; font-size: 10px; flex-shrink: 0; }
+  .group-header .title { flex: 1; color: #ffd166; font-size: 13px; font-weight: bold; }
+  .group-header .count { color: #888; font-size: 11px; }
+  .group-children { background: #252525; padding: 4px 4px 4px 18px; }
+  .group-children.collapsed { display: none; }
+  .group-folder.solo-on { border-color: #ffd166; box-shadow: 0 0 0 1px #ffd166; }
+  .group-folder.hidden > .group-header { opacity: 0.4; }
+
+  .icon-btn {
+    width: 22px; height: 22px;
+    background: #444; border: 1px solid #555;
+    border-radius: 3px; cursor: pointer;
+    display: inline-flex; align-items: center; justify-content: center;
+    font-size: 13px; color: #fff; padding: 0;
+    flex: 0 0 22px;
+  }
+  .icon-btn:hover { background: #555; }
+  .icon-btn.on { background: #ffd166; color: #222; border-color: #ffaa00; }
+  .icon-btn.dim { opacity: 0.35; }
+
+  #props { background: #1f1f1f; border-radius: 4px; padding: 8px; margin-top: 8px; font-size: 13px; }
+  #props .row { display: flex; gap: 6px; align-items: center; margin: 4px 0; }
+  #props label { width: 55px; color: #aaa; font-size: 12px; }
+  #props input { flex: 1; min-width: 0; background: #333; color: #fff; border: 1px solid #555; padding: 4px 5px; border-radius: 3px; font-size: 13px; }
+
+  .btn-row { display: flex; gap: 5px; flex-wrap: wrap; margin-top: 6px; }
+  .page-tab { padding: 5px 9px; background: #2a2a2a; color: #ddd; border: 1px solid #444; border-radius: 4px; cursor: pointer; font-size: 11px; }
+  .page-tab:hover { background: #383838; }
+  .page-tab.active { background: #c9842f; color: #fff; border-color: #8a5722; font-weight: bold; }
+  button { background: #ffd166; color: #1a1a1a; border: none; padding: 7px 10px; border-radius: 3px; cursor: pointer; font-weight: bold; font-size: 13px; flex: 1; min-width: 0; }
+  button:hover { background: #ffdd88; }
+  button.secondary { background: #555; color: #fff; }
+  button.danger { background: #c93030; color: #fff; }
+  button.small { padding: 3px 7px; font-size: 11px; flex: 0; }
+
+  select { width: 100%; background: #333; color: #fff; border: 1px solid #555; padding: 6px; border-radius: 3px; font-size: 13px; margin: 3px 0; }
+
+  #canvas-wrap { flex: 1; position: relative; overflow: auto; background: #0a0a0a; display: flex; align-items: center; justify-content: center; }
+  #stage { position: relative; background: #444; box-shadow: 0 0 40px rgba(0,0,0,0.8); margin: 20px; }
+  #bg-layer { position: absolute; inset: 0; background-size: 100% 100%; background-position: center; }
+  #path-svg { position: absolute; inset: 0; pointer-events: none; z-index: 50; }
+
+  .element { position: absolute; cursor: move; user-select: none; box-sizing: border-box; }
+  .element.rect-style { border: 1.5px solid; }
+  .element.sprite-style { background: transparent !important; }
+  .element.sprite-style img { width: 100%; height: 100%; object-fit: contain; pointer-events: none; display: block; }
+  .element.selected { outline: 2px dashed #fff; outline-offset: 2px; z-index: 100; }
+  .element.hidden { display: none; }
+  .element .label { position: absolute; bottom: -14px; left: 50%; transform: translateX(-50%); color: #fff; font-size: 8px; font-weight: bold; text-shadow: 0 0 3px rgba(0,0,0,0.9); pointer-events: none; white-space: nowrap; background: rgba(0,0,0,0.6); padding: 1px 3px; border-radius: 2px; }
+  .handle { position: absolute; width: 8px; height: 8px; background: #ffd166; border: 1px solid #000; z-index: 200; }
+  .handle.nw { top: -4px; left: -4px; cursor: nwse-resize; }
+  .handle.ne { top: -4px; right: -4px; cursor: nesw-resize; }
+  .handle.sw { bottom: -4px; left: -4px; cursor: nesw-resize; }
+  .handle.se { bottom: -4px; right: -4px; cursor: nwse-resize; }
+
+  .waypoint {
+    position: absolute;
+    transform: translate(-50%, -50%);
+    display: flex; align-items: center; justify-content: center;
+    cursor: move; z-index: 60;
+    box-sizing: border-box;
+    color: #000; font-size: 11px; font-weight: bold;
+  }
+  .waypoint:hover { filter: brightness(1.2); }
+  .waypoint.selected { outline: 2px solid #fff; outline-offset: 2px; }
+
+  .zone-line { position: absolute; top: 0; bottom: 0; width: 2px; background: rgba(255,209,102,0.6); cursor: ew-resize; z-index: 40; }
+  .zone-line.selected { background: #fff; outline: 2px solid #ffd166; }
+  .zone-line .label { position: absolute; top: 4px; left: 4px; background: rgba(0,0,0,0.7); padding: 1px 3px; color: #ffd166; font-size: 9px; font-weight: bold; border-radius: 2px; }
+  .row-line { position: absolute; left: 0; right: 0; height: 2px; background: rgba(255,100,100,0.6); cursor: ns-resize; z-index: 40; }
+  .row-line.selected { background: #fff; outline: 2px solid #ff6464; }
+  .row-line .label { position: absolute; top: -14px; left: 4px; background: rgba(0,0,0,0.7); padding: 1px 3px; color: #ff8080; font-size: 9px; font-weight: bold; border-radius: 2px; }
+
+  textarea { width: 100%; height: 70px; background: #111; color: #ffd166; border: 1px solid #444; border-radius: 3px; font-family: monospace; font-size: 9px; padding: 3px; margin-top: 3px; }
+</style>
+</head>
+<body>
+
+<div id="toolbar">
+  <h2>🖼 背景</h2>
+  <div class="layer-list">
+    <select id="bg-select">
+      <option value="" selected>無（純剪影）</option>
+      <option value="/assets/A/A00_empty_bg.png">A00 空場景（AI 圖）</option>
+      <option value="/assets/lcd_remaster_v1.png">lcd_remaster_v1</option>
+      <option value="/atlas_ref.png">🎯 LCD atlas（自訂對位圖）</option>
+    </select>
+    <div style="display:flex;gap:4px;font-size:9px;align-items:center;margin-top:2px;">
+      不透明<input type="range" id="bg-opacity" min="0" max="1" step="0.05" value="0.5" style="flex:1;">
+    </div>
+    <div style="font-size:9px;color:#888;margin-top:3px;">
+      或拖檔到下框：<br>
+      <input type="file" id="bg-upload" accept="image/*" style="font-size:10px;margin-top:2px;">
+    </div>
+  </div>
+
+  <h2>📐 縮放</h2>
+  <div class="layer-list">
+    <div style="font-size:9px;color:#aaa;">縮放：
+      <input type="range" id="stage-zoom" min="0.5" max="2.5" step="0.1" value="1.2" style="width:130px;vertical-align:middle;">
+      <span id="zoom-val">1.2x</span>
+    </div>
+  </div>
+
+  <h2>📑 頁面（依角色聚焦）</h2>
+  <div class="layer-list" style="font-size:11px;">
+    <div id="page-tabs" style="display:flex;gap:3px;flex-wrap:wrap;">
+      <button class="page-tab" data-page="sheriff">🤠 警長</button>
+      <button class="page-tab" data-page="bandit">🦹 通緝犯</button>
+      <button class="page-tab" data-page="couple">👫 夫妻</button>
+      <button class="page-tab" data-page="all">🗂 全部</button>
+    </div>
+    <div id="page-hint" style="font-size:10px;color:#888;margin-top:4px;"></div>
+  </div>
+
+  <h2>🎬 圖層（Photoshop 風格）</h2>
+  <div style="font-size:11px;color:#888;margin-bottom:6px;">👁 顯示／隱藏　🎯 solo（只看這組）　▼/▶ 展開／摺疊</div>
+  <div id="layers"></div>
+
+  <h2>⚙️ 屬性</h2>
+  <div id="props"><div style="color:#888;font-size:10px;">（選一個元件）</div></div>
+
+  <h2>📋 匯出</h2>
+  <div class="layer-list">
+    <div class="btn-row">
+      <button id="btn-export">📋 匯出</button>
+      <button id="btn-import" class="secondary">📥 匯入</button>
+    </div>
+    <div class="btn-row" style="margin-top:3px;">
+      <button id="btn-reset" class="danger">↺ Reset</button>
+      <button id="btn-save-local" class="secondary">💾 暫存</button>
+    </div>
+    <textarea id="json-area"></textarea>
+  </div>
+</div>
+
+<div id="canvas-wrap">
+  <div id="stage">
+    <div id="bg-layer"></div>
+    <svg id="path-svg"></svg>
+  </div>
+</div>
+
+<script>
+const STAGE_W = 960, STAGE_H = 540;
+
+// ========== 預設狀態 ==========
+const SHERIFF_POSES = ["action1", "action2", "action3", "action4", "pour", "hide", "fire", "down"];
+const BANDIT_POSES = ["at_door", "enter", "hide", "peek", "fire", "hit", "down"];
+const BARMAN_POSES = ["idle", "slide", "catch", "cheer"];
+const HUSBAND_POSES = ["eat1", "eat2", "alert", "hide"];
+const WIFE_POSES = ["eat1", "eat2", "alert", "hide"];
+
+// 警長 8 pose 預設位置（散落在 5 個 zone）
+function defaultSheriffPoses() {
+  // 同步 LAYOUT.ts v8 鎖定值 + gunOffset
+  const POSES = {
+    action1: { x: 0.328, y: 0.876, w: 0.090, h: 0.260, gunOffsetX: +0.20, gunOffsetY: -0.50 },
+    action2: { x: 0.463, y: 0.883, w: 0.090, h: 0.260, gunOffsetX: +0.22, gunOffsetY: -0.50 },
+    action3: { x: 0.592, y: 0.876, w: 0.101, h: 0.275, gunOffsetX: +0.24, gunOffsetY: -0.50 },
+    action4: { x: 0.730, y: 0.893, w: 0.117, h: 0.303, gunOffsetX: +0.25, gunOffsetY: -0.50 },
+    pour:    { x: 0.742, y: 0.904, w: 0.129, h: 0.328 },
+    hide:    { x: 0.906, y: 0.654, w: 0.123, h: 0.343 },
+    fire:    { x: 0.758, y: 0.636, w: 0.126, h: 0.328 },
+    down:    { x: 0.849, y: 0.886, w: 0.179, h: 0.420 },
+  };
+  return SHERIFF_POSES.reduce((o, p) => {
+    const v = POSES[p] || POSES.action1;
+    o[`sheriff_${p}`] = { ...v, src: `/assets/sprites/sheriff/${p}.png`, label: `警長/${p}`, anchor: "bottom", group: "sheriff" };
+    return o;
+  }, {});
+}
+function defaultBanditPoses() {
+  // 同步 LAYOUT.ts — 對決序列：at_door → enter → hide → peek → fire → hit → down
+  const POSES = {
+    at_door: { x: 0.111, y: 0.420, w: 0.095, h: 0.270 },
+    enter:   { x: 0.150, y: 0.620, w: 0.095, h: 0.270 },
+    hide:    { x: 0.180, y: 0.790, w: 0.080, h: 0.210 },
+    peek:    { x: 0.180, y: 0.760, w: 0.085, h: 0.250 },
+    fire:    { x: 0.160, y: 0.790, w: 0.140, h: 0.300 },
+    hit:     { x: 0.120, y: 0.790, w: 0.140, h: 0.300 },
+    down:    { x: 0.090, y: 0.840, w: 0.160, h: 0.250 },
+  };
+  return BANDIT_POSES.reduce((o, p) => {
+    const v = POSES[p] || POSES.at_door;
+    o[`bandit_${p}`] = { ...v, src: `/assets/sprites/bandit/${p}.png`, label: `通緝犯/${p}`, anchor: "bottom", group: "bandit" };
+    return o;
+  }, {});
+}
+function defaultBarmanPoses() {
+  // 酒保 4 pose 統一尺寸與位置（避免切換時跳大小）
+  return BARMAN_POSES.reduce((o, p) => {
+    o[`barman_${p}`] = {
+      x: 0.927, y: 0.346, w: 0.105, h: 0.250,
+      src: `/assets/sprites/barman/${p}.png`, label: `酒保/${p}`, anchor: "bottom", group: "barman"
+    };
+    return o;
+  }, {});
+}
+function defaultHusbandPoses() {
+  return HUSBAND_POSES.reduce((o, p, i) => {
+    o[`husband_${p}`] = { x: 0.362 + i*0.02, y: 0.557, w: 0.1, h: 0.22,
+      src: `/assets/sprites/husband/${p}.png`, label: `丈夫/${p}`, anchor: "bottom", group: "husband" };
+    return o;
+  }, {});
+}
+function defaultWifePoses() {
+  return WIFE_POSES.reduce((o, p, i) => {
+    o[`wife_${p}`] = { x: 0.529 + i*0.02, y: 0.544, w: 0.095, h: 0.225,
+      src: `/assets/sprites/wife/${p}.png`, label: `妻子/${p}`, anchor: "bottom", group: "wife" };
+    return o;
+  }, {});
+}
+
+const DEFAULT_STATE = {
+  rows: {
+    rowTopY:    { y: 0.300, label: "rowTopY (吧台軌道)", color: "#ff6464" },
+    rowCoupleY: { y: 0.478, label: "rowCoupleY (夫婦)",  color: "#ff9466" },
+    rowPlayerY: { y: 0.790, label: "rowPlayerY (玩家)",  color: "#ffd166" },
+  },
+  zones: [0.05, 0.14, 0.227, 0.358, 0.492, 0.608, 0.732, 0.868],
+  // 與 LAYOUT.ts 同步（使用者最近匯出版）
+  rects: {
+    barCounter:  { x: 0.339, y: 0.043, w: 0.630, h: 0.211, color: "#8b5a2b", opacity: 0.3, label: "吧台檯面" },
+    bottleShelf: { x: 0.341, y: 0.047, w: 0.634, h: 0.224, color: "#5a3a1f", opacity: 0.2, label: "酒瓶架" },
+  },
+  paths: {
+    cup_flow:     { color: "#ffd700", label: "馬克杯流動", points: [
+      { x: 0.896, y: 0.258, lbl: "酒保發" },
+      { x: 0.806, y: 0.261 },
+      { x: 0.676, y: 0.260 },
+      { x: 0.554, y: 0.260 },
+      { x: 0.420, y: 0.258 },
+      { x: 0.290, y: 0.258 },
+      { x: 0.175, y: 0.319, lbl: "MISS" },
+    ]},
+    bottle_flow:  { color: "#3a7d44", label: "酒瓶流動", points: [
+      { x: 0.900, y: 0.295 }, { x: 0.811, y: 0.297 }, { x: 0.674, y: 0.297 },
+      { x: 0.554, y: 0.297 }, { x: 0.418, y: 0.295 }, { x: 0.290, y: 0.292 },
+      { x: 0.179, y: 0.361 },
+    ]},
+    plate_flow:   { color: "#e9d8a6", label: "盤子流動", points: [
+      { x: 0.906, y: 0.064 }, { x: 0.798, y: 0.059 }, { x: 0.671, y: 0.059 },
+      { x: 0.553, y: 0.059 }, { x: 0.423, y: 0.056 }, { x: 0.291, y: 0.122 },
+      { x: 0.184, y: 0.179 },
+    ]},
+    dynamite_arc: { color: "#ff5722", label: "沖天炮 10 位置", points: [
+      { x: 0.181, y: 0.077, lbl: "1 門口" },
+      { x: 0.291, y: 0.076 },
+      { x: 0.423, y: 0.127 },
+      { x: 0.556, y: 0.119, lbl: "拋物頂" },
+      { x: 0.675, y: 0.118 },
+      { x: 0.802, y: 0.121 },
+      { x: 0.906, y: 0.159 },
+      { x: 0.946, y: 0.396 },
+      { x: 0.923, y: 0.550 },
+      { x: 0.771, y: 0.838, lbl: "10 落地" },
+    ]},
+    husband_throw_z1: { color: "#6b4423", label: "丈夫 → Z1", points: [
+      { x: 0.362, y: 0.50, lbl: "起" },
+      { x: 0.300, y: 0.40 },
+      { x: 0.250, y: 0.55 },
+      { x: 0.227, y: 0.79, lbl: "Z1 落" },
+    ]},
+    husband_throw_z2: { color: "#8a5a33", label: "丈夫 → Z2", points: [
+      { x: 0.362, y: 0.50, lbl: "起" },
+      { x: 0.370, y: 0.42 },
+      { x: 0.365, y: 0.61 },
+      { x: 0.358, y: 0.79, lbl: "Z2 落" },
+    ]},
+    wife_throw_z3: { color: "#c83982", label: "妻子 → Z3", points: [
+      { x: 0.529, y: 0.50, lbl: "起" },
+      { x: 0.515, y: 0.42 },
+      { x: 0.500, y: 0.61 },
+      { x: 0.492, y: 0.79, lbl: "Z3 落" },
+    ]},
+    wife_throw_z4: { color: "#e8569b", label: "妻子 → Z4", points: [
+      { x: 0.529, y: 0.50, lbl: "起" },
+      { x: 0.580, y: 0.40 },
+      { x: 0.620, y: 0.56 },
+      { x: 0.608, y: 0.79, lbl: "Z4 落" },
+    ]},
+  },
+  sprites: {
+    // 家具
+    swing_door:   { x: 0.111, y: 0.185, w: 0.080, h: 0.270, src: "/assets/A/A11_swing_door.png", label: "彈簧門", group: "furniture" },
+    couple_table: { x: 0.434, y: 0.476, w: 0.180, h: 0.150, src: "/assets/A/A26_round_table.png", label: "夫婦圓桌", group: "furniture" },
+    cover_intact:    { x: 0.871, y: 0.488, w: 0.110, h: 0.140, src: "/assets/F/F01_table_intact.png",    label: "掩體完好", group: "cover" },
+    cover_damaged:   { x: 0.730, y: 0.700, w: 0.110, h: 0.140, src: "/assets/F/F02_table_damaged.png",   label: "掩體破損", group: "cover" },
+    cover_destroyed: { x: 0.730, y: 0.700, w: 0.110, h: 0.130, src: "/assets/F/F03_table_destroyed.png", label: "掩體毀壞", group: "cover" },
+    // 角色 — 每個 pose 獨立 entry
+    ...defaultSheriffPoses(),
+    ...defaultBanditPoses(),
+    ...defaultBarmanPoses(),
+    ...defaultHusbandPoses(),
+    ...defaultWifePoses(),
+    // 物品
+    cup:     { x: 0.749, y: 0.30, w: 0.04, h: 0.06, src: "/assets/G/G01_cup_intact.png",     label: "馬克杯",  group: "item" },
+    bottle:  { x: 0.705, y: 0.30, w: 0.03, h: 0.08, src: "/assets/G/G03_bottle_intact.png", label: "酒瓶",    group: "item" },
+    plate:   { x: 0.788, y: 0.30, w: 0.045, h: 0.05, src: "/assets/G/G05_plate_intact.png", label: "盤子",    group: "item" },
+    bonus:   { x: 0.780, y: 0.30, w: 0.035, h: 0.08, src: "/assets/G/G07_bonus_bottle.png", label: "Bonus",   group: "item" },
+    apple:   { x: 0.569, y: 0.50, w: 0.03, h: 0.04, src: "/assets/H/H01_apple.png",          label: "蘋果",    group: "item" },
+    ashtray: { x: 0.311, y: 0.50, w: 0.035, h: 0.03, src: "/assets/H/H02_ashtray.png",       label: "菸灰缸",  group: "item" },
+    whiskey: { x: 0.850, y: 0.45, w: 0.03, h: 0.075, src: "/assets/J/J01_whiskey_bottle.png", label: "威士忌", group: "item" },
+    // 投射物
+    dynamite_lit:    { x: 0.080, y: 0.20, w: 0.03, h: 0.05, src: "/assets/I/I01_dynamite_lit.png", label: "炸藥(飛)", group: "proj" },
+    dynamite_ground: { x: 0.492, y: 0.86, w: 0.035, h: 0.05, src: "/assets/I/I02_dynamite_ground.png", label: "炸彈(地)", group: "proj" },
+    explosion:       { x: 0.516, y: 0.64, w: 0.08, h: 0.11, src: "/assets/I/I03_explosion.png", label: "爆炸", group: "proj" },
+    bullet_player:   { x: 0.558, y: 0.76, w: 0.015, h: 0.04, src: "/assets/L/L01_bullet_player.png", label: "玩家彈", group: "proj" },
+    bullet_bandit:   { x: 0.206, y: 0.60, w: 0.015, h: 0.035, src: "/assets/L/L02_bullet_bandit.png", label: "敵彈", group: "proj" },
+  },
+  visible: {
+    // 預設隱藏多 pose 中除了主 pose
+    "sprite:sheriff_walk": false, "sprite:sheriff_aim": false, "sprite:sheriff_pour": false,
+    "sprite:sheriff_fire": false, "sprite:sheriff_hide": false, "sprite:sheriff_hit": false, "sprite:sheriff_down": false,
+    "sprite:bandit_enter": false, "sprite:bandit_hide": false, "sprite:bandit_peek": false,
+    "sprite:bandit_fire": false, "sprite:bandit_hit": false, "sprite:bandit_down": false, "sprite:bandit_idle": false,
+    "sprite:barman_slide": false, "sprite:barman_catch": false, "sprite:barman_cheer": false,
+    "sprite:husband_eat2": false, "sprite:husband_alert": false, "sprite:husband_hide": false,
+    "sprite:wife_eat2": false, "sprite:wife_alert": false, "sprite:wife_hide": false,
+    // 掩體預設只顯示完好版
+    "sprite:cover_damaged": false, "sprite:cover_destroyed": false,
+  },
+};
+
+let state = JSON.parse(JSON.stringify(DEFAULT_STATE));
+let selected = null;
+
+try {
+  const stored = localStorage.getItem("wb_scene_editor_v7_bandit_seq");
+  if (stored) {
+    const parsed = JSON.parse(stored);
+    // 深層 merge：以 DEFAULT_STATE 為基底，stored 只覆蓋【已存在】的 key
+    // sprite/rect/path 內部再做欄位級別 merge（保留新增欄位如 gunOffsetX/Y）
+    state = JSON.parse(JSON.stringify(DEFAULT_STATE));
+    for (const topKey of ["rows", "rects", "paths", "sprites", "visible", "groupState"]) {
+      if (parsed[topKey]) {
+        for (const k in parsed[topKey]) {
+          if (state[topKey] && k in state[topKey]) {
+            // 物件型 → 欄位 merge（DEFAULT 為底、stored 覆蓋已知欄位）
+            if (typeof state[topKey][k] === "object" && state[topKey][k] !== null && !Array.isArray(state[topKey][k])) {
+              state[topKey][k] = { ...state[topKey][k], ...parsed[topKey][k] };
+            } else {
+              state[topKey][k] = parsed[topKey][k];
+            }
+          }
+        }
+      }
+    }
+    if (parsed.zones) state.zones = parsed.zones;
+  }
+} catch(e) { console.warn("load state failed", e); }
+
+const stage = document.getElementById("stage");
+const bgLayer = document.getElementById("bg-layer");
+const pathSvg = document.getElementById("path-svg");
+const zoomInput = document.getElementById("stage-zoom");
+const zoomVal = document.getElementById("zoom-val");
+const bgSelect = document.getElementById("bg-select");
+const bgOpacity = document.getElementById("bg-opacity");
+
+function getZoom() { return parseFloat(zoomInput.value) || 1.0; }
+function W() { return STAGE_W * getZoom(); }
+function H() { return STAGE_H * getZoom(); }
+
+function updateStage() {
+  stage.style.width = W() + "px";
+  stage.style.height = H() + "px";
+  pathSvg.setAttribute("width", W());
+  pathSvg.setAttribute("height", H());
+  zoomVal.textContent = getZoom().toFixed(1) + "x";
+  rerenderAll();
+}
+let customBgUrl = "";  // 使用者上傳的圖（DataURL）
+function updateBg() {
+  const src = customBgUrl || bgSelect.value;
+  bgLayer.style.backgroundImage = src ? `url(${src})` : "none";
+  bgLayer.style.opacity = bgOpacity.value;
+}
+zoomInput.oninput = updateStage;
+bgSelect.onchange = () => { customBgUrl = ""; updateBg(); };
+bgOpacity.oninput = updateBg;
+
+// 本地檔上傳 — 把圖當對位背景（不會存到 server，純前端記憶體）
+const bgUpload = document.getElementById("bg-upload");
+if (bgUpload) {
+  bgUpload.onchange = (e) => {
+    const f = e.target.files?.[0];
+    if (!f) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      customBgUrl = reader.result;
+      updateBg();
+    };
+    reader.readAsDataURL(f);
+  };
+}
+
+
+// ========== 圖層分組 ==========
+const LAYER_GROUPS = [
+  { title: "📏 三層 Y (紅線)", type: "row", listKeys: () => Object.keys(state.rows) },
+  { title: "📌 Zone X (黃線)", type: "zone", listKeys: () => state.zones.map((_,i)=>i) },
+  { title: "🏛 結構參考矩形", type: "rect", listKeys: () => Object.keys(state.rects) },
+  { title: "🌊 流動軌跡 (paths)", type: "path", listKeys: () => Object.keys(state.paths) },
+  { title: "🪑 家具", type: "sprite", filter: k => state.sprites[k]?.group === "furniture" },
+  { title: "🛡 掩體 3 階段", type: "sprite", filter: k => state.sprites[k]?.group === "cover" },
+  { title: "🤠 警長 8 pose", type: "sprite", filter: k => state.sprites[k]?.group === "sheriff" },
+  { title: "🤠 通緝犯 8 pose", type: "sprite", filter: k => state.sprites[k]?.group === "bandit" },
+  { title: "🤠 酒保 4 pose", type: "sprite", filter: k => state.sprites[k]?.group === "barman" },
+  { title: "🤠 丈夫 4 pose", type: "sprite", filter: k => state.sprites[k]?.group === "husband" },
+  { title: "🤠 妻子 4 pose", type: "sprite", filter: k => state.sprites[k]?.group === "wife" },
+  { title: "🍺 物品", type: "sprite", filter: k => state.sprites[k]?.group === "item" },
+  { title: "💣 投射物", type: "sprite", filter: k => state.sprites[k]?.group === "proj" },
+];
+
+// PS 風格群組狀態：每組有 collapsed/visible/solo
+const GROUP_IDS = ["rows", "zones", "rect", "path", "furniture", "cover", "sheriff", "bandit", "barman", "husband", "wife", "item", "proj"];
+if (!state.groupState) state.groupState = {};
+GROUP_IDS.forEach(g => {
+  if (!state.groupState[g]) state.groupState[g] = { collapsed: g !== "rows" && g !== "zones", visible: true, solo: false };
+});
+
+// 判斷 sprite/path/rect/row/zone 對應哪個群組
+function groupOf(type, key) {
+  if (type === "row") return "rows";
+  if (type === "zone") return "zones";
+  if (type === "rect") return "rect";
+  if (type === "path") return "path";
+  if (type === "sprite") return state.sprites[key]?.group || "item";
+  return "item";
+}
+
+// 是否有任何 solo 開啟？
+function anySolo() { return GROUP_IDS.some(g => state.groupState[g]?.solo); }
+
+function isVisible(type, key) {
+  const grp = groupOf(type, key);
+  const gs = state.groupState[grp];
+  if (!gs) return true;
+  // solo 模式：只顯示 solo 的群組
+  if (anySolo() && !gs.solo) return false;
+  // 群組關閉
+  if (!gs.visible) return false;
+  // 個別 visible
+  return state.visible[`${type}:${key}`] !== false;
+}
+function setVisible(type, key, v) {
+  state.visible[`${type}:${key}`] = v;
+  saveLocal();
+}
+
+// PS 風格資料夾 layer 面板
+// 每組對應 LAYER_GROUPS 的 type+filter；外層額外含 groupId 對應 state.groupState
+const FOLDERS = [
+  { id: "rows",      title: "📏 三層 Y (輔助線)",  type: "row",    listKeys: () => Object.keys(state.rows) },
+  { id: "zones",     title: "📌 Zone X (輔助線)",   type: "zone",   listKeys: () => state.zones.map((_,i)=>i) },
+  { id: "rect",      title: "🏛 結構參考矩形",       type: "rect",   listKeys: () => Object.keys(state.rects) },
+  { id: "path",      title: "🌊 流動軌跡",          type: "path",   listKeys: () => Object.keys(state.paths) },
+  { id: "furniture", title: "🪑 家具",              type: "sprite", filter: k => state.sprites[k]?.group === "furniture" },
+  { id: "cover",     title: "🛡 掩體 3 階段",       type: "sprite", filter: k => state.sprites[k]?.group === "cover" },
+  { id: "sheriff",   title: "🤠 警長 8 pose",       type: "sprite", filter: k => state.sprites[k]?.group === "sheriff" },
+  { id: "bandit",    title: "🤠 通緝犯 8 pose",     type: "sprite", filter: k => state.sprites[k]?.group === "bandit" },
+  { id: "barman",    title: "🤠 酒保 4 pose",       type: "sprite", filter: k => state.sprites[k]?.group === "barman" },
+  { id: "husband",   title: "🤠 丈夫 4 pose",       type: "sprite", filter: k => state.sprites[k]?.group === "husband" },
+  { id: "wife",      title: "🤠 妻子 4 pose",       type: "sprite", filter: k => state.sprites[k]?.group === "wife" },
+  { id: "item",      title: "🍺 物品",              type: "sprite", filter: k => state.sprites[k]?.group === "item" },
+  { id: "proj",      title: "💣 投射物",            type: "sprite", filter: k => state.sprites[k]?.group === "proj" },
+];
+
+// ===== 頁面（依角色聚焦）=====
+// 每個頁面只顯示相關的群組。背景/zones/rows 永遠在。
+const PAGES = {
+  sheriff: {
+    label: "🤠 警長頁面",
+    hint: "射擊模式（4 zone）+ 酒杯/酒瓶/標靶軌跡 + 決鬥位置",
+    groups: ["rows", "zones", "rect", "path", "cover", "sheriff", "barman", "item", "proj"],
+  },
+  bandit: {
+    label: "🦹 通緝犯頁面",
+    hint: "進場 → 蹲低 → 探頭 → 開槍 → 中彈 → 倒地",
+    groups: ["rows", "zones", "rect", "cover", "bandit", "proj"],
+  },
+  couple: {
+    label: "👫 夫妻頁面",
+    hint: "怎麼生氣 + 怎麼丟（z1/z2/z3/z4 路徑）+ 桌椅食物",
+    groups: ["rows", "zones", "rect", "path", "furniture", "husband", "wife", "item"],
+  },
+  all: {
+    label: "🗂 全部",
+    hint: "顯示所有群組",
+    groups: GROUP_IDS,
+  },
+};
+
+if (!state.currentPage) state.currentPage = "all";
+
+function applyPage(pageId) {
+  const page = PAGES[pageId] || PAGES.all;
+  state.currentPage = pageId;
+  // 把每組的 visible 依該頁面組合更新
+  GROUP_IDS.forEach(g => {
+    if (!state.groupState[g]) state.groupState[g] = { collapsed: true, visible: true, solo: false };
+    state.groupState[g].visible = page.groups.includes(g);
+    state.groupState[g].solo = false;  // 切頁面時取消 solo
+  });
+  // 更新 tab 樣式 + hint
+  document.querySelectorAll(".page-tab").forEach(btn => {
+    btn.classList.toggle("active", btn.dataset.page === pageId);
+  });
+  const hint = document.getElementById("page-hint");
+  if (hint) hint.textContent = page.hint || "";
+  saveLocal();
+  renderLayers();
+  rerenderAll();
+}
+
+function renderLayers() {
+  const wrap = document.getElementById("layers");
+  wrap.innerHTML = "";
+  const soloActive = anySolo();
+
+  FOLDERS.forEach(grp => {
+    const gs = state.groupState[grp.id];
+    const folder = document.createElement("div");
+    folder.className = "group-folder";
+    if (gs.solo) folder.classList.add("solo-on");
+    if (!gs.visible || (soloActive && !gs.solo)) folder.classList.add("hidden");
+
+    // header
+    const header = document.createElement("div");
+    header.className = "group-header";
+    const arrow = gs.collapsed ? "▶" : "▼";
+
+    const keys = grp.filter ? Object.keys(state.sprites).filter(grp.filter) : grp.listKeys();
+
+    header.innerHTML = `
+      <span class="arrow">${arrow}</span>
+      <button class="icon-btn ${gs.visible ? "" : "dim"}" data-act="vis" title="顯示/隱藏整組">👁</button>
+      <button class="icon-btn ${gs.solo ? "on" : ""}" data-act="solo" title="solo — 只看這組">🎯</button>
+      <span class="title">${grp.title}</span>
+      <span class="count">(${keys.length})</span>
+    `;
+    folder.appendChild(header);
+
+    // header clicks
+    header.addEventListener("click", (e) => {
+      const btn = e.target.closest("[data-act]");
+      if (btn) {
+        e.stopPropagation();
+        const act = btn.dataset.act;
+        if (act === "vis") gs.visible = !gs.visible;
+        if (act === "solo") gs.solo = !gs.solo;
+        saveLocal(); renderLayers(); rerenderAll();
+        return;
+      }
+      gs.collapsed = !gs.collapsed;
+      saveLocal(); renderLayers();
+    });
+
+    // children
+    if (!gs.collapsed) {
+      const children = document.createElement("div");
+      children.className = "group-children";
+      keys.forEach(k => {
+        const div = document.createElement("div");
+        div.className = "layer-row";
+        if (selected && selected.type === grp.type && String(selected.key) === String(k)) div.classList.add("active");
+
+        let thumb = "", name = "";
+        if (grp.type === "row") { thumb = `<span class="swatch" style="background:${state.rows[k].color};"></span>`; name = state.rows[k].label; }
+        else if (grp.type === "zone") { thumb = `<span class="swatch" style="background:#ffd166;"></span>`; name = `Z${k === 0 ? "-1" : k-1}`; }
+        else if (grp.type === "rect") { thumb = `<span class="swatch" style="background:${state.rects[k].color};"></span>`; name = state.rects[k].label; }
+        else if (grp.type === "path") { thumb = `<span class="swatch" style="background:${state.paths[k].color};"></span>`; name = state.paths[k].label; }
+        else if (grp.type === "sprite") { thumb = `<img class="thumb" src="${state.sprites[k].src}" onerror="this.style.background='#822'">`; name = state.sprites[k].label; }
+
+        const itemVisible = state.visible[`${grp.type}:${k}`] !== false;
+        div.innerHTML = `<button class="icon-btn ${itemVisible ? "" : "dim"}" data-act="vis">👁</button>${thumb}<span class="name">${name}</span>`;
+        div.onclick = (e) => {
+          const btn = e.target.closest("[data-act]");
+          if (btn && btn.dataset.act === "vis") {
+            e.stopPropagation();
+            setVisible(grp.type, k, !itemVisible);
+            renderLayers(); rerenderAll();
+            return;
+          }
+          selectItem(grp.type, k);
+        };
+        children.appendChild(div);
+      });
+      folder.appendChild(children);
+    }
+
+    wrap.appendChild(folder);
+  });
+}
+
+function rerenderAll() {
+  [...stage.children].forEach(c => { if (c.id !== "bg-layer" && c.id !== "path-svg") c.remove(); });
+  pathSvg.innerHTML = "";
+
+  // Rects
+  for (const k in state.rects) {
+    if (!isVisible("rect", k)) continue;
+    const r = state.rects[k];
+    const el = document.createElement("div");
+    el.className = "element rect-style";
+    el.dataset.type = "rect"; el.dataset.key = k;
+    el.style.left = (r.x*W()) + "px"; el.style.top = (r.y*H()) + "px";
+    el.style.width = (r.w*W()) + "px"; el.style.height = (r.h*H()) + "px";
+    el.style.background = `${r.color}${Math.round(r.opacity*255).toString(16).padStart(2,"0")}`;
+    el.style.borderColor = r.color;
+    el.innerHTML = `<span class="label">${r.label}</span>`;
+    if (selected && selected.type === "rect" && selected.key === k) {
+      el.classList.add("selected");
+      ["nw","ne","sw","se"].forEach(p => { const h = document.createElement("div"); h.className="handle "+p; h.dataset.handle=p; el.appendChild(h); });
+    }
+    stage.appendChild(el);
+  }
+
+  // Sprites
+  for (const k in state.sprites) {
+    if (!isVisible("sprite", k)) continue;
+    const s = state.sprites[k];
+    const el = document.createElement("div");
+    el.className = "element sprite-style";
+    el.dataset.type = "sprite"; el.dataset.key = k;
+    const sw = s.w*W(), sh = s.h*H();
+    let left = s.x*W() - sw/2, top = s.y*H();
+    if (s.anchor === "bottom") top -= sh; else top -= sh/2;
+    el.style.left = left + "px"; el.style.top = top + "px";
+    el.style.width = sw + "px"; el.style.height = sh + "px";
+    el.innerHTML = `<img src="${s.src}" onerror="this.style.opacity='0.3';this.style.background='#822';"><span class="label">${s.label}</span>`;
+    // 警長 action1-4：在 sprite 上顯示槍口準心（可拖）
+    if (s.group === "sheriff" && s.gunOffsetX !== undefined && s.gunOffsetY !== undefined) {
+      const gun = document.createElement("div");
+      gun.dataset.type = "gunOffset";
+      gun.dataset.key = k;
+      const gx = sw / 2 + s.gunOffsetX * sw;
+      const gy = sh / 2 + s.gunOffsetY * sh;
+      gun.style.cssText = `position:absolute;left:${gx}px;top:${gy}px;width:16px;height:16px;transform:translate(-50%,-50%);border:2px solid #ff3030;border-radius:50%;background:rgba(255,48,48,0.3);cursor:crosshair;z-index:150;pointer-events:auto;`;
+      gun.innerHTML = `<div style="position:absolute;top:50%;left:-6px;right:-6px;height:1px;background:#ff3030;"></div><div style="position:absolute;left:50%;top:-6px;bottom:-6px;width:1px;background:#ff3030;"></div>`;
+      if (selected && selected.type === "gunOffset" && selected.key === k) {
+        gun.style.background = "rgba(255,255,0,0.6)";
+        gun.style.borderColor = "#ffff00";
+      }
+      el.appendChild(gun);
+    }
+    if (selected && selected.type === "sprite" && selected.key === k) {
+      el.classList.add("selected");
+      ["nw","ne","sw","se"].forEach(p => { const h = document.createElement("div"); h.className="handle "+p; h.dataset.handle=p; el.appendChild(h); });
+    }
+    stage.appendChild(el);
+  }
+
+  // Paths — 每條 path 的 sprite 圖像（讓 waypoint 顯示實際物品圖而非編號圓）
+  const PATH_SPRITE = {
+    cup_flow: "/assets/G/G01_cup_intact.png",
+    bottle_flow: "/assets/G/G03_bottle_intact.png",
+    plate_flow: "/assets/G/G05_plate_intact.png",
+    dynamite_arc: "/assets/I/I01_dynamite_lit.png",
+    husband_throw_z1: "/assets/H/H01_apple.png",
+    husband_throw_z2: "/assets/H/H01_apple.png",
+    wife_throw_z3: "/assets/H/H01_apple.png",
+    wife_throw_z4: "/assets/H/H01_apple.png",
+  };
+  // 視覺錯位（避免不同 path 在同 y 重疊）
+  const PATH_VISUAL_OFFSET = {
+    cup_flow: -10, bottle_flow: 0, plate_flow: 10,
+    dynamite_arc: 0,
+    husband_throw_z1: 0, husband_throw_z2: 0,
+    wife_throw_z3: 0, wife_throw_z4: 0,
+  };
+  for (const pk in state.paths) {
+    if (!isVisible("path", pk)) continue;
+    const p = state.paths[pk];
+    const yOff = PATH_VISUAL_OFFSET[pk] || 0;
+    const points = p.points.map(pt => `${pt.x*W()},${pt.y*H()+yOff}`).join(" ");
+    const poly = document.createElementNS("http://www.w3.org/2000/svg", "polyline");
+    poly.setAttribute("points", points);
+    poly.setAttribute("fill", "none");
+    poly.setAttribute("stroke", p.color);
+    poly.setAttribute("stroke-width", "2.5");
+    poly.setAttribute("stroke-dasharray", "6 4");
+    poly.setAttribute("opacity", "0.8");
+    pathSvg.appendChild(poly);
+
+    // waypoints — 顯示對應 sprite 圖（+ 編號小徽章）
+    const spriteSrc = PATH_SPRITE[pk];
+    // 從 SPRITES 找對應實際顯示尺寸（同類物品在遊戲中的大小）
+    const sizeKey = pk === "cup_flow" ? "cup"
+                  : pk === "bottle_flow" ? "bottle"
+                  : pk === "plate_flow" ? "plate"
+                  : pk === "dynamite_arc" ? "dynamite_lit"
+                  : "apple";
+    const sizeInfo = state.sprites[sizeKey];
+    const sprW = sizeInfo ? sizeInfo.w * W() : 30;
+    const sprH = sizeInfo ? sizeInfo.h * H() : 30;
+    p.points.forEach((pt, i) => {
+      const wp = document.createElement("div");
+      wp.className = "waypoint";
+      wp.dataset.type = "waypoint";
+      wp.dataset.pathKey = pk;
+      wp.dataset.index = i;
+      wp.style.left = (pt.x*W()) + "px";
+      wp.style.top = (pt.y*H() + yOff) + "px";
+      wp.style.width = Math.max(28, sprW) + "px";
+      wp.style.height = Math.max(28, sprH) + "px";
+      wp.style.background = "transparent";
+      wp.style.border = `2px solid ${p.color}`;
+      wp.style.borderRadius = "4px";
+      wp.style.padding = "0";
+      wp.style.overflow = "visible";
+      if (spriteSrc) {
+        const img = document.createElement("img");
+        img.src = spriteSrc;
+        img.style.cssText = "width:100%;height:100%;object-fit:contain;pointer-events:none;";
+        wp.appendChild(img);
+      } else {
+        wp.style.background = p.color;
+        wp.style.color = "#fff";
+        wp.textContent = (i+1).toString();
+      }
+      // 編號小徽章（左上角）
+      const badge = document.createElement("div");
+      badge.textContent = (i+1).toString();
+      badge.style.cssText = `position:absolute;top:-8px;left:-8px;width:16px;height:16px;background:${p.color};color:#000;font-size:10px;font-weight:bold;border-radius:50%;display:flex;align-items:center;justify-content:center;border:1px solid #000;pointer-events:none;`;
+      wp.appendChild(badge);
+      if (selected && selected.type === "waypoint" && selected.key === `${pk}/${i}`) wp.classList.add("selected");
+      if (pt.lbl) {
+        const lbl = document.createElement("div");
+        lbl.style.cssText = "position:absolute;top:100%;left:50%;transform:translateX(-50%);background:rgba(0,0,0,0.7);color:#fff;font-size:9px;padding:1px 3px;border-radius:2px;white-space:nowrap;margin-top:2px;pointer-events:none;";
+        lbl.textContent = pt.lbl;
+        wp.appendChild(lbl);
+      }
+      stage.appendChild(wp);
+    });
+  }
+
+  // Zone lines
+  state.zones.forEach((x, i) => {
+    if (!isVisible("zone", i)) return;
+    const el = document.createElement("div");
+    el.className = "zone-line";
+    el.dataset.type = "zone"; el.dataset.key = i;
+    el.style.left = (x*W()) + "px";
+    el.innerHTML = `<span class="label">Z${i===0?"-1":i-1}</span>`;
+    if (selected && selected.type === "zone" && selected.key === i) el.classList.add("selected");
+    stage.appendChild(el);
+  });
+
+  // Row lines
+  for (const k in state.rows) {
+    if (!isVisible("row", k)) continue;
+    const r = state.rows[k];
+    const el = document.createElement("div");
+    el.className = "row-line";
+    el.dataset.type = "row"; el.dataset.key = k;
+    el.style.top = (r.y*H()) + "px";
+    el.style.background = r.color;
+    el.innerHTML = `<span class="label" style="color:${r.color}">${r.label}</span>`;
+    if (selected && selected.type === "row" && selected.key === k) el.classList.add("selected");
+    stage.appendChild(el);
+  }
+}
+
+function selectItem(type, key) {
+  selected = { type, key };
+  renderLayers(); rerenderAll(); renderProps();
+}
+
+function renderProps() {
+  const props = document.getElementById("props");
+  if (!selected) { props.innerHTML = `<div style="color:#888;font-size:10px;">（選一個元件）</div>`; return; }
+  const { type, key } = selected;
+  let obj, html = `<div style="color:#ffd166;font-weight:bold;font-size:10px;margin-bottom:4px;">${type}/${key}</div>`;
+
+  if (type === "row") {
+    obj = state.rows[key];
+    html += propRow("Y", "y", obj.y, 0, 1, 0.001);
+  } else if (type === "zone") {
+    obj = { x: state.zones[key] };
+    html += propRow("X", "x", obj.x, 0, 1, 0.001);
+  } else if (type === "rect") {
+    obj = state.rects[key];
+    html += propRow("X", "x", obj.x, 0, 1, 0.001) + propRow("Y", "y", obj.y, 0, 1, 0.001)
+      + propRow("W", "w", obj.w, 0, 1, 0.001) + propRow("H", "h", obj.h, 0, 1, 0.001);
+  } else if (type === "sprite") {
+    obj = state.sprites[key];
+    html += propRow("X", "x", obj.x, 0, 1, 0.001) + propRow("Y", "y", obj.y, 0, 1, 0.001)
+      + propRow("W", "w", obj.w, 0.005, 0.5, 0.005) + propRow("H", "h", obj.h, 0.005, 0.5, 0.005);
+  } else if (type === "waypoint") {
+    const [pk, idx] = key.split("/");
+    obj = state.paths[pk].points[parseInt(idx)];
+    html += propRow("X", "x", obj.x, 0, 1, 0.001) + propRow("Y", "y", obj.y, 0, 1, 0.001);
+    html += `<div class="row"><label>lbl</label><input type="text" data-key="lbl" value="${obj.lbl||""}" style="font-size:9px;"></div>`;
+  } else if (type === "gunOffset") {
+    obj = state.sprites[key];
+    html += `<div style="color:#ff3030;font-size:11px;">🔫 槍口位置（相對 sprite 中心，-0.5..+0.5）</div>`;
+    html += propRow("dx", "gunOffsetX", obj.gunOffsetX, -0.5, 0.5, 0.01);
+    html += propRow("dy", "gunOffsetY", obj.gunOffsetY, -0.5, 0.5, 0.01);
+  } else if (type === "path") {
+    // 整條 path 屬性：可加 / 刪 waypoint
+    const p = state.paths[key];
+    html += `<div style="font-size:9px;color:#aaa;">共 ${p.points.length} 點</div>`;
+    html += `<div class="btn-row" style="margin-top:3px;"><button class="small" id="path-add">+ 加點</button><button class="small danger" id="path-del">- 刪尾</button></div>`;
+  }
+  props.innerHTML = html;
+  props.querySelectorAll("input").forEach(inp => {
+    inp.oninput = () => {
+      const k = inp.dataset.key;
+      const val = inp.type === "text" ? inp.value : parseFloat(inp.value);
+      if (type === "zone") state.zones[key] = val;
+      else obj[k] = val;
+      rerenderAll(); saveLocal();
+    };
+  });
+  if (type === "path") {
+    document.getElementById("path-add").onclick = () => {
+      const p = state.paths[key];
+      const last = p.points[p.points.length-1] || {x:0.5,y:0.5};
+      p.points.push({ x: clamp(last.x + 0.05), y: last.y });
+      rerenderAll(); renderProps(); saveLocal();
+    };
+    document.getElementById("path-del").onclick = () => {
+      const p = state.paths[key];
+      if (p.points.length > 2) p.points.pop();
+      rerenderAll(); renderProps(); saveLocal();
+    };
+  }
+}
+
+function propRow(label, k, val, mn, mx, step) {
+  return `<div class="row"><label>${label}</label><input type="number" data-key="${k}" value="${val.toFixed(3)}" min="${mn}" max="${mx}" step="${step}"></div>`;
+}
+
+// 拖移
+let dragging = null;
+stage.addEventListener("mousedown", (e) => {
+  // 槍口準心
+  const gun = e.target.closest("[data-type='gunOffset']");
+  if (gun) {
+    const k = gun.dataset.key;
+    selectItem("gunOffset", k);
+    const s = state.sprites[k];
+    dragging = {
+      type: "gunOffset", key: k,
+      startX: e.clientX, startY: e.clientY,
+      initial: { gunOffsetX: s.gunOffsetX, gunOffsetY: s.gunOffsetY },
+      spriteW: s.w * W(), spriteH: s.h * H(),
+    };
+    e.preventDefault();
+    return;
+  }
+  const wp = e.target.closest(".waypoint");
+  if (wp) {
+    const pk = wp.dataset.pathKey, idx = parseInt(wp.dataset.index);
+    selectItem("waypoint", `${pk}/${idx}`);
+    const pt = state.paths[pk].points[idx];
+    dragging = { type: "waypoint", key: `${pk}/${idx}`, startX: e.clientX, startY: e.clientY, initial: { ...pt }, pathKey: pk, idx };
+    e.preventDefault(); return;
+  }
+  const handleEl = e.target.closest(".handle");
+  const el = e.target.closest(".element, .zone-line, .row-line");
+  if (!el) return;
+  const type = el.dataset.type;
+  const key = type === "zone" ? parseInt(el.dataset.key) : el.dataset.key;
+  selectItem(type, key);
+  dragging = {
+    type, key,
+    handle: handleEl ? handleEl.dataset.handle : null,
+    startX: e.clientX, startY: e.clientY,
+    initial: type === "row" ? { ...state.rows[key] }
+           : type === "zone" ? { x: state.zones[key] }
+           : type === "rect" ? { ...state.rects[key] }
+           : { ...state.sprites[key] },
+  };
+  e.preventDefault();
+});
+
+window.addEventListener("mousemove", (e) => {
+  if (!dragging) return;
+  const dx = (e.clientX - dragging.startX) / W();
+  const dy = (e.clientY - dragging.startY) / H();
+  const { type, key, handle, initial } = dragging;
+
+  if (type === "gunOffset") {
+    const s = state.sprites[key];
+    // dx/dy 以 sprite 寬高為 1.0 換算
+    s.gunOffsetX = clampSigned(initial.gunOffsetX + (e.clientX - dragging.startX) / dragging.spriteW);
+    s.gunOffsetY = clampSigned(initial.gunOffsetY + (e.clientY - dragging.startY) / dragging.spriteH);
+  } else if (type === "waypoint") {
+    const pt = state.paths[dragging.pathKey].points[dragging.idx];
+    pt.x = clamp(initial.x + dx); pt.y = clamp(initial.y + dy);
+  } else if (type === "row") {
+    state.rows[key].y = clamp(initial.y + dy);
+  } else if (type === "zone") {
+    state.zones[key] = clamp(initial.x + dx);
+  } else if (type === "rect" || type === "sprite") {
+    const r = type === "rect" ? state.rects[key] : state.sprites[key];
+    if (handle) {
+      if (handle.includes("w")) { r.x = clamp(initial.x + dx); r.w = clamp(initial.w - dx); }
+      if (handle.includes("e")) { r.w = clamp(initial.w + dx); }
+      if (handle.includes("n")) { r.y = clamp(initial.y + dy); r.h = clamp(initial.h - dy); }
+      if (handle.includes("s")) { r.h = clamp(initial.h + dy); }
+    } else {
+      r.x = clamp(initial.x + dx); r.y = clamp(initial.y + dy);
+    }
+  }
+  rerenderAll(); renderProps(); saveLocal();
+});
+
+window.addEventListener("mouseup", () => { dragging = null; });
+function clamp(v) { return Math.max(0, Math.min(1, v)); }
+function clampSigned(v) { return Math.max(-0.5, Math.min(0.5, v)); }
+
+function exportJSON() {
+  const out = {
+    devCompat: {
+      rowTopY: state.rows.rowTopY.y, rowCoupleY: state.rows.rowCoupleY.y, rowPlayerY: state.rows.rowPlayerY.y,
+      zoneX: state.zones,
+    },
+    paths: state.paths,
+    sprites: state.sprites,
+    rects: state.rects,
+    fullState: state,
+  };
+  const txt = JSON.stringify(out, null, 2);
+  document.getElementById("json-area").value = txt;
+  navigator.clipboard.writeText(txt).then(() => alert("已複製"), () => alert("複製失敗，看文字框"));
+}
+function importJSON() {
+  try { state = JSON.parse(document.getElementById("json-area").value).fullState; rerenderAll(); renderLayers(); renderProps(); saveLocal(); alert("匯入完成"); }
+  catch(e) { alert(e.message); }
+}
+function resetAll() {
+  if (!confirm("重置？")) return;
+  state = JSON.parse(JSON.stringify(DEFAULT_STATE));
+  selected = null; rerenderAll(); renderLayers(); renderProps(); saveLocal();
+}
+function saveLocal() { localStorage.setItem("wb_scene_editor_v7_bandit_seq", JSON.stringify(state)); }
+
+document.getElementById("btn-export").onclick = exportJSON;
+document.getElementById("btn-import").onclick = importJSON;
+document.getElementById("btn-reset").onclick = resetAll;
+document.getElementById("btn-save-local").onclick = () => { saveLocal(); alert("已存"); };
+
+// 頁面 tab 點擊
+document.querySelectorAll(".page-tab").forEach(btn => {
+  btn.onclick = () => applyPage(btn.dataset.page);
+});
+
+updateStage();
+updateBg();
+// 套用初始頁面（從 localStorage 還原或預設 sheriff）
+applyPage(state.currentPage || "sheriff");
+</script>
+</body>
+</html>
