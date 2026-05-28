@@ -1,13 +1,13 @@
 import Phaser from "phaser";
-import { GAME_WIDTH, GAME_HEIGHT } from "./config";
+import { CANVAS_WIDTH, CANVAS_HEIGHT } from "./config";
 import { BootScene } from "./scenes/BootScene";
 import { LcdScene } from "./scenes/LcdScene";
 
 const game: any = new Phaser.Game({
   type: Phaser.WEBGL,
   parent: "game",
-  width: GAME_WIDTH,
-  height: GAME_HEIGHT,
+  width: CANVAS_WIDTH,
+  height: CANVAS_HEIGHT,
   backgroundColor: "#1a0f08",
   scale: {
     mode: Phaser.Scale.FIT,

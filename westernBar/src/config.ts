@@ -1,6 +1,26 @@
 // Western Bar — v4.3 設定
+
+// === 手機 / 直式版面偵測（依螢幕比例自適應）===
+export const IS_MOBILE = (() => {
+  if (typeof window === "undefined") return false;
+  return window.matchMedia("(max-width: 800px), (orientation: portrait)").matches
+      || ("ontouchstart" in window && window.innerWidth < 900);
+})();
+
+// 遊戲世界邏輯尺寸（slot 比例的基準）— 永遠 960×540
 export const GAME_WIDTH = 960;
 export const GAME_HEIGHT = 540;
+
+// Canvas 實際尺寸：桌機 960×540；手機自動匹配螢幕比例（去除 letterbox）
+function computeCanvas() {
+  if (!IS_MOBILE || typeof window === "undefined") return { w: 960, h: 540 };
+  const W = 540;
+  const aspect = window.innerHeight / window.innerWidth;
+  return { w: W, h: Math.max(900, Math.min(1500, Math.round(W * aspect))) };
+}
+const _c = computeCanvas();
+export const CANVAS_WIDTH  = _c.w;
+export const CANVAS_HEIGHT = _c.h;
 
 // 7 zone：0 = MISS、1..4 = 玩家可動 + 可射、5 = 緩衝空格、6 = 酒保固定位
 export const ZONES = 7;

@@ -52,6 +52,12 @@ export const LCD_ASSETS: Array<{ key: string; file: string }> = [
   { key: "lcd_husband_hide",   file: "lcd_color/husband_hide.png" },
   { key: "lcd_wife_hide",      file: "lcd_color/wife_hide.png" },
   { key: "lcd_couple_hide",    file: "lcd_figma/couple_table_hide.png" },
+  { key: "lcd_wanted_poster",  file: "clean_v2/wanted_poster.png" },
+  // 手機 UI 按鈕（loading 階段的 bg/frame/fill 已在 preload 第一階段載過）
+  { key: "ui_mobile_bg",       file: "clean_v3/ui_bg.png" },
+  { key: "ui_btn_left",        file: "clean_v3/btn_left.png" },
+  { key: "ui_btn_right",       file: "clean_v3/btn_right.png" },
+  { key: "ui_btn_fire",        file: "clean_v3/btn_fire.png" },
 ];
 
 // 同名黑剪影 fallback（彩色沒生好時用）— key 前綴 lcd_sil_
@@ -123,6 +129,8 @@ export const SOUNDS: Record<string, string> = {
 
 // 永遠用 LCD 剪影視圖（暫時禁用 AI 精緻圖，先求玩法）
 
+import { IS_MOBILE, CANVAS_WIDTH, CANVAS_HEIGHT } from "../config";
+
 export class BootScene extends Phaser.Scene {
   private failed = new Set<string>();
 
@@ -130,15 +138,60 @@ export class BootScene extends Phaser.Scene {
 
   preload() {
     this.load.setPath("assets");
-    // 載入 LCD 彩色素材 + 黑剪影 fallback
+    // 第一階段：只載 loading 畫面用的素材（背景 + 進度條）
+    this.load.image("ui_bg_pc",         "clean_v2/loading_bg_pc.png");
+    this.load.image("ui_bg_mobile",     "clean_v2/loading_bg_mobile.png");
+    this.load.image("ui_loading_frame", "clean/loading_bar_frame_modern_clean.png");
+    this.load.image("ui_loading_fill",  "clean/loading_bar_fill_modern_clean.png");
+  }
+
+  /** 第二階段：顯示 loading 畫面，再載完整 LCD 資源 */
+  create() {
+    this.startMainLoad();
+  }
+
+  private startMainLoad() {
+    // 背景
+    const bg = this.add.image(CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2, IS_MOBILE ? "ui_bg_mobile" : "ui_bg_pc");
+    const bgTex = this.textures.get(bg.texture.key).getSourceImage() as HTMLImageElement;
+    const bgScale = Math.max(CANVAS_WIDTH / bgTex.width, CANVAS_HEIGHT / bgTex.height);
+    bg.setScale(bgScale);
+
+    // 進度條（frame + fill）置中下方
+    const barY = CANVAS_HEIGHT * (IS_MOBILE ? 0.78 : 0.85);
+    const barTargetW = CANVAS_WIDTH * 0.7;
+    const frame = this.add.image(CANVAS_WIDTH / 2, barY, "ui_loading_frame");
+    const frameTex = this.textures.get("ui_loading_frame").getSourceImage() as HTMLImageElement;
+    const frameScale = barTargetW / frameTex.width;
+    frame.setScale(frameScale);
+
+    const fill = this.add.image(CANVAS_WIDTH / 2 - barTargetW / 2 + 12, barY, "ui_loading_fill")
+      .setOrigin(0, 0.5);
+    const fillTex = this.textures.get("ui_loading_fill").getSourceImage() as HTMLImageElement;
+    // fill 寬度 0 開始
+    fill.setScale(0, frameScale * (frameTex.height / fillTex.height));
+    const fillFullScaleX = (barTargetW - 24) / fillTex.width;
+
+    // Loading 文字
+    this.add.text(CANVAS_WIDTH / 2, barY - 40, "LOADING...", {
+      fontSize: `${Math.round(CANVAS_HEIGHT * 0.03)}px`,
+      color: "#ffd166", fontFamily: "monospace", fontStyle: "bold",
+    }).setOrigin(0.5);
+
+    // 載入主要資源
+    this.load.on("progress", (p: number) => {
+      fill.setScale(fillFullScaleX * p, frameScale * (frameTex.height / fillTex.height));
+    });
+    this.load.once("complete", () => {
+      if (this.failed.size > 0) console.log(`[Boot] missing: ${[...this.failed].join(", ")}`);
+      // 短暫顯示「滿條」效果再切場景
+      this.time.delayedCall(300, () => this.scene.start("Lcd"));
+    });
+
     for (const a of LCD_ASSETS)          this.load.image(a.key, a.file);
     for (const a of LCD_FALLBACK_ASSETS) this.load.image(a.key, a.file);
     for (const k of Object.keys(SOUNDS)) this.load.audio(k, SOUNDS[k]);
     this.load.on("loaderror", (file: Phaser.Loader.File) => { this.failed.add(file.key); });
-  }
-
-  create() {
-    if (this.failed.size > 0) console.log(`[Boot] missing: ${[...this.failed].join(", ")}`);
-    this.scene.start("Lcd");
+    this.load.start();  // 觸發第二階段載入
   }
 }

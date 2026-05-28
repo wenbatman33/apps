@@ -3,7 +3,7 @@
 //
 // 設計：完全 LCD 風格 — 每個 actor 只顯示當前 slot，無 tween，每拍瞬移一格。
 import Phaser from "phaser";
-import { GAME_WIDTH, GAME_HEIGHT } from "../config";
+import { GAME_WIDTH, GAME_HEIGHT, IS_MOBILE, CANVAS_WIDTH, CANVAS_HEIGHT } from "../config";
 import { SLOTS, ACTORS, makeActor, actorCurrentSlot, actorAdvance, slotPx, type ActorState } from "./LCD_LAYOUT";
 
 // 拍速（ms）
@@ -49,6 +49,10 @@ export class LcdScene extends Phaser.Scene {
   private prevSubLevel: 1 | 2 | 3 = 1;
   private levelBannerHideUntil = 0;  // 大字關卡橫幅顯示到此時間（毫秒）
   private gunDebug = false;
+  // 手機 UI 調位
+  private mobileUiBtns?: { left: Phaser.GameObjects.Image; right: Phaser.GameObjects.Image; fire: Phaser.GameObjects.Image; bg: Phaser.GameObjects.Image; mainCam: Phaser.Cameras.Scene2D.Camera };
+  private mobileUiEditOn = false;
+  private mobileUiHud?: Phaser.GameObjects.Text;
   private barmanSprite?: Phaser.GameObjects.Sprite;
   private tableSprite?: Phaser.GameObjects.Sprite;
   private coupleHideSprite?: Phaser.GameObjects.Sprite;
@@ -212,12 +216,16 @@ export class LcdScene extends Phaser.Scene {
     kb.on("keydown-D", () => this.toggleDevPanel());
     // 編輯模式：E 切換
     kb.on("keydown-E", () => this.toggleEditMode());
+    // 手機 UI 調位模式：U 切換、P 印出當前 ratios
+    kb.on("keydown-U", () => this.toggleMobileUiEdit());
+    kb.on("keydown-P", () => this.printMobileUiRatios());
     // 槍口 debug：G 切換（紅點顯示子彈起點）
     kb.on("keydown-G", () => { this.gunDebug = !this.gunDebug; console.log("gunDebug =", this.gunDebug); });
     kb.on("keydown-DELETE", () => this.exportLayoutJson());
     kb.on("keydown-S", (ev: KeyboardEvent) => { if (ev.shiftKey && this.editMode) this.exportLayoutJson(); });
 
     // 開場序列：警長 zone 4 → 3 → 2 → 1 → 0 → 2，停在 2 開兩槍，然後 play
+    if (IS_MOBILE) this.setupMobileLayout();
     this.runIntro();
   }
 
@@ -413,6 +421,151 @@ export class LcdScene extends Phaser.Scene {
   }
 
   // === 背景 ===
+
+  /** 手機 portrait 版面：主 camera 縮到中間遊戲區、加 poster + 控制按鈕 cameras */
+  private setupMobileLayout() {
+    // === 手機 3D 街機 cabinet 斜面版面（bg 放大 16% 切側邊）===
+    // 源圖 ratio：螢幕 x 0.050..0.949, y 0.030..0.500
+    //          凹槽: 左 0.180 / 右 0.300 / FIRE 0.550, y 0.595
+    // 放大後 canvas x = 1.16 × source_r - 0.08
+    const SCREEN_X = 0;
+    const SCREEN_Y = Math.round(CANVAS_HEIGHT * 0.030);
+    const SCREEN_W = CANVAS_WIDTH;
+    const SCREEN_H = Math.round(CANVAS_HEIGHT * 0.470);
+    // 遊戲 16:9 等比塞入螢幕凹槽
+    const gameZoom = Math.min(SCREEN_W / GAME_WIDTH, SCREEN_H / GAME_HEIGHT);
+    const gameW    = GAME_WIDTH * gameZoom;
+    const gameH    = GAME_HEIGHT * gameZoom;
+    const gameX    = SCREEN_X + (SCREEN_W - gameW) / 2;
+    const gameY    = SCREEN_Y + (SCREEN_H - gameH) / 2;
+
+    // 1. 主 camera 縮到螢幕凹槽
+    const mainCam = this.cameras.main;
+    mainCam.setViewport(gameX, gameY, gameW, gameH);
+    mainCam.setBounds(0, 0, GAME_WIDTH, GAME_HEIGHT);
+    mainCam.setZoom(gameZoom);
+    mainCam.centerOn(GAME_WIDTH / 2, GAME_HEIGHT / 2);
+    mainCam.setBackgroundColor(0x000000);
+
+    // 2. 外框 camera — 單張 ui_bg.png 拉伸到整個 canvas
+    const FRAME_Y = 2000;  // world 外座標
+    const uiCam = this.cameras.add(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+    uiCam.transparent = true;  // 透明，露出 mainCam 渲染的遊戲畫面
+    uiCam.setScroll(0, FRAME_Y);
+    // 把 bg 圖放大 16% 讓左右機體邊緣超出 canvas → 自然 crop 掉粉色側邊
+    const bg = this.add.image(CANVAS_WIDTH / 2, FRAME_Y + CANVAS_HEIGHT / 2, "ui_mobile_bg")
+      .setDisplaySize(CANVAS_WIDTH * 1.16, CANVAS_HEIGHT).setDepth(0);
+    mainCam.ignore(bg);
+
+    // 3. 按鈕（依 ui_bg 內凹槽 ratio 擺）
+    const uiObjs: Phaser.GameObjects.GameObject[] = [bg];
+    const makeImgBtn = (x: number, worldY: number, texKey: string, size: number, onDown: () => void) => {
+      const img = this.add.image(x, worldY, texKey).setInteractive({ draggable: true, useHandCursor: true }).setDepth(1);
+      const tex = this.textures.get(texKey).getSourceImage() as HTMLImageElement;
+      const scale = size / Math.max(tex.width, tex.height);
+      img.setScale(scale);
+      const origY = worldY;
+      const pressDepth = size * 0.08;
+      const press = () => {
+        // 按下：縮 0.92、往下推 8% size、輕微變暗
+        img.setScale(scale * 0.92);
+        img.setY(origY + pressDepth);
+        img.setTint(0xb0b0b0);
+      };
+      const release = () => {
+        img.setScale(scale);
+        img.setY(origY);
+        img.clearTint();
+      };
+      img.on("pointerdown", () => {
+        if (this.mobileUiEditOn) return;
+        press();
+        onDown();
+      });
+      img.on("pointerup",   () => { if (!this.mobileUiEditOn) release(); });
+      img.on("pointerout",  () => { if (!this.mobileUiEditOn) release(); });
+      img.on("drag", (_p: any, dx: number, dy: number) => {
+        if (!this.mobileUiEditOn) return;
+        img.setPosition(dx, dy);
+        this.refreshMobileUiHud();
+      });
+      uiObjs.push(img);
+      return img;
+    };
+    // 按鈕位置（U 模式手動調好寫回）
+    //   left (0.148, 0.618) / right (0.397, 0.616) / fire (0.781, 0.614)
+    const smallBtnSize = Math.round(CANVAS_WIDTH * 0.22);
+    const fireBtnSize  = Math.round(CANVAS_WIDTH * 0.34);
+    const btnL = makeImgBtn(Math.round(CANVAS_WIDTH * 0.148), FRAME_Y + Math.round(CANVAS_HEIGHT * 0.618), "ui_btn_left", smallBtnSize, () => {
+      if (this.phase === "play") this.movePlayer(-1);
+    });
+    const btnR = makeImgBtn(Math.round(CANVAS_WIDTH * 0.397), FRAME_Y + Math.round(CANVAS_HEIGHT * 0.616), "ui_btn_right", smallBtnSize, () => {
+      if (this.phase === "play") this.movePlayer(+1);
+    });
+    const btnF = makeImgBtn(Math.round(CANVAS_WIDTH * 0.781), FRAME_Y + Math.round(CANVAS_HEIGHT * 0.614), "ui_btn_fire", fireBtnSize, () => {
+      if (this.phase === "play") this.fire();
+      else if (this.phase === "duel") {
+        if (this.duelReady && !this.duelPaused && !this.duelSheriffExposed) this.duelFire();
+      }
+    });
+    mainCam.ignore(uiObjs);
+    // 存供 UI 編輯模式拖拉
+    this.mobileUiBtns = { left: btnL, right: btnR, fire: btnF, bg, mainCam };
+
+    // 4. UI cam 忽略所有 main world game objects
+    this.events.once("update", () => {
+      const allGameObjs = this.children.getChildren().filter(o => !uiObjs.includes(o));
+      uiCam.ignore(allGameObjs);
+    });
+    this.events.on("addedtoscene", (gameObj: Phaser.GameObjects.GameObject) => {
+      if (!uiObjs.includes(gameObj)) uiCam.ignore(gameObj);
+    });
+  }
+
+  /** 手機 UI 調位模式：拖拉按鈕 + 印出 ratio */
+  private toggleMobileUiEdit() {
+    if (!this.mobileUiBtns) { console.log("[mobile UI edit] 非手機版"); return; }
+    this.mobileUiEditOn = !this.mobileUiEditOn;
+    const { mainCam } = this.mobileUiBtns;
+    if (this.mobileUiEditOn) {
+      this.mobileUiHud = this.add.text(10, CANVAS_HEIGHT - 80,
+        "UI 編輯模式 ON  |  拖按鈕到正確位置  |  按 P 印出 ratio  |  U 退出",
+        { fontSize: "11px", color: "#fff", backgroundColor: "#000", padding: { x: 6, y: 3 }, fontFamily: "monospace" }
+      ).setDepth(300).setScrollFactor(0);
+      // HUD 要由 uiCam 顯示
+      mainCam.ignore(this.mobileUiHud);
+      this.refreshMobileUiHud();
+    } else {
+      this.mobileUiHud?.destroy(); this.mobileUiHud = undefined;
+    }
+    console.log(`[mobile UI edit] ${this.mobileUiEditOn ? "ON" : "OFF"}`);
+  }
+
+  private refreshMobileUiHud() {
+    if (!this.mobileUiHud || !this.mobileUiBtns) return;
+    const FRAME_Y = 2000;
+    const { left, right, fire } = this.mobileUiBtns;
+    const ratio = (xy: { x: number, y: number }) =>
+      `(${(xy.x/CANVAS_WIDTH).toFixed(3)}, ${((xy.y-FRAME_Y)/CANVAS_HEIGHT).toFixed(3)})`;
+    this.mobileUiHud.setText(
+      `UI 編輯 | left ${ratio(left)} | right ${ratio(right)} | fire ${ratio(fire)} | P=印 | U=退`
+    );
+  }
+
+  private printMobileUiRatios() {
+    if (!this.mobileUiBtns) return;
+    const FRAME_Y = 2000;
+    const { left, right, fire } = this.mobileUiBtns;
+    const rx = (n: number) => +(n/CANVAS_WIDTH).toFixed(3);
+    const ry = (n: number) => +((n-FRAME_Y)/CANVAS_HEIGHT).toFixed(3);
+    const out = {
+      left:  { x: rx(left.x),  y: ry(left.y) },
+      right: { x: rx(right.x), y: ry(right.y) },
+      fire:  { x: rx(fire.x),  y: ry(fire.y) },
+    };
+    console.log("===== 手機 UI 按鈕 ratio =====\n" + JSON.stringify(out, null, 2));
+    alert("已印出 ratio 到 console（F12 查看）");
+  }
 
   private drawStaticProps() {
     // depth 層級（由低到高）：
