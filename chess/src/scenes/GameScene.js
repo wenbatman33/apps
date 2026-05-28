@@ -1,4 +1,4 @@
-import { createInitialBoard, legalMoves, applyMove, owner, isKing, countPieces, gameOver, SIZE, P1, P2, P1K, P2K, EMPTY } from '../game/Board.js';
+import { createInitialBoard, legalMoves, applyMove, owner, isKing, countPieces, gameOver, boardKey, isProgressMove, SIZE, P1, P2, P1K, P2K, EMPTY } from '../game/Board.js';
 import { chooseAIMove } from '../game/AI.js';
 import { installPieceTextures } from '../game/pieces.js';
 
@@ -57,6 +57,10 @@ export default class GameScene extends Phaser.Scene {
     this.lastMove = null;
     this.locked = false;
     this.gameOverFlag = false;
+    // 反僵持狀態
+    this.noProgressPly = 0;
+    this.positionCounts = new Map();
+    this.positionCounts.set(boardKey(this.board, this.toMove), 1);
 
     this.drawBackground(W, H);
     this.buildLayout();
@@ -353,13 +357,28 @@ export default class GameScene extends Phaser.Scene {
     this.p1Card.turnRing.setVisible(this.toMove === 1);
     this.p2Card.turnRing.setVisible(this.toMove === 2);
 
-    const status = gameOver(this.board, this.toMove);
+    const status = gameOver(this.board, this.toMove, {
+      noProgressPly: this.noProgressPly,
+      positionCounts: this.positionCounts,
+    });
     if (status.over) {
-      const winner = status.winner === 1
-        ? 'Victory is yours'
-        : (this.mode === 'ai' ? 'The keeper prevails' : 'Player II prevails');
-      this.statusText.setText(`— ${winner} — tap to return —`);
-      this.statusText.setColor(status.winner === 1 ? GOLD_HI : '#c9876d');
+      let msg, color;
+      if (status.winner === 0) {
+        // 和棋
+        const reason = status.reason === 'threefold' ? '三重複局面'
+                     : status.reason === 'forty_move' ? '40 步無進展'
+                     : '和棋';
+        msg = `— Draw · ${reason} — tap to return —`;
+        color = '#a88f60';
+      } else {
+        const winner = status.winner === 1
+          ? 'Victory is yours'
+          : (this.mode === 'ai' ? 'The keeper prevails' : 'Player II prevails');
+        msg = `— ${winner} — tap to return —`;
+        color = status.winner === 1 ? GOLD_HI : '#c9876d';
+      }
+      this.statusText.setText(msg);
+      this.statusText.setColor(color);
       this.gameOverFlag = true;
       return;
     }
@@ -430,10 +449,14 @@ export default class GameScene extends Phaser.Scene {
     this.selected = null;
     this.legalForSelected = [];
     const finalBoard = applyMove(this.board, move);
+    const progress = isProgressMove(this.board, move);
     this.animateMove(move, () => {
       this.board = finalBoard;
       this.lastMove = move;
       this.toMove = (this.toMove === 1) ? 2 : 1;
+      this.noProgressPly = progress ? 0 : this.noProgressPly + 1;
+      const key = boardKey(this.board, this.toMove);
+      this.positionCounts.set(key, (this.positionCounts.get(key) || 0) + 1);
       this.drawAll();
       this.refreshStatus();
       this.locked = false;
@@ -510,7 +533,9 @@ export default class GameScene extends Phaser.Scene {
   runAI() {
     if (this.gameOverFlag) return;
     this.time.delayedCall(20, () => {
-      const move = chooseAIMove(this.board, this.aiPlayer, this.difficulty);
+      const move = chooseAIMove(this.board, this.aiPlayer, this.difficulty, {
+        positionCounts: this.positionCounts,
+      });
       if (!move) { this.refreshStatus(); return; }
       this.executeMove(move);
     });

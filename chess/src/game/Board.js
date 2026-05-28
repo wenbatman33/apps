@@ -164,10 +164,40 @@ export function countPieces(board) {
 }
 
 // 勝負判斷：對手無合法走法或無子 → 我方勝
-export function gameOver(board, toMovePlayer) {
+// state: { noProgressPly, positionCounts }（可選，提供時會檢查和棋）
+export function gameOver(board, toMovePlayer, state) {
   const moves = legalMoves(board, toMovePlayer);
   if (moves.length === 0) {
-    return { over: true, winner: toMovePlayer === 1 ? 2 : 1 };
+    return { over: true, winner: toMovePlayer === 1 ? 2 : 1, reason: 'no_moves' };
+  }
+  if (state) {
+    // 40 步無進展（80 ply）→ 和棋
+    if (state.noProgressPly >= 80) {
+      return { over: true, winner: 0, reason: 'forty_move' };
+    }
+    // 三重複局面 → 和棋
+    const key = boardKey(board, toMovePlayer);
+    if ((state.positionCounts.get(key) || 0) >= 3) {
+      return { over: true, winner: 0, reason: 'threefold' };
+    }
   }
   return { over: false, winner: 0 };
+}
+
+// 盤面 hash（含輪誰下），用於三重複偵測
+export function boardKey(board, toMove) {
+  let s = String(toMove) + '|';
+  for (let r = 0; r < SIZE; r++) {
+    for (let c = 0; c < SIZE; c++) s += board[r][c];
+  }
+  return s;
+}
+
+// 判斷一個 move 是否「有進展」（吃子 or 移動普通子）→ 用於重置 40 步計數
+export function isProgressMove(boardBefore, move) {
+  if (move.captures.length > 0) return true;
+  const [fr, fc] = move.from;
+  const piece = boardBefore[fr][fc];
+  // 普通子（非王）移動 = 有進展
+  return piece === P1 || piece === P2;
 }

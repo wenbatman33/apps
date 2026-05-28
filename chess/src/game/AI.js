@@ -1,5 +1,5 @@
 // Minimax + Alpha-Beta，AI 永遠扮演玩家 2（頂部，coral）
-import { legalMoves, applyMove, owner, isKing, P1, P2, P1K, P2K, SIZE } from './Board.js';
+import { legalMoves, applyMove, owner, isKing, boardKey, isProgressMove, P1, P2, P1K, P2K, SIZE } from './Board.js';
 
 const PIECE_VAL = 100;
 const KING_VAL = 175;
@@ -31,10 +31,9 @@ function evaluate(board, aiPlayer) {
   return score;
 }
 
-function minimax(board, toMove, depth, alpha, beta, aiPlayer) {
+function minimax(board, toMove, depth, alpha, beta, aiPlayer, ctx) {
   const moves = legalMoves(board, toMove);
   if (moves.length === 0) {
-    // 對方贏
     return { score: toMove === aiPlayer ? -100000 - depth : 100000 + depth, move: null };
   }
   if (depth === 0) {
@@ -43,12 +42,32 @@ function minimax(board, toMove, depth, alpha, beta, aiPlayer) {
   const maximizing = (toMove === aiPlayer);
   let best = maximizing ? -Infinity : Infinity;
   let bestMove = null;
-  // 簡單啟發排序：優先看吃子多的
   moves.sort((a, b) => b.captures.length - a.captures.length);
   for (const m of moves) {
     const nb = applyMove(board, m);
     const next = (toMove === 1) ? 2 : 1;
-    const { score } = minimax(nb, next, depth - 1, alpha, beta, aiPlayer);
+
+    // 反重複：若這一步會導致歷史已出現過 ≥ 2 次的局面（再走一次就 3 次和棋）
+    // → AI 走出來會強烈避免（除非處於劣勢，那時和棋反而有利）
+    let repetitionAdjust = 0;
+    if (ctx && ctx.positionCounts) {
+      const key = boardKey(nb, next);
+      const prevCount = ctx.positionCounts.get(key) || 0;
+      if (prevCount >= 2) {
+        // 將形成三重複 → 和棋
+        const evalNow = evaluate(board, aiPlayer);
+        // AI 領先（evalNow > 0）時，和棋不利 → 大扣分
+        // AI 落後（evalNow < 0）時，和棋有利 → 加分
+        repetitionAdjust = -evalNow * 0.8;
+      } else if (prevCount >= 1) {
+        // 即將第 2 次重複，略避免
+        repetitionAdjust = maximizing ? -8 : 8;
+      }
+    }
+
+    const { score: rawScore } = minimax(nb, next, depth - 1, alpha, beta, aiPlayer, ctx);
+    const score = rawScore + (maximizing ? repetitionAdjust : -repetitionAdjust);
+
     if (maximizing) {
       if (score > best) { best = score; bestMove = m; }
       alpha = Math.max(alpha, best);
@@ -61,12 +80,11 @@ function minimax(board, toMove, depth, alpha, beta, aiPlayer) {
   return { score: best, move: bestMove };
 }
 
-export function chooseAIMove(board, aiPlayer, difficulty = 'normal') {
+export function chooseAIMove(board, aiPlayer, difficulty = 'normal', ctx = null) {
   const depthMap = { easy: 2, normal: 5, hard: 7 };
   const depth = depthMap[difficulty] ?? 5;
-  const { move } = minimax(board, aiPlayer, depth, -Infinity, Infinity, aiPlayer);
+  const { move } = minimax(board, aiPlayer, depth, -Infinity, Infinity, aiPlayer, ctx);
   if (move) return move;
-  // fallback：隨便挑一個合法走法
   const ms = legalMoves(board, aiPlayer);
   return ms[Math.floor(Math.random() * ms.length)] || null;
 }
