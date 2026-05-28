@@ -1,0 +1,5 @@
+# codex 出圖過程日誌
+scripts/*.out
+
+# Claude Code 本地預覽設定
+.claude/

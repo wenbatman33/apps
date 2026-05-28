@@ -1,0 +1,29 @@
+{
+  "style": "Classic MSN Zone / Yahoo Games checkers piece. Top-down view. Two-tier structure: an outer SEGMENTED POKER-CHIP RIM with alternating notched segments, and an inner GLOSSY DOME on top. Bright cartoon 2000s-era game art. Thin black outline. Centered on transparent background, PNG.",
+  "items": [
+    {
+      "id": "piece_p1",
+      "file": "assets/img/piece_p1.png",
+      "size": "512x512",
+      "prompt": "A classic MSN Games checkers piece, top-down 3D view. Structure: (1) outer POKER-CHIP RIM ring with alternating notched segments — about 16 to 20 alternating dark-red and bright-orange short rectangular notches around the circumference like a poker chip edge; (2) a slightly smaller GLOSSY ORANGE-RED DOME sitting on top, vivid fire orange to red gradient with a strong bright soft highlight on the upper-left and shadow on lower-right giving 3D sphere look. The dome surface is smooth and glossy, lit from above-left. A thin dark outline around the rim and dome. Soft subtle ground shadow under the piece. Cartoony bright 2000s game art style. NO black blobs on the dome face — keep dome bright orange. NO text, NO crown. Centered on transparent background. 1024x1024 PNG transparent."
+    },
+    {
+      "id": "piece_p2",
+      "file": "assets/img/piece_p2.png",
+      "size": "512x512",
+      "prompt": "A classic MSN Games checkers piece, top-down 3D view. Structure: (1) outer POKER-CHIP RIM ring with alternating notched segments — about 16 to 20 alternating dark-gray and light-white short rectangular notches around the circumference like a poker chip edge; (2) a slightly smaller GLOSSY WHITE DOME sitting on top, bright pearl white with a strong bright soft highlight on the upper-left and very pale gray shadow on the lower-right giving 3D sphere look. The dome surface is smooth and glossy. Thin dark outline around the rim and dome. Soft subtle ground shadow under the piece. Cartoony bright 2000s game art style. PURE WHITE — NO blue tint, NO dark spots on the dome. NO text, NO crown. Centered on transparent background. 1024x1024 PNG transparent."
+    },
+    {
+      "id": "piece_p1_king",
+      "file": "assets/img/piece_p1_king.png",
+      "size": "512x512",
+      "prompt": "A classic MSN Games checkers KING piece, top-down 3D view. Outer POKER-CHIP RIM with about 18 alternating dark-red and bright-orange notched segments. Inner GLOSSY ORANGE-RED DOME with strong upper-left highlight. Sitting centered on top of the dome is a small bright POLISHED GOLD CROWN icon — three-point classic crown silhouette with tiny jewel accents at peaks, metallic gold (#d4a857), NOT dark. Thin dark outline. Soft ground shadow. Cartoony bright 2000s style. NO text. Centered on transparent background. 1024x1024 PNG transparent."
+    },
+    {
+      "id": "piece_p2_king",
+      "file": "assets/img/piece_p2_king.png",
+      "size": "512x512",
+      "prompt": "A classic MSN Games checkers KING piece, top-down 3D view. Outer POKER-CHIP RIM with about 18 alternating dark-gray and light-white notched segments. Inner GLOSSY WHITE DOME with strong upper-left highlight. Sitting centered on top of the dome is a small bright POLISHED GOLD CROWN icon — three-point classic crown silhouette with tiny jewel accents, metallic gold (#d4a857), NOT dark. Thin dark outline. Soft ground shadow. Cartoony bright 2000s style. PURE WHITE dome — NO blue tint. NO text. Centered on transparent background. 1024x1024 PNG transparent."
+    }
+  ]
+}

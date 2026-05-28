@@ -1,0 +1,17 @@
+{
+  "style": "Classic 2000s MSN/Yahoo Games checkers art style: faceted cut gemstone pieces rendered in glossy stylized 2D. Centered subject on transparent background, PNG.",
+  "items": [
+    {
+      "id": "piece_p2",
+      "file": "assets/img/piece_p2.png",
+      "size": "512x512",
+      "prompt": "A classic MSN-Games-era checkers piece, top-down view, perfectly round disc shape, FACETED CUT GEMSTONE style like a polished cut DIAMOND or CLEAR QUARTZ. The piece color is BRIGHT WHITE / PEARL WHITE / ICY WHITE — pure white with cool icy tint. DO NOT make it blue, DO NOT make it dark, DO NOT make it gray. The disc body is white (#f5f8ff to #d8dee8) with very pale cool silver shading. Multiple short triangular FACETS visible like a cut gem, several bright WHITE SPARKLE highlights scattered across surface. Soft pale silver-gray outer rim band on edge. Cartoony bright 2D rendering. NO BLUE TINT. NO black blob. NO text, NO crown. Centered on transparent background. 1024x1024 PNG transparent."
+    },
+    {
+      "id": "piece_p2_king",
+      "file": "assets/img/piece_p2_king.png",
+      "size": "512x512",
+      "prompt": "A classic MSN-Games-era checkers KING piece, top-down view, round disc, FACETED CUT GEMSTONE style like a cut DIAMOND. Piece color is BRIGHT WHITE / PEARL WHITE / ICY WHITE — pure white. DO NOT make it blue, DO NOT make it dark gray. Body (#f5f8ff to #d8dee8) with pale silver shading and many bright white sparkle highlights. Pale silver rim band. Centered on top of the disc is a small bright POLISHED GOLD CROWN icon — three-point classic crown with tiny jewel accents, metallic gold (#d4a857), shiny. Soft cast shadow below disc. NO BLUE, NO BLACK blobs. NO text. Centered on transparent background. 1024x1024 PNG transparent."
+    }
+  ]
+}
