@@ -138,11 +138,7 @@ export class BootScene extends Phaser.Scene {
 
   preload() {
     this.load.setPath("assets");
-    // 第一階段：只載 loading 畫面用的素材（背景 + 進度條）
-    this.load.image("ui_bg_pc",         "clean_v2/loading_bg_pc.png");
-    this.load.image("ui_bg_mobile",     "clean_v2/loading_bg_mobile.png");
-    this.load.image("ui_loading_frame", "clean/loading_bar_frame_modern_clean.png");
-    this.load.image("ui_loading_fill",  "clean/loading_bar_fill_modern_clean.png");
+    // 第一階段 preload 為空（loading 畫面用 Phaser 原生繪圖，不依賴外部素材）
   }
 
   /** 第二階段：顯示 loading 畫面，再載完整 LCD 資源 */
@@ -151,47 +147,45 @@ export class BootScene extends Phaser.Scene {
   }
 
   private startMainLoad() {
-    // 背景
-    const bg = this.add.image(CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2, IS_MOBILE ? "ui_bg_mobile" : "ui_bg_pc");
-    const bgTex = this.textures.get(bg.texture.key).getSourceImage() as HTMLImageElement;
-    const bgScale = Math.max(CANVAS_WIDTH / bgTex.width, CANVAS_HEIGHT / bgTex.height);
-    bg.setScale(bgScale);
+    // 純色背景（取代外部 bg 圖）
+    this.cameras.main.setBackgroundColor("#1a1410");
 
-    // 進度條（frame + fill）置中下方
-    const barY = CANVAS_HEIGHT * (IS_MOBILE ? 0.78 : 0.85);
-    const barTargetW = CANVAS_WIDTH * 0.7;
-    const frame = this.add.image(CANVAS_WIDTH / 2, barY, "ui_loading_frame");
-    const frameTex = this.textures.get("ui_loading_frame").getSourceImage() as HTMLImageElement;
-    const frameScale = barTargetW / frameTex.width;
-    frame.setScale(frameScale);
-
-    const fill = this.add.image(CANVAS_WIDTH / 2 - barTargetW / 2 + 12, barY, "ui_loading_fill")
+    // 進度條（Phaser 原生 rectangle）
+    const barY = CANVAS_HEIGHT * (IS_MOBILE ? 0.55 : 0.55);
+    const barW = CANVAS_WIDTH * 0.6;
+    const barH = Math.round(CANVAS_HEIGHT * 0.025);
+    // 外框
+    this.add.rectangle(CANVAS_WIDTH / 2, barY, barW, barH, 0x000000, 1)
+      .setStrokeStyle(2, 0xffd166, 1);
+    // 填充條（從左對齊，寬度動態）
+    const fill = this.add.rectangle(CANVAS_WIDTH / 2 - barW / 2 + 2, barY, 0, barH - 4, 0xffd166, 1)
       .setOrigin(0, 0.5);
-    const fillTex = this.textures.get("ui_loading_fill").getSourceImage() as HTMLImageElement;
-    // fill 寬度 0 開始
-    fill.setScale(0, frameScale * (frameTex.height / fillTex.height));
-    const fillFullScaleX = (barTargetW - 24) / fillTex.width;
 
     // Loading 文字
-    this.add.text(CANVAS_WIDTH / 2, barY - 40, "LOADING...", {
-      fontSize: `${Math.round(CANVAS_HEIGHT * 0.03)}px`,
+    this.add.text(CANVAS_WIDTH / 2, barY - barH * 2, "LOADING...", {
+      fontSize: `${Math.round(CANVAS_HEIGHT * 0.025)}px`,
       color: "#ffd166", fontFamily: "monospace", fontStyle: "bold",
+    }).setOrigin(0.5);
+
+    const progressText = this.add.text(CANVAS_WIDTH / 2, barY + barH * 2, "0%", {
+      fontSize: `${Math.round(CANVAS_HEIGHT * 0.02)}px`,
+      color: "#888", fontFamily: "monospace",
     }).setOrigin(0.5);
 
     // 載入主要資源
     this.load.on("progress", (p: number) => {
-      fill.setScale(fillFullScaleX * p, frameScale * (frameTex.height / fillTex.height));
+      fill.width = (barW - 4) * p;
+      progressText.setText(`${Math.round(p * 100)}%`);
     });
     this.load.once("complete", () => {
       if (this.failed.size > 0) console.log(`[Boot] missing: ${[...this.failed].join(", ")}`);
-      // 短暫顯示「滿條」效果再切場景
-      this.time.delayedCall(300, () => this.scene.start("Lcd"));
+      this.time.delayedCall(200, () => this.scene.start("Lcd"));
     });
 
     for (const a of LCD_ASSETS)          this.load.image(a.key, a.file);
     for (const a of LCD_FALLBACK_ASSETS) this.load.image(a.key, a.file);
     for (const k of Object.keys(SOUNDS)) this.load.audio(k, SOUNDS[k]);
     this.load.on("loaderror", (file: Phaser.Loader.File) => { this.failed.add(file.key); });
-    this.load.start();  // 觸發第二階段載入
+    this.load.start();
   }
 }

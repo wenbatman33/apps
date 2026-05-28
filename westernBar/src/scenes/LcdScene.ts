@@ -424,14 +424,14 @@ export class LcdScene extends Phaser.Scene {
 
   /** 手機 portrait 版面：主 camera 縮到中間遊戲區、加 poster + 控制按鈕 cameras */
   private setupMobileLayout() {
-    // === 手機 3D 街機 cabinet 斜面版面（bg 放大 16% 切側邊）===
-    // 源圖 ratio：螢幕 x 0.050..0.949, y 0.030..0.500
-    //          凹槽: 左 0.180 / 右 0.300 / FIRE 0.550, y 0.595
+    // === 手機 3D 街機 cabinet 純色版面（bg 放大 16% 切側邊）===
+    // 源圖 ratio：螢幕 x 0.082..0.912, y 0.126..0.352
+    //          凹槽: 按 U 模式自行調整
     // 放大後 canvas x = 1.16 × source_r - 0.08
     const SCREEN_X = 0;
-    const SCREEN_Y = Math.round(CANVAS_HEIGHT * 0.030);
+    const SCREEN_Y = Math.round(CANVAS_HEIGHT * 0.073);
     const SCREEN_W = CANVAS_WIDTH;
-    const SCREEN_H = Math.round(CANVAS_HEIGHT * 0.470);
+    const SCREEN_H = Math.round(CANVAS_HEIGHT * 0.427);
     // 遊戲 16:9 等比塞入螢幕凹槽
     const gameZoom = Math.min(SCREEN_W / GAME_WIDTH, SCREEN_H / GAME_HEIGHT);
     const gameW    = GAME_WIDTH * gameZoom;
@@ -496,10 +496,10 @@ export class LcdScene extends Phaser.Scene {
     //   left (0.148, 0.618) / right (0.397, 0.616) / fire (0.781, 0.614)
     const smallBtnSize = Math.round(CANVAS_WIDTH * 0.22);
     const fireBtnSize  = Math.round(CANVAS_WIDTH * 0.34);
-    const btnL = makeImgBtn(Math.round(CANVAS_WIDTH * 0.148), FRAME_Y + Math.round(CANVAS_HEIGHT * 0.618), "ui_btn_left", smallBtnSize, () => {
+    const btnL = makeImgBtn(Math.round(CANVAS_WIDTH * 0.107), FRAME_Y + Math.round(CANVAS_HEIGHT * 0.620), "ui_btn_left", smallBtnSize, () => {
       if (this.phase === "play") this.movePlayer(-1);
     });
-    const btnR = makeImgBtn(Math.round(CANVAS_WIDTH * 0.397), FRAME_Y + Math.round(CANVAS_HEIGHT * 0.616), "ui_btn_right", smallBtnSize, () => {
+    const btnR = makeImgBtn(Math.round(CANVAS_WIDTH * 0.396), FRAME_Y + Math.round(CANVAS_HEIGHT * 0.616), "ui_btn_right", smallBtnSize, () => {
       if (this.phase === "play") this.movePlayer(+1);
     });
     const btnF = makeImgBtn(Math.round(CANVAS_WIDTH * 0.781), FRAME_Y + Math.round(CANVAS_HEIGHT * 0.614), "ui_btn_fire", fireBtnSize, () => {
