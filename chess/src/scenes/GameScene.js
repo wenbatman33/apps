@@ -28,6 +28,7 @@ export default class GameScene extends Phaser.Scene {
     this.mode = data.mode || 'ai';
     this.difficulty = data.difficulty || 'normal';
     this.aiPlayer = 2;
+    this.firstPlayer = data.firstPlayer || 1;
   }
 
   preload() {
@@ -51,7 +52,7 @@ export default class GameScene extends Phaser.Scene {
     if (need.length) installPieceTextures(this, 512, need);
 
     this.board = createInitialBoard();
-    this.toMove = 1;
+    this.toMove = this.firstPlayer;
     this.selected = null;
     this.legalForSelected = [];
     this.lastMove = null;
@@ -66,6 +67,11 @@ export default class GameScene extends Phaser.Scene {
     this.buildLayout();
     this.drawAll();
     this.refreshStatus();
+
+    // 若電腦先手，自動觸發第一手
+    if (this.mode === 'ai' && this.toMove === this.aiPlayer) {
+      this.time.delayedCall(600, () => this.runAI());
+    }
   }
 
   drawBackground(W, H) {
@@ -100,13 +106,13 @@ export default class GameScene extends Phaser.Scene {
 
     // 標題列
     const titleSize = Math.round(Math.min(W * 0.06, 28 * S));
-    this.add.text(sidePad + 2 * S, 26 * S, 'DRAUGHTS', {
-      fontFamily: '"Cinzel", serif',
+    this.add.text(sidePad + 2 * S, 26 * S, '西洋跳棋', {
+      fontFamily: '"Cinzel", "PingFang TC", serif',
       fontSize: titleSize + 'px',
       color: GOLD,
     }).setOrigin(0, 0.5).setLetterSpacing(Math.round(titleSize * 0.2));
-    this.add.text(sidePad + 2 * S, 26 * S + titleSize * 0.85, 'EMBER · SLATE', {
-      fontFamily: '"Cinzel", serif',
+    this.add.text(sidePad + 2 * S, 26 * S + titleSize * 0.85, '灰燼 · 石板', {
+      fontFamily: '"Cinzel", "PingFang TC", serif',
       fontSize: Math.round(titleSize * 0.35) + 'px',
       color: MUTED,
     }).setOrigin(0, 0.5).setLetterSpacing(Math.round(titleSize * 0.2));
@@ -248,17 +254,17 @@ export default class GameScene extends Phaser.Scene {
     const dot = this.add.circle(x + 18 * S, y, 9 * S, accent);
     dot.setStrokeStyle(1 * S, COLOR_GOLD, 0.6);
 
-    const labelText = player === 1 ? 'YOU' : (this.mode === 'ai' ? 'AI' : 'P2');
+    const labelText = player === 1 ? '我方' : (this.mode === 'ai' ? '電腦' : '對手');
     const label = this.add.text(x + 34 * S, y - 10 * S, labelText, {
-      fontFamily: '"Cinzel", serif', fontSize: px(10) + 'px', color: MUTED,
+      fontFamily: '"Cinzel", "PingFang TC", serif', fontSize: px(11) + 'px', color: MUTED,
     }).setOrigin(0, 0.5).setLetterSpacing(2 * S);
 
     const num = this.add.text(x + 34 * S, y + 8 * S, '12', {
       fontFamily: '"Cinzel", serif', fontSize: px(20) + 'px', color: INK, fontStyle: '600',
     }).setOrigin(0, 0.5);
 
-    const sub = this.add.text(x + w - 8 * S, y + 8 * S, 'pcs', {
-      fontFamily: '"Cormorant Garamond", serif', fontStyle: 'italic', fontSize: px(11) + 'px', color: MUTED,
+    const sub = this.add.text(x + w - 8 * S, y + 8 * S, '顆', {
+      fontFamily: '"Cormorant Garamond", "PingFang TC", serif', fontStyle: 'italic', fontSize: px(11) + 'px', color: MUTED,
     }).setOrigin(1, 0.5);
 
     const turnRing = this.add.graphics();
@@ -364,17 +370,16 @@ export default class GameScene extends Phaser.Scene {
     if (status.over) {
       let msg, color;
       if (status.winner === 0) {
-        // 和棋
         const reason = status.reason === 'threefold' ? '三重複局面'
                      : status.reason === 'forty_move' ? '40 步無進展'
                      : '和棋';
-        msg = `— Draw · ${reason} — tap to return —`;
+        msg = `— 和棋 · ${reason} · 點任意處返回 —`;
         color = '#a88f60';
       } else {
         const winner = status.winner === 1
-          ? 'Victory is yours'
-          : (this.mode === 'ai' ? 'The keeper prevails' : 'Player II prevails');
-        msg = `— ${winner} — tap to return —`;
+          ? '你獲勝了'
+          : (this.mode === 'ai' ? '電腦獲勝' : '玩家二獲勝');
+        msg = `— ${winner} · 點任意處返回 —`;
         color = status.winner === 1 ? GOLD_HI : '#c9876d';
       }
       this.statusText.setText(msg);
@@ -383,10 +388,10 @@ export default class GameScene extends Phaser.Scene {
       return;
     }
     if (this.mode === 'ai' && this.toMove === this.aiPlayer) {
-      this.statusText.setText('the keeper deliberates…');
+      this.statusText.setText('電腦思考中…');
       this.statusText.setColor(MUTED);
     } else {
-      this.statusText.setText(this.toMove === 1 ? 'your turn' : 'player II to move');
+      this.statusText.setText(this.toMove === 1 ? '你的回合' : '玩家二的回合');
       this.statusText.setColor(INK);
     }
   }
@@ -420,7 +425,7 @@ export default class GameScene extends Phaser.Scene {
       const all = legalMoves(this.board, this.toMove);
       const mine = all.filter(m => m.from[0] === r && m.from[1] === c);
       if (mine.length === 0) {
-        this.flashStatus('a capture must be taken');
+        this.flashStatus('此回合必須吃子');
         return;
       }
       this.selected = [r, c];

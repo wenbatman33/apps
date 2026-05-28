@@ -27,8 +27,8 @@ export default class MenuScene extends Phaser.Scene {
 
     this.drawOrnamentLine(W / 2, titleY - titleSize * 0.85, Math.min(W * 0.55, 340 * S));
 
-    const title = this.add.text(W / 2, titleY, 'DRAUGHTS', {
-      fontFamily: '"Cinzel", "Cormorant Garamond", serif',
+    const title = this.add.text(W / 2, titleY, '西洋跳棋', {
+      fontFamily: '"Cinzel", "Noto Serif TC", "PingFang TC", serif',
       fontSize: titleSize + 'px',
       fontStyle: '600',
       color: GOLD,
@@ -36,31 +36,34 @@ export default class MenuScene extends Phaser.Scene {
     title.setShadow(0, 0, '#ffcb6c', 18, true, true);
 
     const subSize = Math.round(Math.min(titleSize * 0.22, W * 0.035));
-    this.add.text(W / 2, titleY + titleSize * 0.78, 'EMBER  ·  SLATE', {
-      fontFamily: '"Cinzel", serif',
+    this.add.text(W / 2, titleY + titleSize * 0.78, '灰燼  ·  石板', {
+      fontFamily: '"Cinzel", "PingFang TC", serif',
       fontSize: subSize + 'px',
       color: MUTED,
     }).setOrigin(0.5).setLetterSpacing(Math.max(2 * S, Math.round(subSize * 0.4)));
 
     this.drawOrnamentLine(W / 2, titleY + titleSize * 1.15, Math.min(W * 0.55, 340 * S));
 
-    // 兩個玻璃感按鈕
+    // 三個玻璃感按鈕
     const btnW = Math.min(Math.max(W * 0.78, 200 * S), 360 * S);
-    const btnH = Math.round(Math.min(H * 0.085, 76 * S));
-    const gap = Math.round(btnH * 0.32);
-    const startY = H * 0.50;
+    const btnH = Math.round(Math.min(H * 0.075, 70 * S));
+    const gap = Math.round(btnH * 0.26);
+    const startY = H * 0.46;
 
-    this.makeJewelButton(W / 2, startY,           btnW, btnH, '對戰電腦 AI',     AMBER,    '⟁', () => {
-      this.scene.start('Difficulty');
+    this.makeJewelButton(W / 2, startY,                       btnW, btnH, '對戰電腦 · 你先手',   AMBER,    '⟁', () => {
+      this.scene.start('Difficulty', { firstPlayer: 1 });
     });
-    this.makeJewelButton(W / 2, startY + btnH + gap, btnW, btnH, '雙人對戰 · 同機', SAPPHIRE, '⟁', () => {
+    this.makeJewelButton(W / 2, startY + (btnH + gap),        btnW, btnH, '對戰電腦 · 電腦先手', AMBER,    '⟁', () => {
+      this.scene.start('Difficulty', { firstPlayer: 2 });
+    });
+    this.makeJewelButton(W / 2, startY + (btnH + gap) * 2,    btnW, btnH, '雙人對戰 · 同機',     SAPPHIRE, '⟁', () => {
       this.scene.start('Game', { mode: 'pvp' });
     });
 
     // 底部 italic 提示
     const footY = H - Math.max(28 * S, H * 0.06);
-    this.add.text(W / 2, footY, 'A timeless game of cunning, refined in ember and slate.', {
-      fontFamily: '"Cormorant Garamond", serif',
+    this.add.text(W / 2, footY, '一場永恆的智謀對決，淬鍊於灰燼與石板之間。', {
+      fontFamily: '"Cormorant Garamond", "PingFang TC", serif',
       fontStyle: 'italic',
       fontSize: Math.round(Math.min(W * 0.032, 15 * S)) + 'px',
       color: MUTED,

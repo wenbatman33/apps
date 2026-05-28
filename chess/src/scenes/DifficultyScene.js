@@ -9,28 +9,32 @@ const GOLD_HEX = 0xd4a857;
 export default class DifficultyScene extends Phaser.Scene {
   constructor() { super('Difficulty'); }
 
+  init(data) {
+    this.firstPlayer = data?.firstPlayer || 1;  // 1=人先手 2=電腦先手
+  }
+
   create() {
     const { width: W, height: H } = this.scale;
     this.drawBackground(W, H);
 
     const titleSize = Math.round(Math.min(W * 0.075, H * 0.045, 38 * S));
-    this.add.text(W / 2, H * 0.20, 'CHOOSE  THY  RIVAL', {
-      fontFamily: '"Cinzel", serif',
+    this.add.text(W / 2, H * 0.20, '選擇對手', {
+      fontFamily: '"Cinzel", "PingFang TC", serif',
       fontSize: titleSize + 'px',
       color: GOLD,
     }).setOrigin(0.5).setLetterSpacing(Math.round(titleSize * 0.3));
 
-    this.add.text(W / 2, H * 0.20 + titleSize, 'select an opponent worthy of you', {
-      fontFamily: '"Cormorant Garamond", serif',
+    this.add.text(W / 2, H * 0.20 + titleSize, '挑一位與你旗鼓相當的棋手', {
+      fontFamily: '"Cormorant Garamond", "PingFang TC", serif',
       fontStyle: 'italic',
       fontSize: Math.round(titleSize * 0.45) + 'px',
       color: MUTED,
     }).setOrigin(0.5);
 
     const opts = [
-      { key: 'easy',   label: 'NOVICE',  subtitle: '初心 · 三回合的展望',     tone: 0x6f9b6a },
-      { key: 'normal', label: 'KEEPER',  subtitle: '守局 · 五回合的盤算',     tone: 0xc78a3a },
-      { key: 'hard',   label: 'MASTER',  subtitle: '宗師 · 七回合的算度',     tone: 0xb83c4a },
+      { key: 'easy',   label: '初心',  subtitle: '三回合的展望',     tone: 0x6f9b6a },
+      { key: 'normal', label: '守局',  subtitle: '五回合的盤算',     tone: 0xc78a3a },
+      { key: 'hard',   label: '宗師',  subtitle: '七回合的算度',     tone: 0xb83c4a },
     ];
 
     const btnW = Math.min(Math.max(W * 0.78, 200 * S), 380 * S);
@@ -40,7 +44,7 @@ export default class DifficultyScene extends Phaser.Scene {
 
     opts.forEach((opt, i) => {
       this.makeCard(W / 2, startY + (btnH + gap) * i, btnW, btnH, opt.label, opt.subtitle, opt.tone, () => {
-        this.scene.start('Game', { mode: 'ai', difficulty: opt.key });
+        this.scene.start('Game', { mode: 'ai', difficulty: opt.key, firstPlayer: this.firstPlayer });
       });
     });
 
@@ -74,7 +78,7 @@ export default class DifficultyScene extends Phaser.Scene {
     draw(false);
 
     const labelText = this.add.text(x - w / 2 + 24 * S, y - h * 0.18, label, {
-      fontFamily: '"Cinzel", serif',
+      fontFamily: '"Cinzel", "PingFang TC", serif',
       fontSize: Math.round(h * 0.30) + 'px',
       color: INK,
     }).setOrigin(0, 0.5).setLetterSpacing(4 * S);
@@ -97,8 +101,8 @@ export default class DifficultyScene extends Phaser.Scene {
   }
 
   makeBackButton(x, y) {
-    const t = this.add.text(x, y, '‹  return', {
-      fontFamily: '"Cormorant Garamond", serif',
+    const t = this.add.text(x, y, '‹  返回', {
+      fontFamily: '"Cormorant Garamond", "PingFang TC", serif',
       fontStyle: 'italic',
       fontSize: px(18) + 'px',
       color: MUTED,
