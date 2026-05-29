@@ -470,18 +470,25 @@ class PlayScene extends Phaser.Scene {
 
     _showWinPanel() {
         const D = 200; // 結算面板放最頂層
-        this.add.rectangle(CANVAS_WIDTH_HALF, CANVAS_HEIGHT_HALF, CANVAS_WIDTH, CANVAS_HEIGHT, 0x001233, 0.8).setDepth(D);
-        this.add.text(CANVAS_WIDTH_HALF, CANVAS_HEIGHT_HALF - 80, 'GAME OVER', {
-            fontFamily: 'Arial Black', fontSize: 72, color: '#fff', stroke: '#0033aa', strokeThickness: 8,
-        }).setOrigin(0.5).setDepth(D + 1);
-        this.add.text(CANVAS_WIDTH_HALF, CANVAS_HEIGHT_HALF + 10, 'SCORE  ' + this.score, {
-            fontFamily: 'Arial Black', fontSize: 48, color: '#ffe066',
-        }).setOrigin(0.5).setDepth(D + 1);
-        const btn = this.add.rectangle(CANVAS_WIDTH_HALF, CANVAS_HEIGHT_HALF + 110, 260, 60, 0x1a4fb8)
-            .setStrokeStyle(2, 0x9cc3ff).setInteractive({ useHandCursor: true }).setDepth(D + 1);
-        this.add.text(CANVAS_WIDTH_HALF, CANVAS_HEIGHT_HALF + 110, 'PLAY AGAIN', {
-            fontFamily: 'Arial', fontSize: 28, color: '#fff',
-        }).setOrigin(0.5).setDepth(D + 2);
+        const W = window.innerWidth || GAME_W, H = window.innerHeight || GAME_H;
+        const portrait = H > W;
+        const cx = CANVAS_WIDTH_HALF, cy = CANVAS_HEIGHT_HALF;
+        // 全部 setScrollFactor(0)：固定畫面中央、不隨相機跟拍偏移、不被 ENVELOP 裁；字級依方向縮放
+        this.add.rectangle(cx, cy, GAME_W * 2, GAME_H * 2, 0x001233, 0.82).setDepth(D).setScrollFactor(0);
+        this.add.text(cx, cy - (portrait ? 70 : 80), 'GAME OVER', {
+            fontFamily: 'Arial Black', fontSize: portrait ? 36 : 72, color: '#fff',
+            stroke: '#0033aa', strokeThickness: portrait ? 5 : 8,
+        }).setOrigin(0.5).setDepth(D + 1).setScrollFactor(0);
+        this.add.text(cx, cy - (portrait ? 12 : 10), 'SCORE  ' + this.score, {
+            fontFamily: 'Arial Black', fontSize: portrait ? 28 : 48, color: '#ffe066',
+        }).setOrigin(0.5).setDepth(D + 1).setScrollFactor(0);
+        const bw = portrait ? 230 : 260, bh = portrait ? 50 : 60;
+        const by = cy + (portrait ? 72 : 110);
+        const btn = this.add.rectangle(cx, by, bw, bh, 0x1a4fb8)
+            .setStrokeStyle(2, 0x9cc3ff).setInteractive({ useHandCursor: true }).setDepth(D + 1).setScrollFactor(0);
+        this.add.text(cx, by, 'PLAY AGAIN', {
+            fontFamily: 'Arial', fontSize: portrait ? 22 : 28, color: '#fff',
+        }).setOrigin(0.5).setDepth(D + 2).setScrollFactor(0);
         btn.on('pointerdown', () => this.scene.restart());
     }
 
