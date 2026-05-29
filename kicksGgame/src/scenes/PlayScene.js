@@ -87,7 +87,7 @@ class PlayScene extends Phaser.Scene {
     onOrientation(portrait) {
         this.portrait = portrait;
         if (!portrait) this.cameras.main.setScroll(0, 0); // 橫向不跟拍、相機回正
-        if (this.scoreText) this._layoutHUD(portrait); // HUD 重新定位
+        if (this.scoreText) this._layoutHUD(); // HUD 重新定位
     }
 
     // 直向相機跟球：待射對準中央、射門後平滑跟著球左右 pan
@@ -197,10 +197,10 @@ class PlayScene extends Phaser.Scene {
             fontFamily: 'Arial Black', color: '#ffffff', stroke: '#002a59', strokeThickness: 5,
         }).setOrigin(1, 0).setDepth(D).setScrollFactor(0);
 
-        this.backBg = this.add.rectangle(0, 0, 150, 44, 0x000033, 0.6)
-            .setStrokeStyle(2, 0x9cc3ff).setInteractive({ useHandCursor: true }).setDepth(D).setScrollFactor(0);
-        this.backText = this.add.text(0, 0, '← MENU', {
-            fontFamily: 'Arial', fontSize: 20, color: '#fff',
+        this.backBg = this.add.rectangle(0, 0, 68, 22, 0x000033, 0.6)
+            .setStrokeStyle(1.5, 0x9cc3ff).setInteractive({ useHandCursor: true }).setDepth(D).setScrollFactor(0);
+        this.backText = this.add.text(0, 0, 'MENU', {
+            fontFamily: 'Arial', fontSize: 11, color: '#fff',
         }).setOrigin(0.5).setDepth(D + 1).setScrollFactor(0);
         this.backBg.on('pointerdown', () => this.scene.start('Menu'));
 
@@ -209,27 +209,32 @@ class PlayScene extends Phaser.Scene {
             fontFamily: 'Arial Black', color: '#fff', stroke: '#002a59', strokeThickness: 10,
         }).setOrigin(0.5).setDepth(D + 5);
 
-        this._layoutHUD(this.portrait);
+        this._layoutHUD();
     }
 
     // 依方向定位 HUD：直向收進中央可視條(x∈533~827)，橫向回角落
-    _layoutHUD(portrait) {
-        if (portrait) {
-            const L = 545, R = 815, MID = CANVAS_WIDTH_HALF;
-            this.scoreText.setOrigin(0, 0).setPosition(L, 14).setFontSize(28);
-            this.multiText.setOrigin(0, 0).setPosition(L, 48).setFontSize(20);
-            this.launchText.setPosition(R, 14).setFontSize(24);
-            this.backBg.setPosition(R - 45, 92);
-            this.backText.setPosition(R - 45, 92);
-            this.resultText.setFontSize(44); // 位置由 update 固定置中
-        } else {
-            this.scoreText.setOrigin(0, 0).setPosition(40, 24).setFontSize(38);
-            this.multiText.setOrigin(0, 0).setPosition(40, 70).setFontSize(26);
-            this.launchText.setPosition(CANVAS_WIDTH - 40, 24).setFontSize(32);
-            this.backBg.setPosition(CANVAS_WIDTH - 90, 80);
-            this.backText.setPosition(CANVAS_WIDTH - 90, 80);
-            this.resultText.setFontSize(72); // 位置由 update 固定置中
-        }
+    // 依「實際可見邊界」把 HUD 貼齊螢幕四周，不被 ENVELOP 裁切（PC/手機/任何比例通用）
+    _layoutHUD() {
+        const W = window.innerWidth || GAME_W;
+        const H = window.innerHeight || GAME_H;
+        const portrait = H > W;
+        const scale = Math.max(W / GAME_W, H / GAME_H);    // ENVELOP 縮放
+        const visHalfW = Math.min(GAME_W, W / scale) / 2;   // 可見半寬（game 座標）
+        const visHalfH = Math.min(GAME_H, H / scale) / 2;   // 可見半高
+        const m = 18;
+        const left = CANVAS_WIDTH_HALF - visHalfW + m;
+        const right = CANVAS_WIDTH_HALF + visHalfW - m;
+        const top = CANVAS_HEIGHT_HALF - visHalfH + m;
+
+        const big = !portrait;
+        this.scoreText.setOrigin(0, 0).setPosition(left, top).setFontSize(big ? 34 : 26);
+        this.multiText.setOrigin(0, 0).setPosition(left, top + (big ? 42 : 32)).setFontSize(big ? 22 : 18);
+        this.launchText.setOrigin(1, 0).setPosition(right, top).setFontSize(big ? 30 : 22);
+        // MENU 框右緣對齊可見右界（與 0/15 同一垂直線），文字置於框正中心
+        const menuY = top + (big ? 64 : 52);
+        this.backBg.setOrigin(1, 0.5).setPosition(right, menuY);       // 框右緣 = right
+        this.backText.setOrigin(0.5, 0.5).setPosition(right - 34, menuY); // 框中心 = right-34（寬68的一半）
+        this.resultText.setFontSize(big ? 72 : 44); // 位置由 update 固定置中
     }
 
     // ---------- 輸入（移植 onMouseDown / onPressMove / onPressUp）----------
