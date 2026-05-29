@@ -11,7 +11,9 @@ const config = {
     height: GAME_H,
     transparent: true,
     scale: {
-        mode: Phaser.Scale.FIT,
+        // ENVELOP：放大填滿整個螢幕、超出的邊緣裁切（直向才能佔滿全畫面）
+        // 直向只顯示中央窄條，球往邊角射時靠 PlayScene 的相機跟隨補足視野
+        mode: Phaser.Scale.ENVELOP,
         autoCenter: Phaser.Scale.CENTER_BOTH,
     },
     scene: [PreloadScene, MenuScene, JerseyPocScene, PlayScene],

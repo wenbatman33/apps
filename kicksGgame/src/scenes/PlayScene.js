@@ -77,6 +77,28 @@ class PlayScene extends Phaser.Scene {
         this._buildInput();
 
         this.lastTime = this.time.now;
+
+        // 直向：相機跟球（ENVELOP 只顯示中央窄條，球往邊角時鏡頭跟拍補足視野）
+        this.portrait = !!window.__portrait;
+        this.cameras.main.setScroll(0, 0);
+    }
+
+    // 方向改變時由 orientation.js 呼叫
+    onOrientation(portrait) {
+        this.portrait = portrait;
+        if (!portrait) this.cameras.main.setScroll(0, 0); // 橫向不跟拍、相機回正
+        if (this.scoreText) this._layoutHUD(portrait); // HUD 重新定位
+    }
+
+    // 直向相機跟球：待射對準中央、射門後平滑跟著球左右 pan
+    _updateCameraFollow() {
+        const cam = this.cameras.main;
+        if (!this.portrait) { cam.scrollX = 0; return; }
+        let target = 0;
+        if (this.launched) {
+            target = Phaser.Math.Clamp(this.ball.sprite.x - CANVAS_WIDTH_HALF, -400, 400);
+        }
+        cam.scrollX += (target - cam.scrollX) * 0.12; // lerp 平滑跟拍
     }
 
     // ---------- 廣告看板層 ----------
@@ -163,37 +185,51 @@ class PlayScene extends Phaser.Scene {
     // ---------- HUD ----------
     // HUD 一律放 depth 100，永遠蓋在球門網/球/守門員之上，避免被遮住
     _buildHUD() {
-        const HUD_DEPTH = 100;
+        const D = 100;
+        // 全部 setScrollFactor(0)：固定貼螢幕、不隨相機跟拍移動
+        this.scoreText = this.add.text(0, 0, 'SCORE 0', {
+            fontFamily: 'Arial Black', color: '#ffffff', stroke: '#002a59', strokeThickness: 6,
+        }).setDepth(D).setScrollFactor(0);
+        this.multiText = this.add.text(0, 0, 'x1.0', {
+            fontFamily: 'Arial Black', color: '#ffe066', stroke: '#002a59', strokeThickness: 4,
+        }).setDepth(D).setScrollFactor(0);
+        this.launchText = this.add.text(0, 0, `0 / ${this.NUM_OF_PENALTY}`, {
+            fontFamily: 'Arial Black', color: '#ffffff', stroke: '#002a59', strokeThickness: 5,
+        }).setOrigin(1, 0).setDepth(D).setScrollFactor(0);
 
-        this.scoreText = this.add.text(40, 24, 'SCORE 0', {
-            fontFamily: 'Arial Black', fontSize: 38, color: '#ffffff',
-            stroke: '#002a59', strokeThickness: 6,
-        }).setDepth(HUD_DEPTH);
-        this.multiText = this.add.text(40, 70, 'x1.0', {
-            fontFamily: 'Arial Black', fontSize: 26, color: '#ffe066',
-            stroke: '#002a59', strokeThickness: 4,
-        }).setDepth(HUD_DEPTH);
-        this.launchText = this.add.text(CANVAS_WIDTH - 40, 24, `0 / ${this.NUM_OF_PENALTY}`, {
-            fontFamily: 'Arial Black', fontSize: 32, color: '#ffffff',
-            stroke: '#002a59', strokeThickness: 5,
-        }).setOrigin(1, 0).setDepth(HUD_DEPTH);
-
-        const backBg = this.add.rectangle(CANVAS_WIDTH - 90, 80, 150, 44, 0x000033, 0.6)
-            .setStrokeStyle(2, 0x9cc3ff).setInteractive({ useHandCursor: true }).setDepth(HUD_DEPTH);
-        this.add.text(CANVAS_WIDTH - 90, 80, '← MENU', {
+        this.backBg = this.add.rectangle(0, 0, 150, 44, 0x000033, 0.6)
+            .setStrokeStyle(2, 0x9cc3ff).setInteractive({ useHandCursor: true }).setDepth(D).setScrollFactor(0);
+        this.backText = this.add.text(0, 0, '← MENU', {
             fontFamily: 'Arial', fontSize: 20, color: '#fff',
-        }).setOrigin(0.5).setDepth(HUD_DEPTH + 1);
-        backBg.on('pointerdown', () => this.scene.start('Menu'));
+        }).setOrigin(0.5).setDepth(D + 1).setScrollFactor(0);
+        this.backBg.on('pointerdown', () => this.scene.start('Menu'));
 
-        this.resultText = this.add.text(CANVAS_WIDTH_HALF, CANVAS_HEIGHT_HALF - 60, '', {
-            fontFamily: 'Arial Black', fontSize: 100, color: '#fff',
-            stroke: '#002a59', strokeThickness: 10,
-        }).setOrigin(0.5).setDepth(HUD_DEPTH);
+        // resultText 不靠 scrollFactor，改由 update 每幀強制釘在畫面正中央（不跟鏡頭）
+        this.resultText = this.add.text(0, 0, '', {
+            fontFamily: 'Arial Black', color: '#fff', stroke: '#002a59', strokeThickness: 10,
+        }).setOrigin(0.5).setDepth(D + 5);
 
-        this.add.text(CANVAS_WIDTH_HALF, CANVAS_HEIGHT - 28,
-            '由下往上「快速滑動」射門 — 滑動方向決定球的左右，按住時間越久球越高', {
-                fontFamily: 'Arial', fontSize: 18, color: '#ffeb88',
-            }).setOrigin(0.5).setDepth(HUD_DEPTH);
+        this._layoutHUD(this.portrait);
+    }
+
+    // 依方向定位 HUD：直向收進中央可視條(x∈533~827)，橫向回角落
+    _layoutHUD(portrait) {
+        if (portrait) {
+            const L = 545, R = 815, MID = CANVAS_WIDTH_HALF;
+            this.scoreText.setOrigin(0, 0).setPosition(L, 14).setFontSize(28);
+            this.multiText.setOrigin(0, 0).setPosition(L, 48).setFontSize(20);
+            this.launchText.setPosition(R, 14).setFontSize(24);
+            this.backBg.setPosition(R - 45, 92);
+            this.backText.setPosition(R - 45, 92);
+            this.resultText.setFontSize(44); // 位置由 update 固定置中
+        } else {
+            this.scoreText.setOrigin(0, 0).setPosition(40, 24).setFontSize(38);
+            this.multiText.setOrigin(0, 0).setPosition(40, 70).setFontSize(26);
+            this.launchText.setPosition(CANVAS_WIDTH - 40, 24).setFontSize(32);
+            this.backBg.setPosition(CANVAS_WIDTH - 90, 80);
+            this.backText.setPosition(CANVAS_WIDTH - 90, 80);
+            this.resultText.setFontSize(72); // 位置由 update 固定置中
+        }
     }
 
     // ---------- 輸入（移植 onMouseDown / onPressMove / onPressUp）----------
@@ -481,5 +517,11 @@ class PlayScene extends Phaser.Scene {
         this.ballPosition();
         this.ball.rolls(this.ballBody);
         Projection.refresh();
+
+        this._updateCameraFollow();
+
+        // 結果文字永遠固定在畫面正中央（抵消相機位移，不跟鏡頭）
+        const cam = this.cameras.main;
+        this.resultText.setPosition(cam.scrollX + CANVAS_WIDTH_HALF, cam.scrollY + CANVAS_HEIGHT_HALF);
     }
 }

@@ -7,16 +7,20 @@ class PreloadScene extends Phaser.Scene {
         this.load.maxParallelDownloads = 8;
 
         const cx = CANVAS_WIDTH / 2, cy = CANVAS_HEIGHT / 2;
+        // 直向（ENVELOP 中央窄條）縮窄進度條塞進可視區
+        const portrait = window.innerHeight > window.innerWidth;
+        const barW = portrait ? 260 : 440;
+        const hw = barW / 2;
         this.add.rectangle(cx, cy, CANVAS_WIDTH, CANVAS_HEIGHT, 0x0a1a30);
         const bg = this.add.graphics();
-        bg.fillStyle(0x222244).fillRect(cx - 220, cy - 14, 440, 28);
+        bg.fillStyle(0x222244).fillRect(cx - hw, cy - 14, barW, 28);
         const bar = this.add.graphics();
         const pct = this.add.text(cx, cy - 56, 'LOADING… 0%', {
-            fontFamily: 'Arial', fontSize: 26, color: '#cfe0ff',
+            fontFamily: 'Arial', fontSize: portrait ? 22 : 26, color: '#cfe0ff',
         }).setOrigin(0.5);
         this.load.on('progress', (p) => {
             bar.clear();
-            bar.fillStyle(0x4d8bff).fillRect(cx - 216, cy - 10, 432 * p, 20);
+            bar.fillStyle(0x4d8bff).fillRect(cx - hw + 4, cy - 10, (barW - 8) * p, 20);
             pct.setText('LOADING… ' + Math.round(p * 100) + '%');
         });
 
