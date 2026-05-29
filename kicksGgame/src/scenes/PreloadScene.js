@@ -26,23 +26,21 @@ class PreloadScene extends Phaser.Scene {
 
         const base = 'assets/sprites';
 
-        // 背景 / 靜態圖
-        this.load.image('bg_menu', `${base}/bg_menu.jpg`);
-        this.load.image('bg_game', `${base}/bg_game.jpg`);
-        this.load.image('goal', `${base}/goal.png`);
-        this.load.image('ball_shadow', `${base}/ball_shadow.png`);
-        this.load.image('logo', `${base}/logo_ctl.png`);
-        this.load.image('start_ball', `${base}/start_ball.png`);
+        // 背景 / 靜態圖（已轉 WebP；bg_menu 與 logo 無場景使用，移除）
+        this.load.image('bg_game', `${base}/bg_game.webp`);
+        this.load.image('goal', `${base}/goal.webp`);
+        this.load.image('ball_shadow', `${base}/ball_shadow.webp`);
+        this.load.image('start_ball', `${base}/start_ball.webp`);
 
         // 廣告看板用圖（平鋪）
-        this.load.image('ad_18luck', 'assets/logo/18luck.png');
+        this.load.image('ad_18luck', 'assets/logo/18luck.webp');
 
         // 球：1050×150 = 7 幀，每幀 150×150
-        this.load.spritesheet('ball', `${base}/ball.png`, { frameWidth: 150, frameHeight: 150 });
+        this.load.spritesheet('ball', `${base}/ball.webp`, { frameWidth: 150, frameHeight: 150 });
 
         // 球員射門動畫 31 幀
         for (let i = 0; i < NUM_SPRITE_PLAYER; i++) {
-            this.load.image(`player_${i}`, `${base}/player/player_${i}.png`);
+            this.load.image(`player_${i}`, `${base}/player/player_${i}.webp`);
         }
 
         // 守門員 16 組動畫，逐幀載入
@@ -50,7 +48,7 @@ class PreloadScene extends Phaser.Scene {
             const name = SPRITE_NAME_GOALKEEPER[g];
             const n = NUM_SPRITE_GOALKEEPER[g];
             for (let f = 0; f < n; f++) {
-                this.load.image(`${name}_${f}`, `${base}/${name}/${name}_${f}.png`);
+                this.load.image(`${name}_${f}`, `${base}/${name}/${name}_${f}.webp`);
             }
         }
 
