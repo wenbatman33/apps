@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<title>Widget 示範 — 任何網頁都能塞</title>
+<style>
+  body { font-family: -apple-system, "Noto Sans TC", sans-serif; max-width: 720px; margin: 60px auto; padding: 0 20px; line-height: 1.7; color: #333; }
+  h1 { color: #c2410c; }
+  pre { background: #f4f4f4; padding: 14px; border-radius: 8px; overflow-x: auto; }
+  code { background: #f4f4f4; padding: 2px 6px; border-radius: 4px; }
+</style>
+</head>
+<body>
+  <h1>🏀 Basketball Widget 示範</h1>
+  <p>這頁是一個<strong>完全普通的網頁</strong>，沒有任何特別 markup，只在最後加了一行：</p>
+  <pre><code>&lt;script src="basketball-widget.js"&gt;&lt;/script&gt;</code></pre>
+  <p>瞄準器自動出現在右下角，籃框出現在左下角，HUD 在左上角。點籃球或按空白鍵就出手。</p>
+  <p>把 <code>basketball-widget.js</code> 丟到任何網站，加這行 script 就能玩。</p>
+
+  <h2>整合方式</h2>
+  <ol>
+    <li>把 <code>basketball-widget.js</code> 放到你的網站</li>
+    <li>在任何頁面的 <code>&lt;body&gt;</code> 結尾前加一行 script</li>
+    <li>就這樣</li>
+  </ol>
+
+  <p>不需要 jQuery、不需要 React、不會跟你的 CSS 衝突（class 都用 <code>bbw-</code> 前綴 + 超高 z-index）。</p>
+
+  <h2>更多內容測試捲動</h2>
+  <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit.</p>
+  <p>Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.</p>
+  <p>Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris.</p>
+  <p>Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore.</p>
+  <p>Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia.</p>
+
+  <script src="basketball-widget.js"></script>
+</body>
+</html>
