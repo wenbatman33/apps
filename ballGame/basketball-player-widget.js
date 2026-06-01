@@ -26,7 +26,13 @@
 
   // ====== 樣式 ======
   const css = `
-  .bpw-root, .bpw-root * { box-sizing: border-box; }
+  .bpw-root, .bpw-root * {
+    box-sizing: border-box;
+    -webkit-user-select: none; user-select: none;
+    -webkit-touch-callout: none;          /* 禁 iOS 長按選單 */
+    -webkit-user-drag: none;
+  }
+  .bpw-root img { -webkit-user-drag: none; user-drag: none; pointer-events: none; }
   .bpw-player, .bpw-hoop, .bpw-ball, .bpw-hud, .bpw-power, .bpw-team {
     position: fixed; z-index: 99990;
     pointer-events: none;
@@ -202,7 +208,7 @@
   const hoopEl = el('div', 'bpw-hoop', hoopSVG);
   const shadowEl = el('div', 'bpw-shadow');
   const playerEl = el('div', 'bpw-player');  // 背景使用 sprite sheet
-  const ballEl = el('div', 'bpw-ball', `<img src="${ballImg}" alt="ball" />`);
+  const ballEl = el('div', 'bpw-ball', `<img src="${ballImg}" alt="ball" draggable="false" />`);
   const powerEl = el('div', 'bpw-power', `<div class="track"><div class="fill"></div></div>`);
   const powerFill = powerEl.querySelector('.fill');
   const vpowerEl = el('div', 'bpw-vpower', `<div class="track"><div class="vfill"></div></div>`);
@@ -383,10 +389,12 @@
     activeBar = null;
   }
   // 兩段都按在球員身上開始；放開(任意處)結束該段
-  playerEl.addEventListener('mousedown', startCharge);
-  playerEl.addEventListener('touchstart', startCharge, { passive: false });
-  document.addEventListener('mouseup', endCharge);
-  document.addEventListener('touchend', endCharge, { passive: false });
+  // 觸控後 800ms 內忽略瀏覽器補送的合成滑鼠事件，避免第二段被假事件吃掉
+  let lastTouch = 0;
+  playerEl.addEventListener('touchstart', e => { lastTouch = performance.now(); startCharge(e); }, { passive: false });
+  document.addEventListener('touchend', e => { lastTouch = performance.now(); if (charging && e.cancelable) e.preventDefault(); endCharge(e); }, { passive: false });
+  playerEl.addEventListener('mousedown', e => { if (performance.now() - lastTouch < 800) return; startCharge(e); });
+  document.addEventListener('mouseup', e => { if (performance.now() - lastTouch < 800) return; endCharge(e); });
 
   // ====== 投籃：逐幀播放 + 出手物理 ======
   const stats = { score: 0, hits: 0, shots: 0 };
