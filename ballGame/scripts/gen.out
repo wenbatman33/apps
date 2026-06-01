@@ -1,0 +1,967 @@
+[gen] 輸出目錄: /Users/batman_work/claude/apps/ballGame/assets/players
+[gen] 共 4 張，跳過已存在的
+
+[gen] knicks_ready → /Users/batman_work/claude/apps/ballGame/assets/players/knicks_ready.png
+Reading additional input from stdin...
+OpenAI Codex v0.133.0
+--------
+workdir: /Users/batman_work/claude/apps/ballGame
+model: gpt-5.5
+provider: openai
+approval: never
+sandbox: workspace-write [workdir, /tmp, $TMPDIR]
+reasoning effort: medium
+reasoning summaries: none
+session id: 019e8130-2614-7a12-aee7-a6cf461622a6
+--------
+user
+請用內建 image_gen 工具產一張 1024x1024 PNG。
+主題：Full-body cartoon illustration of a male basketball player standing in ready stance, holding a basketball at chest height with both hands. Wearing official New York Knicks home jersey: orange jersey top with blue trim and 'KNICKS' wordmark on chest, large white number '7' on the front, blue shorts with orange side stripe, white basketball shoes. Athletic build, confident smile, looking forward. NBA 2K cover art style, clean bold outlines, half-realistic cartoon shading, crisp vector-like rendering. Front-facing pose, fully visible from head to feet. TRANSPARENT BACKGROUND PNG, no background elements, no shadow on ground. Centered composition with small padding.
+完成後把產出複製到絕對路徑 /Users/batman_work/claude/apps/ballGame/assets/players/knicks_ready.png，並用 sips 縮放到 512x512（指令: sips -z 512 512 /Users/batman_work/claude/apps/ballGame/assets/players/knicks_ready.png）。
+最後回報 OK 即可，不要額外說明。
+codex
+我會使用 imagegen skill，因為這次需要產出 PNG 圖像資產並放進專案指定路徑。
+exec
+/bin/zsh -lc "sed -n '1,220p' /Users/batman_work/.codex/skills/.system/imagegen/SKILL.md" in /Users/batman_work/claude/apps/ballGame
+ succeeded in 0ms:
+---
+name: "imagegen"
+description: "Generate or edit raster images when the task benefits from AI-created bitmap visuals such as photos, illustrations, textures, sprites, mockups, or transparent-background cutouts. Use when Codex should create a brand-new image, transform an existing image, or derive visual variants from references, and the output should be a bitmap asset rather than repo-native code or vector. Do not use when the task is better handled by editing existing SVG/vector/code-native assets, extending an established icon or logo system, or building the visual directly in HTML/CSS/canvas."
+---
+
+# Image Generation Skill
+
+Generates or edits images for the current project (for example website assets, game assets, UI mockups, product mockups, wireframes, logo design, photorealistic images, or infographics).
+
+## Top-level modes and rules
+
+This skill has exactly two top-level modes:
+
+- **Default built-in tool mode (preferred):** built-in `image_gen` tool for normal image generation, editing, and simple transparent-image requests. Does not require `OPENAI_API_KEY`.
+- **Fallback CLI mode:** `scripts/image_gen.py` CLI. Use when the user explicitly asks for the CLI/API/model path, or after the user explicitly confirms a true model-native transparency fallback with `gpt-image-1.5`. Requires `OPENAI_API_KEY`.
+
+Within CLI fallback, the CLI exposes three subcommands:
+
+- `generate`
+- `edit`
+- `generate-batch`
+
+Rules:
+- Use the built-in `image_gen` tool by default for normal image generation and editing requests.
+- Do not switch to CLI fallback for ordinary quality, size, or file-path control.
+- If the user explicitly asks for a transparent image/background, stay on built-in `image_gen` first: prompt for a flat removable chroma-key background, then remove it locally with the installed helper at `$CODEX_HOME/skills/.system/imagegen/scripts/remove_chroma_key.py`.
+- Never silently switch from built-in `image_gen` or CLI `gpt-image-2` to CLI `gpt-image-1.5`. Treat this as a model/path downgrade and ask the user before doing it, unless the user has already explicitly requested `gpt-image-1.5`, `scripts/image_gen.py`, or CLI fallback.
+- If a transparent request appears too complex for clean chroma-key removal, asks for true/native transparency, or local removal fails validation, explain that true transparency requires CLI `gpt-image-1.5 --background transparent --output-format png` because `gpt-image-2` does not support `background=transparent`, then ask whether to proceed. Run the CLI fallback only after the user confirms.
+- The word `batch` by itself does not mean CLI fallback. If the user asks for many assets or says to batch-generate assets without explicitly asking for CLI/API/model controls, stay on the built-in path and issue one built-in call per requested asset or variant.
+- If the built-in tool fails or is unavailable, tell the user the CLI fallback exists and that it requires `OPENAI_API_KEY`. Proceed only if the user explicitly asks for that fallback.
+- If the user explicitly asks for CLI mode, use the bundled `scripts/image_gen.py` workflow. Do not create one-off SDK runners.
+- Never modify `scripts/image_gen.py`. If something is missing, ask the user before doing anything else.
+
+Built-in save-path policy:
+- In built-in tool mode, Codex saves generated images under `$CODEX_HOME/*` by default.
+- Do not describe or rely on OS temp as the default built-in destination.
+- Do not describe or rely on a destination-path argument (if any) on the built-in `image_gen` tool. If a specific location is needed, generate first and then move or copy the selected output from `$CODEX_HOME/generated_images/...`.
+- Save-path precedence in built-in mode:
+  1. If the user names a destination, move or copy the selected output there.
+  2. If the image is meant for the current project, move or copy the final selected image into the workspace before finishing.
+  3. If the image is only for preview or brainstorming, render it inline; the underlying file can remain at the default `$CODEX_HOME/*` path.
+- Never leave a project-referenced asset only at the default `$CODEX_HOME/*` path.
+- Do not overwrite an existing asset unless the user explicitly asked for replacement; otherwise create a sibling versioned filename such as `hero-v2.png` or `item-icon-edited.png`.
+
+Shared prompt guidance for both modes lives in `references/prompting.md` and `references/sample-prompts.md`.
+
+Fallback-only docs/resources for CLI mode:
+- `references/cli.md`
+- `references/image-api.md`
+- `references/codex-network.md`
+- `scripts/image_gen.py`
+
+Local post-processing helper:
+- `$CODEX_HOME/skills/.system/imagegen/scripts/remove_chroma_key.py`: removes a flat chroma-key background from a generated image and writes a PNG/WebP with alpha. Prefer auto-key sampling, soft matte, and despill for antialiased edges.
+
+## When to use
+- Generate a new image (concept art, product shot, cover, website hero)
+- Generate a new image using one or more reference images for style, composition, or mood
+- Edit an existing image (inpainting, lighting or weather transformations, background replacement, object removal, compositing, transparent background)
+- Produce many assets or variants for one task
+
+## When not to use
+- Extending or matching an existing SVG/vector icon set, logo system, or illustration library inside the repo
+- Creating simple shapes, diagrams, wireframes, or icons that are better produced directly in SVG, HTML/CSS, or canvas
+- Making a small project-local asset edit when the source file already exists in an editable native format
+- Any task where the user clearly wants deterministic code-native output instead of a generated bitmap
+
+## Decision tree
+
+Think about two separate questions:
+
+1. **Intent:** is this a new image or an edit of an existing image?
+2. **Execution strategy:** is this one asset or many assets/variants?
+
+Intent:
+- If the user wants to modify an existing image while preserving parts of it, treat the request as **edit**.
+- If the user provides images only as references for style, composition, mood, or subject guidance, treat the request as **generate**.
+- If the user provides no images, treat the request as **generate**.
+
+Built-in edit semantics:
+- Built-in edit mode is for images already visible in the conversation context, such as attached images or images generated earlier in the thread.
+- If the user wants to edit a local image file with the built-in tool, first load it with built-in `view_image` tool so the image is visible in the conversation context, then proceed with the built-in edit flow.
+- Do not promise arbitrary filesystem-path editing through the built-in tool.
+- If a local file still needs direct file-path control, masks, or other explicit CLI-only parameters, use the explicit CLI fallback only when the user asks for it.
+- For edits, preserve invariants aggressively and save non-destructively by default.
+
+Execution strategy:
+- In the built-in default path, produce many assets or variants by issuing one `image_gen` call per requested asset or variant.
+- In the CLI fallback path, use the CLI `generate-batch` subcommand only when the user explicitly chose CLI mode and needs many prompts/assets.
+- For many distinct assets, do not use `n` as a substitute for separate prompts. `n` is for variants of one prompt; distinct assets need distinct built-in calls or distinct CLI `generate-batch` jobs.
+
+Assume the user wants a new image unless they clearly ask to change an existing one.
+
+## Workflow
+1. Decide the top-level mode: built-in by default, including simple transparent-output requests; fallback CLI only if explicitly requested or after the user explicitly confirms a transparent-output fallback.
+2. Decide the intent: `generate` or `edit`.
+3. Decide whether the output is preview-only or meant to be consumed by the current project.
+4. Decide the execution strategy: single asset vs repeated built-in calls vs CLI `generate-batch`.
+5. Collect inputs up front: prompt(s), exact text (verbatim), constraints/avoid list, and any input images.
+6. For every input image, label its role explicitly:
+   - reference image
+   - edit target
+   - supporting insert/style/compositing input
+7. If the edit target is only on the local filesystem and you are staying on the built-in path, inspect it with `view_image` first so the image is available in conversation context.
+8. If the user asked for a photo, illustration, sprite, product image, banner, or other explicitly raster-style asset, use `image_gen` rather than substituting SVG/HTML/CSS placeholders. If the request is for an icon, logo, or UI graphic that should match existing repo-native SVG/vector/code assets, prefer editing those directly instead.
+9. Augment the prompt based on specificity:
+   - If the user's prompt is already specific and detailed, normalize it into a clear spec without adding creative requirements.
+   - If the user's prompt is generic, add tasteful augmentation only when it materially improves output quality.
+10. Use the built-in `image_gen` tool by default.
+11. For transparent-output requests, follow the transparent image guidance below: generate with built-in `image_gen` on a flat chroma-key background, copy the selected output into the workspace or `tmp/imagegen/`, run the installed `$CODEX_HOME/skills/.system/imagegen/scripts/remove_chroma_key.py` helper, and validate the alpha result before using it. If this path looks unsuitable or fails, ask before switching to CLI `gpt-image-1.5`.
+12. Inspect outputs and validate: subject, style, composition, text accuracy, and invariants/avoid items.
+13. Iterate with a single targeted change, then re-check.
+14. For preview-only work, render the image inline; the underlying file may remain at the default `$CODEX_HOME/generated_images/...` path.
+15. For project-bound work, move or copy the selected artifact into the workspace and update any consuming code or references. Never leave a project-referenced asset only at the default `$CODEX_HOME/generated_images/...` path.
+16. For batches or multi-asset requests, persist every requested deliverable final in the workspace unless the user explicitly asked to keep outputs preview-only. Discarded variants do not need to be kept unless requested.
+17. If the user explicitly chooses or confirms the CLI fallback, then use the fallback-only docs for model, quality, size, `input_fidelity`, masks, output format, output paths, and network setup.
+18. Always report the final saved path(s) for any workspace-bound asset(s), plus the final prompt or prompt set and whether the built-in tool or fallback CLI mode was used.
+
+## Transparent image requests
+
+Transparent-image requests still use built-in `image_gen` first. Because the built-in tool does not expose a true transparent-background control, create a removable chroma-key source image and then convert the key color to alpha locally.
+
+Default sequence:
+1. Use built-in `image_gen` to generate the requested subject on a perfectly flat solid chroma-key background.
+2. Choose a key color that is unlikely to appear in the subject: default `#00ff00`, use `#ff00ff` for green subjects, and avoid `#0000ff` for blue subjects.
+3. After generation, move or copy the selected source image from `$CODEX_HOME/generated_images/...` into the workspace or `tmp/imagegen/`.
+4. Run the installed helper path, not a project-relative script path:
+   ```bash
+   python "${CODEX_HOME:-$HOME/.codex}/skills/.system/imagegen/scripts/remove_chroma_key.py" \
+     --input <source> \
+     --out <final.png> \
+     --auto-key border \
+     --soft-matte \
+     --transparent-threshold 12 \
+     --opaque-threshold 220 \
+     --despill
+   ```
+5. Validate that the output has an alpha channel, transparent corners, plausible subject coverage, and no obvious key-color fringe. If a thin fringe remains, retry once with `--edge-contract 1`; use `--edge-feather 0.25` only when the edge is visibly stair-stepped and the subject is not shiny or reflective.
+6. Save the final alpha PNG/WebP in the project if the asset is project-bound. Never leave a project-referenced transparent asset only under `$CODEX_HOME/*`.
+
+Prompt transparent requests like this:
+
+```text
+Create the requested subject on a perfectly flat solid #00ff00 chroma-key background for background removal.
+The background must be one uniform color with no shadows, gradients, texture, reflections, floor plane, or lighting variation.
+Keep the subject fully separated from the background with crisp edges and generous padding.
+Do not use #00ff00 anywhere in the subject.
+No cast shadow, no contact shadow, no reflection, no watermark, and no text unless explicitly requested.
+```
+
+Do not automatically use CLI `gpt-image-1.5 --background transparent --output-format png` instead of chroma keying. Ask the user first when the user asks for true/native transparency, when local removal fails validation, or when the requested image is complex: hair, fur, feathers, smoke, glass, liquids, translucent materials, reflective objects, soft shadows, realistic product grounding, or subject colors that conflict with all practical key colors.
+
+Use a concise confirmation like:
+
+```text
+This likely needs true native transparency. The default built-in path uses a chroma-key background plus local removal, but true transparency requires the CLI fallback with gpt-image-1.5 because gpt-image-2 does not support background=transparent. It also requires OPENAI_API_KEY. Should I proceed with that CLI fallback?
+```
+
+## Prompt augmentation
+
+Reformat user prompts into a structured, production-oriented spec. Make the user's goal clearer and more actionable, but do not blindly add detail.
+
+Treat this as prompt-shaping guidance, not a closed schema. Use only the lines that help, and add a short extra labeled line when it materially improves clarity.
+
+### Specificity policy
+
+Use the user's prompt specificity to decide how much augmentation is appropriate:
+
+- If the prompt is already specific and detailed, preserve that specificity and only normalize/structure it.
+- If the prompt is generic, you may add tasteful augmentation when it will materially improve the result.
+
+Allowed augmentations:
+- composition or framing hints
+- polish level or intended-use hints
+- practical layout guidance
+- reasonable scene concreteness that supports the stated request
+
+Not allowed augmentations:
+- extra characters or objects that are not implied by the request
+- brand names, slogans, palettes, or narrative beats that are not implied
+- arbitrary side-specific placement unless the surrounding layout supports it
+
+## Use-case taxonomy (exact slugs)
+
+Classify each request into one of these buckets and keep the slug consistent across prompts and references.
+
+Generate:
+- photorealistic-natural — candid/editorial lifestyle scenes with real texture and natural lighting.
+- product-mockup — product/packaging shots, catalog imagery, merch concepts.
+- ui-mockup — app/web interface mockups and wireframes; specify the desired fidelity.
+- infographic-diagram — diagrams/infographics with structured layout and text.
+- scientific-educational — classroom explainers, scientific diagrams, and learning visuals with required labels and accuracy constraints.
+- ads-marketing — campaign concepts and ad creatives with audience, brand position, scene, and exact tagline/copy.
+- productivity-visual — slide, chart, workflow, and data-heavy business visuals.
+- logo-brand — logo/mark exploration, vector-friendly.
+- illustration-story — comics, children’s book art, narrative scenes.
+- stylized-concept — style-driven concept art, 3D/stylized renders.
+- historical-scene — period-accurate/world-knowledge scenes.
+
+Edit:
+- text-localization — translate/replace in-image text, preserve layout.
+- identity-preserve — try-on, person-in-scene; lock face/body/pose.
+- precise-object-edit — remove/replace a specific element (including interior swaps).
+- lighting-weather — time-of-day/season/atmosphere changes only.
+- background-extraction — transparent background / clean cutout. Use built-in `image_gen` with chroma-key removal first for simple opaque subjects; ask before using CLI true transparency for complex subjects.
+- style-transfer — apply reference style while changing subject/scene.
+- compositing — multi-image insert/merge with matched lighting/perspective.
+- sketch-to-render — drawing/line art to photoreal render.
+
+## Shared prompt schema
+
+Use the following labeled spec as shared prompt scaffolding for both top-level modes:
+
+```text
+Use case: <taxonomy slug>
+Asset type: <where the asset will be used>
+Primary request: <user's main prompt>
+Input images: <Image 1: role; Image 2: role> (optional)
+Scene/backdrop: <environment>
+Subject: <main subject>
+
+codex
+圖像已產出，我接著把內建工具保存的檔案找出來，轉成透明背景 PNG，放到指定路徑並用 `sips` 縮到 512x512。
+exec
+/bin/zsh -lc 'ls -ld assets assets/players 2>/dev/null || true' in /Users/batman_work/claude/apps/ballGame
+ succeeded in 0ms:
+drwxr-xr-x  3 batman_work  staff  96 Jun  1 11:17 assets
+drwxr-xr-x  2 batman_work  staff  64 Jun  1 11:17 assets/players
+
+exec
+/bin/zsh -lc 'find ${CODEX_HOME:-$HOME/.codex} -path '"'*generated_images*' -type f -mmin -10 -print" in /Users/batman_work/claude/apps/ballGame
+ succeeded in 456ms:
+/Users/batman_work/.codex/generated_images/019e8130-2614-7a12-aee7-a6cf461622a6/ig_09f73b331af0875b016a1cf9f2560c8191b3f4457670374c74.png
+
+exec
+/bin/zsh -lc 'python "${CODEX_HOME:-$HOME/.codex}/skills/.system/imagegen/scripts/remove_chroma_key.py" --input /Users/batman_work/.codex/generated_images/019e8130-2614-7a12-aee7-a6cf461622a6/ig_09f73b331af0875b016a1cf9f2560c8191b3f4457670374c74.png --out /Users/batman_work/claude/apps/ballGame/assets/players/knicks_ready.png --auto-key border --soft-matte --transparent-threshold 12 --opaque-threshold 220 --despill && sips -z 512 512 /Users/batman_work/claude/apps/ballGame/assets/players/knicks_ready.png' in /Users/batman_work/claude/apps/ballGame
+ exited 127 in 0ms:
+zsh:1: command not found: python
+
+exec
+/bin/zsh -lc 'python3 "${CODEX_HOME:-$HOME/.codex}/skills/.system/imagegen/scripts/remove_chroma_key.py" --input /Users/batman_work/.codex/generated_images/019e8130-2614-7a12-aee7-a6cf461622a6/ig_09f73b331af0875b016a1cf9f2560c8191b3f4457670374c74.png --out /Users/batman_work/claude/apps/ballGame/assets/players/knicks_ready.png --auto-key border --soft-matte --transparent-threshold 12 --opaque-threshold 220 --despill && sips -z 512 512 /Users/batman_work/claude/apps/ballGame/assets/players/knicks_ready.png' in /Users/batman_work/claude/apps/ballGame
+ succeeded in 2278ms:
+Wrote /Users/batman_work/claude/apps/ballGame/assets/players/knicks_ready.png
+Key color: #04f508
+Transparent pixels: 1279453/1572516
+Partially transparent pixels: 5940/1572516
+/Users/batman_work/claude/apps/ballGame/assets/players/knicks_ready.png
+  /Users/batman_work/claude/apps/ballGame/assets/players/knicks_ready.png
+
+exec
+/bin/zsh -lc 'file /Users/batman_work/claude/apps/ballGame/assets/players/knicks_ready.png' in /Users/batman_work/claude/apps/ballGame
+ succeeded in 0ms:
+/Users/batman_work/claude/apps/ballGame/assets/players/knicks_ready.png: PNG image data, 512 x 512, 8-bit/color RGBA, non-interlaced
+
+exec
+/bin/zsh -lc 'sips -g pixelWidth -g pixelHeight -g hasAlpha /Users/batman_work/claude/apps/ballGame/assets/players/knicks_ready.png' in /Users/batman_work/claude/apps/ballGame
+ succeeded in 0ms:
+/Users/batman_work/claude/apps/ballGame/assets/players/knicks_ready.png
+  pixelWidth: 512
+  pixelHeight: 512
+  hasAlpha: yes
+
+codex
+OK
+tokens used
+48,174
+OK
+[ok]   knicks_ready  (108.6s)
+
+[gen] knicks_shoot → /Users/batman_work/claude/apps/ballGame/assets/players/knicks_shoot.png
+Reading additional input from stdin...
+OpenAI Codex v0.133.0
+--------
+workdir: /Users/batman_work/claude/apps/ballGame
+model: gpt-5.5
+provider: openai
+approval: never
+sandbox: workspace-write [workdir, /tmp, $TMPDIR]
+reasoning effort: medium
+reasoning summaries: none
+session id: 019e8131-c9fc-7d42-9bcd-b9bb58c39d05
+--------
+user
+請用內建 image_gen 工具產一張 1024x1024 PNG。
+主題：Full-body cartoon illustration of a male basketball player in mid-air jump shot release pose (follow-through), shooting hand extended high above head with wrist snapped down, guide hand to the side, legs slightly bent and lifted off ground. Wearing official New York Knicks home jersey: orange jersey top with blue trim and 'KNICKS' wordmark, large white number '7' on the front, blue shorts with orange side stripe, white basketball shoes. Athletic build, focused expression. NBA 2K cover art style, clean bold outlines, half-realistic cartoon shading. Side-front 3/4 view, fully visible from head to feet. TRANSPARENT BACKGROUND PNG, no background elements, no shadow.
+完成後把產出複製到絕對路徑 /Users/batman_work/claude/apps/ballGame/assets/players/knicks_shoot.png，並用 sips 縮放到 512x512（指令: sips -z 512 512 /Users/batman_work/claude/apps/ballGame/assets/players/knicks_shoot.png）。
+最後回報 OK 即可，不要額外說明。
+codex
+我會使用 `imagegen` skill，先產生透明背景 PNG，再把檔案放到指定路徑並用 `sips` 縮放。
+exec
+/bin/zsh -lc "sed -n '1,220p' /Users/batman_work/.codex/skills/.system/imagegen/SKILL.md" in /Users/batman_work/claude/apps/ballGame
+ exited 1 in 0ms:
+sed: /Users/batman_work/.codex/skills/.system/imagegen/SKILL.md: No such file or directory
+
+exec
+/bin/zsh -lc 'mkdir -p /Users/batman_work/claude/apps/ballGame/assets/players && ls -ld /Users/batman_work/claude/apps/ballGame/assets/players' in /Users/batman_work/claude/apps/ballGame
+ succeeded in 0ms:
+drwxr-xr-x  3 batman_work  staff  96 Jun  1 11:19 /Users/batman_work/claude/apps/ballGame/assets/players
+
+exec
+/bin/zsh -lc "find /private/tmp /Users/batman_work/claude/apps/ballGame -maxdepth 4 -type f \\( -name '*.png' -o -name '*.webp' \\) -mmin -5 2>/dev/null | sort" in /Users/batman_work/claude/apps/ballGame
+ succeeded in 0ms:
+/Users/batman_work/claude/apps/ballGame/assets/players/knicks_ready.png
+
+exec
+/bin/zsh -lc "find /Users/batman_work/.codex/generated_images/019e8131-c9fc-7d42-9bcd-b9bb58c39d05 -maxdepth 1 -type f -name '*.png' -print" in /Users/batman_work/claude/apps/ballGame
+ succeeded in 0ms:
+/Users/batman_work/.codex/generated_images/019e8131-c9fc-7d42-9bcd-b9bb58c39d05/ig_04c6021c3e67ad82016a1cfa5f20dc8191a39fecbfcfd8769f.png
+
+exec
+/bin/zsh -lc 'cp /Users/batman_work/.codex/generated_images/019e8131-c9fc-7d42-9bcd-b9bb58c39d05/ig_04c6021c3e67ad82016a1cfa5f20dc8191a39fecbfcfd8769f.png /Users/batman_work/claude/apps/ballGame/assets/players/knicks_shoot.png && sips -z 512 512 /Users/batman_work/claude/apps/ballGame/assets/players/knicks_shoot.png' in /Users/batman_work/claude/apps/ballGame
+ succeeded in 0ms:
+/Users/batman_work/claude/apps/ballGame/assets/players/knicks_shoot.png
+  /Users/batman_work/claude/apps/ballGame/assets/players/knicks_shoot.png
+
+codex
+OK
+tokens used
+38,353
+OK
+[ok]   knicks_shoot  (96.7s)
+
+[gen] spurs_ready → /Users/batman_work/claude/apps/ballGame/assets/players/spurs_ready.png
+Reading additional input from stdin...
+OpenAI Codex v0.133.0
+--------
+workdir: /Users/batman_work/claude/apps/ballGame
+model: gpt-5.5
+provider: openai
+approval: never
+sandbox: workspace-write [workdir, /tmp, $TMPDIR]
+reasoning effort: medium
+reasoning summaries: none
+session id: 019e8133-43d3-79c1-b34d-e6d60e6b88e6
+--------
+user
+請用內建 image_gen 工具產一張 1024x1024 PNG。
+主題：Full-body cartoon illustration of a male basketball player standing in ready stance, holding a basketball at chest height with both hands. Wearing official San Antonio Spurs home jersey: black jersey with silver/white trim and 'SPURS' wordmark on chest, large white number '21' on the front, black shorts with silver side stripe, white and black basketball shoes. Athletic build, calm confident expression. NBA 2K cover art style, clean bold outlines, half-realistic cartoon shading. Front-facing pose, fully visible from head to feet. TRANSPARENT BACKGROUND PNG, no background elements, no shadow.
+完成後把產出複製到絕對路徑 /Users/batman_work/claude/apps/ballGame/assets/players/spurs_ready.png，並用 sips 縮放到 512x512（指令: sips -z 512 512 /Users/batman_work/claude/apps/ballGame/assets/players/spurs_ready.png）。
+最後回報 OK 即可，不要額外說明。
+codex
+我會用 imagegen 技能產出點陣 PNG，然後放到指定路徑並用 `sips` 縮到 512。
+exec
+/bin/zsh -lc "sed -n '1,220p' /Users/batman_work/.codex/skills/.system/imagegen/SKILL.md" in /Users/batman_work/claude/apps/ballGame
+ succeeded in 0ms:
+---
+name: "imagegen"
+description: "Generate or edit raster images when the task benefits from AI-created bitmap visuals such as photos, illustrations, textures, sprites, mockups, or transparent-background cutouts. Use when Codex should create a brand-new image, transform an existing image, or derive visual variants from references, and the output should be a bitmap asset rather than repo-native code or vector. Do not use when the task is better handled by editing existing SVG/vector/code-native assets, extending an established icon or logo system, or building the visual directly in HTML/CSS/canvas."
+---
+
+# Image Generation Skill
+
+Generates or edits images for the current project (for example website assets, game assets, UI mockups, product mockups, wireframes, logo design, photorealistic images, or infographics).
+
+## Top-level modes and rules
+
+This skill has exactly two top-level modes:
+
+- **Default built-in tool mode (preferred):** built-in `image_gen` tool for normal image generation, editing, and simple transparent-image requests. Does not require `OPENAI_API_KEY`.
+- **Fallback CLI mode:** `scripts/image_gen.py` CLI. Use when the user explicitly asks for the CLI/API/model path, or after the user explicitly confirms a true model-native transparency fallback with `gpt-image-1.5`. Requires `OPENAI_API_KEY`.
+
+Within CLI fallback, the CLI exposes three subcommands:
+
+- `generate`
+- `edit`
+- `generate-batch`
+
+Rules:
+- Use the built-in `image_gen` tool by default for normal image generation and editing requests.
+- Do not switch to CLI fallback for ordinary quality, size, or file-path control.
+- If the user explicitly asks for a transparent image/background, stay on built-in `image_gen` first: prompt for a flat removable chroma-key background, then remove it locally with the installed helper at `$CODEX_HOME/skills/.system/imagegen/scripts/remove_chroma_key.py`.
+- Never silently switch from built-in `image_gen` or CLI `gpt-image-2` to CLI `gpt-image-1.5`. Treat this as a model/path downgrade and ask the user before doing it, unless the user has already explicitly requested `gpt-image-1.5`, `scripts/image_gen.py`, or CLI fallback.
+- If a transparent request appears too complex for clean chroma-key removal, asks for true/native transparency, or local removal fails validation, explain that true transparency requires CLI `gpt-image-1.5 --background transparent --output-format png` because `gpt-image-2` does not support `background=transparent`, then ask whether to proceed. Run the CLI fallback only after the user confirms.
+- The word `batch` by itself does not mean CLI fallback. If the user asks for many assets or says to batch-generate assets without explicitly asking for CLI/API/model controls, stay on the built-in path and issue one built-in call per requested asset or variant.
+- If the built-in tool fails or is unavailable, tell the user the CLI fallback exists and that it requires `OPENAI_API_KEY`. Proceed only if the user explicitly asks for that fallback.
+- If the user explicitly asks for CLI mode, use the bundled `scripts/image_gen.py` workflow. Do not create one-off SDK runners.
+- Never modify `scripts/image_gen.py`. If something is missing, ask the user before doing anything else.
+
+Built-in save-path policy:
+- In built-in tool mode, Codex saves generated images under `$CODEX_HOME/*` by default.
+- Do not describe or rely on OS temp as the default built-in destination.
+- Do not describe or rely on a destination-path argument (if any) on the built-in `image_gen` tool. If a specific location is needed, generate first and then move or copy the selected output from `$CODEX_HOME/generated_images/...`.
+- Save-path precedence in built-in mode:
+  1. If the user names a destination, move or copy the selected output there.
+  2. If the image is meant for the current project, move or copy the final selected image into the workspace before finishing.
+  3. If the image is only for preview or brainstorming, render it inline; the underlying file can remain at the default `$CODEX_HOME/*` path.
+- Never leave a project-referenced asset only at the default `$CODEX_HOME/*` path.
+- Do not overwrite an existing asset unless the user explicitly asked for replacement; otherwise create a sibling versioned filename such as `hero-v2.png` or `item-icon-edited.png`.
+
+Shared prompt guidance for both modes lives in `references/prompting.md` and `references/sample-prompts.md`.
+
+Fallback-only docs/resources for CLI mode:
+- `references/cli.md`
+- `references/image-api.md`
+- `references/codex-network.md`
+- `scripts/image_gen.py`
+
+Local post-processing helper:
+- `$CODEX_HOME/skills/.system/imagegen/scripts/remove_chroma_key.py`: removes a flat chroma-key background from a generated image and writes a PNG/WebP with alpha. Prefer auto-key sampling, soft matte, and despill for antialiased edges.
+
+## When to use
+- Generate a new image (concept art, product shot, cover, website hero)
+- Generate a new image using one or more reference images for style, composition, or mood
+- Edit an existing image (inpainting, lighting or weather transformations, background replacement, object removal, compositing, transparent background)
+- Produce many assets or variants for one task
+
+## When not to use
+- Extending or matching an existing SVG/vector icon set, logo system, or illustration library inside the repo
+- Creating simple shapes, diagrams, wireframes, or icons that are better produced directly in SVG, HTML/CSS, or canvas
+- Making a small project-local asset edit when the source file already exists in an editable native format
+- Any task where the user clearly wants deterministic code-native output instead of a generated bitmap
+
+## Decision tree
+
+Think about two separate questions:
+
+1. **Intent:** is this a new image or an edit of an existing image?
+2. **Execution strategy:** is this one asset or many assets/variants?
+
+Intent:
+- If the user wants to modify an existing image while preserving parts of it, treat the request as **edit**.
+- If the user provides images only as references for style, composition, mood, or subject guidance, treat the request as **generate**.
+- If the user provides no images, treat the request as **generate**.
+
+Built-in edit semantics:
+- Built-in edit mode is for images already visible in the conversation context, such as attached images or images generated earlier in the thread.
+- If the user wants to edit a local image file with the built-in tool, first load it with built-in `view_image` tool so the image is visible in the conversation context, then proceed with the built-in edit flow.
+- Do not promise arbitrary filesystem-path editing through the built-in tool.
+- If a local file still needs direct file-path control, masks, or other explicit CLI-only parameters, use the explicit CLI fallback only when the user asks for it.
+- For edits, preserve invariants aggressively and save non-destructively by default.
+
+Execution strategy:
+- In the built-in default path, produce many assets or variants by issuing one `image_gen` call per requested asset or variant.
+- In the CLI fallback path, use the CLI `generate-batch` subcommand only when the user explicitly chose CLI mode and needs many prompts/assets.
+- For many distinct assets, do not use `n` as a substitute for separate prompts. `n` is for variants of one prompt; distinct assets need distinct built-in calls or distinct CLI `generate-batch` jobs.
+
+Assume the user wants a new image unless they clearly ask to change an existing one.
+
+## Workflow
+1. Decide the top-level mode: built-in by default, including simple transparent-output requests; fallback CLI only if explicitly requested or after the user explicitly confirms a transparent-output fallback.
+2. Decide the intent: `generate` or `edit`.
+3. Decide whether the output is preview-only or meant to be consumed by the current project.
+4. Decide the execution strategy: single asset vs repeated built-in calls vs CLI `generate-batch`.
+5. Collect inputs up front: prompt(s), exact text (verbatim), constraints/avoid list, and any input images.
+6. For every input image, label its role explicitly:
+   - reference image
+   - edit target
+   - supporting insert/style/compositing input
+7. If the edit target is only on the local filesystem and you are staying on the built-in path, inspect it with `view_image` first so the image is available in conversation context.
+8. If the user asked for a photo, illustration, sprite, product image, banner, or other explicitly raster-style asset, use `image_gen` rather than substituting SVG/HTML/CSS placeholders. If the request is for an icon, logo, or UI graphic that should match existing repo-native SVG/vector/code assets, prefer editing those directly instead.
+9. Augment the prompt based on specificity:
+   - If the user's prompt is already specific and detailed, normalize it into a clear spec without adding creative requirements.
+   - If the user's prompt is generic, add tasteful augmentation only when it materially improves output quality.
+10. Use the built-in `image_gen` tool by default.
+11. For transparent-output requests, follow the transparent image guidance below: generate with built-in `image_gen` on a flat chroma-key background, copy the selected output into the workspace or `tmp/imagegen/`, run the installed `$CODEX_HOME/skills/.system/imagegen/scripts/remove_chroma_key.py` helper, and validate the alpha result before using it. If this path looks unsuitable or fails, ask before switching to CLI `gpt-image-1.5`.
+12. Inspect outputs and validate: subject, style, composition, text accuracy, and invariants/avoid items.
+13. Iterate with a single targeted change, then re-check.
+14. For preview-only work, render the image inline; the underlying file may remain at the default `$CODEX_HOME/generated_images/...` path.
+15. For project-bound work, move or copy the selected artifact into the workspace and update any consuming code or references. Never leave a project-referenced asset only at the default `$CODEX_HOME/generated_images/...` path.
+16. For batches or multi-asset requests, persist every requested deliverable final in the workspace unless the user explicitly asked to keep outputs preview-only. Discarded variants do not need to be kept unless requested.
+17. If the user explicitly chooses or confirms the CLI fallback, then use the fallback-only docs for model, quality, size, `input_fidelity`, masks, output format, output paths, and network setup.
+18. Always report the final saved path(s) for any workspace-bound asset(s), plus the final prompt or prompt set and whether the built-in tool or fallback CLI mode was used.
+
+## Transparent image requests
+
+Transparent-image requests still use built-in `image_gen` first. Because the built-in tool does not expose a true transparent-background control, create a removable chroma-key source image and then convert the key color to alpha locally.
+
+Default sequence:
+1. Use built-in `image_gen` to generate the requested subject on a perfectly flat solid chroma-key background.
+2. Choose a key color that is unlikely to appear in the subject: default `#00ff00`, use `#ff00ff` for green subjects, and avoid `#0000ff` for blue subjects.
+3. After generation, move or copy the selected source image from `$CODEX_HOME/generated_images/...` into the workspace or `tmp/imagegen/`.
+4. Run the installed helper path, not a project-relative script path:
+   ```bash
+   python "${CODEX_HOME:-$HOME/.codex}/skills/.system/imagegen/scripts/remove_chroma_key.py" \
+     --input <source> \
+     --out <final.png> \
+     --auto-key border \
+     --soft-matte \
+     --transparent-threshold 12 \
+     --opaque-threshold 220 \
+     --despill
+   ```
+5. Validate that the output has an alpha channel, transparent corners, plausible subject coverage, and no obvious key-color fringe. If a thin fringe remains, retry once with `--edge-contract 1`; use `--edge-feather 0.25` only when the edge is visibly stair-stepped and the subject is not shiny or reflective.
+6. Save the final alpha PNG/WebP in the project if the asset is project-bound. Never leave a project-referenced transparent asset only under `$CODEX_HOME/*`.
+
+Prompt transparent requests like this:
+
+```text
+Create the requested subject on a perfectly flat solid #00ff00 chroma-key background for background removal.
+The background must be one uniform color with no shadows, gradients, texture, reflections, floor plane, or lighting variation.
+Keep the subject fully separated from the background with crisp edges and generous padding.
+Do not use #00ff00 anywhere in the subject.
+No cast shadow, no contact shadow, no reflection, no watermark, and no text unless explicitly requested.
+```
+
+Do not automatically use CLI `gpt-image-1.5 --background transparent --output-format png` instead of chroma keying. Ask the user first when the user asks for true/native transparency, when local removal fails validation, or when the requested image is complex: hair, fur, feathers, smoke, glass, liquids, translucent materials, reflective objects, soft shadows, realistic product grounding, or subject colors that conflict with all practical key colors.
+
+Use a concise confirmation like:
+
+```text
+This likely needs true native transparency. The default built-in path uses a chroma-key background plus local removal, but true transparency requires the CLI fallback with gpt-image-1.5 because gpt-image-2 does not support background=transparent. It also requires OPENAI_API_KEY. Should I proceed with that CLI fallback?
+```
+
+## Prompt augmentation
+
+Reformat user prompts into a structured, production-oriented spec. Make the user's goal clearer and more actionable, but do not blindly add detail.
+
+Treat this as prompt-shaping guidance, not a closed schema. Use only the lines that help, and add a short extra labeled line when it materially improves clarity.
+
+### Specificity policy
+
+Use the user's prompt specificity to decide how much augmentation is appropriate:
+
+- If the prompt is already specific and detailed, preserve that specificity and only normalize/structure it.
+- If the prompt is generic, you may add tasteful augmentation when it will materially improve the result.
+
+Allowed augmentations:
+- composition or framing hints
+- polish level or intended-use hints
+- practical layout guidance
+- reasonable scene concreteness that supports the stated request
+
+Not allowed augmentations:
+- extra characters or objects that are not implied by the request
+- brand names, slogans, palettes, or narrative beats that are not implied
+- arbitrary side-specific placement unless the surrounding layout supports it
+
+## Use-case taxonomy (exact slugs)
+
+Classify each request into one of these buckets and keep the slug consistent across prompts and references.
+
+Generate:
+- photorealistic-natural — candid/editorial lifestyle scenes with real texture and natural lighting.
+- product-mockup — product/packaging shots, catalog imagery, merch concepts.
+- ui-mockup — app/web interface mockups and wireframes; specify the desired fidelity.
+- infographic-diagram — diagrams/infographics with structured layout and text.
+- scientific-educational — classroom explainers, scientific diagrams, and learning visuals with required labels and accuracy constraints.
+- ads-marketing — campaign concepts and ad creatives with audience, brand position, scene, and exact tagline/copy.
+- productivity-visual — slide, chart, workflow, and data-heavy business visuals.
+- logo-brand — logo/mark exploration, vector-friendly.
+- illustration-story — comics, children’s book art, narrative scenes.
+- stylized-concept — style-driven concept art, 3D/stylized renders.
+- historical-scene — period-accurate/world-knowledge scenes.
+
+Edit:
+- text-localization — translate/replace in-image text, preserve layout.
+- identity-preserve — try-on, person-in-scene; lock face/body/pose.
+- precise-object-edit — remove/replace a specific element (including interior swaps).
+- lighting-weather — time-of-day/season/atmosphere changes only.
+- background-extraction — transparent background / clean cutout. Use built-in `image_gen` with chroma-key removal first for simple opaque subjects; ask before using CLI true transparency for complex subjects.
+- style-transfer — apply reference style while changing subject/scene.
+- compositing — multi-image insert/merge with matched lighting/perspective.
+- sketch-to-render — drawing/line art to photoreal render.
+
+## Shared prompt schema
+
+Use the following labeled spec as shared prompt scaffolding for both top-level modes:
+
+```text
+Use case: <taxonomy slug>
+Asset type: <where the asset will be used>
+Primary request: <user's main prompt>
+Input images: <Image 1: role; Image 2: role> (optional)
+Scene/backdrop: <environment>
+Subject: <main subject>
+
+codex
+圖已生成；接著我會找出剛才的輸出檔、移到專案路徑、移除綠幕透明化，最後用 `sips` 縮放。
+exec
+/bin/zsh -lc 'find . -maxdepth 4 -type d -print | sort' in /Users/batman_work/claude/apps/ballGame
+ succeeded in 0ms:
+.
+./.claude
+./assets
+./assets/players
+./scripts
+
+exec
+/bin/zsh -lc 'find ${CODEX_HOME:-$HOME/.codex} -path '"'*generated_images*' -type f -maxdepth 6 -print | tail -n 20" in /Users/batman_work/claude/apps/ballGame
+ succeeded in 0ms:
+/Users/batman_work/.codex/generated_images/019e4478-2d69-7773-a74f-8cb909c79385/ig_0a7b1688d54a887f016a0d6eb1423481919a3e15ebcf14d637.png
+/Users/batman_work/.codex/generated_images/019e572b-9435-7630-9131-4c85b6844951/ig_05d1868dec22b54e016a123846fabc8191a723d0bed6658f7b.png
+/Users/batman_work/.codex/generated_images/019e572b-9435-7630-9131-4c85b6844951/ig_05d1868dec22b54e016a1238941c148191a78a520530c348ac.png
+/Users/batman_work/.codex/generated_images/019e64a0-1b31-75c3-9fd9-502911f6aab2/ig_0b1e4c2768c8eb40016a15aa101e208191a5e9513c25ec9c73.png
+/Users/batman_work/.codex/generated_images/019e54f4-ad9d-7f31-ab2c-2dc9bee2bb03/ig_08410a25d36888f2016a11a723aae88191bc23bfcedb3252ba.png
+/Users/batman_work/.codex/generated_images/019e4da1-773e-7ad1-bb90-d9be90a0d1f1/ig_07b8b3e562f24fa0016a0fc72d1c8881919f89cb38ef4e1bdc.png
+/Users/batman_work/.codex/generated_images/019e48d2-c800-7ad1-9946-e219dd92fc50/ig_025151f3bc855c46016a0e8c089ff08191ab776606365a5f35.png
+/Users/batman_work/.codex/generated_images/019e5541-7db1-7660-a56c-88b1ff36d7a1/ig_063fad46cca62d99016a11bace067881919ae43310d43e1403.png
+/Users/batman_work/.codex/generated_images/019e4780-c426-7f30-ad12-753d99e7779e/ig_0ea26ff3ab878141016a0e357d36548191b4b87a08d7a5f3a0.png
+/Users/batman_work/.codex/generated_images/019e4955-5ddd-7591-a0bf-94a114a02ce5/ig_043ac3fbc97201ff016a0ead7c11e48191a6128c746c96ab7b.png
+/Users/batman_work/.codex/generated_images/019e640e-d8a5-72c1-bf9e-6d89c1fbace7/ig_05119868ce8c5d4c016a1584de910081919695e03c7d8cdf6f.png
+/Users/batman_work/.codex/generated_images/019e4d94-f486-7db1-95f4-cf9bc6717ca3/ig_0cdd5e8a0857245c016a0fc3e37e788191888092429c9d9cb9.png
+/Users/batman_work/.codex/generated_images/019e4d94-f486-7db1-95f4-cf9bc6717ca3/ig_0cdd5e8a0857245c016a0fc43b40508191b65b0970f5d9d3f6.png
+/Users/batman_work/.codex/generated_images/019e4565-5ca9-7cb0-93fa-bc26d5e1506a/ig_03c842cb00b48b98016a0dab68aad88191b3ef1d8270b88f19.png
+/Users/batman_work/.codex/generated_images/019e553e-20bd-73e1-8f2f-b5d6db43c26d/ig_05dbaddd8d9e1da7016a11b9f136208191aed211fc8332c9bf.png
+/Users/batman_work/.codex/generated_images/019e6423-96e6-7632-8a8c-bbe0e5ccc4f9/ig_05954888d5aa81a0016a158a2ccfa48191b6e3aa3093149c24.png
+/Users/batman_work/.codex/generated_images/019e4478-2d61-7c51-93d8-4fc1573d1219/ig_04822d5a78756a78016a0d6ff7e4948191af5063e34226a15c.png
+/Users/batman_work/.codex/generated_images/019e4478-2d61-7c51-93d8-4fc1573d1219/ig_04822d5a78756a78016a0d6eb478d48191ba7a6a0c0c82daf8.png
+/Users/batman_work/.codex/generated_images/019e64af-15a6-7c83-9102-46de258c4a5a/ig_030527e9d89952cc016a15ade4a400819182e2495e705cfb27.png
+/Users/batman_work/.codex/generated_images/019e4de3-d8bb-7293-a3b9-bf8b227737d9/ig_0355055d2b1e163e016a0fd8138a88819183b3b44ca7730097.png
+
+exec
+/bin/zsh -lc 'find /Users/batman_work/.codex/generated_images/019e8133-43d3-79c1-b34d-e6d60e6b88e6 -type f -print' in /Users/batman_work/claude/apps/ballGame
+ succeeded in 0ms:
+/Users/batman_work/.codex/generated_images/019e8133-43d3-79c1-b34d-e6d60e6b88e6/ig_0086ef2f2b9f3cde016a1cfac16df88191aa06a3816c62a50b.png
+
+exec
+/bin/zsh -lc 'python "${CODEX_HOME:-$HOME/.codex}/skills/.system/imagegen/scripts/remove_chroma_key.py" --input /Users/batman_work/.codex/generated_images/019e8133-43d3-79c1-b34d-e6d60e6b88e6/ig_0086ef2f2b9f3cde016a1cfac16df88191aa06a3816c62a50b.png --out /Users/batman_work/claude/apps/ballGame/assets/players/spurs_ready.png --auto-key border --soft-matte --transparent-threshold 12 --opaque-threshold 220 --despill && sips -z 512 512 /Users/batman_work/claude/apps/ballGame/assets/players/spurs_ready.png' in /Users/batman_work/claude/apps/ballGame
+ exited 127 in 0ms:
+zsh:1: command not found: python
+
+codex
+這台環境沒有 `python` 命令，我改用 `python3` 跑同一個透明化流程，然後再執行使用者指定的 `sips`。
+exec
+/bin/zsh -lc 'python3 "${CODEX_HOME:-$HOME/.codex}/skills/.system/imagegen/scripts/remove_chroma_key.py" --input /Users/batman_work/.codex/generated_images/019e8133-43d3-79c1-b34d-e6d60e6b88e6/ig_0086ef2f2b9f3cde016a1cfac16df88191aa06a3816c62a50b.png --out /Users/batman_work/claude/apps/ballGame/assets/players/spurs_ready.png --auto-key border --soft-matte --transparent-threshold 12 --opaque-threshold 220 --despill && sips -z 512 512 /Users/batman_work/claude/apps/ballGame/assets/players/spurs_ready.png' in /Users/batman_work/claude/apps/ballGame
+ succeeded in 1947ms:
+Wrote /Users/batman_work/claude/apps/ballGame/assets/players/spurs_ready.png
+Key color: #05f709
+Transparent pixels: 1279135/1572516
+Partially transparent pixels: 5661/1572516
+/Users/batman_work/claude/apps/ballGame/assets/players/spurs_ready.png
+  /Users/batman_work/claude/apps/ballGame/assets/players/spurs_ready.png
+
+exec
+/bin/zsh -lc 'file /Users/batman_work/claude/apps/ballGame/assets/players/spurs_ready.png' in /Users/batman_work/claude/apps/ballGame
+ succeeded in 0ms:
+/Users/batman_work/claude/apps/ballGame/assets/players/spurs_ready.png: PNG image data, 512 x 512, 8-bit/color RGBA, non-interlaced
+
+exec
+/bin/zsh -lc 'sips -g pixelWidth -g pixelHeight /Users/batman_work/claude/apps/ballGame/assets/players/spurs_ready.png' in /Users/batman_work/claude/apps/ballGame
+ succeeded in 0ms:
+/Users/batman_work/claude/apps/ballGame/assets/players/spurs_ready.png
+  pixelWidth: 512
+  pixelHeight: 512
+
+codex
+OK
+tokens used
+52,184
+OK
+[ok]   spurs_ready  (112.8s)
+
+[gen] spurs_shoot → /Users/batman_work/claude/apps/ballGame/assets/players/spurs_shoot.png
+Reading additional input from stdin...
+OpenAI Codex v0.133.0
+--------
+workdir: /Users/batman_work/claude/apps/ballGame
+model: gpt-5.5
+provider: openai
+approval: never
+sandbox: workspace-write [workdir, /tmp, $TMPDIR]
+reasoning effort: medium
+reasoning summaries: none
+session id: 019e8134-fc96-77b2-b006-e65e70a904ce
+--------
+user
+請用內建 image_gen 工具產一張 1024x1024 PNG。
+主題：Full-body cartoon illustration of a male basketball player in mid-air jump shot release pose (follow-through), shooting hand extended high above head with wrist snapped down, guide hand to the side, legs slightly bent and lifted off ground. Wearing official San Antonio Spurs home jersey: black jersey with silver/white trim and 'SPURS' wordmark, large white number '21' on the front, black shorts with silver side stripe, white and black basketball shoes. Athletic build, focused expression. NBA 2K cover art style, clean bold outlines, half-realistic cartoon shading. Side-front 3/4 view, fully visible from head to feet. TRANSPARENT BACKGROUND PNG, no background elements, no shadow.
+完成後把產出複製到絕對路徑 /Users/batman_work/claude/apps/ballGame/assets/players/spurs_shoot.png，並用 sips 縮放到 512x512（指令: sips -z 512 512 /Users/batman_work/claude/apps/ballGame/assets/players/spurs_shoot.png）。
+最後回報 OK 即可，不要額外說明。
+codex
+我會用 imagegen skill 產生點陣 PNG，然後放到指定的 `assets/players` 路徑並用 `sips` 縮到 512。
+exec
+/bin/zsh -lc "sed -n '1,220p' /Users/batman_work/.codex/skills/.system/imagegen/SKILL.md && pwd && ls -la assets || true && ls -la assets/players || true" in /Users/batman_work/claude/apps/ballGame
+ succeeded in 0ms:
+---
+name: "imagegen"
+description: "Generate or edit raster images when the task benefits from AI-created bitmap visuals such as photos, illustrations, textures, sprites, mockups, or transparent-background cutouts. Use when Codex should create a brand-new image, transform an existing image, or derive visual variants from references, and the output should be a bitmap asset rather than repo-native code or vector. Do not use when the task is better handled by editing existing SVG/vector/code-native assets, extending an established icon or logo system, or building the visual directly in HTML/CSS/canvas."
+---
+
+# Image Generation Skill
+
+Generates or edits images for the current project (for example website assets, game assets, UI mockups, product mockups, wireframes, logo design, photorealistic images, or infographics).
+
+## Top-level modes and rules
+
+This skill has exactly two top-level modes:
+
+- **Default built-in tool mode (preferred):** built-in `image_gen` tool for normal image generation, editing, and simple transparent-image requests. Does not require `OPENAI_API_KEY`.
+- **Fallback CLI mode:** `scripts/image_gen.py` CLI. Use when the user explicitly asks for the CLI/API/model path, or after the user explicitly confirms a true model-native transparency fallback with `gpt-image-1.5`. Requires `OPENAI_API_KEY`.
+
+Within CLI fallback, the CLI exposes three subcommands:
+
+- `generate`
+- `edit`
+- `generate-batch`
+
+Rules:
+- Use the built-in `image_gen` tool by default for normal image generation and editing requests.
+- Do not switch to CLI fallback for ordinary quality, size, or file-path control.
+- If the user explicitly asks for a transparent image/background, stay on built-in `image_gen` first: prompt for a flat removable chroma-key background, then remove it locally with the installed helper at `$CODEX_HOME/skills/.system/imagegen/scripts/remove_chroma_key.py`.
+- Never silently switch from built-in `image_gen` or CLI `gpt-image-2` to CLI `gpt-image-1.5`. Treat this as a model/path downgrade and ask the user before doing it, unless the user has already explicitly requested `gpt-image-1.5`, `scripts/image_gen.py`, or CLI fallback.
+- If a transparent request appears too complex for clean chroma-key removal, asks for true/native transparency, or local removal fails validation, explain that true transparency requires CLI `gpt-image-1.5 --background transparent --output-format png` because `gpt-image-2` does not support `background=transparent`, then ask whether to proceed. Run the CLI fallback only after the user confirms.
+- The word `batch` by itself does not mean CLI fallback. If the user asks for many assets or says to batch-generate assets without explicitly asking for CLI/API/model controls, stay on the built-in path and issue one built-in call per requested asset or variant.
+- If the built-in tool fails or is unavailable, tell the user the CLI fallback exists and that it requires `OPENAI_API_KEY`. Proceed only if the user explicitly asks for that fallback.
+- If the user explicitly asks for CLI mode, use the bundled `scripts/image_gen.py` workflow. Do not create one-off SDK runners.
+- Never modify `scripts/image_gen.py`. If something is missing, ask the user before doing anything else.
+
+Built-in save-path policy:
+- In built-in tool mode, Codex saves generated images under `$CODEX_HOME/*` by default.
+- Do not describe or rely on OS temp as the default built-in destination.
+- Do not describe or rely on a destination-path argument (if any) on the built-in `image_gen` tool. If a specific location is needed, generate first and then move or copy the selected output from `$CODEX_HOME/generated_images/...`.
+- Save-path precedence in built-in mode:
+  1. If the user names a destination, move or copy the selected output there.
+  2. If the image is meant for the current project, move or copy the final selected image into the workspace before finishing.
+  3. If the image is only for preview or brainstorming, render it inline; the underlying file can remain at the default `$CODEX_HOME/*` path.
+- Never leave a project-referenced asset only at the default `$CODEX_HOME/*` path.
+- Do not overwrite an existing asset unless the user explicitly asked for replacement; otherwise create a sibling versioned filename such as `hero-v2.png` or `item-icon-edited.png`.
+
+Shared prompt guidance for both modes lives in `references/prompting.md` and `references/sample-prompts.md`.
+
+Fallback-only docs/resources for CLI mode:
+- `references/cli.md`
+- `references/image-api.md`
+- `references/codex-network.md`
+- `scripts/image_gen.py`
+
+Local post-processing helper:
+- `$CODEX_HOME/skills/.system/imagegen/scripts/remove_chroma_key.py`: removes a flat chroma-key background from a generated image and writes a PNG/WebP with alpha. Prefer auto-key sampling, soft matte, and despill for antialiased edges.
+
+## When to use
+- Generate a new image (concept art, product shot, cover, website hero)
+- Generate a new image using one or more reference images for style, composition, or mood
+- Edit an existing image (inpainting, lighting or weather transformations, background replacement, object removal, compositing, transparent background)
+- Produce many assets or variants for one task
+
+## When not to use
+- Extending or matching an existing SVG/vector icon set, logo system, or illustration library inside the repo
+- Creating simple shapes, diagrams, wireframes, or icons that are better produced directly in SVG, HTML/CSS, or canvas
+- Making a small project-local asset edit when the source file already exists in an editable native format
+- Any task where the user clearly wants deterministic code-native output instead of a generated bitmap
+
+## Decision tree
+
+Think about two separate questions:
+
+1. **Intent:** is this a new image or an edit of an existing image?
+2. **Execution strategy:** is this one asset or many assets/variants?
+
+Intent:
+- If the user wants to modify an existing image while preserving parts of it, treat the request as **edit**.
+- If the user provides images only as references for style, composition, mood, or subject guidance, treat the request as **generate**.
+- If the user provides no images, treat the request as **generate**.
+
+Built-in edit semantics:
+- Built-in edit mode is for images already visible in the conversation context, such as attached images or images generated earlier in the thread.
+- If the user wants to edit a local image file with the built-in tool, first load it with built-in `view_image` tool so the image is visible in the conversation context, then proceed with the built-in edit flow.
+- Do not promise arbitrary filesystem-path editing through the built-in tool.
+- If a local file still needs direct file-path control, masks, or other explicit CLI-only parameters, use the explicit CLI fallback only when the user asks for it.
+- For edits, preserve invariants aggressively and save non-destructively by default.
+
+Execution strategy:
+- In the built-in default path, produce many assets or variants by issuing one `image_gen` call per requested asset or variant.
+- In the CLI fallback path, use the CLI `generate-batch` subcommand only when the user explicitly chose CLI mode and needs many prompts/assets.
+- For many distinct assets, do not use `n` as a substitute for separate prompts. `n` is for variants of one prompt; distinct assets need distinct built-in calls or distinct CLI `generate-batch` jobs.
+
+Assume the user wants a new image unless they clearly ask to change an existing one.
+
+## Workflow
+1. Decide the top-level mode: built-in by default, including simple transparent-output requests; fallback CLI only if explicitly requested or after the user explicitly confirms a transparent-output fallback.
+2. Decide the intent: `generate` or `edit`.
+3. Decide whether the output is preview-only or meant to be consumed by the current project.
+4. Decide the execution strategy: single asset vs repeated built-in calls vs CLI `generate-batch`.
+5. Collect inputs up front: prompt(s), exact text (verbatim), constraints/avoid list, and any input images.
+6. For every input image, label its role explicitly:
+   - reference image
+   - edit target
+   - supporting insert/style/compositing input
+7. If the edit target is only on the local filesystem and you are staying on the built-in path, inspect it with `view_image` first so the image is available in conversation context.
+8. If the user asked for a photo, illustration, sprite, product image, banner, or other explicitly raster-style asset, use `image_gen` rather than substituting SVG/HTML/CSS placeholders. If the request is for an icon, logo, or UI graphic that should match existing repo-native SVG/vector/code assets, prefer editing those directly instead.
+9. Augment the prompt based on specificity:
+   - If the user's prompt is already specific and detailed, normalize it into a clear spec without adding creative requirements.
+   - If the user's prompt is generic, add tasteful augmentation only when it materially improves output quality.
+10. Use the built-in `image_gen` tool by default.
+11. For transparent-output requests, follow the transparent image guidance below: generate with built-in `image_gen` on a flat chroma-key background, copy the selected output into the workspace or `tmp/imagegen/`, run the installed `$CODEX_HOME/skills/.system/imagegen/scripts/remove_chroma_key.py` helper, and validate the alpha result before using it. If this path looks unsuitable or fails, ask before switching to CLI `gpt-image-1.5`.
+12. Inspect outputs and validate: subject, style, composition, text accuracy, and invariants/avoid items.
+13. Iterate with a single targeted change, then re-check.
+14. For preview-only work, render the image inline; the underlying file may remain at the default `$CODEX_HOME/generated_images/...` path.
+15. For project-bound work, move or copy the selected artifact into the workspace and update any consuming code or references. Never leave a project-referenced asset only at the default `$CODEX_HOME/generated_images/...` path.
+16. For batches or multi-asset requests, persist every requested deliverable final in the workspace unless the user explicitly asked to keep outputs preview-only. Discarded variants do not need to be kept unless requested.
+17. If the user explicitly chooses or confirms the CLI fallback, then use the fallback-only docs for model, quality, size, `input_fidelity`, masks, output format, output paths, and network setup.
+18. Always report the final saved path(s) for any workspace-bound asset(s), plus the final prompt or prompt set and whether the built-in tool or fallback CLI mode was used.
+
+## Transparent image requests
+
+Transparent-image requests still use built-in `image_gen` first. Because the built-in tool does not expose a true transparent-background control, create a removable chroma-key source image and then convert the key color to alpha locally.
+
+Default sequence:
+1. Use built-in `image_gen` to generate the requested subject on a perfectly flat solid chroma-key background.
+2. Choose a key color that is unlikely to appear in the subject: default `#00ff00`, use `#ff00ff` for green subjects, and avoid `#0000ff` for blue subjects.
+3. After generation, move or copy the selected source image from `$CODEX_HOME/generated_images/...` into the workspace or `tmp/imagegen/`.
+4. Run the installed helper path, not a project-relative script path:
+   ```bash
+   python "${CODEX_HOME:-$HOME/.codex}/skills/.system/imagegen/scripts/remove_chroma_key.py" \
+     --input <source> \
+     --out <final.png> \
+     --auto-key border \
+     --soft-matte \
+     --transparent-threshold 12 \
+     --opaque-threshold 220 \
+     --despill
+   ```
+5. Validate that the output has an alpha channel, transparent corners, plausible subject coverage, and no obvious key-color fringe. If a thin fringe remains, retry once with `--edge-contract 1`; use `--edge-feather 0.25` only when the edge is visibly stair-stepped and the subject is not shiny or reflective.
+6. Save the final alpha PNG/WebP in the project if the asset is project-bound. Never leave a project-referenced transparent asset only under `$CODEX_HOME/*`.
+
+Prompt transparent requests like this:
+
+```text
+Create the requested subject on a perfectly flat solid #00ff00 chroma-key background for background removal.
+The background must be one uniform color with no shadows, gradients, texture, reflections, floor plane, or lighting variation.
+Keep the subject fully separated from the background with crisp edges and generous padding.
+Do not use #00ff00 anywhere in the subject.
+No cast shadow, no contact shadow, no reflection, no watermark, and no text unless explicitly requested.
+```
+
+Do not automatically use CLI `gpt-image-1.5 --background transparent --output-format png` instead of chroma keying. Ask the user first when the user asks for true/native transparency, when local removal fails validation, or when the requested image is complex: hair, fur, feathers, smoke, glass, liquids, translucent materials, reflective objects, soft shadows, realistic product grounding, or subject colors that conflict with all practical key colors.
+
+Use a concise confirmation like:
+
+```text
+This likely needs true native transparency. The default built-in path uses a chroma-key background plus local removal, but true transparency requires the CLI fallback with gpt-image-1.5 because gpt-image-2 does not support background=transparent. It also requires OPENAI_API_KEY. Should I proceed with that CLI fallback?
+```
+
+## Prompt augmentation
+
+Reformat user prompts into a structured, production-oriented spec. Make the user's goal clearer and more actionable, but do not blindly add detail.
+
+Treat this as prompt-shaping guidance, not a closed schema. Use only the lines that help, and add a short extra labeled line when it materially improves clarity.
+
+### Specificity policy
+
+Use the user's prompt specificity to decide how much augmentation is appropriate:
+
+- If the prompt is already specific and detailed, preserve that specificity and only normalize/structure it.
+- If the prompt is generic, you may add tasteful augmentation when it will materially improve the result.
+
+Allowed augmentations:
+- composition or framing hints
+- polish level or intended-use hints
+- practical layout guidance
+- reasonable scene concreteness that supports the stated request
+
+Not allowed augmentations:
+- extra characters or objects that are not implied by the request
+- brand names, slogans, palettes, or narrative beats that are not implied
+- arbitrary side-specific placement unless the surrounding layout supports it
+
+## Use-case taxonomy (exact slugs)
+
+Classify each request into one of these buckets and keep the slug consistent across prompts and references.
+
+Generate:
+- photorealistic-natural — candid/editorial lifestyle scenes with real texture and natural lighting.
+- product-mockup — product/packaging shots, catalog imagery, merch concepts.
+- ui-mockup — app/web interface mockups and wireframes; specify the desired fidelity.
+- infographic-diagram — diagrams/infographics with structured layout and text.
+- scientific-educational — classroom explainers, scientific diagrams, and learning visuals with required labels and accuracy constraints.
+- ads-marketing — campaign concepts and ad creatives with audience, brand position, scene, and exact tagline/copy.
+- productivity-visual — slide, chart, workflow, and data-heavy business visuals.
+- logo-brand — logo/mark exploration, vector-friendly.
+- illustration-story — comics, children’s book art, narrative scenes.
+- stylized-concept — style-driven concept art, 3D/stylized renders.
+- historical-scene — period-accurate/world-knowledge scenes.
+
+Edit:
+- text-localization — translate/replace in-image text, preserve layout.
+- identity-preserve — try-on, person-in-scene; lock face/body/pose.
+- precise-object-edit — remove/replace a specific element (including interior swaps).
+- lighting-weather — time-of-day/season/atmosphere changes only.
+- background-extraction — transparent background / clean cutout. Use built-in `image_gen` with chroma-key removal first for simple opaque subjects; ask before using CLI true transparency for complex subjects.
+- style-transfer — apply reference style while changing subject/scene.
+- compositing — multi-image insert/merge with matched lighting/perspective.
+- sketch-to-render — drawing/line art to photoreal render.
+
+## Shared prompt schema
+
+Use the following labeled spec as shared prompt scaffolding for both top-level modes:
+
+```text
+Use case: <taxonomy slug>
+Asset type: <where the asset will be used>
+Primary request: <user's main prompt>
+Input images: <Image 1: role; Image 2: role> (optional)
+Scene/backdrop: <environment>
+Subject: <main subject>
+/Users/batman_work/claude/apps/ballGame
+total 0
+drwxr-xr-x   3 batman_work  staff   96 Jun  1 11:17 .
+drwxr-xr-x  14 batman_work  staff  448 Jun  1 11:20 ..
+drwxr-xr-x   5 batman_work  staff  160 Jun  1 11:23 players
+total 1152
+drwxr-xr-x  5 batman_work  staff     160 Jun  1 11:23 .
+drwxr-xr-x  3 batman_work  staff      96 Jun  1 11:17 ..
+-rw-r--r--  1 batman_work  staff  141988 Jun  1 11:19 knicks_ready.png
+-rw-r--r--  1 batman_work  staff  306594 Jun  1 11:21 knicks_shoot.png
+-rw-r--r--  1 batman_work  staff  136464 Jun  1 11:23 spurs_ready.png
+
+codex
+產圖完成。我現在找出內建工具保存的原始檔，做去背、複製到指定路徑，再執行你指定的 `sips` 縮放。
+exec
+/bin/zsh -lc 'find "${CODEX_HOME:-$HOME/.codex}" -path '"'*generated_images*' -type f -name '*.png' -mmin -10 -print | sort | tail -20" in /Users/batman_work/claude/apps/ballGame
+ succeeded in 241ms:
+/Users/batman_work/.codex/generated_images/019e8130-2614-7a12-aee7-a6cf461622a6/ig_09f73b331af0875b016a1cf9f2560c8191b3f4457670374c74.png
+/Users/batman_work/.codex/generated_images/019e8131-c9fc-7d42-9bcd-b9bb58c39d05/ig_04c6021c3e67ad82016a1cfa5f20dc8191a39fecbfcfd8769f.png
+/Users/batman_work/.codex/generated_images/019e8133-43d3-79c1-b34d-e6d60e6b88e6/ig_0086ef2f2b9f3cde016a1cfac16df88191aa06a3816c62a50b.png
+/Users/batman_work/.codex/generated_images/019e8134-fc96-77b2-b006-e65e70a904ce/ig_0e33b1dbc1bfdda9016a1cfb2f3e888191bba5f498b3b6ffaf.png
+
+exec
+/bin/zsh -lc 'mkdir -p assets/players tmp/imagegen && cp /Users/batman_work/.codex/generated_images/019e8134-fc96-77b2-b006-e65e70a904ce/ig_0e33b1dbc1bfdda9016a1cfb2f3e888191bba5f498b3b6ffaf.png tmp/imagegen/spurs_shoot_chromakey.png && python "${CODEX_HOME:-$HOME/.codex}/skills/.system/imagegen/scripts/remove_chroma_key.py" --input tmp/imagegen/spurs_shoot_chromakey.png --out /Users/batman_work/claude/apps/ballGame/assets/players/spurs_shoot.png --auto-key border --soft-matte --transparent-threshold 12 --opaque-threshold 220 --despill && sips -z 512 512 /Users/batman_work/claude/apps/ballGame/assets/players/spurs_shoot.png' in /Users/batman_work/claude/apps/ballGame
+ exited 127 in 0ms:
+zsh:1: command not found: python
+
+codex
+`python` 在這台環境沒有對應執行檔，我改用系統的 `python3` 跑同一個去背腳本，接著繼續縮圖。
+exec
+/bin/zsh -lc 'mkdir -p assets/players tmp/imagegen && cp /Users/batman_work/.codex/generated_images/019e8134-fc96-77b2-b006-e65e70a904ce/ig_0e33b1dbc1bfdda9016a1cfb2f3e888191bba5f498b3b6ffaf.png tmp/imagegen/spurs_shoot_chromakey.png && python3 "${CODEX_HOME:-$HOME/.codex}/skills/.system/imagegen/scripts/remove_chroma_key.py" --input tmp/imagegen/spurs_shoot_chromakey.png --out /Users/batman_work/claude/apps/ballGame/assets/players/spurs_shoot.png --auto-key border --soft-matte --transparent-threshold 12 --opaque-threshold 220 --despill && sips -z 512 512 /Users/batman_work/claude/apps/ballGame/assets/players/spurs_shoot.png' in /Users/batman_work/claude/apps/ballGame
+ succeeded in 1926ms:
+Wrote /Users/batman_work/claude/apps/ballGame/assets/players/spurs_shoot.png
+Key color: #05f80b
+Transparent pixels: 1379073/1572516
+Partially transparent pixels: 5836/1572516
+/Users/batman_work/claude/apps/ballGame/assets/players/spurs_shoot.png
+  /Users/batman_work/claude/apps/ballGame/assets/players/spurs_shoot.png
+
+exec
+/bin/zsh -lc 'sips -g pixelWidth -g pixelHeight -g hasAlpha /Users/batman_work/claude/apps/ballGame/assets/players/spurs_shoot.png && ls -l /Users/batman_work/claude/apps/ballGame/assets/players/spurs_shoot.png' in /Users/batman_work/claude/apps/ballGame
+ succeeded in 0ms:
+/Users/batman_work/claude/apps/ballGame/assets/players/spurs_shoot.png
+  pixelWidth: 512
+  pixelHeight: 512
+  hasAlpha: yes
+-rw-r--r--  1 batman_work  staff  105358 Jun  1 11:24 /Users/batman_work/claude/apps/ballGame/assets/players/spurs_shoot.png
+
+codex
+OK
+tokens used
+26,748
+OK
+[ok]   spurs_shoot  (101.6s)
+
+[done] 完成 4 / 跳過 0 / 失敗 0（共 419.8s）

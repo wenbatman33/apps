@@ -1,0 +1,19 @@
+{
+  "outDir": "assets/players",
+  "items": [
+    {
+      "id": "knicks_ready_side",
+      "file": "knicks_ready_side.png",
+      "size": "1024x1024",
+      "finalSize": "512x512",
+      "prompt": "Full-body cartoon illustration of a male NBA basketball player in the LOADING / LOWEST POSITION of a free throw shooting motion (the 'dip' position right before driving up to release). View: 3/4 SIDE VIEW with body FACING LEFT, player looking toward the LEFT side of the frame at an imaginary rim. Body is in a DEEP ATHLETIC CROUCH: knees bent significantly (about 90 degrees), hips lowered and pushed back, weight on heels, torso leaning slightly forward but chest UP, head and eyes looking forward-left toward the rim. Both arms hang down with elbows bent, both hands cupped TOGETHER IN FRONT OF THE WAIST / LOWER BELLY, palms facing each other, fingers curved as if cradling an invisible basketball at hip / waist level. THERE IS NO BASKETBALL IN THE IMAGE — hands are empty but shaped as if holding a ball at the low loading position. Calm focused expression. Reference: wikiHow free throw tutorial step 1 (the deep crouch before driving up). Wearing official New York Knicks home jersey: orange jersey top with blue trim and 'KNICKS' wordmark on chest, large white number '7' on the front, blue shorts with orange side stripe, white basketball shoes. Athletic build. NBA 2K cover art style, clean bold outlines, half-realistic cartoon shading. Fully visible head to feet. TRANSPARENT BACKGROUND PNG, NO BASKETBALL anywhere in the image, no background elements, no shadow on ground. Centered composition."
+    },
+    {
+      "id": "spurs_ready_side",
+      "file": "spurs_ready_side.png",
+      "size": "1024x1024",
+      "finalSize": "512x512",
+      "prompt": "Full-body cartoon illustration of a male NBA basketball player in the LOADING / LOWEST POSITION of a free throw shooting motion (the 'dip' position right before driving up to release). View: 3/4 SIDE VIEW with body FACING LEFT, player looking toward the LEFT side of the frame at an imaginary rim. Body is in a DEEP ATHLETIC CROUCH: knees bent significantly (about 90 degrees), hips lowered and pushed back, weight on heels, torso leaning slightly forward but chest UP, head and eyes looking forward-left toward the rim. Both arms hang down with elbows bent, both hands cupped TOGETHER IN FRONT OF THE WAIST / LOWER BELLY, palms facing each other, fingers curved as if cradling an invisible basketball at hip / waist level. THERE IS NO BASKETBALL IN THE IMAGE — hands are empty but shaped as if holding a ball at the low loading position. Calm focused expression. Reference: wikiHow free throw tutorial step 1 (the deep crouch before driving up). Wearing official San Antonio Spurs home jersey: black jersey with silver/white trim and 'SPURS' wordmark on chest, large white number '21' on the front, black shorts with silver side stripe, white and black basketball shoes. Athletic build. NBA 2K cover art style, clean bold outlines, half-realistic cartoon shading. Fully visible head to feet. TRANSPARENT BACKGROUND PNG, NO BASKETBALL anywhere in the image, no background elements, no shadow."
+    }
+  ]
+}

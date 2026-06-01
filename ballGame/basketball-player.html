@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>🏀 球員投籃浮層 Demo — 尼克 / 馬刺</title>
+<style>
+  html, body {
+    margin: 0; padding: 0;
+    min-height: 100vh;
+    font-family: -apple-system, "Noto Sans TC", sans-serif;
+    background:
+      radial-gradient(ellipse at top, #2a3960 0%, #131c33 60%, #0a0f1f 100%);
+    color: #e8edf6;
+    line-height: 1.8;
+  }
+  .page {
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 70px 24px 180px;
+  }
+  .tag {
+    display: inline-block;
+    background: #ffd84a; color: #222;
+    padding: 4px 12px; border-radius: 999px;
+    font-weight: 800; font-size: 12px; letter-spacing: 1.5px;
+  }
+  h1 {
+    font-size: 42px;
+    margin: 12px 0 6px;
+    text-shadow: 0 4px 0 rgba(0,0,0,.3);
+    background: linear-gradient(90deg, #ffd84a, #ff8a3d);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  h2 {
+    margin-top: 44px;
+    border-bottom: 2px dashed rgba(255,255,255,.25);
+    padding-bottom: 6px;
+    font-size: 22px;
+  }
+  p { font-size: 16px; color: #c8d0e0; }
+  code {
+    background: rgba(0,0,0,.45);
+    padding: 2px 8px;
+    border-radius: 5px;
+    color: #ffd84a;
+    font-family: ui-monospace, Menlo, monospace;
+    font-size: 14px;
+  }
+  pre {
+    background: rgba(0,0,0,.5);
+    padding: 16px 20px;
+    border-radius: 12px;
+    overflow-x: auto;
+    border: 1px solid rgba(255,255,255,.08);
+    font-family: ui-monospace, Menlo, monospace;
+    font-size: 13px;
+    color: #e8edf6;
+  }
+  .card {
+    background: rgba(255,255,255,.05);
+    border: 1px solid rgba(255,255,255,.1);
+    border-radius: 16px;
+    padding: 22px 26px;
+    margin-top: 18px;
+    backdrop-filter: blur(8px);
+  }
+  .card h3 { margin: 0 0 8px; font-size: 18px; color: #ffd84a; }
+  ul { padding-left: 22px; color: #c8d0e0; }
+  li { margin: 4px 0; }
+  .credits {
+    margin-top: 60px;
+    text-align: center;
+    color: rgba(255,255,255,.5);
+    font-size: 13px;
+  }
+</style>
+</head>
+<body>
+
+<div class="page">
+  <span class="tag">WIDGET DEMO</span>
+  <h1>🏀 球員投籃浮層</h1>
+  <p>這是一個普通的 HTML 內容頁面。籃球員、籃框、計分都是用 <code>basketball-player-widget.js</code>
+     掛上去的浮層。你可以一邊讀文字，一邊按住畫面投籃。</p>
+
+  <h2>怎麼玩</h2>
+  <div class="card">
+    <h3>操作</h3>
+    <ul>
+      <li>📱 <strong>按住</strong>畫面任意處開始蓄力</li>
+      <li>⚡ 蓄力條會出現在畫面下方</li>
+      <li>🏀 <strong>放開</strong>就會投籃</li>
+      <li>🎯 蓄力大約 <strong>65%</strong> 時最準</li>
+      <li>👕 右上角可切換 <strong>尼克 / 馬刺</strong> 隊球員</li>
+    </ul>
+  </div>
+
+  <h2>怎麼用在自己的頁面</h2>
+  <p>把這兩行加到任何 HTML 頁面的 <code>&lt;body&gt;</code> 結尾就好：</p>
+  <pre>&lt;script src="basketball-player-widget.js"
+        data-assets="assets/players"
+        data-team="knicks"&gt;&lt;/script&gt;</pre>
+
+  <p>需要的素材結構：</p>
+  <pre>assets/players/
+  ├─ knicks_ready.png   ← 準備姿勢
+  ├─ knicks_shoot.png   ← 投籃出手
+  ├─ spurs_ready.png
+  └─ spurs_shoot.png</pre>
+
+  <h2>關於人物素材</h2>
+  <div class="card">
+    <h3>AI 生成（NBA 2K 風格）</h3>
+    <p style="margin:0">球員人物用 OpenAI image_gen 透過 <code>codex exec</code> 產生。
+       生圖腳本與 prompt manifest 都放在 <code>scripts/</code> 下，可以隨時改 prompt 重跑：</p>
+    <pre>node scripts/gen_via_codex.mjs</pre>
+  </div>
+
+  <h2>為什麼分成 widget</h2>
+  <p>跟 <code>basketball-widget.js</code> 一樣的設計：一行 script tag 就能把投籃小遊戲掛到任何頁面上，
+     不會搶走原本內容的位置（HUD 跟提示是 <code>position: fixed</code>，球員浮在角落）。
+     未來想換素材、換隊伍、換籃框位置，都只動 widget 內部。</p>
+
+  <p style="margin-top: 40px; opacity: .7;">
+    ↓↓↓ 試試看！按住畫面任意處蓄力，然後放開 ↓↓↓
+  </p>
+
+  <div class="credits">— basketball-player-widget v1 · 2026 —</div>
+</div>
+
+<!-- 把 widget 掛上去（重點就這一行） -->
+<script src="basketball-player-widget.js"
+        data-assets="assets/players"
+        data-team="knicks"></script>
+</body>
+</html>
