@@ -498,6 +498,7 @@
 
     // 球飛行
     if (ball.flying) {
+      const prevLeft = ball.x;                  // 上一幀左緣(用來判斷是否從正面撞板)
       const fdt = dt / 1000;
       ball.vy += GRAV * fdt;
       ball.x += ball.vx * fdt;
@@ -507,14 +508,19 @@
 
       const cx = ball.x + bHalf, cy = ball.y + bHalf;
 
-      // 籃板（左側豎板）反彈
+      // 籃板：只擋「從右邊正面撞上來」的球(上一幀還在板右側)；已經越過板頂跑到板後方的球不擋，讓它自由落下/飛出
       const boardX = hoop.x + HOOP_W * (40 / 253);
-      const boardTop = hoop.y + HOOP_H * (28 / 389);
+      const boardTop = hoop.y + HOOP_H * (31 / 389);
       const boardBottom = hoop.y + HOOP_H * (372 / 389);
-      if (ball.vx < 0 && (cx - bHalf) <= boardX && cy > boardTop && cy < boardBottom) {
-        ball.x = boardX - bHalf + 2;
-        ball.vx = Math.abs(ball.vx) * 0.55;     // 撞板彈回右側
+      if (ball.vx < 0 && prevLeft > boardX && ball.x <= boardX && cy > boardTop && cy < boardBottom) {
+        ball.x = boardX;
+        ball.vx = Math.abs(ball.vx) * 0.55;     // 正面撞板→彈回右側(阻尼)
         ball.bounces++;
+      }
+      // 越過板頂、掉到籃板「後方」的球 → 出界(被板擋在後面)，直接結束，避免透過半透明板顯示像穿越
+      else if (!ball.scored && cx < boardX && cy > boardTop && cy < boardBottom) {
+        ball.flying = false;
+        hideBall();
       }
 
       // 籃框：進球 or 打鐵反彈
@@ -522,7 +528,8 @@
           cy >= hoop.rimY - bHalf && cy <= hoop.rimY + bHalf) {
         if (Math.abs(cx - hoop.rimX) < hoop.rimR - 3) {
           ball.scored = true;
-          score(cx, cy);                         // 空心/進框：穿過續落
+          ball.vx *= 0.1;                         // 進框後水平幾乎歸零→穿網直落，不會往左飄進籃板
+          score(cx, cy);
         } else if (!ball.rimHit &&
                    cx > hoop.rimX - hoop.rimR - bHalf &&
                    cx < hoop.rimX + hoop.rimR + bHalf) {
