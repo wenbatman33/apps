@@ -30,7 +30,7 @@ body::before {
   z-index: -2;
   background:
     linear-gradient(90deg, rgba(23, 19, 15, 0.12) 1px, transparent 1px) 0 0 / 14px 14px,
-    url("assets/stadium-panorama-bg.png") center / cover no-repeat;
+    url("assets/stadium-panorama-bg.webp") center / cover no-repeat;
   filter: blur(7px) saturate(0.92) contrast(0.92);
   transform: scale(1.04);
 }
@@ -389,6 +389,89 @@ h1 {
   border-bottom: 4px solid var(--ink);
 }
 
+.tomorrow-section {
+  padding: 18px 0;
+  border-bottom: 4px solid var(--ink);
+}
+
+.section-title {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 12px;
+}
+
+.section-title span {
+  padding: 5px 10px;
+  border: 2px solid var(--ink);
+  background: var(--ink);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 1000;
+}
+
+.section-title h2 {
+  margin-bottom: 0;
+  font-size: 28px;
+}
+
+.schedule-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.schedule-grid article {
+  min-height: 150px;
+  padding: 12px;
+  border: 3px solid var(--ink);
+  background:
+    radial-gradient(circle at 88% 18%, rgba(255, 226, 90, 0.74) 0 34px, transparent 35px),
+    linear-gradient(135deg, #fff7e6 0 68%, #e5d5b7 68% 100%);
+}
+
+.schedule-grid span {
+  display: block;
+  margin-bottom: 10px;
+  color: var(--blue);
+  font-size: 12px;
+  font-weight: 1000;
+}
+
+.schedule-grid strong {
+  display: block;
+  margin-bottom: 8px;
+  font-size: 20px;
+  line-height: 1.2;
+}
+
+.schedule-grid p {
+  margin-bottom: 0;
+  color: #40382f;
+  line-height: 1.55;
+}
+
+.prediction-banner {
+  display: block;
+  margin-top: 18px;
+  overflow: hidden;
+  border: 4px solid #f4bd24;
+  background: #080808;
+  text-decoration: none;
+  box-shadow: 8px 8px 0 rgba(23, 19, 15, 0.24);
+}
+
+.prediction-banner picture,
+.prediction-banner img {
+  display: block;
+  width: 100%;
+}
+
+.prediction-banner img {
+  height: auto;
+}
+
 .story {
   padding: 14px;
 }
@@ -479,13 +562,16 @@ h1 {
 @media (max-width: 980px) {
   .lead-grid,
   .paper-columns,
-  .poster-row {
+  .poster-row,
+  .schedule-grid,
+  .prediction-banner {
     grid-template-columns: 1fr;
   }
 
   .match-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+
 }
 
 @media (max-width: 620px) {
@@ -523,6 +609,19 @@ h1 {
 
   .match-grid {
     grid-template-columns: 1fr;
+  }
+
+  .section-title {
+    align-items: start;
+    flex-direction: column;
+  }
+
+  .schedule-grid article {
+    min-height: 0;
+  }
+
+  .prediction-banner {
+    margin-top: 14px;
   }
 
   .match-visual {
