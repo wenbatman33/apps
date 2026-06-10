@@ -195,16 +195,10 @@ class PlayScene extends Phaser.Scene {
         this.multiText = this.add.text(0, 0, 'x1.0', {
             fontFamily: 'Arial Black', color: '#ffe066', stroke: '#002a59', strokeThickness: 4,
         }).setDepth(D).setScrollFactor(0).setVisible(false);
-        this.launchText = this.add.text(0, 0, `0 / ${this.NUM_OF_PENALTY}`, {
+        // 進球計數（顯示於左上角）
+        this.launchText = this.add.text(0, 0, `進球 0 / ${this.NUM_OF_PENALTY}`, {
             fontFamily: 'Arial Black', color: '#ffffff', stroke: '#002a59', strokeThickness: 5,
-        }).setOrigin(1, 0).setDepth(D).setScrollFactor(0);
-
-        this.backBg = this.add.rectangle(0, 0, 68, 22, 0x000033, 0.6)
-            .setStrokeStyle(1.5, 0x9cc3ff).setInteractive({ useHandCursor: true }).setDepth(D).setScrollFactor(0);
-        this.backText = this.add.text(0, 0, 'MENU', {
-            fontFamily: 'Arial', fontSize: 11, color: '#fff',
-        }).setOrigin(0.5).setDepth(D + 1).setScrollFactor(0);
-        this.backBg.on('pointerdown', () => this.scene.start('Menu'));
+        }).setOrigin(0, 0).setDepth(D).setScrollFactor(0);
 
         // resultText 不靠 scrollFactor，改由 update 每幀強制釘在畫面正中央（不跟鏡頭）
         this.resultText = this.add.text(0, 0, '', {
@@ -231,11 +225,7 @@ class PlayScene extends Phaser.Scene {
         const big = !portrait;
         this.scoreText.setOrigin(0, 0).setPosition(left, top).setFontSize(big ? 34 : 26);
         this.multiText.setOrigin(0, 0).setPosition(left, top + (big ? 42 : 32)).setFontSize(big ? 22 : 18);
-        this.launchText.setOrigin(1, 0).setPosition(right, top).setFontSize(big ? 30 : 22);
-        // MENU 框右緣對齊可見右界（與 0/15 同一垂直線），文字置於框正中心
-        const menuY = top + (big ? 64 : 52);
-        this.backBg.setOrigin(1, 0.5).setPosition(right, menuY);       // 框右緣 = right
-        this.backText.setOrigin(0.5, 0.5).setPosition(right - 34, menuY); // 框中心 = right-34（寬68的一半）
+        this.launchText.setOrigin(0, 0).setPosition(left, top).setFontSize(big ? 30 : 22); // 進球計數，左上角
         this.resultText.setFontSize(big ? 72 : 44); // 位置由 update 固定置中
     }
 
@@ -443,7 +433,7 @@ class PlayScene extends Phaser.Scene {
 
     _endTurn() {
         this.launch++;
-        this.launchText.setText(`${this.launch} / ${this.NUM_OF_PENALTY}`);
+        this.launchText.setText(`進球 ${this.goalsScored} / ${this.NUM_OF_PENALTY}`);
         if (this.launch < this.NUM_OF_PENALTY) {
             this._resetScene();
             this.launched = false;
