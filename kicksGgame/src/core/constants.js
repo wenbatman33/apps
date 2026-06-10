@@ -94,7 +94,7 @@ const HIT_BALL_MAX_FORCE = 130;
 const HIT_BALL_MIN_FORCE = 5;
 const FORCE_RATE = 0.0014;
 const FORCE_MAX = 0.5;
-const FORCE_MULTIPLIER_AXIS = {x: 0.16, y: 0.4, z: 0.11};
+const FORCE_MULTIPLIER_AXIS = {x: 0.14, y: 0.4, z: 0.10};
 const MAX_FORCE_Y = 66;
 const MIN_FORCE_Y = 50;
 const TIME_SWIPE_DESKTOP = 500;
@@ -120,15 +120,15 @@ const SHADOWN_FACTOR = 1.1;
 
 // 關卡資料（原 game/index.html 傳入 CMain 的 oData）
 const LEVEL_DATA = {
-    // 平均 ~51%（原 73%）：保留「角落較高、中央較低」結構但整體下調，搭配偶爾出界 → 整體進球約 5 成
+    // 平均 ~74%：搭配少量出界 → 10 球約進 6~7 球
     area_goal: [
-        {id: 0, probability: 72}, {id: 1, probability: 54}, {id: 2, probability: 40},
-        {id: 3, probability: 54}, {id: 4, probability: 72}, {id: 5, probability: 54},
-        {id: 6, probability: 40}, {id: 7, probability: 30}, {id: 8, probability: 40},
-        {id: 9, probability: 54}, {id: 10, probability: 60}, {id: 11, probability: 44},
-        {id: 12, probability: 50}, {id: 13, probability: 44}, {id: 14, probability: 60}
+        {id: 0, probability: 96}, {id: 1, probability: 80}, {id: 2, probability: 60},
+        {id: 3, probability: 80}, {id: 4, probability: 96}, {id: 5, probability: 78},
+        {id: 6, probability: 60}, {id: 7, probability: 50}, {id: 8, probability: 60},
+        {id: 9, probability: 78}, {id: 10, probability: 84}, {id: 11, probability: 66},
+        {id: 12, probability: 72}, {id: 13, probability: 66}, {id: 14, probability: 84}
     ],
-    num_of_penalty: 15,
+    num_of_penalty: 10,
     multiplier_step: 0.1,
 };
 

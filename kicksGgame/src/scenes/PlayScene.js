@@ -14,6 +14,7 @@ class PlayScene extends Phaser.Scene {
         this.animPlayerFlag = false;
 
         this.score = 0;
+        this.goalsScored = 0; // 進球數
         this.multiplier = 1;
         this.combo = 0;
         this.launch = 0;
@@ -187,12 +188,13 @@ class PlayScene extends Phaser.Scene {
     _buildHUD() {
         const D = 100;
         // 全部 setScrollFactor(0)：固定貼螢幕、不隨相機跟拍移動
+        // 分數與連擊倍率隱藏（保留計分邏輯與物件，僅不顯示於遊戲畫面）
         this.scoreText = this.add.text(0, 0, 'SCORE 0', {
             fontFamily: 'Arial Black', color: '#ffffff', stroke: '#002a59', strokeThickness: 6,
-        }).setDepth(D).setScrollFactor(0);
+        }).setDepth(D).setScrollFactor(0).setVisible(false);
         this.multiText = this.add.text(0, 0, 'x1.0', {
             fontFamily: 'Arial Black', color: '#ffe066', stroke: '#002a59', strokeThickness: 4,
-        }).setDepth(D).setScrollFactor(0);
+        }).setDepth(D).setScrollFactor(0).setVisible(false);
         this.launchText = this.add.text(0, 0, `0 / ${this.NUM_OF_PENALTY}`, {
             fontFamily: 'Arial Black', color: '#ffffff', stroke: '#002a59', strokeThickness: 5,
         }).setOrigin(1, 0).setDepth(D).setScrollFactor(0);
@@ -361,6 +363,7 @@ class PlayScene extends Phaser.Scene {
         if (this.goal || this.saved) return;
         if (this.makeGoal) {
             this.goal = true;
+            this.goalsScored++;
             this.timeReset = TIME_RESET_AFTER_GOAL;
             this._showResult('GOAL!', '#3aff7c');
             this._calculateScore();
@@ -479,7 +482,7 @@ class PlayScene extends Phaser.Scene {
             fontFamily: 'Arial Black', fontSize: portrait ? 36 : 72, color: '#fff',
             stroke: '#0033aa', strokeThickness: portrait ? 5 : 8,
         }).setOrigin(0.5).setDepth(D + 1).setScrollFactor(0);
-        this.add.text(cx, cy - (portrait ? 12 : 10), 'SCORE  ' + this.score, {
+        this.add.text(cx, cy - (portrait ? 12 : 10), '進球  ' + this.goalsScored + ' / ' + this.NUM_OF_PENALTY, {
             fontFamily: 'Arial Black', fontSize: portrait ? 28 : 48, color: '#ffe066',
         }).setOrigin(0.5).setDepth(D + 1).setScrollFactor(0);
         const bw = portrait ? 230 : 260, bh = portrait ? 50 : 60;
