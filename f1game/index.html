@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>F1 鈴鹿大獎賽 — Suzuka Grand Prix</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  html,body { width:100%; height:100%; overflow:hidden; background:#0a0e14; font-family:"Helvetica Neue",Arial,"PingFang TC","Microsoft JhengHei",sans-serif; }
+  #app { position:fixed; inset:0; }
+  canvas { display:block; }
+
+  /* ---------- HUD ---------- */
+  .hud { position:fixed; z-index:10; color:#fff; user-select:none; pointer-events:none; }
+  .hud-panel { background:rgba(8,12,20,.62); backdrop-filter:blur(6px); border-radius:10px; border:1px solid rgba(255,255,255,.10); }
+
+  #hud-pos { left:18px; top:16px; padding:10px 16px; display:flex; gap:14px; align-items:baseline; }
+  #hud-pos .p { font-size:34px; font-weight:900; font-style:italic; color:#ffd23f; }
+  #hud-pos .lap { font-size:16px; font-weight:700; color:#dfe7f3; }
+
+  #btn-mute { left:18px; top:86px; width:44px; height:44px; font-size:20px; pointer-events:auto; cursor:pointer; color:#fff; display:flex; align-items:center; justify-content:center; }
+  #btn-mute:hover { background:rgba(30,40,60,.8); }
+  body.touch #btn-mute { top:auto; bottom:280px; left:22px; }
+
+  #hud-times { right:18px; top:16px; padding:10px 14px; font-size:13px; min-width:172px; }
+  #hud-times .row { display:flex; justify-content:space-between; gap:12px; line-height:1.65; }
+  #hud-times .lbl { color:#9fb0c8; }
+  #hud-times .val { font-variant-numeric:tabular-nums; font-weight:700; }
+  #hud-times .best .val { color:#c478ff; }
+  #hud-times .cur .val { color:#7CFC9B; }
+
+  #hud-speed { right:18px; bottom:18px; padding:12px 20px 10px; text-align:right; }
+  #hud-speed .kmh { font-size:52px; font-weight:900; font-style:italic; line-height:1; letter-spacing:-1px; }
+  #hud-speed .unit { font-size:13px; color:#9fb0c8; font-weight:700; }
+  #hud-speed .gearbox { margin-top:4px; font-size:15px; color:#ffd23f; font-weight:800; }
+  #hud-speed .bar { height:6px; width:180px; background:rgba(255,255,255,.12); border-radius:3px; margin-top:8px; overflow:hidden; }
+  #hud-speed .bar i { display:block; height:100%; width:0%; background:linear-gradient(90deg,#19c37d,#ffd23f,#ff4040); border-radius:3px; }
+
+  #hud-map { left:18px; bottom:18px; padding:8px; }
+  #hud-map canvas { display:block; }
+
+  #hud-msg { left:50%; top:26%; transform:translate(-50%,-50%); font-size:46px; font-weight:900; font-style:italic; text-shadow:0 2px 18px rgba(0,0,0,.7); text-align:center; white-space:nowrap; }
+
+  /* 起跑燈 */
+  #lights { left:50%; top:90px; transform:translateX(-50%); padding:14px 18px; display:none; gap:14px; }
+  #lights .col { display:flex; flex-direction:column; gap:10px; }
+  #lights .lamp { width:34px; height:34px; border-radius:50%; background:#2a2f3a; box-shadow:inset 0 2px 5px rgba(0,0,0,.7); }
+  #lights .lamp.on { background:#ff2222; box-shadow:0 0 18px 4px rgba(255,40,40,.75), inset 0 2px 5px rgba(0,0,0,.3); }
+
+  /* 結算畫面 */
+  #results { position:fixed; inset:0; z-index:30; display:none; align-items:center; justify-content:center; background:rgba(4,8,16,.72); backdrop-filter:blur(8px); }
+  #results .card { background:rgba(14,20,32,.95); border:1px solid rgba(255,255,255,.12); border-radius:16px; padding:30px 40px; color:#fff; min-width:420px; }
+  #results h1 { font-size:30px; font-style:italic; margin-bottom:4px; }
+  #results h2 { font-size:14px; color:#9fb0c8; font-weight:400; margin-bottom:18px; }
+  #results table { width:100%; border-collapse:collapse; font-size:14px; }
+  #results td { padding:7px 10px; border-bottom:1px solid rgba(255,255,255,.07); font-variant-numeric:tabular-nums; }
+  #results tr.me td { color:#ffd23f; font-weight:800; }
+  #results .chip { display:inline-block; width:10px; height:10px; border-radius:2px; margin-right:8px; }
+  #results button { margin-top:22px; width:100%; padding:13px; font-size:17px; font-weight:800; color:#06121f; background:#ffd23f; border:none; border-radius:10px; cursor:pointer; }
+  #results button:hover { filter:brightness(1.08); }
+
+  /* 操作提示 */
+  #hint { left:50%; bottom:14px; transform:translateX(-50%); font-size:12px; color:rgba(255,255,255,.55); padding:6px 14px; }
+
+  /* 觸控控制 */
+  .touch-btn { position:fixed; z-index:20; width:84px; height:84px; border-radius:50%; background:rgba(255,255,255,.10); border:2px solid rgba(255,255,255,.25); color:#fff; font-size:30px; display:none; align-items:center; justify-content:center; user-select:none; -webkit-user-select:none; touch-action:none; }
+  body.touch .touch-btn { display:flex; }
+  #tb-left { left:22px; bottom:120px; } #tb-right { left:128px; bottom:120px; }
+  #tb-gas { right:22px; bottom:170px; background:rgba(25,195,125,.25); border-color:rgba(25,195,125,.5); }
+  #tb-brake { right:22px; bottom:60px; background:rgba(255,64,64,.22); border-color:rgba(255,64,64,.5); }
+  body.touch #hud-map { display:none; } body.touch #hint { display:none; }
+
+  /* DEV 工具 */
+  #dev { position:fixed; right:0; top:0; bottom:0; width:300px; z-index:40; background:rgba(10,14,22,.95); border-left:1px solid rgba(255,255,255,.15); color:#dfe7f3; display:none; flex-direction:column; font-size:12px; }
+  #dev header { padding:12px 14px; font-weight:800; font-size:14px; border-bottom:1px solid rgba(255,255,255,.12); display:flex; justify-content:space-between; align-items:center; }
+  #dev .body { flex:1; overflow-y:auto; padding:10px 14px 20px; }
+  #dev h3 { font-size:12px; color:#ffd23f; margin:14px 0 6px; text-transform:uppercase; letter-spacing:.5px; }
+  #dev .ctl { margin-bottom:8px; }
+  #dev .ctl label { display:flex; justify-content:space-between; margin-bottom:2px; color:#aebdd2; }
+  #dev .ctl label b { color:#fff; font-variant-numeric:tabular-nums; }
+  #dev input[type=range] { width:100%; }
+  #dev .btns { display:flex; flex-wrap:wrap; gap:6px; margin-top:6px; }
+  #dev .btns button { flex:1 1 45%; padding:8px 6px; background:#1d2738; color:#fff; border:1px solid rgba(255,255,255,.15); border-radius:6px; cursor:pointer; font-size:12px; }
+  #dev .btns button:hover { background:#2a3850; }
+  #dev textarea { width:100%; height:110px; margin-top:8px; background:#060a12; color:#7CFC9B; border:1px solid rgba(255,255,255,.15); border-radius:6px; font-size:10px; padding:6px; font-family:monospace; }
+  #dev .note { color:#7c8aa0; margin-top:6px; line-height:1.5; }
+  body.dev-drag .hud-panel { pointer-events:auto; outline:1px dashed #ffd23f; cursor:move; }
+</style>
+</head>
+<body>
+<div id="app"></div>
+
+<!-- HUD -->
+<div id="hud-pos" class="hud hud-panel"><span class="p">P1</span><span class="lap">LAP 1/3</span></div>
+<button id="btn-mute" class="hud hud-panel" title="靜音切換">🔊</button>
+<div id="hud-times" class="hud hud-panel">
+  <div class="row cur"><span class="lbl">本圈</span><span class="val" id="t-cur">--:--.---</span></div>
+  <div class="row"><span class="lbl">上一圈</span><span class="val" id="t-last">--:--.---</span></div>
+  <div class="row best"><span class="lbl">最速圈</span><span class="val" id="t-best">--:--.---</span></div>
+  <div class="row"><span class="lbl">前車差距</span><span class="val" id="t-gap">---</span></div>
+</div>
+<div id="hud-speed" class="hud hud-panel">
+  <div><span class="kmh" id="kmh">0</span> <span class="unit">km/h</span></div>
+  <div class="gearbox">檔位 <span id="gear">N</span></div>
+  <div class="bar"><i id="speedbar"></i></div>
+</div>
+<div id="hud-map" class="hud hud-panel"><canvas id="minimap" width="190" height="190"></canvas></div>
+<div id="hud-msg" class="hud"></div>
+<div id="lights" class="hud hud-panel"></div>
+<div id="hint" class="hud hud-panel">↑/W 油門　空白鍵 煞車（停止時長按倒車）　←→/AD 轉向　R 重新起跑　M 音效　`(F2) 開發工具</div>
+
+<!-- 結算 -->
+<div id="results"><div class="card">
+  <h1 id="res-title">比賽結束</h1>
+  <h2>鈴鹿賽道 Suzuka Circuit · 5.807 km</h2>
+  <table id="res-table"></table>
+  <button id="res-restart">再來一場</button>
+  <div style="margin-top:14px;font-size:10px;color:#5b6880;line-height:1.5">玩家車模型：「Ferrari F1-75」by Sketcher（Sketchfab），CC-BY-NC-4.0</div>
+</div></div>
+
+<!-- 觸控 -->
+<div id="tb-left" class="touch-btn">◀</div>
+<div id="tb-right" class="touch-btn">▶</div>
+<div id="tb-gas" class="touch-btn">▲</div>
+<div id="tb-brake" class="touch-btn">▼</div>
+
+<!-- DEV 工具 -->
+<div id="dev">
+  <header>🔧 DEV 微調工具 <span style="cursor:pointer" id="dev-close">✕</span></header>
+  <div class="body" id="dev-body"></div>
+</div>
+
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+} }
+</script>
+<script type="module" src="src/main.js"></script>
+</body>
+</html>
