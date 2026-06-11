@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Sonic Dash 3D</title>
+<style>
+  html, body { margin: 0; padding: 0; overflow: hidden; background: #000; height: 100%; touch-action: none; }
+  #c { display: block; width: 100vw; height: 100vh; }
+  #hud {
+    position: fixed; top: 12px; left: 14px; color: #fff; z-index: 5;
+    font-family: "Helvetica Neue", Arial, sans-serif; font-weight: 800;
+    text-shadow: 0 2px 6px rgba(0,0,0,.6); pointer-events: none; user-select: none;
+  }
+  #hud .score { font-size: 28px; letter-spacing: 1px; }
+  #hud .rings { font-size: 20px; color: #ffd23f; margin-top: 4px; }
+  #overlay {
+    position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center;
+    background: rgba(0, 20, 60, .55); backdrop-filter: blur(4px); z-index: 10; color: #fff;
+    font-family: "Helvetica Neue", Arial, sans-serif; text-align: center;
+  }
+  #overlay h1 { font-size: 44px; margin: 0 0 8px; font-style: italic; letter-spacing: 2px;
+    background: linear-gradient(180deg,#9be7ff,#1e6cff); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+  #overlay p { margin: 6px 0; font-size: 16px; opacity: .9; }
+  #overlay .btn {
+    margin-top: 18px; padding: 14px 44px; font-size: 20px; font-weight: 800; color: #fff; border: none;
+    border-radius: 999px; background: linear-gradient(180deg, #2f8bff, #0f55d8); cursor: pointer;
+    box-shadow: 0 6px 0 #0a3a96, 0 10px 24px rgba(0,0,0,.4);
+  }
+  #overlay .btn:active { transform: translateY(3px); box-shadow: 0 3px 0 #0a3a96; }
+  #overlay .final { font-size: 22px; font-weight: 800; color: #ffd23f; }
+  #overlay .btn.small { font-size: 14px; padding: 8px 22px; background: linear-gradient(180deg,#5a6780,#39455e); box-shadow: 0 4px 0 #222c40; margin-top: 12px; }
+  .hidden { display: none !important; }
+  /* 教學橫幅 */
+  #tut {
+    position: fixed; top: 16%; left: 50%; transform: translateX(-50%); z-index: 8;
+    color: #fff; font-family: "Helvetica Neue", Arial, sans-serif; font-weight: 800;
+    font-size: 24px; text-align: center; white-space: nowrap;
+    text-shadow: 0 2px 8px rgba(0,0,0,.7); pointer-events: none; user-select: none;
+  }
+  #tut .sub { font-size: 15px; font-weight: 600; opacity: .85; margin-top: 6px; }
+  #tut.pop { animation: tutPop .35s ease-out; }
+  @keyframes tutPop { 0% { transform: translateX(-50%) scale(.6); opacity: 0; } 100% { transform: translateX(-50%) scale(1); opacity: 1; } }
+  @media (max-width: 480px) {
+    #hud .score { font-size: 22px; } #hud .rings { font-size: 16px; }
+    #overlay h1 { font-size: 32px; } #overlay p { font-size: 14px; padding: 0 16px; }
+    #tut { font-size: 19px; white-space: normal; width: 92vw; }
+  }
+  /* DEV 面板 */
+  #devBtn {
+    position: fixed; right: 10px; bottom: 10px; z-index: 20; width: 34px; height: 34px; border-radius: 50%;
+    border: none; background: rgba(0,0,0,.35); color: #fff; font-size: 16px; cursor: pointer; opacity: .35;
+  }
+  #devPanel {
+    position: fixed; right: 10px; top: 10px; bottom: 54px; width: 280px; z-index: 21; overflow-y: auto;
+    background: rgba(10,14,24,.92); color: #dde6f5; border-radius: 10px; padding: 10px 12px;
+    font: 12px/1.5 Menlo, monospace;
+  }
+  #devPanel h3 { margin: 8px 0 4px; font-size: 12px; color: #7fb4ff; border-bottom: 1px solid #2a3550; }
+  #devPanel .row { display: flex; align-items: center; gap: 6px; margin: 2px 0; }
+  #devPanel .row label { flex: 0 0 92px; white-space: nowrap; overflow: hidden; }
+  #devPanel .row input[type=range] { flex: 1; }
+  #devPanel .row .val { flex: 0 0 44px; text-align: right; color: #ffd23f; }
+  #devPanel button { margin: 4px 4px 0 0; padding: 4px 10px; border: none; border-radius: 6px;
+    background: #2f8bff; color: #fff; cursor: pointer; font-size: 12px; }
+  #devPanel button.alt { background: #444f66; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="hud">
+  <div class="score">SCORE <span id="score">0</span></div>
+  <div class="rings">⭕ <span id="ringCount">0</span></div>
+</div>
+<div id="overlay">
+  <h1>SONIC DASH 3D</h1>
+  <p>← → / A D：切換跑道　　↑ / Space：跳躍</p>
+  <p>手機：左右滑切換跑道、上滑跳躍</p>
+  <button class="btn" id="startBtn">開始遊戲</button>
+  <button class="btn small" id="tutBtn">📖 新手教學</button>
+</div>
+<div id="tut" class="hidden"></div>
+<button id="devBtn" title="DEV 工具 (D)">⚙️</button>
+<div id="devPanel" class="hidden"></div>
+<script type="importmap">
+{ "imports": { "three": "./vendor/three.module.js", "three/addons/loaders/GLTFLoader.js": "./vendor/GLTFLoader.js" } }
+</script>
+<script type="module" src="./game.js"></script>
+</body>
+</html>
