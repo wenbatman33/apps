@@ -8,9 +8,11 @@
 <meta http-equiv="Expires" content="0">
 <title>大頭足球 · 拖曳版</title>
 <style>
-  * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent;
+      user-select:none; -webkit-user-select:none; -webkit-touch-callout:none; }
   html,body { width:100%; height:100%; overflow:hidden; background:#0a1020; font-family:-apple-system,"PingFang TC","Microsoft JhengHei",sans-serif; }
-  #game { display:block; width:100vw; height:100vh; touch-action:none; }
+  body { display:flex; align-items:center; justify-content:center; }  /* 置中遊戲畫面，上下留深底 */
+  #game { display:block; touch-action:none; }                          /* 尺寸由 JS 設定 */
   /* DEV 微調工具面板 */
   #dev { position:fixed; top:0; right:0; width:250px; max-height:62vh; overflow-y:auto;
          background:rgba(15,20,35,.8); color:#cfe3ff; font-size:12px; padding:8px 10px;
@@ -114,7 +116,7 @@ const CFG = {
 };
 
 // ---- 素材（有則用，沒有 fallback 向量繪圖）----
-const BUILD = 'b33-0623';  // 版本標記(顯示於左下角)；改版時遞增以破快取
+const BUILD = 'b34-0623';  // 版本標記(顯示於左下角)；改版時遞增以破快取
 const ASSET_SRC = {
   bg:         'assets/bg.png?v='+BUILD,
   ball:       'assets/ball.png',
@@ -129,7 +131,7 @@ function loadAssets(){
   assetsTried = true;
   for(const k in ASSET_SRC){
     const im = new Image();
-    im.onload = ()=>{ IMG[k] = im; };
+    im.onload = ()=>{ IMG[k] = im; if(k==='bg' && typeof resize==='function') resize(); };
     im.onerror = ()=>{ IMG[k] = null; };
     im.src = ASSET_SRC[k];
   }
@@ -167,22 +169,33 @@ let dpr=1;
 function resize(){
   dpr = Math.min(window.devicePixelRatio||1, 2);
   const vw = window.innerWidth, vh = window.innerHeight;
+  // 版面高 = 球場帶高(填滿寬度) × 1.45(上方留白給記分板/挑球弧)，但不超過視窗
+  // -> 手機直式不再有一大片空白，整體就和背景球場差不多高、置中
+  const aspect = IMG.bg ? IMG.bg.height/IMG.bg.width : 0.5625;  // 內聯(避免 TDZ，可提早呼叫)
+  const bandH = vw * aspect;
+  const gameH = Math.min(vh, bandH * 1.45);
   canvas.width = Math.floor(vw*dpr);
-  canvas.height = Math.floor(vh*dpr);
+  canvas.height = Math.floor(gameH*dpr);
   canvas.style.width = vw+'px';
-  canvas.style.height = vh+'px';
-  W = vw; H = vh;                       // 世界 = 視窗
-  // 尺寸縮放：直立窄螢幕依寬度縮小、也顧到高度，球員/球門/球不會過大
-  S = Math.max(0.48, Math.min(1.15, Math.min(vw/640, vh/900)));
-  // 保持球員 home 隨視窗更新（players 建立後才有）
-  if(window.__ready){ p1.home=FL()+(FR()-FL())*0.25; p2.home=FL()+(FR()-FL())*0.75; }
+  canvas.style.height = gameH+'px';
+  W = vw; H = gameH;                    // 世界 = 寬×緊湊高
+  // 尺寸縮放：用緊湊版面高為基準 -> 手機自動縮小球員/球/記分板
+  S = Math.max(0.42, Math.min(1.15, Math.min(vw/640, gameH/900)));
+  // players/ball 建立後：更新半徑與 home(讓尺寸跟著 S 走，旋轉/縮放都正確)
+  if(window.__ready){
+    ball.r=BR(); p1.r=PR(); p2.r=PR();
+    p1.home=FL()+(FR()-FL())*0.25; p2.home=FL()+(FR()-FL())*0.75;
+  }
 }
 window.addEventListener('resize', resize);
 window.addEventListener('orientationchange', resize);
-resize();
+resize();   // 內聯長寬比，可在 ball/players 建立前先算好 S
 
-// 螢幕座標 -> 世界座標（canvas 填滿視窗，故為 1:1）
-function toWorld(clientX, clientY){ return { x: clientX, y: clientY }; }
+// 螢幕座標 -> 世界座標（canvas 置中、可能有上下留白，需扣掉偏移）
+function toWorld(clientX, clientY){
+  const r = canvas.getBoundingClientRect();
+  return { x: clientX - r.left, y: clientY - r.top };
+}
 
 // ============================================================
 // 遊戲狀態
@@ -226,6 +239,7 @@ const CHARGE_MULT = 1.8; // 滿氣額外力道倍率(放開力道 = 1 + frac*CHA
 const p1 = makePlayer('L'); // 玩家
 const p2 = makePlayer('R'); // AI
 window.__ready = true;
+resize();   // players 就緒後再算一次(更新半徑/home)
 
 let scoreL=0, scoreR=0;
 let state='select';    // select | play | goal | over
