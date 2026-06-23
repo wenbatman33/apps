@@ -1,0 +1,18 @@
+# 暫存 / log
+tmp/
+scripts/*.out
+
+# 球場圖備份與生成變體（保留 assets/bg.png）
+assets/_bg_backup/
+assets/bg_*.png
+
+# 球門圖生成變體與備份（保留 assets/ui/goal.png 與 scoreboard.png）
+assets/goal_*.png
+assets/ui/goal_*.png
+
+# 球員圖備份 / 暫存（保留 assets/players/<id>.png 與 <id>_kick.png）
+assets/players/_retired_backup/
+assets/players/_withball_backup/
+assets/players/tmp_imagegen/
+封存/
+封存.zip

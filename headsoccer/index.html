@@ -1,0 +1,997 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+<title>大頭足球 · 拖曳版</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html,body { width:100%; height:100%; overflow:hidden; background:#0a1020; font-family:-apple-system,"PingFang TC","Microsoft JhengHei",sans-serif; }
+  #game { display:block; width:100vw; height:100vh; touch-action:none; }
+  /* DEV 微調工具面板 */
+  #dev { position:fixed; top:0; right:0; width:250px; max-height:62vh; overflow-y:auto;
+         background:rgba(15,20,35,.8); color:#cfe3ff; font-size:12px; padding:8px 10px;
+         display:none; z-index:50; border-left:1px solid #2a3a55; border-bottom-left-radius:10px; }
+  #dev h3 { font-size:13px; margin:6px 0 8px; color:#7fc7ff; }
+  #dev .row { display:flex; align-items:center; gap:6px; margin:4px 0; }
+  #dev .row label { width:96px; flex:none; color:#9fb6d6; }
+  #dev .row input[type=range]{ flex:1; }
+  #dev .row .val { width:46px; text-align:right; color:#fff; }
+  #dev .btns { display:flex; gap:6px; margin-top:10px; flex-wrap:wrap; }
+  #dev button { background:#2a4a7a; color:#fff; border:0; border-radius:6px; padding:6px 10px; cursor:pointer; font-size:12px; }
+  #dev button:hover { background:#356; }
+  #devHint { position:fixed; left:8px; bottom:8px; color:#5a7; font-size:11px; opacity:.6; z-index:40; }
+  /* 選人畫面 */
+  #select { position:fixed; inset:0; z-index:60; display:flex; flex-direction:column; align-items:center;
+            justify-content:center; gap:18px; padding:24px 20px; overflow-y:auto;
+            background:radial-gradient(circle at 50% 30%, #1b3a6b, #0a1428 70%); }
+  @media (max-aspect-ratio:1/1){ #select{ justify-content:flex-start; } }
+  #select h1 { color:#ffe27a; font-size:clamp(22px,5vw,40px); text-shadow:0 3px 0 #0006; letter-spacing:2px; }
+  #select .sub { color:#bcd2ef; font-size:clamp(12px,2.6vw,16px); margin-top:-8px; }
+  #grid { display:grid; grid-template-columns:repeat(4,1fr); gap:clamp(8px,1.8vw,18px);
+          width:min(92vw,720px); }
+  @media (max-aspect-ratio:1/1){ #grid{ grid-template-columns:repeat(2,1fr); width:min(92vw,420px);} }
+  .card { background:linear-gradient(180deg,#244a86,#16294c); border:2px solid #3a5f9e; border-radius:14px;
+          padding:8px 6px 10px; cursor:pointer; text-align:center; transition:transform .12s, box-shadow .12s;
+          position:relative; overflow:hidden; }
+  .card:hover, .card:active { transform:translateY(-4px) scale(1.04); box-shadow:0 8px 20px #0008; border-color:#ffe27a; }
+  .card .pic { width:100%; aspect-ratio:1/1; display:flex; align-items:flex-end; justify-content:center; }
+  .card .pic img { width:100%; height:100%; object-fit:contain; filter:drop-shadow(0 4px 4px #0006); }
+  .card .ph { width:64%; aspect-ratio:1/1; border-radius:50%; background:#33538c; margin:auto;
+              display:flex; align-items:center; justify-content:center; color:#9fb6d6; font-size:11px; }
+  .card .nm { color:#fff; font-weight:bold; font-size:clamp(12px,2.4vw,16px); margin-top:4px; }
+  #select .tip { color:#7f9bc4; font-size:12px; }
+  #out { width:100%; height:120px; margin-top:8px; background:#0a1020; color:#8f8; border:1px solid #2a3a55; font-size:11px; }
+</style>
+</head>
+<body>
+<canvas id="game"></canvas>
+<div id="select">
+  <h1>⚽ 選擇你的球員</h1>
+  <div class="sub">每日戰報明星陣容 · 拖曳球員踢球</div>
+  <div id="grid"></div>
+  <div class="tip">點選一位球員開始比賽（對手由電腦隨機選）</div>
+</div>
+<div id="devHint">按 D 開啟微調工具 · <span id="buildTag"></span></div>
+<div id="dev"></div>
+
+<script>
+"use strict";
+/* ============================================================
+   大頭足球 · 拖曳版
+   - 拖曳自己半場的球員去撞球 / 踢球，球進對方球門得分
+   - PC 滑鼠拖、Mobile 觸控拖
+   - 邏輯解析度固定 1280x720，畫面等比 contain 縮放，自適應任何視窗
+   ============================================================ */
+
+const canvas = document.getElementById('game');
+const ctx = canvas.getContext('2d');
+
+// 世界尺寸 = 視窗 CSS 像素（流動式，填滿整個視窗、無黑邊）
+let W = 1280, H = 720;
+// 尺寸/物理縮放因子：以高度為基準(720)，讓手感在各種視窗大小下一致
+let S = 1;
+
+// ---- 可微調參數（基準值，對應 720 高的場地；DEV 工具會改這裡）----
+// 注意：含「距離/速度」單位的值會自動乘上 S，使大小視窗手感一致
+const CFG = {
+  gravity: 2000,          // 重力 px/s^2
+  ballRadius: 26,         // 球半徑
+  ballRestitution: 0.5,   // 球彈性
+  ballAirDrag: 0.06,      // 空氣阻力(每秒比例)
+  ballGroundFric: 0.86,   // 落地水平摩擦
+  playerRadius: 50,       // 球員碰撞基準半徑
+  hitW: 0.62,             // 碰撞框寬度倍率(緊貼身形、去掉左右空白)
+  hitH: 1.15,             // 碰撞框高度倍率(蓋住頭到腳)
+  hitOffY: 0.12,          // 碰撞框垂直偏移(往下對齊身體與腳)
+  kickPower: 1.35,        // 拖曳速度轉換成球速的倍率
+  kickBoost: 520,         // 額外踢球力道(沿法線)
+  kickLift: 240,          // 踢球一律帶的上挑量(避免球往下鑽/折射進門)
+  jumpPower: 980,         // 跳躍初速(AI 起跳用)
+  chipUp: 1050,           // 點一下挑高球的上挑力
+  chipFwd: 700,           // 點一下挑高球的前帶力(往對方門)
+  maxBallSpeed: 2600,     // 球最高速度
+  aiSpeed: 640,           // AI 移動速度
+  aiReaction: 0.6,        // AI 反應(0~1，越高越聰明)
+  courtScale: 1,          // 球場帶大小(1=滿寬比例；越小整個球場越小)
+  courtBottomGap: 0.015,  // 球場帶離畫面底部的留白(≥0 才不會切到下方兩角)
+  courtFrontFrac: 0.71,   // 草皮前緣在球場帶內的位置(球員站這)
+  goalH: 240,             // 球門高度
+  goalW: 26,              // 球門柱寬(框線粗細用)
+  goalDepth: 60,          // 球門深度(網子進深 / 球門線位置)
+  goalWidthFrac: 0.10,    // 球門寬度(相對場地寬度) -> 兩門間留中場
+  goalOpenFrac: 0.97,     // 球門開口高=橫桿對齊球門圖頂端橫桿(裁切後 frac≈0.03)
+  goalImgBottom: 1.0,     // 球門圖底邊對齊地面線(整個開口都在可玩範圍)
+  goalImgInset: 0.04,     // 球門圖往邊外露出比例
+  goalMouthFrac: 0.0,     // 進球線=球門線(前柱處)；球越過線往外進網才算進球
+  courtLeftFrac: 0.095,   // 左門線在球場圖上的位置(0=最左, 0.5=中間)
+  courtRightFrac: 0.905,  // 右門線在球場圖上的位置(1=最右)
+  fieldMargin: 0.1,       // (舊，未用)
+  winScore: 5,            // 幾分獲勝
+};
+
+// ---- 素材（有則用，沒有 fallback 向量繪圖）----
+const BUILD = 'b33-0623';  // 版本標記(顯示於左下角)；改版時遞增以破快取
+const ASSET_SRC = {
+  bg:         'assets/bg.png?v='+BUILD,
+  ball:       'assets/ball.png',
+  p1:         'assets/player1.png',
+  p2:         'assets/player2.png',
+  goal:       'assets/ui/goal.png?v='+BUILD,
+  scoreboard: 'assets/ui/scoreboard.png?v='+BUILD,
+};
+const IMG = {};
+let assetsTried = false;
+function loadAssets(){
+  assetsTried = true;
+  for(const k in ASSET_SRC){
+    const im = new Image();
+    im.onload = ()=>{ IMG[k] = im; };
+    im.onerror = ()=>{ IMG[k] = null; };
+    im.src = ASSET_SRC[k];
+  }
+}
+loadAssets();
+
+// ---- 8 位明星球員（每日戰報風格）----
+const PLAYERS = [
+  { id:'messi',      name:'梅西' },
+  { id:'ronaldo',    name:'C 羅' },
+  { id:'neymar',     name:'內馬爾' },
+  { id:'mbappe',     name:'姆巴佩' },
+  { id:'haaland',    name:'哈蘭德' },
+  { id:'vinicius',   name:'維尼修斯' },
+  { id:'bellingham', name:'貝林厄姆' },
+  { id:'salah',      name:'薩拉赫' },
+];
+const PLAYER_IMG = {};      // id -> 站姿 Image
+const PLAYER_KICK_IMG = {}; // id -> 踢腳 Image
+PLAYERS.forEach(p=>{
+  const im = new Image();
+  im.onload = ()=>{ PLAYER_IMG[p.id] = im; };
+  im.onerror = ()=>{};
+  im.src = `assets/players/${p.id}.png`;
+  const ik = new Image();
+  ik.onload = ()=>{ PLAYER_KICK_IMG[p.id] = ik; };
+  ik.onerror = ()=>{};
+  ik.src = `assets/players/${p.id}_kick.png?v=`+BUILD;
+});
+
+// ============================================================
+// 縮放 / 自適應
+// ============================================================
+let dpr=1;
+function resize(){
+  dpr = Math.min(window.devicePixelRatio||1, 2);
+  const vw = window.innerWidth, vh = window.innerHeight;
+  canvas.width = Math.floor(vw*dpr);
+  canvas.height = Math.floor(vh*dpr);
+  canvas.style.width = vw+'px';
+  canvas.style.height = vh+'px';
+  W = vw; H = vh;                       // 世界 = 視窗
+  // 尺寸縮放：直立窄螢幕依寬度縮小、也顧到高度，球員/球門/球不會過大
+  S = Math.max(0.48, Math.min(1.15, Math.min(vw/640, vh/900)));
+  // 保持球員 home 隨視窗更新（players 建立後才有）
+  if(window.__ready){ p1.home=FL()+(FR()-FL())*0.25; p2.home=FL()+(FR()-FL())*0.75; }
+}
+window.addEventListener('resize', resize);
+window.addEventListener('orientationchange', resize);
+resize();
+
+// 螢幕座標 -> 世界座標（canvas 填滿視窗，故為 1:1）
+function toWorld(clientX, clientY){ return { x: clientX, y: clientY }; }
+
+// ============================================================
+// 遊戲狀態
+// ============================================================
+// 背景圖以「保持比例」畫成一條球場帶、貼底(不拉伸/不裁切)；下列算出帶的位置
+const bgAspect = ()=> IMG.bg ? IMG.bg.height/IMG.bg.width : 0.5625;
+// contain：整張球場完整裝進畫面(不超出寬也不超出高) -> 四個角永遠不被切
+const bgBandH = ()=> Math.min(W*bgAspect(), H*0.98) * CFG.courtScale;
+const bgBandTop = ()=> H - bgBandH() - H*CFG.courtBottomGap;  // 帶的上緣(貼底)
+// 球員站位 = 球場帶內的草皮前緣
+const groundY = ()=> bgBandTop() + bgBandH()*CFG.courtFrontFrac;
+const PR = ()=> CFG.playerRadius*S;   // 球員半徑(已縮放)
+const BR = ()=> CFG.ballRadius*S;     // 球半徑(已縮放)
+const GW = ()=> CFG.goalW*S;          // 門柱寬
+// 袖珍球場：可玩場地左右各留白，球門/球員/球都在這個較窄的置中場地內
+const bandW = ()=> bgBandH() * (IMG.bg ? IMG.bg.width/IMG.bg.height : 16/9);
+const bandX = ()=> (W - bandW())/2;
+// 可玩場地範圍 = 你在球場圖上定義的左門線/右門線(相對球場帶寬度的比例)
+const FL = ()=> bandX() + bandW()*CFG.courtLeftFrac;   // 左門線
+const FR = ()=> bandX() + bandW()*CFG.courtRightFrac;  // 右門線
+// 球門尺寸全部綁定「場地寬度」比例 -> 場地多窄球門都自動合適、留出中場
+const GAR = ()=> IMG.goal ? IMG.goal.height/IMG.goal.width : 0.62;  // 球門圖高寬比
+const goalImgW = ()=> (FR()-FL()) * CFG.goalWidthFrac;             // 球門視覺寬度
+const GH = ()=> goalImgW() * GAR() * CFG.goalOpenFrac;             // 球門開口高(碰撞)
+const GD = ()=> goalImgW() * CFG.goalMouthFrac;                    // 球門線/守門位置
+const CX = ()=> (FL()+FR())/2;             // 場地中心(兩門線中間)
+
+const ball = { x:W/2, y:H/2, vx:0, vy:0, r:BR(), spin:0, trail:[] };
+
+// 球員：x,y 為碰撞圓心；半場限制
+function makePlayer(side){
+  const homeX = side==='L' ? FL()+(FR()-FL())*0.25 : FL()+(FR()-FL())*0.75;
+  return { side, x:homeX, y:groundY()-PR(), px:homeX, py:groundY()-PR(),
+           vx:0, vy:0, r:PR(), home:homeX, dragging:false, pointerId:null, char:null,
+           jvy:0, grounded:true, jumpCD:0, kickAnim:0,
+           charging:false, chargeT:0, chipCD:0 };
+}
+const KICK_DUR = 0.28;   // 伸腳踢球動畫時長(秒)；八位球員共用同一動作
+const CHARGE_MAX = 0.85; // 集氣到滿所需秒數
+const CHARGE_MULT = 1.8; // 滿氣額外力道倍率(放開力道 = 1 + frac*CHARGE_MULT)
+const p1 = makePlayer('L'); // 玩家
+const p2 = makePlayer('R'); // AI
+window.__ready = true;
+
+let scoreL=0, scoreR=0;
+let state='select';    // select | play | goal | over
+let goalTimer=0, goalWho='';
+let winner='';
+let kickReady=0;       // 開球緩衝：>0 時球懸停中線，雙方不可得分
+let showHitbox=false;  // 顯示球員碰撞(反彈)範圍，按 H 開關(預設隱藏)
+
+// ============================================================
+// 輸入：拖曳（PC + 觸控，多指支援雙人未來擴充）
+// ============================================================
+const pointers = new Map();
+
+function pickPlayer(wx, wy){
+  // 只允許玩家拖左半場球員
+  const dx = wx - p1.x, dy = wy - p1.y;
+  if(Math.hypot(dx,dy) < p1.r*1.6) return p1;
+  // 若點在左半場任意處也視為要控制 p1（更好操作）
+  if(wx < CX()) return p1;
+  return null;
+}
+
+canvas.addEventListener('pointerdown', e=>{
+  const w = toWorld(e.clientX, e.clientY);
+  const pl = pickPlayer(w.x, w.y);
+  if(pl && pl.pointerId===null){
+    pl.pointerId = e.pointerId;
+    pl.dragging = true;
+    pl.charging = true; pl.chargeT = 0;   // 按住開始集氣(放開才踢)
+    // 記錄按下位置以區分「點擊集氣」vs「拖曳(左右移動)」
+    pointers.set(e.pointerId, {pl, x:w.x, y:w.y, downX:w.x, downY:w.y, moved:false});
+    canvas.setPointerCapture(e.pointerId);
+  }
+});
+canvas.addEventListener('pointermove', e=>{
+  const rec = pointers.get(e.pointerId);
+  if(!rec) return;
+  const w = toWorld(e.clientX, e.clientY);
+  rec.x = w.x; rec.y = w.y;
+  if(Math.hypot(w.x-rec.downX, w.y-rec.downY) > 14*S){
+    rec.moved = true; rec.pl.charging = false; // 變成拖曳 -> 取消集氣
+  }
+});
+function endPointer(e){
+  const rec = pointers.get(e.pointerId);
+  if(!rec) return;
+  // 放開且沒拖曳 -> 依集氣量踢球(越久越強)
+  if(!rec.moved){
+    const frac = Math.min(1, rec.pl.chargeT/CHARGE_MAX);
+    chipBall(rec.pl, 1 + frac*CHARGE_MULT);
+  }
+  rec.pl.dragging = false;
+  rec.pl.charging = false; rec.pl.chargeT = 0;
+  rec.pl.pointerId = null;
+  pointers.delete(e.pointerId);
+}
+// 伸腳往前踢(不跳)。mult=力道倍率(集氣越久越大)。靠近球時把球往前帶+上挑
+function chipBall(pl, mult=1){
+  pl.kickAnim = KICK_DUR;                             // 一律播放伸腳動畫(即使球太遠)
+  const dx = ball.x - pl.x, dy = ball.y - (pl.y + pl.r*CFG.hitOffY);
+  const reach = pl.r*CFG.hitW + ball.r + 40*S;       // 觸及範圍(略大於身體)
+  if(Math.hypot(dx, dy) > reach) return;             // 太遠 -> 只擺腿、不踢到球
+  const dir = pl.side==='L' ? 1 : -1;                // 往對方門方向
+  ball.vy = -CFG.chipUp*S*mult;                       // 上挑(隨集氣放大)
+  ball.vx = dir*CFG.chipFwd*S*mult + ball.vx*0.3;     // 往前帶(隨集氣放大)
+  ball.spin += dir*0.05;
+}
+// AI 用的物理起跳
+function jumpPlayer(pl){
+  if(pl.grounded){ pl.jvy = -CFG.jumpPower*S; pl.grounded = false; }
+}
+canvas.addEventListener('pointerup', endPointer);
+canvas.addEventListener('pointercancel', endPointer);
+
+// 結束後點擊 -> 回選人畫面
+canvas.addEventListener('pointerdown', e=>{
+  if(state==='over'){ showSelect(); }
+});
+
+// ============================================================
+// 更新
+// ============================================================
+function clampPlayer(pl){
+  const minY = 40 + pl.r;
+  const maxY = groundY() - pl.r;
+  if(pl.side==='L'){
+    pl.x = Math.max(FL()+pl.r+GD(), Math.min(CX() - 4, pl.x));
+  } else {
+    pl.x = Math.max(CX() + 4, Math.min(FR() - pl.r - GD(), pl.x));
+  }
+  pl.y = Math.max(minY, Math.min(maxY, pl.y));
+}
+
+function updatePlayerDrag(pl, dt){
+  pl.r = PR();
+  pl.px = pl.x; pl.py = pl.y;
+  const rec = [...pointers.values()].find(r=>r.pl===pl);
+  if(rec){
+    // 自由拖曳：上下左右都跟手指；用 dt 計算跟隨係數，避免不同幀率下卡頓/抖動
+    const k = 1 - Math.pow(0.000005, dt);   // 快速但平滑地貼近手指
+    pl.x += (rec.x - pl.x)*k;
+    pl.y += (rec.y - pl.y)*k;
+  } else {
+    // 沒拖時，緩慢回到地面
+    pl.y += (groundY()-pl.r - pl.y)*(1 - Math.pow(0.02, dt));
+  }
+  clampPlayer(pl);
+  // 速度估計(供踢球)
+  pl.vx = (pl.x - pl.px)/dt;
+  pl.vy = (pl.y - pl.py)/dt;
+}
+
+function updateAI(pl, dt){
+  pl.r = PR();
+  pl.px = pl.x; pl.py = pl.y;
+  const react = CFG.aiReaction;
+  const gY = groundY(), floor = gY - pl.r, d = GD();
+  const goalX = FR() - d;                        // 我方(右)球門線
+  const linePos = goalX - pl.r;                 // 門線站位(身體右緣貼球門線)
+  let tx;
+  const mid = CX();
+  const fastShotAtGoal = ball.vx > 260*S && ball.x > mid;
+  if(fastShotAtGoal){
+    tx = linePos;                               // 有人朝門大力射 -> 退守門線擋
+  } else if(ball.x > mid){
+    // 球在我方(右)半場 -> 主動上前，站到球的門側把球往左(玩家門)頂回去
+    tx = Math.min(linePos, ball.x + pl.r*0.85);
+  } else {
+    // 球在對方半場 -> 防守補位：隨球水平移動(會一直動)，球越靠近對方門就越退回守門
+    const k = Math.max(0, Math.min(1, (ball.x-FL())/(mid-FL())));  // 0(對方門) ~ 1(中線)
+    tx = mid + (1-k)*(linePos - mid);
+  }
+  // --- 水平移動(等速、不卡頓) ---
+  const sp = CFG.aiSpeed*S * (0.6 + 0.4*react);
+  const dx = tx - pl.x, adx = Math.abs(dx);
+  if(adx > 2) pl.x += Math.sign(dx)*Math.min(adx, sp*dt);
+  // AI 純地面防守：永遠站在地面(不跳、不飄、不雜耍)，穩定可預期
+  pl.y = floor; pl.jvy = 0; pl.grounded = true;
+  clampPlayer(pl);
+  // --- AI 挑球：球進入觸及範圍且冷卻好了，就伸腳往玩家門挑射 ---
+  pl.chipCD = Math.max(0, pl.chipCD - dt);
+  const bdx = ball.x - pl.x, bdy = ball.y - (pl.y + pl.r*CFG.hitOffY);
+  const reach = pl.r*CFG.hitW + ball.r + 46*S;
+  if(pl.chipCD<=0 && Math.hypot(bdx,bdy) < reach && Math.random() < 0.35+0.55*react){
+    chipBall(pl, 1 + Math.random()*CHARGE_MULT*0.6);   // 力道隨機(含集氣感)
+    pl.chipCD = 0.7;                                   // 冷卻避免連發
+  }
+  pl.vx = (pl.x - pl.px)/dt;
+  pl.vy = (pl.y - pl.py)/dt;
+}
+
+// 球(圓) vs 球員(方形 AABB) 碰撞：以平面方式反彈
+// 球 vs 球員(橢圓實心體) 連續碰撞(swept)。
+// 把橢圓變換成單位圓空間，解「球的移動線段」與圓的交點，精確夾在入射點 -> 數學上保證穿不過。
+// (ox,oy) = 本子步開始時的球位置；ball.x/y = 移動後位置。
+function ballPlayerCollision(pl, ox, oy, plOldX, plOldY){
+  const hx = pl.r*CFG.hitW + ball.r;     // 充氣橢圓(球當點)
+  const hy = pl.r*CFG.hitH + ball.r;
+  const cx = pl.x, cy = pl.y + pl.r*CFG.hitOffY;             // 球員(子步終點)中心
+  const cOldX = plOldX, cOldY = plOldY + pl.r*CFG.hitOffY;   // 球員(子步起點)中心
+  // 變換到單位圓空間：用「球相對球員」的路徑(把球員移動也算進去 -> 衝刺時球被推到前方)
+  const ax=(ox-cOldX)/hx, ay=(oy-cOldY)/hy;      // 線段起點(相對球員起點)
+  const bx=(ball.x-cx)/hx, by=(ball.y-cy)/hy;    // 線段終點(相對球員終點)
+  const startInside = ax*ax+ay*ay < 1;
+  const endInside   = bx*bx+by*by < 1;
+  const ddx=bx-ax, ddy=by-ay;
+  const A=ddx*ddx+ddy*ddy;
+  let t=-1;
+  if(A < 1e-12){
+    // 幾乎沒位移：若終點在內就以 t=0 處理，否則沒撞到
+    if(endInside) t=0; else return;
+  } else {
+    const B=2*(ax*ddx+ay*ddy);
+    const C=ax*ax+ay*ay-1;
+    const disc=B*B-4*A*C;
+    if(disc < 0) return;                          // 線段未碰到圓
+    const sq=Math.sqrt(disc);
+    const t1=(-B-sq)/(2*A);                       // 進入點
+    if(startInside){ t=0; }
+    else if(t1>=0 && t1<=1){ t=t1; }              // 在這一步飛入
+    else if(!endInside) return;                   // 整段都在圓外
+    else t=Math.max(0,t1);
+  }
+  // 入射接觸點(單位圓空間)
+  const px=ax+ddx*t, py=ay+ddy*t;
+  // 世界外法線 = (px/hx, py/hy) 正規化(橢圓梯度)
+  let wnx=px/hx, wny=py/hy;
+  let wnl=Math.hypot(wnx,wny);
+  if(wnl<1e-9){ wnx=0; wny=-1; wnl=1; }
+  wnx/=wnl; wny/=wnl;
+  // 把球夾到接觸點(世界座標)，再沿法線推出一點點離開表面
+  ball.x = cx + px*hx + wnx*0.5;
+  ball.y = cy + py*hy + wny*0.5;
+  // 反射「球相對球員」的法線速度(移動牆) -> 彈回 + 球員前推力
+  const rvx=ball.vx-pl.vx, rvy=ball.vy-pl.vy;
+  const vn=rvx*wnx+rvy*wny;
+  if(vn<0){
+    ball.vx -= (1+CFG.ballRestitution)*vn*wnx;
+    ball.vy -= (1+CFG.ballRestitution)*vn*wny;
+  }
+  // 額外踢力(沿法線) + 些微上挑
+  ball.vx += wnx*(CFG.kickBoost*S);
+  ball.vy += wny*(CFG.kickBoost*S) - 60*S;
+  ball.spin += pl.vx*0.002;
+}
+
+// 球(圓) vs 靜態方塊 純反彈(無踢力)，可當平台/牆/橫樑
+function ballVsBox(minX,minY,maxX,maxY){
+  let nx,ny,overlap;
+  if(ball.x>minX && ball.x<maxX && ball.y>minY && ball.y<maxY){
+    const pL=ball.x-minX,pR=maxX-ball.x,pT=ball.y-minY,pB=maxY-ball.y;
+    const m=Math.min(pL,pR,pT,pB);
+    if(m===pL){nx=-1;ny=0;overlap=pL+ball.r;}
+    else if(m===pR){nx=1;ny=0;overlap=pR+ball.r;}
+    else if(m===pT){nx=0;ny=-1;overlap=pT+ball.r;}
+    else{nx=0;ny=1;overlap=pB+ball.r;}
+  } else {
+    const cx=Math.max(minX,Math.min(ball.x,maxX)), cy=Math.max(minY,Math.min(ball.y,maxY));
+    const dx=ball.x-cx,dy=ball.y-cy,dist=Math.hypot(dx,dy);
+    if(dist>=ball.r || dist<1e-6) return false;
+    nx=dx/dist; ny=dy/dist; overlap=ball.r-dist;
+  }
+  ball.x+=nx*overlap; ball.y+=ny*overlap;
+  const vn=ball.vx*nx+ball.vy*ny;           // 沿法線速度分量
+  if(vn<0){ ball.vx-=(1+CFG.ballRestitution)*vn*nx; ball.vy-=(1+CFG.ballRestitution)*vn*ny; }
+  return true;
+}
+
+// 偵測球被兩名球員同時夾住 -> 強制往上頂開，避免從身體下方穿越
+function resolveSqueeze(){
+  // 方塊重疊判定：球心與方塊最近點距離 < 球半徑 即視為接觸
+  const near = (pl)=>{
+    const cx=Math.max(pl.x-pl.r,Math.min(ball.x,pl.x+pl.r));
+    const cy=Math.max(pl.y-pl.r,Math.min(ball.y,pl.y+pl.r));
+    return Math.hypot(ball.x-cx,ball.y-cy) < ball.r+2;
+  };
+  if(near(p1) && near(p2)){
+    // 被夾：抬到兩顆頭之上並向上彈飛
+    const topY = Math.min(p1.y, p2.y) - ball.r - 4;
+    ball.y = Math.min(ball.y, topY);
+    ball.vy = -Math.max(420*S, Math.abs(ball.vy));
+    // 往場地較空的一側帶（離中線遠的方向）
+    ball.vx += (ball.x < CX() ? -1 : 1) * 120*S;
+  }
+}
+
+// 只做積分(重力/阻力/限速/位移)，不處理碰撞
+function integrateBall(dt){
+  ball.r = BR();
+  ball.vy += CFG.gravity*S*dt;
+  ball.vx *= Math.pow(1-CFG.ballAirDrag, dt);
+  ball.vy *= Math.pow(1-CFG.ballAirDrag, dt);
+  const sp = Math.hypot(ball.vx,ball.vy);
+  const maxSp = CFG.maxBallSpeed*S;
+  if(sp>maxSp){ ball.vx*=maxSp/sp; ball.vy*=maxSp/sp; }
+  ball.x += ball.vx*dt;
+  ball.y += ball.vy*dt;
+  ball.spin += ball.vx*0.0006;
+}
+
+// 牆/天花板/橫樑碰撞(地面由 clampBallToField 處理)
+function collideBallWorld(){
+  const gY = groundY();
+  if(ball.y - ball.r < 0){ ball.y = ball.r; ball.vy = Math.abs(ball.vy)*CFG.ballRestitution; }
+  const d = GD(), goalTop = gY - GH(), th = Math.max(10, 12*S);
+  const fl=FL(), fr=FR(), netW=goalImgW();
+  const llx=fl+d, rlx=fr-d;                      // 進球線(=前柱)
+  ballVsBox(llx-netW, goalTop-th, llx, goalTop); // 左門橫桿(沿線後網深)
+  ballVsBox(rlx, goalTop-th, rlx+netW, goalTop); // 右門橫桿
+  ballVsBox(llx-400, 0, llx, goalTop-th);        // 左邊牆(門楣以上擋球)
+  ballVsBox(rlx, 0, rlx+400, goalTop-th);        // 右邊牆
+}
+
+// 地面/天花板是絕對厚牆：任何碰撞推擠後都把球壓回場內上方，永不下陷穿地
+function clampBallToField(){
+  const gy = groundY();
+  if(ball.y + ball.r > gy){
+    ball.y = gy - ball.r;
+    if(ball.vy > 0) ball.vy = -ball.vy*CFG.ballRestitution;   // 往下的速度反彈成往上
+    ball.vx *= CFG.ballGroundFric;
+    if(Math.abs(ball.vy) < 40*S) ball.vy = 0;
+  }
+  if(ball.y - ball.r < 0){
+    ball.y = ball.r;
+    if(ball.vy < 0) ball.vy = -ball.vy*CFG.ballRestitution;
+  }
+}
+
+// 進球判定(在球員碰撞之後才呼叫，讓守門員先有機會擋下)
+function checkGoal(){
+  const d = GD(), goalTop = groundY() - GH();
+  if(ball.y > goalTop){
+    if(ball.x < FL()+d){ doGoal('R'); return true; }       // 越過左門線 -> 右方得分
+    if(ball.x > FR()-d){ doGoal('L'); return true; }       // 越過右門線 -> 左方得分
+  }
+  return false;
+}
+
+function doGoal(who){
+  if(who==='L') scoreL++; else scoreR++;
+  goalWho = who;
+  if(scoreL>=CFG.winScore || scoreR>=CFG.winScore){
+    state='over'; winner = scoreL>scoreR?'你贏了！':'AI 獲勝';
+  } else {
+    state='goal'; goalTimer=1.4;
+  }
+}
+
+function kickoff(){
+  ball.x=CX(); ball.y=H*0.34; ball.vx=0; ball.vy=0; ball.spin=0; ball.trail.length=0;
+  p1.x=p1.home; p1.y=groundY()-PR();
+  p2.x=p2.home; p2.y=groundY()-PR();
+  kickReady=0.9; // 開球緩衝，給玩家就位時間
+}
+function resetMatch(){
+  scoreL=0; scoreR=0; winner=''; state='play'; kickoff();
+}
+
+// ---- 選人畫面 ----
+const selectEl = document.getElementById('select');
+function buildSelect(){
+  const grid = document.getElementById('grid');
+  grid.innerHTML = PLAYERS.map(p=>`
+    <div class="card" data-id="${p.id}">
+      <div class="pic"><img src="assets/players/${p.id}.png" alt="${p.name}"
+           onerror="this.style.display='none';this.parentNode.innerHTML='<div class=\\'ph\\'>${p.name}</div>'"></div>
+      <div class="nm">${p.name}</div>
+    </div>`).join('');
+  grid.querySelectorAll('.card').forEach(c=>{
+    c.addEventListener('click', ()=> startMatch(c.dataset.id));
+  });
+}
+function startMatch(charId){
+  p1.char = charId;
+  // 對手隨機選一位不同球員
+  const others = PLAYERS.filter(p=>p.id!==charId);
+  p2.char = others[Math.floor(Math.random()*others.length)].id;
+  selectEl.style.display='none';
+  resetMatch();
+}
+function showSelect(){
+  state='select';
+  selectEl.style.display='flex';
+}
+buildSelect();
+{ const bt=document.getElementById('buildTag'); if(bt) bt.textContent='版本 '+BUILD; }
+
+kickoff(); // 初始也給開球緩衝
+let last=performance.now();
+function update(now){
+  let dt = (now-last)/1000; last=now;
+  if(dt>0.033) dt=0.033; // 防卡頓爆衝
+  if(dt<=0) dt=0.016;
+
+  if(p1.kickAnim>0) p1.kickAnim-=dt;   // 伸腳踢球動畫倒數
+  if(p2.kickAnim>0) p2.kickAnim-=dt;
+  if(p1.charging) p1.chargeT = Math.min(CHARGE_MAX, p1.chargeT+dt);  // 集氣累積
+
+  if(state==='play'){
+    if(kickReady>0){
+      // 開球緩衝：球懸停中線、AI 退守、不判進球
+      updatePlayerDrag(p1, dt);
+      kickReady -= dt;
+      ball.x=CX(); ball.y=H*0.34; ball.vx=0; ball.vy=0;
+      const tx=p2.home, ty=groundY()-PR();
+      p2.px=p2.x; p2.py=p2.y;
+      p2.x += (tx-p2.x)*0.2; p2.y += (ty-p2.y)*0.2;
+    } else {
+      // 1) 算出兩名球員「本幀終點」位置(先存起點，供子步進插值)
+      const s1x=p1.x, s1y=p1.y, s2x=p2.x, s2y=p2.y;
+      updatePlayerDrag(p1, dt);
+      updateAI(p2, dt);
+      const e1x=p1.x, e1y=p1.y, e2x=p2.x, e2y=p2.y;
+      // 球員速度(供踢球) = 整幀位移 / dt
+      p1.vx=(e1x-s1x)/dt; p1.vy=(e1y-s1y)/dt;
+      p2.vx=(e2x-s2x)/dt; p2.vy=(e2y-s2y)/dt;
+      // 2) 子步進：球員從起點插值到終點，球同步積分並碰撞
+      //    -> 球員是實心連續體，任何速度下球都不會被穿越/跳過
+      // 步長依「球 + 較快球員」的接近位移，步距取球半徑的 1/4，確保不穿透
+      const move = Math.hypot(ball.vx, ball.vy)*dt
+                 + Math.max(Math.hypot(e1x-s1x, e1y-s1y), Math.hypot(e2x-s2x, e2y-s2y));
+      const steps = Math.max(1, Math.min(32, Math.ceil(move / (BR()*0.25))));
+      const sub = dt/steps;
+      let scored = false;
+      let pp1x=s1x, pp1y=s1y, pp2x=s2x, pp2y=s2y;  // 球員上一子步位置
+      for(let s=1; s<=steps && !scored; s++){
+        const f = s/steps;
+        const n1x=s1x+(e1x-s1x)*f, n1y=s1y+(e1y-s1y)*f;
+        const n2x=s2x+(e2x-s2x)*f, n2y=s2y+(e2y-s2y)*f;
+        p1.x=n1x; p1.y=n1y; p2.x=n2x; p2.y=n2y;
+        const obx=ball.x, oby=ball.y;     // 球本子步起點
+        integrateBall(sub);
+        collideBallWorld();               // 牆/天花板/橫樑
+        // 連續碰撞：球相對球員的移動線段對橢圓求交，球不可穿越任一球員
+        ballPlayerCollision(p1, obx, oby, pp1x, pp1y);
+        ballPlayerCollision(p2, obx, oby, pp2x, pp2y);
+        clampBallToField();               // 地面厚牆
+        if(checkGoal()) scored = true;    // 守門員擋過後才判進球
+        pp1x=n1x; pp1y=n1y; pp2x=n2x; pp2y=n2y;
+      }
+      resolveSqueeze();
+      ball.trail.push({x:ball.x, y:ball.y});
+      if(ball.trail.length>14) ball.trail.shift();
+    }
+  } else if(state==='goal'){
+    goalTimer -= dt;
+    if(goalTimer<=0){ state='play'; kickoff(); }
+  }
+}
+
+// ============================================================
+// 繪圖
+// ============================================================
+function draw(){
+  const vw=canvas.width, vh=canvas.height;
+  ctx.setTransform(1,0,0,1,0,0);
+  ctx.clearRect(0,0,vw,vh);
+  // 世界座標 = CSS 像素，僅套 dpr（填滿整個視窗、無黑邊）
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+
+  drawField();
+  drawBall();           // 先畫球
+  drawGoals();          // 球門/網畫在球之後 -> 球進網時被網蓋住(真正進網的層次)
+  drawPlayer(p1);
+  drawPlayer(p2);
+  drawGoalDebug();      // DEBUG 進球範圍(按 G)
+  drawHUD();
+  drawOverlay();
+}
+
+function drawField(){
+  // 整片填深色(夜空/邊框)，再把球場帶以「保持比例」貼上(不拉伸、不裁切)
+  ctx.fillStyle = '#0a1426'; ctx.fillRect(0,0,W,H);
+  if(IMG.bg){
+    const bandH = bgBandH(), bandW = bandH * (IMG.bg.width/IMG.bg.height);
+    const bandX = (W - bandW)/2, bandY = bgBandTop();
+    ctx.drawImage(IMG.bg, bandX, bandY, bandW, bandH);
+    window.__bandX=bandX; window.__bandW=bandW;   // 供場地邊界對齊
+  }
+}
+
+function drawGoals(){ drawGoal('L'); drawGoal('R'); }
+
+// DEBUG：畫出實際進球範圍(進球線 + 橫桿高 + 進球區)，按 G 開關
+function drawGoalDebug(){
+  if(!window.__dbg) return;
+  const gY=groundY(), d=GD(), goalTop=gY-GH();
+  const fl=FL(), fr=FR();
+  const netW=goalImgW();
+  const llx=fl+d, rlx=fr-d;        // 進球線 x(左/右)
+  ctx.save();
+  ctx.lineWidth=2;
+  // 進球區半透明填色(線後/外側，球心進到這且在橫桿以下=進球)
+  ctx.fillStyle='rgba(255,60,60,.18)';
+  ctx.fillRect(llx-netW, goalTop, netW, gY-goalTop);   // 左門:線往外(左)
+  ctx.fillRect(rlx, goalTop, netW, gY-goalTop);        // 右門:線往外(右)
+  // 進球線(垂直，紅)
+  ctx.strokeStyle='#ff3b3b';
+  ctx.beginPath(); ctx.moveTo(llx, goalTop); ctx.lineTo(llx, gY); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(rlx, goalTop); ctx.lineTo(rlx, gY); ctx.stroke();
+  // 橫桿高(水平，黃) — 此線以上不算進球、且球會被橫桿彈開
+  ctx.strokeStyle='#ffe23b';
+  ctx.beginPath(); ctx.moveTo(llx-netW, goalTop); ctx.lineTo(llx, goalTop); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(rlx, goalTop); ctx.lineTo(rlx+netW, goalTop); ctx.stroke();
+  // 標註
+  ctx.fillStyle='#fff'; ctx.font=`${Math.round(12*S)}px sans-serif`; ctx.textAlign='left';
+  ctx.fillText('進球線', llx+4, goalTop+14);
+  ctx.fillText('橫桿(以上不算)', llx-netW+4, goalTop-6);
+  ctx.restore();
+}
+
+// 紅白條紋框桿
+function drawStripedBar(x,y,w,h){
+  ctx.fillStyle='#f2f2f2'; ctx.fillRect(x,y,w,h);
+  ctx.fillStyle='#e23b3b';
+  const seg = Math.max(10, 16*S);
+  const along = (w>=h);                 // 水平桿沿 x，垂直桿沿 y
+  const len = along?w:h;
+  for(let i=0;i<len;i+=seg*2){
+    if(along) ctx.fillRect(x+i, y, Math.min(seg,len-i), h);
+    else      ctx.fillRect(x, y+i, w, Math.min(seg,len-i));
+  }
+  // 框邊
+  ctx.strokeStyle='rgba(0,0,0,.25)'; ctx.lineWidth=1.5; ctx.strokeRect(x,y,w,h);
+}
+
+// 粗線段
+function thickLine(x1,y1,x2,y2,w,col){ ctx.strokeStyle=col; ctx.lineWidth=w; ctx.lineCap='round'; ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); ctx.stroke(); }
+// 沿線段畫紅白交錯條紋(白底已先畫)
+function stripedSeg(x1,y1,x2,y2,w){
+  const len=Math.hypot(x2-x1,y2-y1), seg=Math.max(8,13*S), n=Math.max(2,Math.round(len/seg));
+  for(let i=0;i<n;i++){
+    if(i%2===0) continue;
+    const t1=i/n, t2=(i+1)/n;
+    thickLine(x1+(x2-x1)*t1, y1+(y2-y1)*t1, x1+(x2-x1)*t2, y1+(y2-y1)*t2, w, '#e2502a');
+  }
+}
+// 球門：優先用生成的 PNG(白框紅白條紋菱形網)，否則手繪
+function drawGoal(side){
+  const gY=groundY(), d=GD(), top=gY-GH();
+  const L=side==='L';
+  if(IMG.goal){
+    const w = goalImgW();
+    const h = w * (IMG.goal.height/IMG.goal.width);
+    const oy = gY - h*CFG.goalImgBottom;       // 底邊貼近地面
+    const inset = w*CFG.goalImgInset;
+    ctx.save();
+    if(L){
+      // 左門：原圖 -> 條紋高前柱貼球門線 FL、門口朝場內(右)，網往左(線後/外側)垂
+      ctx.drawImage(IMG.goal, FL()-w+inset, oy, w, h);
+    } else {
+      // 右門：水平翻轉 -> 條紋高前柱貼球門線 FR、門口朝場內(左)，網往右(線後/外側)垂
+      ctx.translate(FR()+w-inset, oy); ctx.scale(-1,1);
+      ctx.drawImage(IMG.goal, 0, 0, w, h);
+    }
+    ctx.restore();
+    return;
+  }
+  const fx=L?d:W-d;          // 前柱(球門線)
+  const bx=L?0:W;            // 後緣(螢幕邊)
+  const pr=GH()*0.20;        // 透視抬升(後緣較高)
+  const fpw=Math.max(9,12*S), bpw=Math.max(6,8*S);
+  const fty=top, fby=gY, bty=top-pr, bby=gY-pr*0.5;
+  // ---- 菱形網(側面四邊形) ----
+  ctx.save();
+  ctx.beginPath(); ctx.moveTo(fx,fty); ctx.lineTo(bx,bty); ctx.lineTo(bx,bby); ctx.lineTo(fx,fby); ctx.closePath();
+  ctx.fillStyle='rgba(255,255,255,.06)'; ctx.fill(); ctx.clip();
+  ctx.strokeStyle='rgba(255,255,255,.8)'; ctx.lineWidth=1.2;
+  const sp=14*S, dir=L?-1:1, span=GH()+pr;
+  for(let i=-span;i<Math.abs(fx-bx)+span;i+=sp){
+    ctx.beginPath(); ctx.moveTo(fx+dir*i, top);   ctx.lineTo(fx+dir*(i+span), gY);  ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(fx+dir*i, gY);    ctx.lineTo(fx+dir*(i+span), top); ctx.stroke();
+  }
+  ctx.restore();
+  // ---- 框架白桿 ----
+  thickLine(fx,fty,bx,bty,bpw,'#f2f2f2');     // 上橫樑(斜，進深)
+  thickLine(fx,fby,bx,bby,bpw*0.8,'#e6e6e6'); // 底桿
+  thickLine(bx,bty,bx,bby,bpw,'#ededed');     // 後柱
+  // ---- 前立柱(白底紅段，最前最醒目) ----
+  thickLine(fx,fty,fx,fby,fpw,'#f7f7f7');
+  stripedSeg(fx,fty,fx,fby,fpw);
+}
+
+function drawBall(){
+  // ---- 運動殘影(彗星尾) ----
+  const spd = Math.hypot(ball.vx, ball.vy);
+  if(spd > 600*S && ball.trail.length>2){
+    const n=ball.trail.length;
+    ctx.save();
+    ctx.lineCap='round'; ctx.strokeStyle='#fff';
+    for(let i=1;i<n;i++){
+      const a=ball.trail[i-1], b=ball.trail[i];
+      const t=i/n;                       // 越新越粗越亮
+      ctx.globalAlpha = 0.5*t;
+      ctx.lineWidth = ball.r*2*t;
+      ctx.beginPath(); ctx.moveTo(a.x,a.y); ctx.lineTo(b.x,b.y); ctx.stroke();
+    }
+    ctx.restore();
+  }
+  ctx.save();
+  ctx.translate(ball.x, ball.y);
+  ctx.rotate(ball.spin);
+  if(IMG.ball){
+    ctx.drawImage(IMG.ball, -ball.r, -ball.r, ball.r*2, ball.r*2);
+  } else {
+    ctx.fillStyle='#fff'; ctx.beginPath(); ctx.arc(0,0,ball.r,0,7); ctx.fill();
+    ctx.strokeStyle='#222'; ctx.lineWidth=2; ctx.stroke();
+    // 五邊塊
+    ctx.fillStyle='#222';
+    ctx.beginPath(); ctx.arc(0,0,ball.r*0.34,0,7); ctx.fill();
+    for(let i=0;i<5;i++){ const a=i/5*Math.PI*2;
+      ctx.beginPath(); ctx.arc(Math.cos(a)*ball.r*0.62,Math.sin(a)*ball.r*0.62,ball.r*0.16,0,7); ctx.fill(); }
+  }
+  ctx.restore();
+}
+
+function drawPlayer(pl){
+  // 踢球動畫期間用「踢腳圖」，否則用站姿圖；都沒有再退回 p1/p2 或向量
+  const kicking = pl.kickAnim>0;
+  const kimg = kicking && pl.char ? PLAYER_KICK_IMG[pl.char] : null;
+  const img = kimg || (pl.char && PLAYER_IMG[pl.char]) || (pl.side==='L'?IMG.p1:IMG.p2);
+  ctx.save();
+  ctx.translate(pl.x, pl.y);
+  // 陰影
+  ctx.fillStyle='rgba(0,0,0,.18)';
+  ctx.beginPath(); ctx.ellipse(0, groundY()-pl.y, pl.r*0.8, pl.r*0.25, 0,0,7); ctx.fill();
+  if(img){
+    const s=pl.r*2.7;
+    ctx.save();
+    if(pl.side==='R') ctx.scale(-1,1);   // 右側球員水平翻轉，面朝中線
+    ctx.drawImage(img, -s/2, -s/2 - pl.r*0.15, s, s);
+    ctx.restore();
+  } else {
+    // 向量大頭：身體 + 頭
+    const col = pl.side==='L'?'#2f7bff':'#ff4d4d';
+    const dark = pl.side==='L'?'#1b5bd0':'#d63333';
+    // 身體
+    ctx.fillStyle=dark;
+    ctx.beginPath(); ctx.roundRect(-pl.r*0.5, 0, pl.r, pl.r*0.95, 8); ctx.fill();
+    // 頭
+    ctx.fillStyle=col;
+    ctx.beginPath(); ctx.arc(0,0,pl.r,0,7); ctx.fill();
+    ctx.strokeStyle='rgba(0,0,0,.25)'; ctx.lineWidth=3; ctx.stroke();
+    // 眼睛(朝向中線)
+    const dir = pl.side==='L'?1:-1;
+    ctx.fillStyle='#fff';
+    ctx.beginPath(); ctx.arc(dir*pl.r*0.28,-pl.r*0.12,pl.r*0.22,0,7); ctx.fill();
+    ctx.fillStyle='#222';
+    ctx.beginPath(); ctx.arc(dir*pl.r*0.36,-pl.r*0.12,pl.r*0.1,0,7); ctx.fill();
+    // 笑嘴
+    ctx.strokeStyle='#7a1010'; ctx.lineWidth=4; ctx.beginPath();
+    ctx.arc(dir*pl.r*0.18, pl.r*0.25, pl.r*0.28, 0.15*Math.PI, 0.85*Math.PI); ctx.stroke();
+  }
+  // 集氣指示環：按住越久越滿，黃->紅
+  if(pl.charging && pl.chargeT>0.04){
+    const frac = Math.min(1, pl.chargeT/CHARGE_MAX);
+    const ry = -pl.r*1.35;                       // 頭頂上方
+    ctx.lineCap='round';
+    ctx.strokeStyle='rgba(0,0,0,.35)'; ctx.lineWidth=pl.r*0.18;
+    ctx.beginPath(); ctx.arc(0, ry, pl.r*0.7, Math.PI*0.8, Math.PI*2.2); ctx.stroke();  // 底槽
+    const col = frac<0.5 ? '#ffe23b' : (frac<0.85?'#ff9a2b':'#ff3b3b');
+    ctx.strokeStyle=col; ctx.lineWidth=pl.r*0.18;
+    ctx.beginPath(); ctx.arc(0, ry, pl.r*0.7, Math.PI*0.8, Math.PI*0.8 + frac*Math.PI*1.4); ctx.stroke();
+  }
+  ctx.restore();
+  // 顯示實際碰撞(反彈)範圍 —— 橢圓實心體，按 H 開關
+  if(showHitbox){
+    const hx=pl.r*CFG.hitW, hy=pl.r*CFG.hitH, bcy=pl.y+pl.r*CFG.hitOffY;
+    ctx.save();
+    ctx.strokeStyle = pl.side==='L' ? 'rgba(90,190,255,.95)' : 'rgba(255,110,110,.95)';
+    ctx.fillStyle   = pl.side==='L' ? 'rgba(90,190,255,.16)' : 'rgba(255,110,110,.16)';
+    ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.ellipse(pl.x, bcy, hx, hy, 0, 0, 7); ctx.fill(); ctx.stroke();
+    ctx.restore();
+  }
+}
+
+function drawHUD(){
+  const n1 = charName(p1.char)||'你', n2 = charName(p2.char)||'AI';
+  if(IMG.scoreboard){
+    // 生成的記分板：上方名牌、下方綠色比分
+    const w = Math.min(W*0.46, 380*S);
+    const h = w * (IMG.scoreboard.height/IMG.scoreboard.width);
+    const x = W/2 - w/2, y = -h*0.12;          // 托架略出畫面上緣
+    ctx.drawImage(IMG.scoreboard, x, y, w, h);
+    ctx.textAlign='center'; ctx.textBaseline='middle';
+    // 名牌(上方兩槽)
+    ctx.fillStyle='#e9eef5'; ctx.font='bold '+Math.round(h*0.13)+'px sans-serif';
+    ctx.fillText(n1, x+w*0.28, y+h*0.33);
+    ctx.fillText(n2, x+w*0.72, y+h*0.33);
+    // 比分(下方兩窗，綠色)
+    ctx.fillStyle='#39e639'; ctx.font='bold '+Math.round(h*0.34)+'px sans-serif';
+    ctx.fillText(scoreL, x+w*0.28, y+h*0.66);
+    ctx.fillText(scoreR, x+w*0.72, y+h*0.66);
+    return;
+  }
+  ctx.fillStyle='rgba(0,0,0,.35)';
+  ctx.beginPath(); ctx.roundRect(W/2-110,18,220,56,12); ctx.fill();
+  ctx.fillStyle='#fff'; ctx.font='bold 40px sans-serif'; ctx.textAlign='center'; ctx.textBaseline='middle';
+  ctx.fillText(scoreL+' : '+scoreR, W/2, 48);
+  ctx.font='bold 18px sans-serif';
+  ctx.fillStyle='#9fd1ff'; ctx.textAlign='right'; ctx.fillText(n1, W/2-120, 46);
+  ctx.fillStyle='#ff9f9f'; ctx.textAlign='left';  ctx.fillText(n2, W/2+120, 46);
+  ctx.textAlign='center';
+}
+function charName(id){ const p=PLAYERS.find(x=>x.id===id); return p?p.name:''; }
+
+function drawOverlay(){
+  if(state==='play' && kickReady>0){
+    ctx.fillStyle='rgba(255,255,255,.9)'; ctx.strokeStyle='rgba(0,0,0,.4)'; ctx.lineWidth=6;
+    ctx.font='bold 60px sans-serif'; ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.strokeText('準備…', W/2, H*0.22); ctx.fillText('準備…', W/2, H*0.22);
+  }
+  if(state==='goal'){
+    ctx.fillStyle='rgba(0,0,0,.35)'; ctx.fillRect(0,0,W,H);
+    ctx.fillStyle= goalWho==='L'?'#7fffa0':'#ff8080';
+    ctx.font='bold 90px sans-serif'; ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText(goalWho==='L'?'進球！':'被進球', W/2, H/2);
+  }
+  if(state==='over'){
+    ctx.fillStyle='rgba(0,0,0,.6)'; ctx.fillRect(0,0,W,H);
+    ctx.fillStyle='#fff'; ctx.font='bold 80px sans-serif'; ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText(winner, W/2, H/2-40);
+    ctx.font='bold 30px sans-serif'; ctx.fillStyle='#cfe3ff';
+    ctx.fillText('點擊畫面再玩一次', W/2, H/2+50);
+  }
+}
+
+// ============================================================
+// 主迴圈
+// ============================================================
+function loop(now){
+  update(now);
+  draw();
+  requestAnimationFrame(loop);
+}
+requestAnimationFrame(loop);
+
+// ============================================================
+// DEV 微調工具
+// ============================================================
+const devEl = document.getElementById('dev');
+const SLIDERS = [
+  ['gravity','重力',500,4000,10],
+  ['ballRadius','球半徑',12,60,1],
+  ['ballRestitution','球彈性',0,1,0.01],
+  ['ballAirDrag','空氣阻力',0,0.3,0.005],
+  ['ballGroundFric','地面摩擦',0.5,1,0.01],
+  ['playerRadius','球員半徑',30,120,1],
+  ['hitW','碰撞框寬',0.4,2,0.05],
+  ['hitH','碰撞框高',0.4,2.5,0.05],
+  ['hitOffY','碰撞框上下',-1,1.5,0.05],
+  ['kickPower','拖曳踢力',0,3,0.05],
+  ['kickBoost','法線踢力',0,1200,10],
+  ['jumpPower','跳躍力',500,2000,20],
+  ['chipUp','挑球上挑',400,1800,20],
+  ['chipFwd','挑球前帶',200,1400,20],
+  ['maxBallSpeed','球最高速',800,4000,50],
+  ['aiSpeed','AI 速度',200,1500,10],
+  ['aiReaction','AI 反應',0,1,0.02],
+  // ---- 場地範圍定義(對齊你的球場圖；可即時拖) ----
+  ['courtScale','球場大小',0.4,1.6,0.01],       // 整個球場帶縮放
+  ['courtBottomGap','球場上下',-0.1,0.5,0.01],  // 球場帶離底部留白(越大越往上)
+  ['courtLeftFrac','左門線',0,0.45,0.005],      // 左門線在圖上的位置
+  ['courtRightFrac','右門線',0.55,1,0.005],     // 右門線在圖上的位置
+  ['courtFrontFrac','草皮前緣/站高',0.5,0.98,0.005], // 球員站在草皮前緣的位置
+  ['goalWidthFrac','球門大小',0.04,0.45,0.005], // 球門大小
+  ['goalImgBottom','球門上下',0.5,1.2,0.02],    // 球門垂直位置
+  ['goalMouthFrac','進球線',0,1,0.01],          // 進球線位置(0=外緣,1=內側前柱)
+  ['goalOpenFrac','開口高',0.4,1.4,0.02],       // 球門開口高度(橫桿)
+  ['winScore','獲勝分數',1,15,1],
+];
+function buildDev(){
+  let html='<h3>⚙️ 微調工具 (D 開關)</h3>';
+  for(const [key,label,min,max,step] of SLIDERS){
+    html+=`<div class="row"><label>${label}</label>
+      <input type="range" data-k="${key}" min="${min}" max="${max}" step="${step}" value="${CFG[key]}">
+      <span class="val" id="v_${key}">${CFG[key]}</span></div>`;
+  }
+  html+=`<div class="btns">
+      <button id="btnExport">💾 匯出 JSON</button>
+      <button id="btnKick">重新開球</button>
+      <button id="btnReset">重置比分</button>
+    </div>
+    <textarea id="out" readonly placeholder="匯出的 CFG 會出現在這裡，貼給我即可 baked 進 source"></textarea>`;
+  devEl.innerHTML=html;
+  devEl.querySelectorAll('input[type=range]').forEach(inp=>{
+    inp.addEventListener('input',()=>{
+      const k=inp.dataset.k; CFG[k]=parseFloat(inp.value);
+      document.getElementById('v_'+k).textContent=inp.value;
+    });
+  });
+  document.getElementById('btnExport').onclick=()=>{
+    document.getElementById('out').value=JSON.stringify(CFG,null,2);
+  };
+  document.getElementById('btnKick').onclick=kickoff;
+  document.getElementById('btnReset').onclick=resetMatch;
+}
+buildDev();
+window.__dbg = false;  // 進球範圍疊圖：預設隱藏(按 G 開關)
+window.addEventListener('keydown',e=>{
+  if(e.key==='d'||e.key==='D'){
+    devEl.style.display = devEl.style.display==='block'?'none':'block';
+  }
+  if(e.key==='g'||e.key==='G'){ window.__dbg = !window.__dbg; }
+});
+</script>
+</body>
+</html>
