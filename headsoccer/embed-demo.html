@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>大頭足球 · 嵌入 Banner 示範</title>
+<style>
+  body{ margin:0; font-family:-apple-system,"PingFang TC","Microsoft JhengHei",sans-serif;
+        background:#f3f5f9; color:#222; line-height:1.7; }
+  .wrap{ max-width:680px; margin:0 auto; padding:24px 18px 60px; }
+  h1{ font-size:22px; } h2{ font-size:18px; margin-top:28px; }
+  p{ color:#444; }
+  .note{ background:#fff; border:1px solid #e2e6ee; border-radius:10px; padding:14px 16px; font-size:14px; color:#555; }
+  code,pre{ font-family:ui-monospace,Menlo,Consolas,monospace; }
+  pre{ background:#0e1426; color:#cfe3ff; padding:14px 16px; border-radius:10px; overflow:auto; font-size:13px; }
+
+  /* ===== 可嵌入的「大頭足球」Banner（維持球場比例、響應式）===== */
+  .hs-banner{
+    position:relative; width:100%;
+    max-width:560px;                 /* banner 最大寬度，可自行調整 */
+    margin:18px auto;
+    aspect-ratio:3 / 2;              /* 球場比例(寬:高≈1.5:1)，舊瀏覽器見下方 padding 備援 */
+    border-radius:14px; overflow:hidden;
+    box-shadow:0 10px 30px rgba(20,30,60,.18);
+    background:#0a1426;
+  }
+  /* 不支援 aspect-ratio 的瀏覽器備援 */
+  @supports not (aspect-ratio:1/1){
+    .hs-banner{ height:0; padding-bottom:66.6%; }
+  }
+  .hs-banner iframe{
+    position:absolute; inset:0; width:100%; height:100%; border:0; display:block;
+  }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>範例文章頁面</h1>
+    <p>這是一個普通的網頁。下面我們把「大頭足球」當成一張 <strong>banner</strong> 直接安插進來——它是一個獨立、自適應的小遊戲，會自動填滿所在的容器。</p>
+
+    <!-- ↓↓↓ 這就是嵌入的 Banner，複製這段到任何頁面即可 ↓↓↓ -->
+    <div class="hs-banner">
+      <iframe src="./index.html" title="大頭足球" loading="lazy"
+              allow="autoplay; fullscreen"></iframe>
+    </div>
+    <!-- ↑↑↑ 嵌入結束 ↑↑↑ -->
+
+    <p>上方的遊戲區塊可以拖曳球員、點按集氣射門，和頁面其他內容並存、互不干擾。</p>
+
+    <h2>如何嵌入到你的網頁</h2>
+    <p>把下面這段貼到你想放的位置（<code>src</code> 改成 banner 的實際路徑或網址）：</p>
+    <pre>&lt;div style="position:relative;width:100%;max-width:560px;aspect-ratio:3/2;
+            border-radius:14px;overflow:hidden;box-shadow:0 10px 30px rgba(20,30,60,.18)"&gt;
+  &lt;iframe src="https://你的網域/headsoccer/index.html" title="大頭足球"
+          style="position:absolute;inset:0;width:100%;height:100%;border:0"
+          loading="lazy" allow="autoplay; fullscreen"&gt;&lt;/iframe&gt;
+&lt;/div&gt;</pre>
+    <div class="note">
+      想要不同尺寸：改 <code>max-width</code>（banner 寬度）即可，高度會依 <code>aspect-ratio:3/2</code> 自動算出、維持球場比例。
+      想要更扁的橫幅就把比例改成例如 <code>16/9</code>，遊戲會自適應。
+    </div>
+
+    <h2>頁面其他內容</h2>
+    <p>Lorem ipsum…這裡是文章的其他段落，證明 banner 可以和正常內容自然並排顯示。</p>
+  </div>
+</body>
+</html>

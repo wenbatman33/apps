@@ -11,7 +11,7 @@
   * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent;
       user-select:none; -webkit-user-select:none; -webkit-touch-callout:none; }
   html,body { width:100%; height:100%; overflow:hidden; background:#0a1020; font-family:-apple-system,"PingFang TC","Microsoft JhengHei",sans-serif; }
-  body { display:flex; align-items:center; justify-content:center; }  /* 置中遊戲畫面，上下留深底 */
+  body { display:flex; align-items:flex-start; justify-content:center; }  /* 遊戲置頂、水平置中 */
   #game { display:block; touch-action:none; }                          /* 尺寸由 JS 設定 */
   /* DEV 微調工具面板 */
   #dev { position:fixed; top:0; right:0; width:250px; max-height:62vh; overflow-y:auto;
@@ -35,7 +35,14 @@
   #select .sub { color:#bcd2ef; font-size:clamp(12px,2.6vw,16px); margin-top:-8px; }
   #grid { display:grid; grid-template-columns:repeat(4,1fr); gap:clamp(8px,1.8vw,18px);
           width:min(92vw,720px); }
-  @media (max-aspect-ratio:1/1){ #grid{ grid-template-columns:repeat(2,1fr); width:min(92vw,420px);} }
+  @media (max-aspect-ratio:1/1){
+    #select{ justify-content:flex-start; gap:10px; padding:14px 14px; }
+    #select h1{ font-size:clamp(18px,4.6vw,30px); }
+    #grid{ grid-template-columns:repeat(2,1fr); width:min(94vw,360px); gap:10px; }
+    .card{ padding:5px 4px 7px; border-radius:11px; }
+    .card .pic{ aspect-ratio:auto; height:86px; }   /* 縮小球員圖 -> 八張少捲動 */
+    .card .nm{ font-size:13px; margin-top:2px; }
+  }
   .card { background:linear-gradient(180deg,#244a86,#16294c); border:2px solid #3a5f9e; border-radius:14px;
           padding:8px 6px 10px; cursor:pointer; text-align:center; transition:transform .12s, box-shadow .12s;
           position:relative; overflow:hidden; }
@@ -116,7 +123,7 @@ const CFG = {
 };
 
 // ---- 素材（有則用，沒有 fallback 向量繪圖）----
-const BUILD = 'b34-0623';  // 版本標記(顯示於左下角)；改版時遞增以破快取
+const BUILD = 'b39-0623';  // 版本標記(顯示於左下角)；改版時遞增以破快取
 const ASSET_SRC = {
   bg:         'assets/bg.png?v='+BUILD,
   ball:       'assets/ball.png',
@@ -131,7 +138,19 @@ function loadAssets(){
   assetsTried = true;
   for(const k in ASSET_SRC){
     const im = new Image();
-    im.onload = ()=>{ IMG[k] = im; if(k==='bg' && typeof resize==='function') resize(); };
+    im.onload = ()=>{ IMG[k] = im;
+      if(k==='bg'){
+        // 取樣球場圖頂端(天空)平均色，給上方填滿用 -> 接縫一致
+        try{
+          const oc=document.createElement('canvas'); oc.width=8; oc.height=8;
+          const ox=oc.getContext('2d'); ox.drawImage(im,0,0,8,8);
+          const p=ox.getImageData(0,0,8,1).data; let r=0,gg=0,b=0;
+          for(let i=0;i<8;i++){ r+=p[i*4]; gg+=p[i*4+1]; b+=p[i*4+2]; }
+          window.__skyCol=`rgb(${r>>3},${gg>>3},${b>>3})`;
+        }catch(e){}
+        if(typeof resize==='function') resize();
+      }
+    };
     im.onerror = ()=>{ IMG[k] = null; };
     im.src = ASSET_SRC[k];
   }
@@ -169,17 +188,15 @@ let dpr=1;
 function resize(){
   dpr = Math.min(window.devicePixelRatio||1, 2);
   const vw = window.innerWidth, vh = window.innerHeight;
-  // 版面高 = 球場帶高(填滿寬度) × 1.45(上方留白給記分板/挑球弧)，但不超過視窗
-  // -> 手機直式不再有一大片空白，整體就和背景球場差不多高、置中
+  // 小區塊：版面 = 球場圖自然大小(填滿寬度的自然高)，置中，周圍深色 -> 手機就是一個小區塊遊戲
   const aspect = IMG.bg ? IMG.bg.height/IMG.bg.width : 0.5625;  // 內聯(避免 TDZ，可提早呼叫)
   const bandH = vw * aspect;
-  const gameH = Math.min(vh, bandH * 1.45);
+  const gameH = Math.min(vh, bandH);
   canvas.width = Math.floor(vw*dpr);
   canvas.height = Math.floor(gameH*dpr);
   canvas.style.width = vw+'px';
   canvas.style.height = gameH+'px';
-  W = vw; H = gameH;                    // 世界 = 寬×緊湊高
-  // 尺寸縮放：用緊湊版面高為基準 -> 手機自動縮小球員/球/記分板
+  W = vw; H = gameH;
   S = Math.max(0.42, Math.min(1.15, Math.min(vw/640, gameH/900)));
   // players/ball 建立後：更新半徑與 home(讓尺寸跟著 S 走，旋轉/縮放都正確)
   if(window.__ready){
@@ -203,10 +220,15 @@ function toWorld(clientX, clientY){
 // 背景圖以「保持比例」畫成一條球場帶、貼底(不拉伸/不裁切)；下列算出帶的位置
 const bgAspect = ()=> IMG.bg ? IMG.bg.height/IMG.bg.width : 0.5625;
 // contain：整張球場完整裝進畫面(不超出寬也不超出高) -> 四個角永遠不被切
-const bgBandH = ()=> Math.min(W*bgAspect(), H*0.98) * CFG.courtScale;
+const bgBandH = ()=> Math.min(W*bgAspect(), H) * CFG.courtScale;
 const bgBandTop = ()=> H - bgBandH() - H*CFG.courtBottomGap;  // 帶的上緣(貼底)
 // 球員站位 = 球場帶內的草皮前緣
 const groundY = ()=> bgBandTop() + bgBandH()*CFG.courtFrontFrac;
+// 天花板 = 球場圖頂端(球被限制在球場圖內，不飛進上方黑色空區/記分板)
+// 天花板 = 球場圖頂端(小區塊內)；球被限制在球場圖內
+const ceilY = ()=> Math.max(0, bgBandTop());
+// 開球時球的高度(落在球場內、地面上方)
+const ballStartY = ()=> bgBandTop() + bgBandH()*0.18;
 const PR = ()=> CFG.playerRadius*S;   // 球員半徑(已縮放)
 const BR = ()=> CFG.ballRadius*S;     // 球半徑(已縮放)
 const GW = ()=> CFG.goalW*S;          // 門柱寬
@@ -502,8 +524,8 @@ function integrateBall(dt){
 
 // 牆/天花板/橫樑碰撞(地面由 clampBallToField 處理)
 function collideBallWorld(){
-  const gY = groundY();
-  if(ball.y - ball.r < 0){ ball.y = ball.r; ball.vy = Math.abs(ball.vy)*CFG.ballRestitution; }
+  const gY = groundY(), cy = ceilY();
+  if(ball.y - ball.r < cy){ ball.y = cy + ball.r; ball.vy = Math.abs(ball.vy)*CFG.ballRestitution; }
   const d = GD(), goalTop = gY - GH(), th = Math.max(10, 12*S);
   const fl=FL(), fr=FR(), netW=goalImgW();
   const llx=fl+d, rlx=fr-d;                      // 進球線(=前柱)
@@ -522,8 +544,9 @@ function clampBallToField(){
     ball.vx *= CFG.ballGroundFric;
     if(Math.abs(ball.vy) < 40*S) ball.vy = 0;
   }
-  if(ball.y - ball.r < 0){
-    ball.y = ball.r;
+  const cy = ceilY();
+  if(ball.y - ball.r < cy){
+    ball.y = cy + ball.r;
     if(ball.vy < 0) ball.vy = -ball.vy*CFG.ballRestitution;
   }
 }
@@ -549,7 +572,7 @@ function doGoal(who){
 }
 
 function kickoff(){
-  ball.x=CX(); ball.y=H*0.34; ball.vx=0; ball.vy=0; ball.spin=0; ball.trail.length=0;
+  ball.x=CX(); ball.y=ballStartY(); ball.vx=0; ball.vy=0; ball.spin=0; ball.trail.length=0;
   p1.x=p1.home; p1.y=groundY()-PR();
   p2.x=p2.home; p2.y=groundY()-PR();
   kickReady=0.9; // 開球緩衝，給玩家就位時間
@@ -603,7 +626,7 @@ function update(now){
       // 開球緩衝：球懸停中線、AI 退守、不判進球
       updatePlayerDrag(p1, dt);
       kickReady -= dt;
-      ball.x=CX(); ball.y=H*0.34; ball.vx=0; ball.vy=0;
+      ball.x=CX(); ball.y=ballStartY(); ball.vx=0; ball.vy=0;
       const tx=p2.home, ty=groundY()-PR();
       p2.px=p2.x; p2.py=p2.y;
       p2.x += (tx-p2.x)*0.2; p2.y += (ty-p2.y)*0.2;
@@ -671,12 +694,16 @@ function draw(){
 }
 
 function drawField(){
-  // 整片填深色(夜空/邊框)，再把球場帶以「保持比例」貼上(不拉伸、不裁切)
-  ctx.fillStyle = '#0a1426'; ctx.fillRect(0,0,W,H);
+  const bandY = bgBandTop();
+  // 夜空填滿整個畫面(填掉上方留白，色調與球場天空一致 -> 無黑邊、無明顯接縫)
+  const sky = window.__skyCol || '#13294d';
+  const g = ctx.createLinearGradient(0,0,0,Math.max(bandY, H*0.5));
+  g.addColorStop(0,'#070f20'); g.addColorStop(1, sky);
+  ctx.fillStyle = g; ctx.fillRect(0,0,W,H);
   if(IMG.bg){
     const bandH = bgBandH(), bandW = bandH * (IMG.bg.width/IMG.bg.height);
-    const bandX = (W - bandW)/2, bandY = bgBandTop();
-    ctx.drawImage(IMG.bg, bandX, bandY, bandW, bandH);
+    const bandX = (W - bandW)/2;
+    ctx.drawImage(IMG.bg, bandX, bandY, bandW, bandH);   // 球場貼底
     window.__bandX=bandX; window.__bandW=bandW;   // 供場地邊界對齊
   }
 }
@@ -883,7 +910,7 @@ function drawHUD(){
     // 生成的記分板：上方名牌、下方綠色比分
     const w = Math.min(W*0.46, 380*S);
     const h = w * (IMG.scoreboard.height/IMG.scoreboard.width);
-    const x = W/2 - w/2, y = -h*0.12;          // 托架略出畫面上緣
+    const x = W/2 - w/2, y = 4*S;              // 貼齊球場圖頂端(天空內)，避免被切掉
     ctx.drawImage(IMG.scoreboard, x, y, w, h);
     ctx.textAlign='center'; ctx.textBaseline='middle';
     // 名牌(上方兩槽)
@@ -910,8 +937,9 @@ function charName(id){ const p=PLAYERS.find(x=>x.id===id); return p?p.name:''; }
 function drawOverlay(){
   if(state==='play' && kickReady>0){
     ctx.fillStyle='rgba(255,255,255,.9)'; ctx.strokeStyle='rgba(0,0,0,.4)'; ctx.lineWidth=6;
-    ctx.font='bold 60px sans-serif'; ctx.textAlign='center'; ctx.textBaseline='middle';
-    ctx.strokeText('準備…', W/2, H*0.22); ctx.fillText('準備…', W/2, H*0.22);
+    ctx.font=`bold ${Math.round(60*S)}px sans-serif`; ctx.textAlign='center'; ctx.textBaseline='middle';
+    const cyT = H*0.45;  // 場中(避開上方記分板)
+    ctx.strokeText('準備…', W/2, cyT); ctx.fillText('準備…', W/2, cyT);
   }
   if(state==='goal'){
     ctx.fillStyle='rgba(0,0,0,.35)'; ctx.fillRect(0,0,W,H);
