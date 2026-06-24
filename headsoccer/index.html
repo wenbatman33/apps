@@ -28,7 +28,7 @@
   #devHint { display:none; }   /* 嵌入 banner 不顯示提示文字；D 鍵仍可開微調工具 */
   /* 選人畫面 */
   #select { position:fixed; inset:0; z-index:60; display:flex; flex-direction:column; align-items:center;
-            justify-content:center; gap:18px; padding:24px 20px; overflow-y:auto;
+            justify-content:center; gap:12px; padding:16px 20px; overflow-y:auto;
             background:radial-gradient(circle at 50% 30%, #1b3a6b, #0a1428 70%); }
   @media (max-aspect-ratio:1/1){ #select{ justify-content:flex-start; } }
   #select h1 { color:#ffe27a; font-size:clamp(22px,5vw,40px); text-shadow:0 3px 0 #0006; letter-spacing:2px; }
@@ -47,7 +47,7 @@
           padding:8px 6px 10px; cursor:pointer; text-align:center; transition:transform .12s, box-shadow .12s;
           position:relative; overflow:hidden; }
   .card:hover, .card:active { transform:translateY(-4px) scale(1.04); box-shadow:0 8px 20px #0008; border-color:#ffe27a; }
-  .card .pic { width:100%; aspect-ratio:1/1; display:flex; align-items:flex-end; justify-content:center; }
+  .card .pic { width:100%; height:clamp(74px,13vh,124px); display:flex; align-items:flex-end; justify-content:center; }
   .card .pic img { width:100%; height:100%; object-fit:contain; filter:drop-shadow(0 4px 4px #0006); }
   .card .ph { width:64%; aspect-ratio:1/1; border-radius:50%; background:#33538c; margin:auto;
               display:flex; align-items:center; justify-content:center; color:#9fb6d6; font-size:11px; }
@@ -60,9 +60,8 @@
 <canvas id="game"></canvas>
 <div id="select">
   <h1>⚽ 选择你的球员</h1>
-  <div class="sub">每日战报明星阵容 · 拖曳球员踢球</div>
+  <div class="sub">选择球星开始游玩</div>
   <div id="grid"></div>
-  <div class="tip">点选一位球员开始比赛（对手由电脑随机选）</div>
 </div>
 <div id="devHint">按 D 開啟微調工具 · <span id="buildTag"></span></div>
 <div id="dev"></div>
@@ -123,7 +122,7 @@ const CFG = {
 };
 
 // ---- 素材（有則用，沒有 fallback 向量繪圖）----
-const BUILD = 'b41-0623';  // 版本標記(顯示於左下角)；改版時遞增以破快取
+const BUILD = 'b43-0623';  // 版本標記(顯示於左下角)；改版時遞增以破快取
 const ASSET_SRC = {
   bg:         'assets/bg.png?v='+BUILD,
   ball:       'assets/ball.png',
@@ -916,10 +915,10 @@ function drawHUD(){
     // 名牌(上方兩槽)：量字寬自動縮放，確保塞進框內、置中
     ctx.fillStyle='#e9eef5';
     const fitName=(txt,cx)=>{
-      let fs=Math.round(h*0.13); ctx.font='bold '+fs+'px sans-serif';
+      let fs=Math.round(h*0.105); ctx.font='bold '+fs+'px sans-serif';
       const maxW=w*0.30;
       while(fs>8 && ctx.measureText(txt).width>maxW){ fs-=1; ctx.font='bold '+fs+'px sans-serif'; }
-      ctx.fillText(txt, cx, y+h*0.33);
+      ctx.fillText(txt, cx, y+h*0.395);   // 名牌(細長條)垂直正中
     };
     fitName(n1, x+w*0.28); fitName(n2, x+w*0.72);
     // 比分(下方兩窗，綠色)
