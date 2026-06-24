@@ -1,12 +1,12 @@
 <!DOCTYPE html>
-<html lang="zh-Hant">
+<html lang="zh-Hans">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>大頭足球 · 拖曳版</title>
+<title>大头足球 · 拖曳版</title>
 <style>
   * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent;
       user-select:none; -webkit-user-select:none; -webkit-touch-callout:none; }
@@ -25,7 +25,7 @@
   #dev .btns { display:flex; gap:6px; margin-top:10px; flex-wrap:wrap; }
   #dev button { background:#2a4a7a; color:#fff; border:0; border-radius:6px; padding:6px 10px; cursor:pointer; font-size:12px; }
   #dev button:hover { background:#356; }
-  #devHint { position:fixed; left:8px; bottom:8px; color:#5a7; font-size:11px; opacity:.6; z-index:40; }
+  #devHint { display:none; }   /* 嵌入 banner 不顯示提示文字；D 鍵仍可開微調工具 */
   /* 選人畫面 */
   #select { position:fixed; inset:0; z-index:60; display:flex; flex-direction:column; align-items:center;
             justify-content:center; gap:18px; padding:24px 20px; overflow-y:auto;
@@ -59,10 +59,10 @@
 <body>
 <canvas id="game"></canvas>
 <div id="select">
-  <h1>⚽ 選擇你的球員</h1>
-  <div class="sub">每日戰報明星陣容 · 拖曳球員踢球</div>
+  <h1>⚽ 选择你的球员</h1>
+  <div class="sub">每日战报明星阵容 · 拖曳球员踢球</div>
   <div id="grid"></div>
-  <div class="tip">點選一位球員開始比賽（對手由電腦隨機選）</div>
+  <div class="tip">点选一位球员开始比赛（对手由电脑随机选）</div>
 </div>
 <div id="devHint">按 D 開啟微調工具 · <span id="buildTag"></span></div>
 <div id="dev"></div>
@@ -123,7 +123,7 @@ const CFG = {
 };
 
 // ---- 素材（有則用，沒有 fallback 向量繪圖）----
-const BUILD = 'b39-0623';  // 版本標記(顯示於左下角)；改版時遞增以破快取
+const BUILD = 'b41-0623';  // 版本標記(顯示於左下角)；改版時遞增以破快取
 const ASSET_SRC = {
   bg:         'assets/bg.png?v='+BUILD,
   ball:       'assets/ball.png',
@@ -160,13 +160,13 @@ loadAssets();
 // ---- 8 位明星球員（每日戰報風格）----
 const PLAYERS = [
   { id:'messi',      name:'梅西' },
-  { id:'ronaldo',    name:'C 羅' },
-  { id:'neymar',     name:'內馬爾' },
+  { id:'ronaldo',    name:'C 罗' },
+  { id:'neymar',     name:'内马尔' },
   { id:'mbappe',     name:'姆巴佩' },
-  { id:'haaland',    name:'哈蘭德' },
-  { id:'vinicius',   name:'維尼修斯' },
-  { id:'bellingham', name:'貝林厄姆' },
-  { id:'salah',      name:'薩拉赫' },
+  { id:'haaland',    name:'哈兰德' },
+  { id:'vinicius',   name:'维尼修斯' },
+  { id:'bellingham', name:'贝林厄姆' },
+  { id:'salah',      name:'萨拉赫' },
 ];
 const PLAYER_IMG = {};      // id -> 站姿 Image
 const PLAYER_KICK_IMG = {}; // id -> 踢腳 Image
@@ -565,7 +565,7 @@ function doGoal(who){
   if(who==='L') scoreL++; else scoreR++;
   goalWho = who;
   if(scoreL>=CFG.winScore || scoreR>=CFG.winScore){
-    state='over'; winner = scoreL>scoreR?'你贏了！':'AI 獲勝';
+    state='over'; winner = scoreL>scoreR?'你赢了！':'AI 获胜';
   } else {
     state='goal'; goalTimer=1.4;
   }
@@ -733,8 +733,8 @@ function drawGoalDebug(){
   ctx.beginPath(); ctx.moveTo(rlx, goalTop); ctx.lineTo(rlx+netW, goalTop); ctx.stroke();
   // 標註
   ctx.fillStyle='#fff'; ctx.font=`${Math.round(12*S)}px sans-serif`; ctx.textAlign='left';
-  ctx.fillText('進球線', llx+4, goalTop+14);
-  ctx.fillText('橫桿(以上不算)', llx-netW+4, goalTop-6);
+  ctx.fillText('进球线', llx+4, goalTop+14);
+  ctx.fillText('横杆(以上不算)', llx-netW+4, goalTop-6);
   ctx.restore();
 }
 
@@ -913,10 +913,15 @@ function drawHUD(){
     const x = W/2 - w/2, y = 4*S;              // 貼齊球場圖頂端(天空內)，避免被切掉
     ctx.drawImage(IMG.scoreboard, x, y, w, h);
     ctx.textAlign='center'; ctx.textBaseline='middle';
-    // 名牌(上方兩槽)
-    ctx.fillStyle='#e9eef5'; ctx.font='bold '+Math.round(h*0.13)+'px sans-serif';
-    ctx.fillText(n1, x+w*0.28, y+h*0.33);
-    ctx.fillText(n2, x+w*0.72, y+h*0.33);
+    // 名牌(上方兩槽)：量字寬自動縮放，確保塞進框內、置中
+    ctx.fillStyle='#e9eef5';
+    const fitName=(txt,cx)=>{
+      let fs=Math.round(h*0.13); ctx.font='bold '+fs+'px sans-serif';
+      const maxW=w*0.30;
+      while(fs>8 && ctx.measureText(txt).width>maxW){ fs-=1; ctx.font='bold '+fs+'px sans-serif'; }
+      ctx.fillText(txt, cx, y+h*0.33);
+    };
+    fitName(n1, x+w*0.28); fitName(n2, x+w*0.72);
     // 比分(下方兩窗，綠色)
     ctx.fillStyle='#39e639'; ctx.font='bold '+Math.round(h*0.34)+'px sans-serif';
     ctx.fillText(scoreL, x+w*0.28, y+h*0.66);
@@ -939,20 +944,20 @@ function drawOverlay(){
     ctx.fillStyle='rgba(255,255,255,.9)'; ctx.strokeStyle='rgba(0,0,0,.4)'; ctx.lineWidth=6;
     ctx.font=`bold ${Math.round(60*S)}px sans-serif`; ctx.textAlign='center'; ctx.textBaseline='middle';
     const cyT = H*0.45;  // 場中(避開上方記分板)
-    ctx.strokeText('準備…', W/2, cyT); ctx.fillText('準備…', W/2, cyT);
+    ctx.strokeText('准备…', W/2, cyT); ctx.fillText('准备…', W/2, cyT);
   }
   if(state==='goal'){
     ctx.fillStyle='rgba(0,0,0,.35)'; ctx.fillRect(0,0,W,H);
     ctx.fillStyle= goalWho==='L'?'#7fffa0':'#ff8080';
-    ctx.font='bold 90px sans-serif'; ctx.textAlign='center'; ctx.textBaseline='middle';
-    ctx.fillText(goalWho==='L'?'進球！':'被進球', W/2, H/2);
+    ctx.font='bold '+Math.round(88*S)+'px sans-serif'; ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText(goalWho==='L'?'进球！':'被进球', W/2, H/2);
   }
   if(state==='over'){
     ctx.fillStyle='rgba(0,0,0,.6)'; ctx.fillRect(0,0,W,H);
-    ctx.fillStyle='#fff'; ctx.font='bold 80px sans-serif'; ctx.textAlign='center'; ctx.textBaseline='middle';
-    ctx.fillText(winner, W/2, H/2-40);
-    ctx.font='bold 30px sans-serif'; ctx.fillStyle='#cfe3ff';
-    ctx.fillText('點擊畫面再玩一次', W/2, H/2+50);
+    ctx.fillStyle='#fff'; ctx.font='bold '+Math.round(78*S)+'px sans-serif'; ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText(winner, W/2, H/2-40*S);
+    ctx.font='bold '+Math.round(30*S)+'px sans-serif'; ctx.fillStyle='#cfe3ff';
+    ctx.fillText('点击画面再玩一次', W/2, H/2+50*S);
   }
 }
 
@@ -972,47 +977,47 @@ requestAnimationFrame(loop);
 const devEl = document.getElementById('dev');
 const SLIDERS = [
   ['gravity','重力',500,4000,10],
-  ['ballRadius','球半徑',12,60,1],
-  ['ballRestitution','球彈性',0,1,0.01],
-  ['ballAirDrag','空氣阻力',0,0.3,0.005],
+  ['ballRadius','球半径',12,60,1],
+  ['ballRestitution','球弹性',0,1,0.01],
+  ['ballAirDrag','空气阻力',0,0.3,0.005],
   ['ballGroundFric','地面摩擦',0.5,1,0.01],
-  ['playerRadius','球員半徑',30,120,1],
-  ['hitW','碰撞框寬',0.4,2,0.05],
+  ['playerRadius','球员半径',30,120,1],
+  ['hitW','碰撞框宽',0.4,2,0.05],
   ['hitH','碰撞框高',0.4,2.5,0.05],
   ['hitOffY','碰撞框上下',-1,1.5,0.05],
   ['kickPower','拖曳踢力',0,3,0.05],
-  ['kickBoost','法線踢力',0,1200,10],
-  ['jumpPower','跳躍力',500,2000,20],
+  ['kickBoost','法线踢力',0,1200,10],
+  ['jumpPower','跳跃力',500,2000,20],
   ['chipUp','挑球上挑',400,1800,20],
-  ['chipFwd','挑球前帶',200,1400,20],
+  ['chipFwd','挑球前带',200,1400,20],
   ['maxBallSpeed','球最高速',800,4000,50],
   ['aiSpeed','AI 速度',200,1500,10],
-  ['aiReaction','AI 反應',0,1,0.02],
-  // ---- 場地範圍定義(對齊你的球場圖；可即時拖) ----
-  ['courtScale','球場大小',0.4,1.6,0.01],       // 整個球場帶縮放
-  ['courtBottomGap','球場上下',-0.1,0.5,0.01],  // 球場帶離底部留白(越大越往上)
-  ['courtLeftFrac','左門線',0,0.45,0.005],      // 左門線在圖上的位置
-  ['courtRightFrac','右門線',0.55,1,0.005],     // 右門線在圖上的位置
-  ['courtFrontFrac','草皮前緣/站高',0.5,0.98,0.005], // 球員站在草皮前緣的位置
-  ['goalWidthFrac','球門大小',0.04,0.45,0.005], // 球門大小
-  ['goalImgBottom','球門上下',0.5,1.2,0.02],    // 球門垂直位置
-  ['goalMouthFrac','進球線',0,1,0.01],          // 進球線位置(0=外緣,1=內側前柱)
-  ['goalOpenFrac','開口高',0.4,1.4,0.02],       // 球門開口高度(橫桿)
-  ['winScore','獲勝分數',1,15,1],
+  ['aiReaction','AI 反应',0,1,0.02],
+  // ---- 场地范围定义(对齐你的球场图；可即时拖) ----
+  ['courtScale','球场大小',0.4,1.6,0.01],       // 整个球场带缩放
+  ['courtBottomGap','球场上下',-0.1,0.5,0.01],  // 球场带离底部留白(越大越往上)
+  ['courtLeftFrac','左门线',0,0.45,0.005],      // 左门线在图上的位置
+  ['courtRightFrac','右门线',0.55,1,0.005],     // 右门线在图上的位置
+  ['courtFrontFrac','草皮前缘/站高',0.5,0.98,0.005], // 球员站在草皮前缘的位置
+  ['goalWidthFrac','球门大小',0.04,0.45,0.005], // 球门大小
+  ['goalImgBottom','球门上下',0.5,1.2,0.02],    // 球门垂直位置
+  ['goalMouthFrac','进球线',0,1,0.01],          // 进球线位置(0=外缘,1=内侧前柱)
+  ['goalOpenFrac','开口高',0.4,1.4,0.02],       // 球门开口高度(横杆)
+  ['winScore','获胜分数',1,15,1],
 ];
 function buildDev(){
-  let html='<h3>⚙️ 微調工具 (D 開關)</h3>';
+  let html='<h3>⚙️ 微调工具 (D 开关)</h3>';
   for(const [key,label,min,max,step] of SLIDERS){
     html+=`<div class="row"><label>${label}</label>
       <input type="range" data-k="${key}" min="${min}" max="${max}" step="${step}" value="${CFG[key]}">
       <span class="val" id="v_${key}">${CFG[key]}</span></div>`;
   }
   html+=`<div class="btns">
-      <button id="btnExport">💾 匯出 JSON</button>
-      <button id="btnKick">重新開球</button>
+      <button id="btnExport">💾 导出 JSON</button>
+      <button id="btnKick">重新开球</button>
       <button id="btnReset">重置比分</button>
     </div>
-    <textarea id="out" readonly placeholder="匯出的 CFG 會出現在這裡，貼給我即可 baked 進 source"></textarea>`;
+    <textarea id="out" readonly placeholder="导出的 CFG 会出现在这里，贴给我即可 baked 进 source"></textarea>`;
   devEl.innerHTML=html;
   devEl.querySelectorAll('input[type=range]').forEach(inp=>{
     inp.addEventListener('input',()=>{
