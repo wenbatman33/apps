@@ -85,6 +85,8 @@ export function initDev({ scene, game, ui, onTestGoal, onReserve }) {
     body.appendChild(slider('牆彈性 wallRest', 'physics.wallRest', 0.3, 1, 0.02));
     body.appendChild(slider('人偶彈性 blockRest', 'physics.blockRest', 0.1, 1, 0.02));
     body.appendChild(slider('球速上限 maxSpeed', 'physics.maxSpeed', 25, 90, 1));
+    body.appendChild(slider('中場死區斜坡', 'physics.slopeMid', 0, 20, 0.5));
+    body.appendChild(slider('球門死角斜坡', 'physics.slopeGoal', 0, 20, 0.5));
 
     section('操作');
     body.appendChild(slider('移桿靈敏度', 'control.moveSens', 0.3, 3, 0.05));

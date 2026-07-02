@@ -93,6 +93,7 @@ export class Game {
     for (const r of this.rods) this._updateRod(r, dt);
     if (this.phase === 'play') {
       this._updateAI(dt);
+      this._slope(dt);
       this._physics(dt);
       this._checkStuck(dt);
     } else if (this.phase === 'goal') {
@@ -238,6 +239,25 @@ export class Game {
       return true;
     }
     return false;
+  }
+
+  // 死區隱形斜坡：球不會停留在沒有任何桿踢得到的區域（仿真實足球檯的斜坡底板）
+  // 桿覆蓋範圍：各桿前方 STRIKE_REACH、後方 STRIKE_BACK → 縫隙在 |z|≈2.65~3.95 與 |z|>12.55
+  _slope(dt) {
+    const b = this.ball, P = CONFIG.physics, T = CONFIG.table;
+    const az = Math.abs(b.z), s = Math.sign(b.z) || 1;
+    if (az > 2.62 && az < 3.98) {
+      // 中場桿與對方前鋒桿之間的縫 → 往中線滾
+      b.vz -= s * P.slopeMid * dt;
+    } else if (az > 12.4) {
+      // 球門區：正在入門的球（門口內側）不干涉，讓它進
+      const entering = Math.abs(b.x) < T.goalHalf && az > 14.2;
+      if (!entering) {
+        b.vz -= s * P.slopeGoal * dt; // 往守門員前方滾
+        // 門邊死角再往中間帶一點
+        if (Math.abs(b.x) > T.goalHalf) b.vx -= Math.sign(b.x) * P.slopeGoal * 0.6 * dt;
+      }
+    }
   }
 
   _checkStuck(dt) {

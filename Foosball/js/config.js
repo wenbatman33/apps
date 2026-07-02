@@ -13,7 +13,9 @@ export const CONFIG = {
     wallRest: 0.82,   // 牆面反彈係數
     blockRest: 0.5,   // 人偶擋球反彈係數
     maxSpeed: 55,     // 球速上限
-    stuckNudge: 2.2,  // 卡球幾秒後輕推
+    slopeMid: 7,      // 中場死區斜坡力道（桿縫間往中線滾）
+    slopeGoal: 6,     // 球門區死角斜坡力道（往守門員前方滾）
+    stuckNudge: 2.2,  // 卡球幾秒後輕推（斜坡外的保險）
     stuckReset: 6.0,  // 卡球幾秒後重新發球
   },
   control: {
