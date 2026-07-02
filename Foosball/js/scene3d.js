@@ -80,6 +80,17 @@ export class Scene3D {
     const bw = W * 0.55, bh = H * 0.13;
     g.strokeRect(W / 2 - bw / 2, m, bw, bh);
     g.strokeRect(W / 2 - bw / 2, H - m - bh, bw, bh);
+    // 四角圓角（跟物理一致，畫成木料底色）
+    const Rp = T.cornerR * W / T.width;
+    g.fillStyle = '#6f4722';
+    for (const [tx, ty, mx, my] of [[0, 0, 1, 1], [W, 0, -1, 1], [0, H, 1, -1], [W, H, -1, -1]]) {
+      g.save(); g.translate(tx, ty); g.scale(mx, my);
+      g.beginPath();
+      g.moveTo(0, 0); g.lineTo(Rp, 0);
+      g.arc(Rp, Rp, Rp, -Math.PI / 2, Math.PI, true);
+      g.lineTo(0, 0); g.closePath(); g.fill();
+      g.restore();
+    }
     const tex = new THREE.CanvasTexture(c);
     tex.anisotropy = 4;
     return tex;
@@ -125,6 +136,18 @@ export class Scene3D {
       );
       pocket.position.set(0, (T.wallH + 0.7) / 2 - 0.05, sz * (T.length / 2 + wallT + 0.9));
       this.tableGroup.add(pocket);
+    }
+    // 四角圓弧牆（面向場內）
+    const curveMat = new THREE.MeshStandardMaterial({ color: 0x7a4f28, roughness: 0.7, side: THREE.DoubleSide });
+    const ccx = T.width / 2 - T.cornerR, ccz = T.length / 2 - T.cornerR;
+    for (const [sx, sz, theta] of [[1, 1, 0], [1, -1, Math.PI / 2], [-1, -1, Math.PI], [-1, 1, Math.PI * 1.5]]) {
+      const arc = new THREE.Mesh(
+        new THREE.CylinderGeometry(T.cornerR + 0.05, T.cornerR + 0.05, T.wallH, 14, 1, true, theta, Math.PI / 2),
+        curveMat
+      );
+      arc.position.set(sx * ccx, T.wallH / 2, sz * ccz);
+      arc.castShadow = true;
+      this.tableGroup.add(arc);
     }
     // 桌體外框底座
     const base = new THREE.Mesh(

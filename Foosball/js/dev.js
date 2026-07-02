@@ -101,7 +101,6 @@ export function initDev({ scene, game, ui, onTestGoal, onReserve }) {
     body.appendChild(slider('反應間隔(秒)', `ai.${diff}.react`, 0.02, 0.6, 0.01));
     body.appendChild(slider('射門力道', `ai.${diff}.kickPow`, 10, 55, 1));
     body.appendChild(slider('瞄準精度', `ai.${diff}.aim`, 0, 1, 0.05));
-    body.appendChild(slider('出腳距離', `ai.${diff}.kickRange`, 0.8, 3.5, 0.1));
     body.appendChild(slider('出腳冷卻(秒)', `ai.${diff}.kickCd`, 0.2, 2.5, 0.05));
 
     section('規則');

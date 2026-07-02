@@ -7,6 +7,7 @@ export const CONFIG = {
     wallH: 1.7,      // 圍牆高
     goalHalf: 3.6,   // 球門開口半寬
     ballR: 0.45,     // 球半徑
+    cornerR: 3.4,    // 四角圓角半徑（圓弧牆把角落球導回場內）
   },
   physics: {
     friction: 0.55,   // 每秒速度衰減比例
@@ -28,9 +29,9 @@ export const CONFIG = {
     grabRange: 5.0,     // 手指落點找桿的 z 範圍
   },
   ai: {
-    easy:   { speed: 6,  react: 0.40, kickPow: 18, aim: 0.22, kickRange: 1.6, kickCd: 1.3 },
-    normal: { speed: 10, react: 0.22, kickPow: 26, aim: 0.50, kickRange: 1.9, kickCd: 0.85 },
-    hard:   { speed: 16, react: 0.10, kickPow: 36, aim: 0.80, kickRange: 2.1, kickCd: 0.5 },
+    easy:   { speed: 6,  react: 0.40, kickPow: 16, aim: 0.15, kickCd: 1.5 },
+    normal: { speed: 10, react: 0.22, kickPow: 24, aim: 0.40, kickCd: 1.0 },
+    hard:   { speed: 16, react: 0.10, kickPow: 36, aim: 0.80, kickCd: 0.5 },
   },
   rules: { winScore: 5 },
   // 版面（鏡頭）參數：手機直版 / PC 橫版 分開調

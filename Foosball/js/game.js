@@ -182,6 +182,26 @@ export class Game {
 
   _collideWalls() {
     const b = this.ball, T = CONFIG.table, P = CONFIG.physics;
+    const R = T.cornerR;
+    const cx = T.width / 2 - R, cz = T.length / 2 - R;
+    // 四角圓弧牆：球沿弧面反彈導回場內
+    if (Math.abs(b.x) > cx && Math.abs(b.z) > cz) {
+      const sx = Math.sign(b.x), sz = Math.sign(b.z);
+      const dx = b.x - sx * cx, dz = b.z - sz * cz;
+      const d = Math.hypot(dx, dz), maxD = R - T.ballR;
+      if (d > maxD && d > 1e-6) {
+        const nx = dx / d, nz = dz / d;
+        b.x = sx * cx + nx * maxD;
+        b.z = sz * cz + nz * maxD;
+        const vn = b.vx * nx + b.vz * nz;
+        if (vn > 0) {
+          b.vx -= (1 + P.wallRest) * vn * nx;
+          b.vz -= (1 + P.wallRest) * vn * nz;
+          this._wallHit();
+        }
+      }
+      return;
+    }
     const xMax = T.width / 2 - T.ballR;
     if (b.x > xMax) { b.x = xMax; if (b.vx > 0) { b.vx *= -P.wallRest; this._wallHit(); } }
     if (b.x < -xMax) { b.x = -xMax; if (b.vx < 0) { b.vx *= -P.wallRest; this._wallHit(); } }
@@ -249,13 +269,16 @@ export class Game {
     if (az > 2.62 && az < 3.98) {
       // 中場桿與對方前鋒桿之間的縫 → 往中線滾
       b.vz -= s * P.slopeMid * dt;
-    } else if (az > 12.4) {
-      // 球門區：正在入門的球（門口內側）不干涉，讓它進
-      const entering = Math.abs(b.x) < T.goalHalf && az > 14.2;
+    } else if (az > 12.4 || (az > 9.2 && Math.abs(b.x) > 5.8)) {
+      // 球門區與側邊角落死區（GK 側向搆不到的貼牆帶）：
+      // 往「守門員正前方」的吸引點匯集——方向永遠背離球門線，不會把球帶進門（避免自殺球）
+      const entering = Math.abs(b.x) < T.goalHalf && az > 14.2 && b.vz * s > 0;
       if (!entering) {
-        b.vz -= s * P.slopeGoal * dt; // 往守門員前方滾
-        // 門邊死角再往中間帶一點
-        if (Math.abs(b.x) > T.goalHalf) b.vx -= Math.sign(b.x) * P.slopeGoal * 0.6 * dt;
+        const tz = s * 10.3;
+        const dx = 0 - b.x, dz = tz - b.z;
+        const d = Math.hypot(dx, dz) || 1;
+        b.vx += dx / d * P.slopeGoal * dt;
+        b.vz += dz / d * P.slopeGoal * dt;
       }
     }
   }
@@ -314,8 +337,8 @@ export class Game {
       if (this.phase === 'play' && r.cooldown <= 0 && r.kickT < 0) {
         const dzf = (b.z - r.def.z) * r.facing;
         const { dx } = this._nearestFig(r, b.x);
-        // 出腳距離不可超過實際觸球距離，否則會空踢；身後近球也踢（解圍）
-        if (dzf > -0.8 && dzf < Math.min(cfg.kickRange, STRIKE_REACH - 0.15) && Math.abs(dx) < 1.6) {
+        // 出腳範圍 = 實際觸球範圍（略縮以免空踢）；範圍縮太窄會產生 AI 發呆口袋
+        if (dzf > -STRIKE_BACK + 0.05 && dzf < STRIKE_REACH - 0.05 && Math.abs(dx) < 1.7) {
           // 瞄準玩家球門（z=+15）左右角落，依 aim 品質混入誤差
           const distZ = T.length / 2 - b.z;
           const targetX = (Math.random() < 0.5 ? -1 : 1) * (T.goalHalf - 1.2);
