@@ -66,7 +66,8 @@
   #kick-bar button { display: flex; flex-direction: column; align-items: center; gap: 2px; min-width: 62px; padding: 8px 12px; border-radius: 14px; border: 1px solid rgba(255,255,255,.22); background: rgba(8,10,22,.66); color: #fff; font-size: 20px; cursor: pointer; touch-action: manipulation; -webkit-user-select: none; user-select: none; }
   #kick-bar button span { font-size: 12px; opacity: .85; }
   #kick-bar button:active, #kick-bar button.pressed { transform: scale(.92); background: rgba(33,193,91,.45); border-color: #21c15b; }
-  #btn-track.on { border-color: #21c15b; background: rgba(33,193,91,.28); }
+  #btn-track { margin-left: 6px; border: 1px solid rgba(255,255,255,.25); background: rgba(255,255,255,.12); color: #fff; border-radius: 8px; padding: 5px 8px; font-size: 12px; cursor: pointer; white-space: nowrap; }
+  #btn-track.on { border-color: #21c15b; background: rgba(33,193,91,.3); }
   #btn-track:not(.on) { opacity: .55; }
 
   /* DEV 工具 */
@@ -121,6 +122,7 @@
   <div class="side"><canvas id="flag-p" width="36" height="24"></canvas><span class="nm" id="name-p"></span></div>
   <span class="sc" id="score-p">0</span><span class="colon">:</span><span class="sc" id="score-a">0</span>
   <div class="side"><span class="nm" id="name-a"></span><canvas id="flag-a" width="36" height="24"></canvas></div>
+  <button id="btn-track" class="on">🧲追球</button>
   <button id="btn-quit">選單</button>
 </div>
 
@@ -130,7 +132,6 @@
   <button data-kind="DEF">🛡️<span>後衛</span></button>
   <button data-kind="MID">⚔️<span>中場</span></button>
   <button data-kind="ATT">🎯<span>前鋒</span></button>
-  <button id="btn-track" class="on">🧲<span>追球</span></button>
 </div>
 
 <!-- 進球演出 -->
