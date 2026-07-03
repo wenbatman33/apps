@@ -90,6 +90,7 @@ export function initDev({ scene, game, ui, onTestGoal, onReserve }) {
 
     section('操作');
     body.appendChild(slider('移桿靈敏度', 'control.moveSens', 0.3, 3, 0.05));
+    body.appendChild(slider('自動追球速度', 'control.trackSpeed', 4, 30, 0.5));
     body.appendChild(slider('點擊射門力道', 'control.tapKickPow', 10, 60, 1));
     body.appendChild(slider('點擊判定秒數', 'control.tapMaxTime', 0.1, 0.6, 0.02));
     body.appendChild(slider('點擊判定移動量', 'control.tapMaxMove', 0.3, 3, 0.1));

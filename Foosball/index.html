@@ -61,6 +61,14 @@
   #result-score { font-size: clamp(18px, 5vw, 26px); margin-bottom: 30px; opacity: .9; }
   #screen-result .row { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; }
 
+  /* 一鍵揮桿按鈕列 */
+  #kick-bar { position: fixed; bottom: max(12px, env(safe-area-inset-bottom)); left: 50%; transform: translateX(-50%); z-index: 15; display: flex; gap: 10px; }
+  #kick-bar button { display: flex; flex-direction: column; align-items: center; gap: 2px; min-width: 62px; padding: 8px 12px; border-radius: 14px; border: 1px solid rgba(255,255,255,.22); background: rgba(8,10,22,.66); color: #fff; font-size: 20px; cursor: pointer; touch-action: manipulation; -webkit-user-select: none; user-select: none; }
+  #kick-bar button span { font-size: 12px; opacity: .85; }
+  #kick-bar button:active, #kick-bar button.pressed { transform: scale(.92); background: rgba(33,193,91,.45); border-color: #21c15b; }
+  #btn-track.on { border-color: #21c15b; background: rgba(33,193,91,.28); }
+  #btn-track:not(.on) { opacity: .55; }
+
   /* DEV 工具 */
   #dev-toggle { position: fixed; right: 10px; bottom: max(10px, env(safe-area-inset-bottom)); z-index: 30; width: 38px; height: 38px; border-radius: 50%; border: 1px solid rgba(255,255,255,.25); background: rgba(10,12,25,.6); color: #9ab; font-size: 18px; cursor: pointer; opacity: .55; }
   #dev-panel { position: fixed; top: 0; right: 0; bottom: 0; z-index: 40; width: min(320px, 88vw); background: rgba(8,10,20,.94); border-left: 1px solid rgba(255,255,255,.15); overflow-y: auto; padding: 12px; touch-action: pan-y; }
@@ -86,7 +94,7 @@
   <button id="btn-play" class="big-btn">開始遊戲</button>
   <div class="hint">
     按住球桿附近拖曳 → 移動球員（保持直立）<br>
-    點一下 → 踢球！<br>
+    點一下 → 踢球！下方按鈕 → 一鍵揮桿<br>
     手機直向遊玩・電腦橫向遊玩・先進 5 球獲勝
   </div>
 </div>
@@ -114,6 +122,15 @@
   <span class="sc" id="score-p">0</span><span class="colon">:</span><span class="sc" id="score-a">0</span>
   <div class="side"><span class="nm" id="name-a"></span><canvas id="flag-a" width="36" height="24"></canvas></div>
   <button id="btn-quit">選單</button>
+</div>
+
+<!-- 一鍵揮桿按鈕列 -->
+<div id="kick-bar" class="hidden">
+  <button data-kind="GK">🧤<span>守門</span></button>
+  <button data-kind="DEF">🛡️<span>後衛</span></button>
+  <button data-kind="MID">⚔️<span>中場</span></button>
+  <button data-kind="ATT">🎯<span>前鋒</span></button>
+  <button id="btn-track" class="on">🧲<span>追球</span></button>
 </div>
 
 <!-- 進球演出 -->

@@ -77,6 +77,30 @@ initDev({
   onReserve: () => { if (game.phase !== 'idle') { game.serve(null); game.phase = 'play'; } },
 });
 
+// --- 一鍵揮桿按鈕：點了對應桿直接踢 ---
+import { CONFIG } from './config.js';
+{
+  const kindToIdx = {};
+  game.rods.forEach((r, i) => { if (r.def.side === 'P') kindToIdx[r.def.kind] = i; });
+  document.querySelectorAll('#kick-bar button[data-kind]').forEach(btn => {
+    btn.addEventListener('pointerdown', e => {
+      e.preventDefault();
+      if (!input.enabled) return;
+      if (game.triggerKick(kindToIdx[btn.dataset.kind], CONFIG.control.tapKickPow)) {
+        btn.classList.add('pressed');
+        setTimeout(() => btn.classList.remove('pressed'), 160);
+      }
+    });
+  });
+  // 自動追球開關
+  const trackBtn = document.getElementById('btn-track');
+  trackBtn.addEventListener('pointerdown', e => {
+    e.preventDefault();
+    CONFIG.control.autoTrack = !CONFIG.control.autoTrack;
+    trackBtn.classList.toggle('on', CONFIG.control.autoTrack);
+  });
+}
+
 // debug 掛勾（DEV / 自動測試用）
 window.__foosball = { game, scene, ui, input };
 

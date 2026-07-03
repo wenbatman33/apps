@@ -93,6 +93,7 @@ export class Game {
     for (const r of this.rods) this._updateRod(r, dt);
     if (this.phase === 'play') {
       this._updateAI(dt);
+      this._updateAssist(dt);
       this._slope(dt);
       this._physics(dt);
       this._checkStuck(dt);
@@ -300,6 +301,36 @@ export class Game {
       const imp = 3.4;
       b.vx += dx / d * imp + (Math.random() - 0.5) * 1.2;
       b.vz += dz / d * imp + (Math.random() - 0.5) * 1.2;
+    }
+  }
+
+  // 自動追球輔助：玩家桿自動對位球的預測落點（正被手指拖曳的桿除外）
+  _updateAssist(dt) {
+    if (!CONFIG.control.autoTrack) return;
+    const b = this.ball, T = CONFIG.table;
+    for (const r of this.rods) {
+      if (r.def.side !== 'P' || r.held) continue;
+      // 預測球到桿位置時的 x（含牆面反彈鏡射）
+      let px = b.x;
+      const dz = r.def.z - b.z;
+      if (Math.abs(b.vz) > 0.5 && dz * b.vz > 0) {
+        const t = dz / b.vz;
+        if (t < 2.5) {
+          px = b.x + b.vx * t;
+          const half = T.width / 2 - T.ballR;
+          while (Math.abs(px) > half) px = px > 0 ? 2 * half - px : -2 * half - px;
+        }
+      }
+      // 挑最省移動的人偶去對位
+      let bestOff = r.offset, bd = 1e9;
+      for (const rel of r.rels) {
+        const want = Math.max(-r.halfTravel, Math.min(r.halfTravel, px - rel));
+        const d = Math.abs(want - r.offset) + Math.abs((want + rel) - px) * 3;
+        if (d < bd) { bd = d; bestOff = want; }
+      }
+      const dir = Math.sign(bestOff - r.offset);
+      const step = Math.min(Math.abs(bestOff - r.offset), CONFIG.control.trackSpeed * dt);
+      r.targetOffset = r.offset + dir * step;
     }
   }
 

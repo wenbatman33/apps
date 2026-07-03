@@ -21,6 +21,8 @@ export const CONFIG = {
   },
   control: {
     moveSens: 1.0,      // 拖曳移桿靈敏度（拖曳只移動，人偶保持直立）
+    autoTrack: true,    // 自動追球：玩家桿自動對位球（拖曳中的桿除外）
+    trackSpeed: 13,     // 自動追球移動速度
     tapKickPow: 34,     // 點擊射門力道
     tapMaxTime: 0.3,    // 點擊判定：最長按壓秒數
     tapMaxMove: 1.3,    // 點擊判定：期間最大移動量（桌面單位）

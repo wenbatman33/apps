@@ -28,6 +28,7 @@ export class InputManager {
     if (best < 0) return;
     try { this.canvas.setPointerCapture(e.pointerId); } catch (_) { /* 合成事件無法 capture，忽略 */ }
     const rod = this.game.rods[best];
+    rod.held = true; // 手指拖曳中，自動追球讓位
     this.pointers.set(e.pointerId, {
       rodIdx: best,
       grabDelta: rod.offset - local.x * CONFIG.control.moveSens,
@@ -49,12 +50,15 @@ export class InputManager {
 
   _up(e) {
     const p = this.pointers.get(e.pointerId);
-    if (p && this.enabled) {
-      const C = CONFIG.control;
-      const dt = (performance.now() - p.downT) / 1000;
-      // 快按快放且幾乎沒拖動 → 踢球
-      if (dt < C.tapMaxTime && p.moved < C.tapMaxMove) {
-        this.game.triggerKick(p.rodIdx, C.tapKickPow);
+    if (p) {
+      this.game.rods[p.rodIdx].held = false;
+      if (this.enabled) {
+        const C = CONFIG.control;
+        const dt = (performance.now() - p.downT) / 1000;
+        // 快按快放且幾乎沒拖動 → 踢球
+        if (dt < C.tapMaxTime && p.moved < C.tapMaxMove) {
+          this.game.triggerKick(p.rodIdx, C.tapKickPow);
+        }
       }
     }
     this.pointers.delete(e.pointerId);

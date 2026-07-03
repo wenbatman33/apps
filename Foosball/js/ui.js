@@ -36,20 +36,20 @@ export class UI {
     this.$('btn-kickoff').addEventListener('click', () => {
       if (!this.pTeam || !this.aTeam) return;
       this._show(null);
-      this.$('hud').classList.remove('hidden');
+      this._hud(true);
       this._updateScore(0, 0);
       this.onStart && this.onStart({ pTeam: this.pTeam, aTeam: this.aTeam, difficulty: this.difficulty });
     });
     // HUD 選單鍵
     this.$('btn-quit').addEventListener('click', () => {
-      this.$('hud').classList.add('hidden');
+      this._hud(false);
       this._show('screen-menu');
       this.onMenu && this.onMenu();
     });
     // 結算
     this.$('btn-rematch').addEventListener('click', () => {
       this._show(null);
-      this.$('hud').classList.remove('hidden');
+      this._hud(true);
       this._updateScore(0, 0);
       this.onRematch && this.onRematch();
     });
@@ -64,7 +64,13 @@ export class UI {
     if (id) this.$(id).classList.remove('hidden');
   }
 
-  showMenu() { this.$('hud').classList.add('hidden'); this._show('screen-menu'); }
+  // HUD 與一鍵揮桿列同步顯示/隱藏
+  _hud(on) {
+    this.$('hud').classList.toggle('hidden', !on);
+    this.$('kick-bar').classList.toggle('hidden', !on);
+  }
+
+  showMenu() { this._hud(false); this._show('screen-menu'); }
 
   _teamCard(t, selected, onClick) {
     const div = document.createElement('div');
@@ -145,7 +151,7 @@ export class UI {
   }
 
   showResult(winner, game) {
-    this.$('hud').classList.add('hidden');
+    this._hud(false);
     const won = winner === 'P';
     this.$('result-title').textContent = won ? '🏆 你贏了！' : '😢 你輸了';
     this.$('result-score').textContent =
