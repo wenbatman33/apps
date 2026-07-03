@@ -1,5 +1,6 @@
 // 入口：組裝場景 / 遊戲 / 操作 / UI / 音效 / DEV 工具與主迴圈
 import { TEAMS, getTeam } from './teams.js';
+import { Tournament } from './tournament.js';
 import { Game } from './game.js';
 import { Scene3D } from './scene3d.js';
 import { InputManager } from './input.js';
@@ -35,30 +36,91 @@ updateOrientation();
 window.addEventListener('pointerdown', () => sfx.unlock(), { once: true });
 
 // --- 遊戲流程 ---
+let tour = null;              // 進行中的錦標賽
+let cupTeam = null, cupDiff = 'normal';
+let lastMatchWasCup = false;
+
 ui.onStart = ({ pTeam, aTeam, difficulty }) => {
+  lastMatchWasCup = false;
   scene.setTeams(pTeam, aTeam);
   ui.setMatchTeams(pTeam, aTeam);
   game.setDifficulty(difficulty);
   game.startMatch();
+  ui.setTimer(null);
   input.enabled = true;
   sfx.whistle();
 };
 ui.onRematch = () => {
+  if (lastMatchWasCup) {
+    // 淘汰後「再戰一屆」：同隊伍開新賽程
+    tour = new Tournament(cupTeam.id);
+    ui.showBracket(tour, 'preview');
+    return;
+  }
   game.startMatch();
+  ui.setTimer(null);
   input.enabled = true;
   sfx.whistle();
 };
 ui.onMenu = () => {
   game.phase = 'idle';
   input.enabled = false;
+  tour = null;
 };
+
+// --- 錦標賽流程 ---
+ui.onCupBegin = ({ pTeam, difficulty }) => {
+  cupTeam = pTeam; cupDiff = difficulty;
+  tour = new Tournament(pTeam.id);
+  ui.showBracket(tour, 'preview');
+};
+ui.onBracketNext = state => {
+  if (state === 'preview') startCupMatch();
+  else ui.showBracket(tour, 'preview'); // 賽果 → 下一輪對戰表（再點才開賽）
+};
+ui.onCupAgain = () => {
+  tour = new Tournament(cupTeam.id);
+  ui.showBracket(tour, 'preview');
+};
+
+function startCupMatch() {
+  lastMatchWasCup = true;
+  const opp = getTeam(tour.playerOpponent());
+  ui.pTeam = cupTeam; ui.aTeam = opp;
+  scene.setTeams(cupTeam, opp);
+  ui.setMatchTeams(cupTeam, opp);
+  game.setDifficulty(cupDiff);
+  ui._show(null);
+  ui._hud(true);
+  ui._updateScore(0, 0);
+  game.startMatch({ mode: 'timed', duration: CONFIG.rules.matchTime });
+  input.enabled = true;
+  sfx.whistle();
+}
 
 game.on('goal', scorer => {
   ui.goalFlash(scorer, game);
   sfx.goal();
 });
+game.on('golden', () => sfx.whistle()); // 黃金進球延長開始
 game.on('end', winner => {
   input.enabled = false;
+  if (tour && game.mode === 'timed') {
+    tour.finishRound(game.scoreP, game.scoreA);
+    if (winner === 'A') {
+      ui.showEliminated(tour.lastRoundName(), game);
+      sfx.lose();
+      tour = null;
+    } else if (tour.champion()) {
+      ui.showChampion(cupTeam);
+      sfx.win();
+      tour = null;
+    } else {
+      ui.showBracket(tour, 'results');
+      sfx.win();
+    }
+    return;
+  }
   ui.showResult(winner, game);
   winner === 'P' ? sfx.win() : sfx.lose();
 });
@@ -123,6 +185,14 @@ function loop(now) {
   const dt = Math.min(0.05, (now - last) / 1000);
   last = now;
   game.update(dt);
+  // 計時賽 HUD 倒數
+  if (game.mode === 'timed' && (game.phase === 'play' || game.phase === 'goal')) {
+    if (game.golden) ui.setTimer('⚡黃金球', true);
+    else {
+      const t = Math.max(0, Math.ceil(game.timeLeft));
+      ui.setTimer(`${Math.floor(t / 60)}:${String(t % 60).padStart(2, '0')}`, false);
+    }
+  }
   scene.sync(game);
   scene.render();
 }

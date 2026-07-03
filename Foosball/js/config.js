@@ -35,7 +35,7 @@ export const CONFIG = {
     normal: { speed: 10, react: 0.22, kickPow: 24, aim: 0.40, kickCd: 1.0 },
     hard:   { speed: 16, react: 0.10, kickPow: 36, aim: 0.80, kickCd: 0.5 },
   },
-  rules: { winScore: 5 },
+  rules: { winScore: 5, matchTime: 180 }, // 快速對戰先進5球；錦標賽每場秒數（平手進黃金進球）
   // 版面（鏡頭）參數：手機直版 / PC 橫版 分開調
   LAYOUT_MOBILE: { camH: 30, camD: 21, fov: 56, lookZ: -1.5, tilt: 0 },
   LAYOUT_PC:     { camH: 25, camD: 15, fov: 46, lookZ: 0,    tilt: 0 },

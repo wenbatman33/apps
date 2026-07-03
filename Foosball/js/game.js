@@ -26,6 +26,7 @@ export class Game {
     this.ball = { x: 0, z: 0, vx: 0, vz: 0, spin: 0 };
     this.scoreP = 0; this.scoreA = 0;
     this.phase = 'idle'; // idle | play | goal | end
+    this.mode = 'score'; this.timeLeft = 0; this.golden = false;
     this.pauseT = 0; this.stuckT = 0; this.pendingServe = null;
     this.aiCfg = CONFIG.ai.normal;
     this._ev = {};
@@ -39,7 +40,11 @@ export class Game {
   }
   setDifficulty(d) { this.aiCfg = CONFIG.ai[d] || CONFIG.ai.normal; }
 
-  startMatch() {
+  // opts: { mode: 'score'(先進N球) | 'timed'(計時+黃金進球), duration }
+  startMatch(opts = {}) {
+    this.mode = opts.mode || 'score';
+    this.timeLeft = opts.duration || CONFIG.rules.matchTime;
+    this.golden = false;
     this.scoreP = 0; this.scoreA = 0;
     this.rods.forEach(r => { r.offset = 0; r.targetOffset = 0; r.angle = 0; r.kickT = -1; });
     this.serve(null);
@@ -92,6 +97,20 @@ export class Game {
     dt = Math.min(dt, 0.05);
     for (const r of this.rods) this._updateRod(r, dt);
     if (this.phase === 'play') {
+      // 計時賽：時間到未分勝負 → 黃金進球延長
+      if (this.mode === 'timed' && !this.golden) {
+        this.timeLeft -= dt;
+        if (this.timeLeft <= 0) {
+          this.timeLeft = 0;
+          if (this.scoreP !== this.scoreA) {
+            this.phase = 'end';
+            this.emit('end', this.scoreP > this.scoreA ? 'P' : 'A');
+            return;
+          }
+          this.golden = true;
+          this.emit('golden');
+        }
+      }
       this._updateAI(dt);
       this._updateAssist(dt);
       this._slope(dt);
@@ -100,7 +119,10 @@ export class Game {
     } else if (this.phase === 'goal') {
       this.pauseT -= dt;
       if (this.pauseT <= 0) {
-        if (this.scoreP >= CONFIG.rules.winScore || this.scoreA >= CONFIG.rules.winScore) {
+        const ended = this.mode === 'timed'
+          ? this.golden // 黃金進球：進了就結束
+          : (this.scoreP >= CONFIG.rules.winScore || this.scoreA >= CONFIG.rules.winScore);
+        if (ended) {
           this.phase = 'end';
           this.emit('end', this.scoreP > this.scoreA ? 'P' : 'A');
         } else {

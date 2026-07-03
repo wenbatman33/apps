@@ -61,6 +61,35 @@
   #result-score { font-size: clamp(18px, 5vw, 26px); margin-bottom: 30px; opacity: .9; }
   #screen-result .row { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; }
 
+  /* 主選單第二模式鈕 */
+  .big-btn.alt { margin-top: 14px; background: linear-gradient(180deg, #3b82f6, #1d4ed8); box-shadow: 0 6px 18px rgba(59,130,246,.4); }
+
+  /* HUD 計時器 */
+  #hud-timer { font-size: 16px; font-weight: 800; color: #ffe14d; min-width: 52px; text-align: center; font-variant-numeric: tabular-nums; }
+  #hud-timer.golden { color: #ff6b6b; font-size: 13px; }
+
+  /* 錦標賽賽程表 */
+  #screen-bracket { justify-content: flex-start; }
+  #bracket-title { font-size: clamp(22px, 6vw, 30px); font-weight: 900; margin: 8px 0 2px; color: #ffe14d; text-shadow: 0 2px 12px rgba(255,225,77,.35); }
+  #bracket-sub { font-size: 13px; opacity: .75; margin-bottom: 10px; }
+  #bracket-list { flex: 1; overflow-y: auto; width: min(560px, 100%); display: flex; flex-direction: column; gap: 6px; padding: 4px 2px 12px; touch-action: pan-y; }
+  .bk-row { display: flex; align-items: center; gap: 8px; background: rgba(255,255,255,.06); border: 1px solid transparent; border-radius: 10px; padding: 7px 12px; font-size: 14px; }
+  .bk-row.me { border-color: #21c15b; background: rgba(33,193,91,.14); }
+  .bk-row canvas { border-radius: 3px; flex: 0 0 auto; }
+  .bk-row .bk-n { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .bk-row .bk-n.right { text-align: right; }
+  .bk-row .bk-s { font-weight: 800; min-width: 42px; text-align: center; color: #ffe14d; }
+  .bk-row .win { color: #21c15b; }
+  #btn-bracket-next { margin: 12px 0 4px; }
+
+  /* 冠軍畫面 */
+  #champ-trophy { font-size: clamp(80px, 22vw, 140px); animation: champPop 1s cubic-bezier(.2, 2, .4, 1); }
+  #champ-flag { border-radius: 8px; box-shadow: 0 4px 24px rgba(0,0,0,.6); margin: 14px 0 10px; }
+  #champ-team { font-size: clamp(28px, 8vw, 44px); font-weight: 900; }
+  #champ-sub { font-size: clamp(16px, 5vw, 22px); color: #ffe14d; margin: 8px 0 30px; }
+  #screen-champion .row { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; }
+  @keyframes champPop { 0% { transform: scale(.2) rotate(-20deg); opacity: 0; } 60% { transform: scale(1.2) rotate(6deg); } 100% { transform: scale(1) rotate(0); opacity: 1; } }
+
   /* 一鍵揮桿按鈕列 */
   #kick-bar { position: fixed; bottom: max(12px, env(safe-area-inset-bottom)); left: 50%; transform: translateX(-50%); z-index: 15; display: flex; gap: 10px; }
   #kick-bar button { display: flex; flex-direction: column; align-items: center; gap: 2px; min-width: 62px; padding: 8px 12px; border-radius: 14px; border: 1px solid rgba(255,255,255,.22); background: rgba(8,10,22,.66); color: #fff; font-size: 20px; cursor: pointer; touch-action: manipulation; -webkit-user-select: none; user-select: none; }
@@ -94,11 +123,13 @@
 <div id="screen-menu" class="screen">
   <h1>⚽ 世界盃手足球</h1>
   <div class="sub">2026 世界盃 32 強 ・ 3D 桌上足球</div>
-  <button id="btn-play" class="big-btn">開始遊戲</button>
+  <button id="btn-cup" class="big-btn">🏆 世界盃錦標賽</button>
+  <button id="btn-play" class="big-btn alt">⚡ 快速對戰</button>
   <div class="hint">
     按住球桿附近拖曳 → 移動球員（保持直立）<br>
     點一下 → 踢球！下方按鈕 → 一鍵揮桿（PC 可按 1 2 3 4）<br>
-    手機直向遊玩・電腦橫向遊玩・先進 5 球獲勝
+    錦標賽：32 強單淘汰、每場 3 分鐘、平手黃金進球<br>
+    快速對戰：先進 5 球獲勝・手機直版／PC 橫版
   </div>
 </div>
 
@@ -124,8 +155,29 @@
   <div class="side"><canvas id="flag-p" width="36" height="24"></canvas><span class="nm" id="name-p"></span></div>
   <span class="sc" id="score-p">0</span><span class="colon">:</span><span class="sc" id="score-a">0</span>
   <div class="side"><span class="nm" id="name-a"></span><canvas id="flag-a" width="36" height="24"></canvas></div>
+  <span id="hud-timer" class="hidden">3:00</span>
   <button id="btn-track" class="on">🧲追球</button>
   <button id="btn-quit">選單</button>
+</div>
+
+<!-- 錦標賽賽程表 -->
+<div id="screen-bracket" class="screen hidden">
+  <div id="bracket-title"></div>
+  <div id="bracket-sub"></div>
+  <div id="bracket-list"></div>
+  <button id="btn-bracket-next" class="big-btn"></button>
+</div>
+
+<!-- 冠軍畫面 -->
+<div id="screen-champion" class="screen hidden">
+  <div id="champ-trophy">🏆</div>
+  <canvas id="champ-flag" width="120" height="80"></canvas>
+  <div id="champ-team"></div>
+  <div id="champ-sub">世界盃冠軍！！</div>
+  <div class="row">
+    <button id="btn-champ-again" class="big-btn">再戰一屆</button>
+    <button id="btn-champ-menu" class="mini-btn">回主選單</button>
+  </div>
 </div>
 
 <!-- 一鍵揮桿按鈕列 -->

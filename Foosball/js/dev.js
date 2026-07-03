@@ -105,7 +105,8 @@ export function initDev({ scene, game, ui, onTestGoal, onReserve }) {
     body.appendChild(slider('出腳冷卻(秒)', `ai.${diff}.kickCd`, 0.2, 2.5, 0.05));
 
     section('規則');
-    body.appendChild(slider('獲勝分數', 'rules.winScore', 1, 11, 1));
+    body.appendChild(slider('快速賽獲勝分數', 'rules.winScore', 1, 11, 1));
+    body.appendChild(slider('錦標賽秒數', 'rules.matchTime', 60, 300, 30));
 
     section('動作測試');
     const btns = document.createElement('div');
