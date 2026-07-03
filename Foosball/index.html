@@ -66,6 +66,8 @@
   #kick-bar button { display: flex; flex-direction: column; align-items: center; gap: 2px; min-width: 62px; padding: 8px 12px; border-radius: 14px; border: 1px solid rgba(255,255,255,.22); background: rgba(8,10,22,.66); color: #fff; font-size: 20px; cursor: pointer; touch-action: manipulation; -webkit-user-select: none; user-select: none; }
   #kick-bar button span { font-size: 12px; opacity: .85; }
   #kick-bar button:active, #kick-bar button.pressed { transform: scale(.92); background: rgba(33,193,91,.45); border-color: #21c15b; }
+  #kick-bar .key { display: none; font-size: 10px; opacity: .55; line-height: 1; }
+  @media (hover: hover) and (pointer: fine) { #kick-bar .key { display: block; } }
   #btn-track { margin-left: 6px; border: 1px solid rgba(255,255,255,.25); background: rgba(255,255,255,.12); color: #fff; border-radius: 8px; padding: 5px 8px; font-size: 12px; cursor: pointer; white-space: nowrap; }
   #btn-track.on { border-color: #21c15b; background: rgba(33,193,91,.3); }
   #btn-track:not(.on) { opacity: .55; }
@@ -95,7 +97,7 @@
   <button id="btn-play" class="big-btn">開始遊戲</button>
   <div class="hint">
     按住球桿附近拖曳 → 移動球員（保持直立）<br>
-    點一下 → 踢球！下方按鈕 → 一鍵揮桿<br>
+    點一下 → 踢球！下方按鈕 → 一鍵揮桿（PC 可按 1 2 3 4）<br>
     手機直向遊玩・電腦橫向遊玩・先進 5 球獲勝
   </div>
 </div>
@@ -128,10 +130,10 @@
 
 <!-- 一鍵揮桿按鈕列 -->
 <div id="kick-bar" class="hidden">
-  <button data-kind="GK">🧤<span>守門</span></button>
-  <button data-kind="DEF">🛡️<span>後衛</span></button>
-  <button data-kind="MID">⚔️<span>中場</span></button>
-  <button data-kind="ATT">🎯<span>前鋒</span></button>
+  <button data-kind="GK">🧤<span>守門</span><span class="key">1</span></button>
+  <button data-kind="DEF">🛡️<span>後衛</span><span class="key">2</span></button>
+  <button data-kind="MID">⚔️<span>中場</span><span class="key">3</span></button>
+  <button data-kind="ATT">🎯<span>前鋒</span><span class="key">4</span></button>
 </div>
 
 <!-- 進球演出 -->

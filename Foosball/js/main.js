@@ -92,6 +92,18 @@ import { CONFIG } from './config.js';
       }
     });
   });
+  // PC 鍵盤 1~4 = 出腳（對應下方按鈕）
+  const keyToKind = { 1: 'GK', 2: 'DEF', 3: 'MID', 4: 'ATT' };
+  window.addEventListener('keydown', e => {
+    const kind = keyToKind[e.key];
+    if (!kind || !input.enabled) return;
+    if (['INPUT', 'TEXTAREA'].includes(document.activeElement.tagName)) return;
+    if (game.triggerKick(kindToIdx[kind], CONFIG.control.tapKickPow)) {
+      const btn = document.querySelector(`#kick-bar button[data-kind="${kind}"]`);
+      btn.classList.add('pressed');
+      setTimeout(() => btn.classList.remove('pressed'), 160);
+    }
+  });
   // 自動追球開關
   const trackBtn = document.getElementById('btn-track');
   trackBtn.addEventListener('pointerdown', e => {
