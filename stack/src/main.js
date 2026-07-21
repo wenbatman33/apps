@@ -1,4 +1,4 @@
-// Stack 疊疊樂 — 經典原版復刻（等角立體 2.5D，純程式繪製，無圖檔）
+// Stack 疊疊樂 — 等角立體 2.5D 疊塔遊戲（純程式繪製，無圖檔；介面為簡體中文）
 // 方塊為立體箱（頂面＋左右側面陰影），每層交替沿 X / Z 兩條水平軸滑動
 // 點擊鎖定 → 溢出切除掉落 → 該軸變窄 → 相機上移 → 顏色隨高度循環
 
@@ -8,15 +8,43 @@ const THICK = 24;             // 每塊在螢幕上的立體厚度（px）
 const F0 = 116;               // 初始方塊平面邊長（plan px，正方）
 const PERFECT = 5;            // 完美對齊容許誤差（plan px）
 const TRAVEL = 118;           // 移動方塊在該軸上的擺幅
-const SPEED_BASE = 150;       // 滑動基礎速率（plan px/s）
-const SPEED_PER = 16;         // 每次完美連擊加速量
-const SPEED_MAX = 380;        // 速率上限（連擊中斷歸 0，速度回基礎）
+// 三種難度：速度與背景氛圍皆不同（開場選單選擇）
+// tint/topK/botK 決定背景漸層朝哪個顏色混、混多少（輕鬆最亮、挑戰偏暗夜）
+const DIFFS = {
+  easy: {
+    key: 'easy', name: '轻松', sub: '慢速・明亮清晨・木质音色',
+    speedBase: 105, speedPer: 9, speedMax: 250,
+    tint: 0xffffff, topK: 0.72, botK: 0.42, sfxTheme: 'wood',
+    speedLabel: '速度 ●○○', cardText: '#5a5264', sample: 2,
+  },
+  normal: {
+    key: 'normal', name: '经典', sub: '经典手感・暖色・清脆音色',
+    speedBase: 150, speedPer: 16, speedMax: 380,
+    tint: 0xffffff, topK: 0.60, botK: 0.30, sfxTheme: 'classic',
+    speedLabel: '速度 ●●○', cardText: '#ffffff', sample: 7,
+  },
+  hard: {
+    key: 'hard', name: '挑战', sub: '高速・深夜霓虹・电子音色',
+    speedBase: 215, speedPer: 24, speedMax: 540,
+    tint: 0x120d24, topK: 0.70, botK: 0.32, sfxTheme: 'synth',
+    speedLabel: '速度 ●●●', cardText: '#ffffff', sample: 13,
+  },
+};
+
+// 各難度分開記錄最高分；經典難度沿用舊版 stack_best 存檔
+function loadBest(key) {
+  let v = parseInt(localStorage.getItem('stack_best_' + key) || '0', 10) || 0;
+  if (key === 'normal' && !v) {
+    v = parseInt(localStorage.getItem('stack_best') || '0', 10) || 0;
+  }
+  return v;
+}
 const CAM_SPEED = 150;        // 相機等速上升（px/s），連續無瞬跳
 // 內部渲染倍率：版面/玩法數值不變，只把畫布與繪製放大 RES 倍，
 // 讓斜向移動的整數像素步進 < 1 裝置像素，消除交界處抖動（低解析放大鋸齒）
 const RES = 3;
 
-// 原版 Stack 的 RGB sin 循環配色：相位 0/2/4、頻率 0.3、較飽和（非粉彩）
+// RGB sin 循環配色：相位 0/2/4、頻率 0.3、較飽和（非粉彩）
 function blockColor(i) {
   const r = Math.round(Math.sin(0.3 * i + 0) * 85 + 150);
   const g = Math.round(Math.sin(0.3 * i + 2) * 85 + 150);
@@ -38,8 +66,285 @@ function mix(c, t, k) {
   return (m(r, R) << 16) | (m(g, G) << 8) | m(b, B);
 }
 
+// ── 高質感程序化音效引擎（WebAudio 純合成，無音檔）──
+// 母線：master → 動態壓縮器 → 喇叭；另設共享殘響 bus（噪音脈衝卷積）增加空間感
+// 每個音效由「琴體音＋泛音層＋攻擊噪聲」層疊而成；三種難度各一套音色主題
+const Sfx = {
+  init(ctx) {
+    if (!ctx || this.ctx) return;
+    this.ctx = ctx;
+    this.master = ctx.createGain();
+    this.master.gain.value = 0.5;
+    const comp = ctx.createDynamicsCompressor();
+    comp.threshold.value = -18; comp.ratio.value = 4;
+    comp.attack.value = 0.003; comp.release.value = 0.25;
+    this.master.connect(comp);
+    comp.connect(ctx.destination);
+    // 殘響脈衝：立體聲白噪音指數衰減
+    const sr = ctx.sampleRate, len = Math.floor(sr * 1.6);
+    const buf = ctx.createBuffer(2, len, sr);
+    for (let ch = 0; ch < 2; ch++) {
+      const d = buf.getChannelData(ch);
+      for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 2.8);
+    }
+    const verb = ctx.createConvolver();
+    verb.buffer = buf;
+    const wet = ctx.createGain();
+    wet.gain.value = 0.4;
+    this.verbBus = ctx.createGain();
+    this.verbBus.connect(verb);
+    verb.connect(wet);
+    wet.connect(this.master);
+  },
+  resume() {
+    if (this.ctx && this.ctx.state === 'suspended') this.ctx.resume();
+  },
+  out(node, verbSend) {
+    node.connect(this.master);
+    if (verbSend > 0) {
+      const s = this.ctx.createGain();
+      s.gain.value = verbSend;
+      node.connect(s);
+      s.connect(this.verbBus);
+    }
+  },
+  // 振盪器音：{f, f1 滑音終點, dur, type, peak, when, att, detune, lpf:{f0,f1,q} 濾波掃頻, verb 殘響量}
+  tone(o) {
+    if (!this.ctx) return;
+    const ctx = this.ctx, t0 = ctx.currentTime + (o.when || 0);
+    const osc = ctx.createOscillator();
+    osc.type = o.type || 'sine';
+    osc.frequency.setValueAtTime(o.f, t0);
+    if (o.f1) osc.frequency.exponentialRampToValueAtTime(o.f1, t0 + o.dur);
+    if (o.detune) osc.detune.value = o.detune;
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0.0001, t0);
+    g.gain.exponentialRampToValueAtTime(o.peak, t0 + (o.att || 0.006));
+    g.gain.exponentialRampToValueAtTime(0.0001, t0 + o.dur);
+    osc.connect(g);
+    let tail = g;
+    if (o.lpf) {
+      const f = ctx.createBiquadFilter();
+      f.type = 'lowpass';
+      f.frequency.setValueAtTime(o.lpf.f0, t0);
+      if (o.lpf.f1) f.frequency.exponentialRampToValueAtTime(o.lpf.f1, t0 + o.dur);
+      f.Q.value = o.lpf.q || 0.8;
+      g.connect(f);
+      tail = f;
+    }
+    this.out(tail, o.verb || 0);
+    osc.start(t0);
+    osc.stop(t0 + o.dur + 0.05);
+  },
+  // 濾波噪聲：{dur, peak, when, ftype, freq, f1 掃頻終點, q, att, verb}
+  noise(o) {
+    if (!this.ctx) return;
+    const ctx = this.ctx, t0 = ctx.currentTime + (o.when || 0);
+    const len = Math.floor(ctx.sampleRate * o.dur) + 1;
+    const buf = ctx.createBuffer(1, len, ctx.sampleRate);
+    const d = buf.getChannelData(0);
+    for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
+    const src = ctx.createBufferSource();
+    src.buffer = buf;
+    const f = ctx.createBiquadFilter();
+    f.type = o.ftype || 'lowpass';
+    f.frequency.setValueAtTime(o.freq, t0);
+    if (o.f1) f.frequency.exponentialRampToValueAtTime(o.f1, t0 + o.dur);
+    f.Q.value = o.q || 0.7;
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0.0001, t0);
+    g.gain.exponentialRampToValueAtTime(o.peak, t0 + (o.att || 0.004));
+    g.gain.exponentialRampToValueAtTime(0.0001, t0 + o.dur);
+    src.connect(f);
+    f.connect(g);
+    this.out(g, o.verb || 0);
+    src.start(t0);
+    src.stop(t0 + o.dur + 0.03);
+  },
+  // 完美連擊音高：七聲大調隨連擊爬升（各主題共用）
+  noteFreq(combo) {
+    const major = [0, 2, 4, 5, 7, 9, 11];
+    const n = Math.max(0, combo - 1);
+    const semi = major[n % 7] + 12 * Math.floor(n / 7);
+    return 261.6 * Math.pow(2, semi / 12);
+  },
+  // 選單點擊（主題無關）
+  ui() {
+    if (!this.ctx) return;
+    this.resume();
+    this.tone({ f: 740, f1: 880, dur: 0.09, peak: 0.2, verb: 0.2 });
+    this.noise({ dur: 0.05, peak: 0.08, ftype: 'highpass', freq: 3000 });
+  },
+  play(theme, kind, combo) {
+    if (!this.ctx || !this[theme]) return;
+    this.resume();
+    this[theme](kind, combo);
+  },
+  // ── 輕鬆：木質溫潤（馬林巴／拇指琴）──
+  wood(kind, combo) {
+    if (kind === 'place') {
+      this.noise({ dur: 0.03, peak: 0.10, ftype: 'bandpass', freq: 1400, q: 1.2 });
+      this.tone({ f: 208, f1: 196, dur: 0.20, peak: 0.34, verb: 0.15 });
+      this.tone({ f: 780, dur: 0.06, peak: 0.09 });
+    } else if (kind === 'slice') {
+      this.noise({ dur: 0.09, peak: 0.14, ftype: 'lowpass', freq: 1100, f1: 500 });
+      this.tone({ f: 150, f1: 92, dur: 0.14, peak: 0.22 });
+    } else if (kind === 'perfect') {
+      const f = this.noteFreq(combo);
+      this.noise({ dur: 0.025, peak: 0.07, ftype: 'highpass', freq: 2600 });
+      this.tone({ f, dur: 0.55, peak: 0.34, verb: 0.35 });
+      this.tone({ f: f * 2, dur: 0.30, peak: 0.12, verb: 0.3 });
+      this.tone({ f: f * 4.02, dur: 0.12, peak: 0.05 });
+    } else if (kind === 'over') {
+      [330, 262, 196].forEach((f, i) => {
+        this.tone({ f, dur: 0.4, peak: 0.3, when: i * 0.17, verb: 0.35 });
+        this.tone({ f: f * 2, dur: 0.22, peak: 0.08, when: i * 0.17, verb: 0.3 });
+      });
+    }
+  },
+  // ── 經典：清脆乾淨（三角波主音＋殘響打磨）──
+  classic(kind, combo) {
+    if (kind === 'place') {
+      this.noise({ dur: 0.04, peak: 0.08, ftype: 'lowpass', freq: 700 });
+      this.tone({ f: 185, f1: 148, dur: 0.13, peak: 0.34, verb: 0.12 });
+      this.tone({ f: 116.5, dur: 0.11, peak: 0.2 });
+    } else if (kind === 'slice') {
+      this.noise({ dur: 0.16, peak: 0.16, ftype: 'bandpass', freq: 900, f1: 350, q: 0.9 });
+      this.tone({ f: 150, f1: 82, dur: 0.16, peak: 0.24 });
+    } else if (kind === 'perfect') {
+      const f = this.noteFreq(combo);
+      this.tone({ f, dur: 0.45, type: 'triangle', peak: 0.38, verb: 0.3 });
+      this.tone({ f: f * 2, dur: 0.28, peak: 0.13, verb: 0.25 });
+      this.tone({ f: f * 3, dur: 0.14, peak: 0.05 });
+    } else if (kind === 'over') {
+      this.tone({ f: 220, dur: 0.18, peak: 0.36, verb: 0.25 });
+      this.tone({ f: 146.8, dur: 0.34, peak: 0.34, when: 0.13, verb: 0.25 });
+      this.tone({ f: 98, dur: 0.5, peak: 0.3, when: 0.28, verb: 0.3 });
+    }
+  },
+  // ── 挑戰：電子霓虹（合成器 punch）──
+  synth(kind, combo) {
+    if (kind === 'place') {
+      this.noise({ dur: 0.05, peak: 0.12, ftype: 'highpass', freq: 2200 });
+      this.tone({ f: 120, f1: 50, dur: 0.20, type: 'sawtooth', peak: 0.30, att: 0.002, lpf: { f0: 900, f1: 200 }, verb: 0.1 });
+      this.tone({ f: 55, dur: 0.16, peak: 0.22 });
+    } else if (kind === 'slice') {
+      this.tone({ f: 420, f1: 70, dur: 0.13, type: 'square', peak: 0.16, lpf: { f0: 2400, f1: 400 } });
+      this.noise({ dur: 0.10, peak: 0.12, ftype: 'highpass', freq: 1500, f1: 4000 });
+    } else if (kind === 'perfect') {
+      const f = this.noteFreq(combo);
+      this.tone({ f, dur: 0.34, type: 'sawtooth', peak: 0.16, lpf: { f0: 3600, f1: 500 }, verb: 0.3 });
+      this.tone({ f, detune: 9, dur: 0.34, type: 'sawtooth', peak: 0.14, lpf: { f0: 3600, f1: 500 }, verb: 0.3 });
+      this.tone({ f: f / 2, dur: 0.26, peak: 0.16 });
+      this.tone({ f: f * 2, dur: 0.10, peak: 0.06, type: 'triangle' });
+    } else if (kind === 'over') {
+      this.tone({ f: 220, f1: 42, dur: 0.6, type: 'sawtooth', peak: 0.26, lpf: { f0: 1200, f1: 120 }, verb: 0.3 });
+      this.tone({ f: 66, f1: 40, dur: 0.55, peak: 0.26 });
+      this.noise({ dur: 0.5, peak: 0.08, ftype: 'lowpass', freq: 300, verb: 0.4 });
+    }
+  },
+};
+
+// 開場選單：選擇關卡難度（每張卡片以該難度的背景漸層做預覽）
+class MenuScene extends Phaser.Scene {
+  constructor() { super('menu'); }
+
+  create() {
+    // 背景：中性暖色漸層
+    const base = blockColor(3);
+    const bg = this.add.graphics();
+    const t = mix(base, 0xffffff, 0.68), b = mix(base, 0xffffff, 0.34);
+    bg.fillGradientStyle(t, t, b, b, 1);
+    bg.fillRect(0, 0, W * RES, H * RES);
+
+    // 星點粒子（與遊戲內一致的氛圍）
+    this.gPart = this.add.graphics();
+    this.parts = [];
+    for (let i = 0; i < 26; i++) {
+      this.parts.push({
+        x: Math.random() * W * RES,
+        y: Math.random() * H * RES,
+        s: (2 + Math.random() * 5) * RES,
+        spd: (6 + Math.random() * 16) * RES,
+        ph: Math.random() * Math.PI * 2,
+        tw: 0.8 + Math.random() * 1.6,
+        a: 0.25 + Math.random() * 0.5,
+      });
+    }
+
+    const font = '-apple-system, "PingFang SC", "Microsoft YaHei", sans-serif';
+    this.add.text(W * RES / 2, 110 * RES, '叠叠乐', {
+      fontFamily: font, fontSize: `${62 * RES}px`, color: '#ffffff', fontStyle: '300',
+    }).setOrigin(0.5).setShadow(0, 2 * RES, 'rgba(0,0,0,0.18)', 5 * RES);
+    this.add.text(W * RES / 2, 158 * RES, 'S T A C K', {
+      fontFamily: font, fontSize: `${20 * RES}px`, color: '#ffffff',
+    }).setOrigin(0.5).setAlpha(0.8);
+
+    this.add.text(W * RES / 2, 225 * RES, '选择关卡难度', {
+      fontFamily: font, fontSize: `${22 * RES}px`, color: '#ffffff',
+    }).setOrigin(0.5).setAlpha(0.9);
+
+    ['easy', 'normal', 'hard'].forEach((k, i) => {
+      this.makeCard(DIFFS[k], 320 + i * 150);
+    });
+  }
+
+  makeCard(d, cy) {
+    const cw = 350, ch = 122, x = (W - cw) / 2;
+    const font = '-apple-system, "PingFang SC", "Microsoft YaHei", sans-serif';
+
+    // 卡片底：用該難度的實際背景配方畫預覽漸層
+    const sample = blockColor(d.sample);
+    const top = mix(sample, d.tint, d.topK), bot = mix(sample, d.tint, d.botK);
+    const g = this.add.graphics();
+    g.fillGradientStyle(top, top, bot, bot, 1);
+    g.fillRoundedRect(x * RES, (cy - ch / 2) * RES, cw * RES, ch * RES, 18 * RES);
+    g.lineStyle(2 * RES, 0xffffff, 0.55);
+    g.strokeRoundedRect(x * RES, (cy - ch / 2) * RES, cw * RES, ch * RES, 18 * RES);
+
+    this.add.text((x + 26) * RES, (cy - 24) * RES, d.name, {
+      fontFamily: font, fontSize: `${32 * RES}px`, color: d.cardText, fontStyle: 'bold',
+    }).setOrigin(0, 0.5);
+    this.add.text((x + 26) * RES, (cy + 22) * RES, d.sub, {
+      fontFamily: font, fontSize: `${16 * RES}px`, color: d.cardText,
+    }).setOrigin(0, 0.5).setAlpha(0.85);
+    this.add.text((x + cw - 26) * RES, (cy - 24) * RES, d.speedLabel, {
+      fontFamily: font, fontSize: `${17 * RES}px`, color: d.cardText,
+    }).setOrigin(1, 0.5).setAlpha(0.95);
+    this.add.text((x + cw - 26) * RES, (cy + 22) * RES, `最高 ${loadBest(d.key)}`, {
+      fontFamily: font, fontSize: `${16 * RES}px`, color: d.cardText,
+    }).setOrigin(1, 0.5).setAlpha(0.85);
+
+    this.add.rectangle(W * RES / 2, cy * RES, cw * RES, ch * RES, 0, 0)
+      .setInteractive({ useHandCursor: true })
+      // 用 pointerup：場景切換後第一個 pointerdown 會被 Phaser 吞掉，up 不受影響
+      .on('pointerup', () => {
+        Sfx.init(this.sound && this.sound.context);
+        Sfx.ui();
+        this.scene.start('stack', { diff: d.key });
+      });
+  }
+
+  update(_, dt) {
+    const ds = dt / 1000;
+    this.gPart.clear();
+    const tn = this.time.now / 1000;
+    for (const p of this.parts) {
+      p.y -= p.spd * ds;
+      if (p.y < -12) { p.y = H * RES + 12; p.x = Math.random() * W * RES; }
+      const a = p.a * (0.35 + 0.65 * Math.abs(Math.sin(tn * p.tw + p.ph)));
+      this.gPart.fillStyle(0xffffff, a);
+      this.gPart.fillRect(p.x - p.s / 2, p.y - p.s / 2, p.s, p.s);
+    }
+  }
+}
+
 class StackScene extends Phaser.Scene {
   constructor() { super('stack'); }
+
+  init(data) {
+    this.diff = DIFFS[(data && data.diff) || 'normal'];
+  }
 
   create() {
     this.bg = this.add.graphics().setScrollFactor(0);
@@ -65,20 +370,35 @@ class StackScene extends Phaser.Scene {
 
     // 分數（大、細緻）
     this.scoreText = this.add.text(W * RES / 2, 150 * RES, '0', {
-      fontFamily: '-apple-system, "Microsoft JhengHei", sans-serif',
+      fontFamily: '-apple-system, "PingFang SC", "Microsoft YaHei", sans-serif',
       fontSize: `${88 * RES}px`, color: '#ffffff', fontStyle: '300',
     }).setOrigin(0.5).setScrollFactor(0).setShadow(0, 2 * RES, 'rgba(0,0,0,0.18)', 5 * RES);
 
     // 皇冠 + 最高分
     this.crown = this.add.graphics().setScrollFactor(0);
     this.bestText = this.add.text(W * RES / 2 + 6 * RES, 232 * RES, '0', {
-      fontFamily: '-apple-system, "Microsoft JhengHei", sans-serif',
+      fontFamily: '-apple-system, "PingFang SC", "Microsoft YaHei", sans-serif',
       fontSize: `${30 * RES}px`, color: '#ffffff',
     }).setOrigin(0, 0.5).setScrollFactor(0).setAlpha(0.92);
-    this.best = parseInt(localStorage.getItem('stack_best') || '0', 10) || 0;
+    this.best = loadBest(this.diff.key);
 
-    this.tipText = this.add.text(W * RES / 2, (H - 150) * RES, '點擊放下方塊', {
-      fontFamily: '-apple-system, "Microsoft JhengHei", sans-serif',
+    // 左上返回選單、右上顯示目前難度
+    this.add.text(18 * RES, 22 * RES, '‹ 菜单', {
+      fontFamily: '-apple-system, "PingFang SC", "Microsoft YaHei", sans-serif',
+      fontSize: `${20 * RES}px`, color: '#ffffff',
+    }).setScrollFactor(0).setAlpha(0.85)
+      .setInteractive({ useHandCursor: true })
+      .on('pointerdown', (pointer, lx, ly, event) => {
+        event.stopPropagation();
+        this.scene.start('menu');
+      });
+    this.add.text((W - 18) * RES, 22 * RES, this.diff.name, {
+      fontFamily: '-apple-system, "PingFang SC", "Microsoft YaHei", sans-serif',
+      fontSize: `${20 * RES}px`, color: '#ffffff',
+    }).setOrigin(1, 0).setScrollFactor(0).setAlpha(0.7);
+
+    this.tipText = this.add.text(W * RES / 2, (H - 150) * RES, '点击放下方块', {
+      fontFamily: '-apple-system, "PingFang SC", "Microsoft YaHei", sans-serif',
       fontSize: `${22 * RES}px`, color: '#ffffff',
     }).setOrigin(0.5).setScrollFactor(0).setAlpha(0.85);
 
@@ -96,7 +416,10 @@ class StackScene extends Phaser.Scene {
       const c = this.sound && this.sound.context;
       if (c && c.state === 'suspended') c.resume();
     };
+    const old = document.getElementById('sfx-dev-panel');
+    if (old) old.remove();   // 場景重進時移除舊面板，避免重複疊加
     const wrap = document.createElement('div');
+    wrap.id = 'sfx-dev-panel';
     wrap.style.cssText =
       'position:fixed;left:0;right:0;bottom:0;z-index:9999;display:flex;' +
       'flex-wrap:wrap;gap:6px;justify-content:center;padding:8px;' +
@@ -117,18 +440,18 @@ class StackScene extends Phaser.Scene {
     };
     mk('一般放下', () => this.sfx('place'));
     mk('切除', () => this.sfx('slice'));
-    mk('遊戲結束', () => this.sfx('over'));
-    const pb = mk('完美 +1（連擊 0）', (b) => {
+    mk('游戏结束', () => this.sfx('over'));
+    const pb = mk('完美 +1（连击 0）', (b) => {
       devCombo++;
       this.sfx('perfect', devCombo);
-      b.textContent = `完美 +1（連擊 ${devCombo}）`;
+      b.textContent = `完美 +1（连击 ${devCombo}）`;
     });
-    mk('完美音階 1→14', () => {
+    mk('完美音阶 1→14', () => {
       for (let i = 1; i <= 14; i++) {
         setTimeout(() => this.sfx('perfect', i), (i - 1) * 260);
       }
     });
-    mk('重置連擊', () => { devCombo = 0; pb.textContent = '完美 +1（連擊 0）'; });
+    mk('重置连击', () => { devCombo = 0; pb.textContent = '完美 +1（连击 0）'; });
     document.body.appendChild(wrap);
   }
 
@@ -152,7 +475,7 @@ class StackScene extends Phaser.Scene {
     this.drawTower();
     this.scoreText.setText('0');
     this.updateBest();
-    this.tipText.setText('點擊放下方塊').setAlpha(0.85);
+    this.tipText.setText('点击放下方块').setAlpha(0.85);
     this.spawnMovingBlock();
   }
 
@@ -191,7 +514,8 @@ class StackScene extends Phaser.Scene {
 
     if (this.state === 'playing' && this.moveBlk && this.moving) {
       const blk = this.moveBlk;
-      const spd = Math.min(SPEED_BASE + this.combo * SPEED_PER, SPEED_MAX);
+      const d = this.diff;
+      const spd = Math.min(d.speedBase + this.combo * d.speedPer, d.speedMax);
       blk.m += blk.dir * spd * ds;
       if (blk.m > blk.center + TRAVEL) { blk.m = blk.center + TRAVEL; blk.dir = -1; }
       else if (blk.m < blk.center - TRAVEL) { blk.m = blk.center - TRAVEL; blk.dir = 1; }
@@ -370,10 +694,12 @@ class StackScene extends Phaser.Scene {
   }
 
   drawBg() {
-    // 明亮暖色漸層：隨高度循環色相，但整體調亮（朝白混合）如原版
+    // 背景漸層隨高度循環色相；混色目標與比例依難度而異
+    // 輕鬆/經典朝白混（明亮），挑戰朝深夜色混（上暗下有霓虹光暈）
     const base = blockColor(this.level);
-    const top = mix(base, 0xffffff, 0.60);   // 上方較亮
-    const bot = mix(base, 0xffffff, 0.30);   // 下方較飽和
+    const d = this.diff;
+    const top = mix(base, d.tint, d.topK);
+    const bot = mix(base, d.tint, d.botK);
     this.bg.clear();
     this.bg.fillGradientStyle(top, top, bot, bot, 1);
     this.bg.fillRect(0, 0, W * RES, H * RES);
@@ -381,52 +707,10 @@ class StackScene extends Phaser.Scene {
 
   playSound(key) { this.sfx(key); }
 
-  initAudio() {
-    const ctx = this.sound && this.sound.context;
-    if (!ctx || this._master) return;
-    this._ctx = ctx;
-    this._master = ctx.createGain();
-    this._master.gain.value = 0.45;
-    this._master.connect(ctx.destination);
-  }
-
-  tone(freq, dur, type, peak, when) {
-    const ctx = this._ctx;
-    const t0 = ctx.currentTime + (when || 0);
-    const o = ctx.createOscillator();
-    o.type = type || 'sine';
-    o.frequency.setValueAtTime(freq, t0);
-    const g = ctx.createGain();
-    g.gain.setValueAtTime(0.0001, t0);
-    g.gain.exponentialRampToValueAtTime(peak, t0 + 0.006);
-    g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
-    o.connect(g); g.connect(this._master);
-    o.start(t0); o.stop(t0 + dur + 0.03);
-  }
-
+  // 交由全域 Sfx 引擎播放：音色主題依難度而異（wood / classic / synth）
   sfx(kind, comboOverride) {
-    this.initAudio();
-    if (!this._ctx) return;
-    if (kind === 'place') {
-      this.tone(174.6, 0.12, 'sine', 0.34);
-      this.tone(116.5, 0.10, 'sine', 0.22);
-    } else if (kind === 'slice') {
-      this.tone(150, 0.09, 'triangle', 0.28);
-      this.tone(86, 0.13, 'sine', 0.16);
-    } else if (kind === 'perfect') {
-      // 七聲大調音階隨連擊一路爬升（do re mi fa sol la si）
-      const combo = comboOverride != null ? comboOverride : this.combo;
-      const major = [0, 2, 4, 5, 7, 9, 11];
-      const n = Math.max(0, combo - 1);
-      const semi = major[n % 7] + 12 * Math.floor(n / 7);
-      const f = 261.6 * Math.pow(2, semi / 12);
-      this.tone(f, 0.42, 'triangle', 0.40);
-      this.tone(f * 2, 0.26, 'sine', 0.14);
-    } else if (kind === 'over') {
-      this.tone(220, 0.16, 'sine', 0.38);
-      this.tone(146.8, 0.34, 'sine', 0.36, 0.13);
-      this.tone(98, 0.5, 'sine', 0.30, 0.28);
-    }
+    Sfx.init(this.sound && this.sound.context);
+    Sfx.play(this.diff.sfxTheme, kind, comboOverride != null ? comboOverride : this.combo);
   }
 
   drawCrown(cx, cy, s) {
@@ -459,12 +743,12 @@ class StackScene extends Phaser.Scene {
     const score = this.level - 1;
     if (score > this.best) {
       this.best = score;
-      localStorage.setItem('stack_best', String(score));
+      localStorage.setItem('stack_best_' + this.diff.key, String(score));
       this.updateBest();
     }
     this.chip = { ...blk, drop: 0, vy: 80, axis: blk.axis, vAxis: 0 };
     this.gMove.clear();
-    this.tipText.setText('按此重新開始').setAlpha(0.9);
+    this.tipText.setText('点此重新开始').setAlpha(0.9);
   }
 }
 
@@ -475,5 +759,5 @@ new Phaser.Game({
   height: H * RES,
   backgroundColor: '#0c0c12',
   scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH },
-  scene: [StackScene],
+  scene: [MenuScene, StackScene],
 });
