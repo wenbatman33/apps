@@ -1,0 +1,11 @@
+本資料夾素材來源：KayKit Game Assets（作者 Kay Lousberg, kaylousberg.com）
+授權：CC0（公眾領域，可自由商用，無需署名）
+
+- chars/   ← KayKit Character Pack: Adventurers（Knight、Rogue_Hooded）
+            KayKit Character Pack: Skeletons（Skeleton_Warrior、Skeleton_Mage）
+            Quaternius Ultimate Space Pack（Astronaut_Finn、Astronaut_Rae，CC0，quaternius.com）
+- props/   ← KayKit Dungeon Remastered（coin、crates_stacked、barrel、chest、spikes）
+- nature/  ← KayKit Medieval Hexagon Pack（tree_single_A/B、rock_single_B/D）
+- space/   ← KayKit Space Base Bits（cargo、containers、rock、solarpanel、windturbine、structure、lander）
+
+下載自 github.com/KayKit-Game-Assets 與 github.com/trebeljahr/quaternius-showcase（2026-06-12）
