@@ -1,0 +1,7 @@
+# 生圖過程檔與音效原檔備份，不需進版控
+scripts/_sfx_backup/
+scripts/gen.out
+scripts/gen.log
+
+# 生圖暫存
+tmp/
