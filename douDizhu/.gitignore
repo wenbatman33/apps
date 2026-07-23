@@ -1,0 +1,4 @@
+# 生圖過程檔，不需進版控
+tmp/
+scripts/gen.out
+scripts/gen.log
