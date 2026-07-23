@@ -5,3 +5,6 @@ scripts/gen.log
 
 # 生圖暫存
 tmp/
+
+# 音效試聽（本地用，不進版控）
+_audition/

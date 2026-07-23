@@ -21,9 +21,9 @@
     { key: 'sfx_button', url: 'assets/sfx/button01a.mp3' },
     { key: 'sfx_pass', url: 'assets/sfx/poka01.mp3' },
     { key: 'sfx_turn', url: 'assets/sfx/blip03.mp3' },
-    { key: 'sfx_win', url: 'assets/sfx/powerup01.mp3' },
-    { key: 'sfx_lose', url: 'assets/sfx/powerdown01.mp3' },
-    { key: 'sfx_finish', url: 'assets/sfx/powerup02.mp3' },
+    { key: 'sfx_win', url: 'assets/sfx/bright_bell1.mp3' },
+    { key: 'sfx_lose', url: 'assets/sfx/blackout_piano1.mp3' },
+    { key: 'sfx_finish', url: 'assets/sfx/blackout_harp1.mp3' },
     { key: 'sfx_coin', url: 'assets/sfx/coin01.mp3' }
   ];
 
