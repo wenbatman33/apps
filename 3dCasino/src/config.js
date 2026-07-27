@@ -45,7 +45,8 @@ export const LAYOUT = {
     backRowOffset: 5.0,   // 後排離後牆距離
     scale: 1.0,
   },
-  camera: { fov: 55, startY: 2.2, startZ: 17, minDist: 1.5, maxDist: 19 },
+  // polarMinDeg/polarMaxDeg：鏡頭俯仰限制（90 = 完全水平），把視角鎖在近水平帶
+  camera: { fov: 55, startY: 2.2, startZ: 17, minDist: 1.5, maxDist: 19, polarMinDeg: 76, polarMaxDeg: 88 },
   lights: {
     ambient: 0.6, hemi: 0.85,
     aisleIntensity: 38, aisleColor: '#ffd9a0',

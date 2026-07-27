@@ -1,8 +1,8 @@
 // DEV 開發者微調工具 — 按 D 或右下角齒輪開關
 // 所有 LAYOUT 數值即時調整、機台可直接拖曳、💾 匯出 JSON
 import GUI from 'three/addons/libs/lil-gui.module.min.js';
-import { LAYOUT } from './config.js';
-import { makeSignTexture } from './casino.js';
+import { LAYOUT } from './config.js?v=20';
+import { makeSignTexture } from './casino.js?v=20';
 
 export function initDev(app, actions) {
   let gui = null;
@@ -29,6 +29,8 @@ export function initDev(app, actions) {
     fCam.add(LAYOUT.camera, 'fov', 35, 80, 1).name('視野 FOV').onChange(actions.applyLayout);
     fCam.add(LAYOUT.camera, 'minDist', 0.5, 5, 0.1).name('最近距離').onChange(actions.applyLayout);
     fCam.add(LAYOUT.camera, 'maxDist', 8, 30, 0.5).name('最遠距離').onChange(actions.applyLayout);
+    fCam.add(LAYOUT.camera, 'polarMinDeg', 45, 88, 1).name('俯仰上限(度)').onChange(actions.applyLayout);
+    fCam.add(LAYOUT.camera, 'polarMaxDeg', 60, 90, 1).name('俯仰下限(度)').onChange(actions.applyLayout);
 
     const fLight = gui.addFolder('燈光');
     fLight.add(LAYOUT.lights, 'exposure', 0.5, 2.5, 0.01).name('整體曝光').onChange(actions.applyLayout);

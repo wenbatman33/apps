@@ -6,10 +6,10 @@ import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
-import { REDIRECT, MACHINES, LAYOUT } from './config.js';
-import { buildMachine, updateMachine, buildCarouselTotem } from './machine.js';
-import { buildCasino } from './casino.js';
-import { initDev } from './dev.js';
+import { REDIRECT, MACHINES, LAYOUT } from './config.js?v=20';
+import { buildMachine, updateMachine, buildCarouselTotem } from './machine.js?v=20';
+import { buildCasino } from './casino.js?v=20';
+import { initDev } from './dev.js?v=20';
 
 const app = {
   scene: null, camera: null, renderer: null, composer: null, bloomPass: null,
@@ -101,8 +101,8 @@ function init() {
   app.controls.dampingFactor = 0.06;
   app.controls.minDistance = LAYOUT.camera.minDist;
   app.controls.maxDistance = LAYOUT.camera.maxDist;
-  app.controls.maxPolarAngle = Math.PI * 0.49;
-  app.controls.minPolarAngle = Math.PI * 0.12;
+  app.controls.maxPolarAngle = THREE.MathUtils.degToRad(LAYOUT.camera.polarMaxDeg);
+  app.controls.minPolarAngle = THREE.MathUtils.degToRad(LAYOUT.camera.polarMinDeg);
   app.controls.enablePan = false;
 
   // 場景
@@ -220,11 +220,13 @@ function rebuildMachines() {
 
   // 島台中心發光柱（有島台機台才放）
   app.spinners = [];
+  app.ticker = null;
   if (cCount > 0) {
     const totem = buildCarouselTotem(LAYOUT.room.height);
     totem.position.set(0, 0, M.carouselZ);
     app.machineGroup.add(totem);
     totem.traverse((o) => { if (o.userData.spin) app.spinners.push(o); });
+    app.ticker = totem.userData.ticker;
   }
   app.scene.add(app.machineGroup);
 }
@@ -249,6 +251,8 @@ function applyLayout() {
   app.camera.updateProjectionMatrix();
   app.controls.minDistance = L.camera.minDist;
   app.controls.maxDistance = L.camera.maxDist;
+  app.controls.minPolarAngle = THREE.MathUtils.degToRad(L.camera.polarMinDeg);
+  app.controls.maxPolarAngle = THREE.MathUtils.degToRad(L.camera.polarMaxDeg);
 }
 
 function triggerRandomWin() {
@@ -296,10 +300,8 @@ function onPointerMove(e) {
   if (app.focused) return;
   const m = pickMachine();
   if (m !== app.hovered) {
-    if (app.hovered) app.hovered.scale.setScalar(LAYOUT.machines.scale);
     app.hovered = m;
     if (m) {
-      m.scale.setScalar(LAYOUT.machines.scale * 1.04);
       tooltip.textContent = `${m.userData.cfg.icon} ${m.userData.cfg.name}`;
       tooltip.style.display = 'block';
       document.body.style.cursor = 'pointer';
@@ -375,8 +377,8 @@ function focusMachine(m) {
 
   // 機台正面方向（local -Z 轉到世界座標）
   const front = new THREE.Vector3(0, 0, -1).applyQuaternion(m.quaternion).normalize();
-  const lookAt = m.position.clone().add(new THREE.Vector3(0, 1.45, 0));
-  const camPos = m.position.clone().add(front.multiplyScalar(3.2)).setY(1.75);
+  const lookAt = m.position.clone().add(new THREE.Vector3(0, 1.7, 0));
+  const camPos = m.position.clone().add(front.multiplyScalar(3.6)).setY(1.9);
 
   tweenV3(app.controls.target, lookAt, 1.0);
   tweenV3(app.camera.position, camPos, 1.0, () => {
@@ -431,8 +433,11 @@ function animate() {
     updateMachine(m, time, dt, LAYOUT.reels.speed, (app.frame + i) % 3 === 0);
   });
 
-  // 島台燈環旋轉
+  // 島台燈環旋轉 + GRAND JACKPOT 金額跳動
   for (const s of app.spinners) s.rotation.y += s.userData.spin * dt;
+  if (app.ticker && app.frame % 24 === 0) {
+    app.ticker.draw(11433.42 + time * 3.7);
+  }
 
   // 招牌霓虹閃爍
   if (app.refs.signMat) {
