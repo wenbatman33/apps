@@ -7,7 +7,7 @@ import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js'
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { REDIRECT, MACHINES, LAYOUT } from './config.js?v=20';
-import { buildMachine, updateMachine, buildCarouselTotem } from './machine.js?v=20';
+import { buildMachine, updateMachine, buildIslandTotem } from './machine.js?v=20';
 import { buildCasino } from './casino.js?v=20';
 import { initDev } from './dev.js?v=20';
 
@@ -147,66 +147,67 @@ function faceTowards(fx, fz) {
   return Math.atan2(-fx, -fz);
 }
 
+const GAME_BY_ID = Object.fromEntries(MACHINES.map((m) => [m.id, m]));
+
 function rebuildMachines() {
   if (app.machineGroup) {
     app.scene.remove(app.machineGroup);
   }
   app.machineGroup = new THREE.Group();
   app.machines = [];
-  const M = LAYOUT.machines;
-  const placements = [];
+  app.spinners = [];
+  app.ticker = null;
+  const placements = [];   // { x, z, rotY, cfg }
 
-  // 1) 中央島台：機台背對中心柱、正面朝外環繞
-  const cCount = Math.min(M.carouselCount, M.total);
-  for (let i = 0; i < cCount; i++) {
-    const phi = (i / cCount) * Math.PI * 2 + Math.PI / cCount;
-    const fx = Math.sin(phi), fz = Math.cos(phi);
-    placements.push({
-      x: fx * M.carouselRadius,
-      z: M.carouselZ + fz * M.carouselRadius,
-      rotY: faceTowards(fx, fz),
-    });
-  }
-
-  // 2) 後排機牆：沿後牆一字排開、面向入口
-  const bCount = Math.min(M.backRowCount, LAYOUT.machines.total - cCount);
-  const backZ = -LAYOUT.room.depth / 2 + M.backRowOffset;
-  for (let i = 0; i < bCount; i++) {
-    placements.push({
-      x: (i - (bCount - 1) / 2) * M.backRowSpacing,
-      z: backZ,
-      rotY: faceTowards(0, 1),
-    });
-  }
-
-  // 3) 兩側弧形機列：沿弧排開、正面朝走道扇形展開
-  const rest = Math.max(0, M.total - cCount - bCount);
-  const perArc = [Math.ceil(rest / 2), Math.floor(rest / 2)];
-  [-1, 1].forEach((side, si) => {
-    const n = perArc[si];
-    if (n <= 0) return;
-    const R = M.arcRadius;
-    const cx = side * (M.aisleHalf + R);          // 弧心在牆外側
-    const dAlpha = M.arcSpacing / R;              // 沿弧長轉角
-    for (let i = 0; i < n; i++) {
-      const alpha = (i - (n - 1) / 2) * dAlpha;
-      const fx = -side * Math.cos(alpha);          // 朝走道的外法線
-      const fz = Math.sin(alpha);
+  // 1) 各主題島：機台背對中心柱、正面朝外環繞；整島同一款遊戲
+  LAYOUT.islands.forEach((isl) => {
+    const cfg = GAME_BY_ID[isl.game] || MACHINES[0];
+    for (let i = 0; i < isl.count; i++) {
+      const phi = (i / isl.count) * Math.PI * 2 + Math.PI / isl.count;
+      const fx = Math.sin(phi), fz = Math.cos(phi);
       placements.push({
-        x: cx + fx * R,
-        z: M.arcZ + fz * R,
+        x: isl.x + fx * isl.radius,
+        z: isl.z + fz * isl.radius,
         rotY: faceTowards(fx, fz),
+        cfg,
       });
     }
+    // 島中心圖騰（主題光球；大島含 GRAND JACKPOT 燈環）
+    const totem = buildIslandTotem(cfg, { big: !!isl.big, ceilingH: LAYOUT.room.height });
+    totem.position.set(isl.x, 0, isl.z);
+    app.machineGroup.add(totem);
+    // 島底圓毯（跟著島移動）
+    if (!isl.big) {
+      const mat = new THREE.Mesh(
+        new THREE.CircleGeometry(isl.radius + 2.0, 40),
+        new THREE.MeshStandardMaterial({ color: 0x3d0d16, roughness: 0.95 })
+      );
+      mat.rotation.x = -Math.PI / 2;
+      mat.position.set(isl.x, 0.011, isl.z);
+      mat.userData.isFloor = true;
+      app.machineGroup.add(mat);
+    }
+    totem.traverse((o) => { if (o.userData.spin) app.spinners.push(o); });
+    if (totem.userData.ticker) app.ticker = totem.userData.ticker;
   });
 
-  // 依序放置：遊戲不夠時循環指派（同款遊戲多台，跟真賭場一樣）
+  // 2) 後排機牆：沿後牆一字排開、面向入口（混合遊戲輪流）
+  const B = LAYOUT.backRow;
+  const backZ = -LAYOUT.room.depth / 2 + B.offset;
+  for (let i = 0; i < B.count; i++) {
+    placements.push({
+      x: (i - (B.count - 1) / 2) * B.spacing,
+      z: backZ,
+      rotY: faceTowards(0, 1),
+      cfg: MACHINES[i % MACHINES.length],
+    });
+  }
+
   placements.forEach((p, i) => {
-    const cfg = MACHINES[i % MACHINES.length];
-    const g = buildMachine(cfg, i);
+    const g = buildMachine(p.cfg, i);
     g.position.set(p.x, 0, p.z);
     g.rotation.y = p.rotY;
-    g.scale.setScalar(M.scale);
+    g.scale.setScalar(LAYOUT.machineScale);
     // DEV 拖曳後儲存的個別位移（以機台序號為鍵）
     const key = `m${i}`;
     const off = LAYOUT.machineOffsets[key];
@@ -218,16 +219,6 @@ function rebuildMachines() {
     app.machines.push(g);
   });
 
-  // 島台中心發光柱（有島台機台才放）
-  app.spinners = [];
-  app.ticker = null;
-  if (cCount > 0) {
-    const totem = buildCarouselTotem(LAYOUT.room.height);
-    totem.position.set(0, 0, M.carouselZ);
-    app.machineGroup.add(totem);
-    totem.traverse((o) => { if (o.userData.spin) app.spinners.push(o); });
-    app.ticker = totem.userData.ticker;
-  }
   app.scene.add(app.machineGroup);
 }
 

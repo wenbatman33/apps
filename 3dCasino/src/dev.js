@@ -1,7 +1,7 @@
 // DEV 開發者微調工具 — 按 D 或右下角齒輪開關
 // 所有 LAYOUT 數值即時調整、機台可直接拖曳、💾 匯出 JSON
 import GUI from 'three/addons/libs/lil-gui.module.min.js';
-import { LAYOUT } from './config.js?v=20';
+import { LAYOUT, MACHINES } from './config.js?v=20';
 import { makeSignTexture } from './casino.js?v=20';
 
 export function initDev(app, actions) {
@@ -10,20 +10,22 @@ export function initDev(app, actions) {
   function build() {
     gui = new GUI({ title: '🛠 DEV 微調工具' });
 
-    const fRoom = gui.addFolder('機台排列');
-    fRoom.add(LAYOUT.machines, 'total', 8, 36, 1).name('機台總數').onChange(actions.rebuildMachines);
-    fRoom.add(LAYOUT.machines, 'carouselCount', 0, 10, 1).name('島台機台數').onChange(actions.rebuildMachines);
-    fRoom.add(LAYOUT.machines, 'carouselRadius', 1.6, 4, 0.05).name('島台半徑').onChange(actions.rebuildMachines);
-    fRoom.add(LAYOUT.machines, 'carouselZ', -8, 8, 0.1).name('島台前後移').onChange(actions.rebuildMachines);
-    fRoom.add(LAYOUT.machines, 'arcRadius', 3, 14, 0.1).name('弧列半徑').onChange(actions.rebuildMachines);
-    fRoom.add(LAYOUT.machines, 'arcSpacing', 1.6, 4, 0.05).name('弧列間距').onChange(actions.rebuildMachines);
-    fRoom.add(LAYOUT.machines, 'arcZ', -6, 8, 0.1).name('弧列前後移').onChange(actions.rebuildMachines);
-    fRoom.add(LAYOUT.machines, 'aisleHalf', 3, 12, 0.1).name('弧列離中距').onChange(actions.rebuildMachines);
-    fRoom.add(LAYOUT.machines, 'backRowCount', 0, 10, 1).name('後排台數').onChange(actions.rebuildMachines);
-    fRoom.add(LAYOUT.machines, 'backRowSpacing', 1.8, 4, 0.05).name('後排間距').onChange(actions.rebuildMachines);
-    fRoom.add(LAYOUT.machines, 'backRowOffset', 2, 12, 0.1).name('後排離牆距').onChange(actions.rebuildMachines);
-    fRoom.add(LAYOUT.machines, 'scale', 0.7, 1.5, 0.01).name('機台縮放').onChange(actions.rebuildMachines);
-    fRoom.add({ reset: () => { LAYOUT.machineOffsets = {}; actions.rebuildMachines(); } }, 'reset').name('清除拖曳位移');
+    const fRoom = gui.addFolder('主題島');
+    const nameById = Object.fromEntries(MACHINES.map((m) => [m.id, `${m.icon} ${m.name}`]));
+    LAYOUT.islands.forEach((isl, idx) => {
+      const f = fRoom.addFolder(`${isl.big ? '👑 ' : ''}${nameById[isl.game] || isl.game}`);
+      f.add(isl, 'x', -34, 34, 0.1).name('X 位置').onChange(actions.rebuildMachines);
+      f.add(isl, 'z', -26, 26, 0.1).name('Z 位置').onChange(actions.rebuildMachines);
+      f.add(isl, 'count', 3, 14, 1).name('機台數').onChange(actions.rebuildMachines);
+      f.add(isl, 'radius', 1.8, 5, 0.05).name('半徑').onChange(actions.rebuildMachines);
+      f.close();
+    });
+    const fBack = gui.addFolder('後排機牆');
+    fBack.add(LAYOUT.backRow, 'count', 0, 12, 1).name('台數').onChange(actions.rebuildMachines);
+    fBack.add(LAYOUT.backRow, 'spacing', 1.8, 4, 0.05).name('間距').onChange(actions.rebuildMachines);
+    fBack.add(LAYOUT.backRow, 'offset', 2, 12, 0.1).name('離牆距').onChange(actions.rebuildMachines);
+    fBack.add(LAYOUT, 'machineScale', 0.7, 1.5, 0.01).name('機台縮放').onChange(actions.rebuildMachines);
+    fBack.add({ reset: () => { LAYOUT.machineOffsets = {}; actions.rebuildMachines(); } }, 'reset').name('清除拖曳位移');
 
     const fCam = gui.addFolder('相機');
     fCam.add(LAYOUT.camera, 'fov', 35, 80, 1).name('視野 FOV').onChange(actions.applyLayout);

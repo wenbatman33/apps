@@ -1,6 +1,8 @@
-// 娛樂場大廳場景：地板、紅毯、牆面、天花板、霓虹招牌、柱子、燈光
+// 娛樂場大廳場景：地板、動線地毯、牆面、天花板、霓虹招牌、柱子、燈光、
+// 桌遊區、VIP 高額區、休息區、禮賓櫃檯
 import * as THREE from 'three';
-import { LAYOUT } from './config.js';
+import { LAYOUT } from './config.js?v=20';
+import { buildTable, buildSofa, buildPlant, buildRopePosts, buildCounter } from './furniture.js?v=20';
 
 // 紅毯圖樣（深紅底 + 金色菱格）
 function makeCarpetTexture() {
@@ -80,30 +82,153 @@ export function buildCasino(scene) {
   floor.userData.isFloor = true;
   room.add(floor);
 
-  // 中央紅毯大區（涵蓋島台與兩側弧列）
-  const carpetW = Math.min(L.machines.aisleHalf * 2 + 10, W - 8);
-  const carpetD = D - 6;
-  const carpetTex = makeCarpetTexture();
-  carpetTex.repeat.set(Math.round(carpetW / 2), Math.round(carpetD / 1.5));
-  const carpet = new THREE.Mesh(
-    new THREE.PlaneGeometry(carpetW, carpetD),
-    new THREE.MeshStandardMaterial({ map: carpetTex, roughness: 0.95, metalness: 0 })
-  );
-  carpet.rotation.x = -Math.PI / 2;
-  carpet.position.y = 0.012;
-  carpet.userData.isFloor = true;
-  room.add(carpet);
-  refs.carpet = carpet;
-
-  // 走道金色鑲邊
   const trimMat = new THREE.MeshStandardMaterial({
     color: 0x8a6a2f, metalness: 1.0, roughness: 0.25,
     emissive: 0x2a1f08, emissiveIntensity: 0.6,
   });
-  for (const sx of [-1, 1]) {
-    const trim = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.02, carpetD), trimMat);
-    trim.position.set(sx * (carpetW / 2 - 0.4), 0.02, 0);
-    room.add(trim);
+
+  // ---------- 動線地毯系統（環狀主動線 + 入口引道）----------
+  const carpetTex = makeCarpetTexture();
+  carpetTex.repeat.set(8, 8);
+  const carpetMat = new THREE.MeshStandardMaterial({ map: carpetTex, roughness: 0.95, metalness: 0 });
+
+  // 中央島區圓毯
+  const centerCarpet = new THREE.Mesh(new THREE.CircleGeometry(9.5, 48), carpetMat);
+  centerCarpet.rotation.x = -Math.PI / 2;
+  centerCarpet.position.set(0, 0.012, -2);
+  centerCarpet.userData.isFloor = true;
+  room.add(centerCarpet);
+
+  // 主環狀動線（亮色紋理，繞中央島一圈、串起各主題島）
+  const pathTex = makeCarpetTexture();
+  pathTex.repeat.set(10, 10);
+  const pathMat = new THREE.MeshStandardMaterial({
+    map: pathTex, color: 0xc89058, roughness: 0.9, metalness: 0,
+  });
+  const ringPath = new THREE.Mesh(new THREE.RingGeometry(9.4, 12.6, 96), pathMat);
+  ringPath.rotation.x = -Math.PI / 2;
+  ringPath.position.set(0, 0.013, -2);
+  ringPath.userData.isFloor = true;
+  room.add(ringPath);
+  // 主動線金邊
+  for (const rr of [9.4, 12.6]) {
+    const edge = new THREE.Mesh(new THREE.TorusGeometry(rr, 0.05, 6, 96), trimMat);
+    edge.rotation.x = Math.PI / 2;
+    edge.position.set(0, 0.02, -2);
+    room.add(edge);
+  }
+
+  // 入口引道（主入口直通環狀動線）
+  const entryLen = D / 2 - 10;
+  const entryPath = new THREE.Mesh(new THREE.PlaneGeometry(4.8, entryLen), pathMat);
+  entryPath.rotation.x = -Math.PI / 2;
+  entryPath.position.set(0, 0.013, 10 + entryLen / 2);
+  entryPath.userData.isFloor = true;
+  room.add(entryPath);
+
+  // ---------- 桌遊區（入口與環狀動線之間）----------
+  const tzCarpet = new THREE.Mesh(new THREE.PlaneGeometry(19, 9), carpetMat);
+  tzCarpet.rotation.x = -Math.PI / 2;
+  tzCarpet.position.set(0, 0.014, 17);
+  tzCarpet.userData.isFloor = true;
+  room.add(tzCarpet);
+  for (const [tw, td, tx, tz2] of [[19, 0.12, 0, 12.5], [19, 0.12, 0, 21.5], [0.12, 9, -9.5, 17], [0.12, 9, 9.5, 17]]) {
+    const b = new THREE.Mesh(new THREE.BoxGeometry(tw, 0.02, td), trimMat);
+    b.position.set(tx, 0.022, tz2);
+    room.add(b);
+  }
+  // 桌子讓開中央入口引道（引道寬 4.8）
+  const tzTables = [
+    ['blackjack', -6.8, 15.6, 2.7],
+    ['poker', -5.6, 19.6, 0.8],
+    ['roulette', 5.8, 17.3, 0],
+  ];
+  for (const [tp, tx, tz2, tr] of tzTables) {
+    const t = buildTable(tp);
+    t.position.set(tx, 0, tz2);
+    t.rotation.y = tr;
+    room.add(t);
+  }
+
+  // 島間散桌（沿環狀動線內外）
+  for (const [tp, tx, tz2, tr] of [
+    ['poker', -9.5, -9, 0.5],
+    ['blackjack', 9.5, -9, -2.4],
+    ['poker', 9.5, 6.5, 2.6],
+    ['blackjack', -9.5, 6.5, 0.6],
+  ]) {
+    const t = buildTable(tp);
+    t.position.set(tx, 0, tz2);
+    t.rotation.y = tr;
+    room.add(t);
+  }
+
+  // ---------- VIP 高額區（右側，金柱紅絨繩圍出）----------
+  const vipCarpet = new THREE.Mesh(
+    new THREE.PlaneGeometry(15, 19),
+    new THREE.MeshStandardMaterial({ color: 0x241030, roughness: 0.92 })
+  );
+  vipCarpet.rotation.x = -Math.PI / 2;
+  vipCarpet.position.set(W / 2 - 9, 0.014, 3);
+  vipCarpet.userData.isFloor = true;
+  room.add(vipCarpet);
+  for (const [tw, td, tx, tz2] of [[15, 0.12, W / 2 - 9, -6.5], [15, 0.12, W / 2 - 9, 12.5], [0.12, 19, W / 2 - 16.5, 3]]) {
+    const b = new THREE.Mesh(new THREE.BoxGeometry(tw, 0.02, td), trimMat);
+    b.position.set(tx, 0.022, tz2);
+    room.add(b);
+  }
+  room.add(buildRopePosts([[W / 2 - 16.5, -6.5], [W / 2 - 16.5, -2], [W / 2 - 16.5, 3], [W / 2 - 16.5, 8], [W / 2 - 16.5, 12.5]]));
+  for (const [tp, tx, tz2, tr] of [['poker', W / 2 - 11, 0, 0.4], ['blackjack', W / 2 - 8, 8, -0.9]]) {
+    const t = buildTable(tp);
+    t.position.set(tx, 0, tz2);
+    t.rotation.y = tr;
+    room.add(t);
+  }
+  // VIP 牆面招牌
+  const vipTex = makeSignTexture('VIP', '★ 高 額 貴 賓 區 ★', '#ffd166');
+  const vipSign = new THREE.Mesh(
+    new THREE.PlaneGeometry(7, 2.2),
+    new THREE.MeshStandardMaterial({
+      color: 0xffffff, map: vipTex,
+      emissive: 0xffffff, emissiveMap: vipTex, emissiveIntensity: 1.2,
+      metalness: 0, roughness: 0.6,
+    })
+  );
+  vipSign.position.set(W / 2 - 0.06, 4.4, 3);
+  vipSign.rotation.y = -Math.PI / 2;
+  room.add(vipSign);
+
+  // ---------- 主入口迎賓 ----------
+  const entryMat = new THREE.Mesh(new THREE.PlaneGeometry(7.6, 4.6), carpetMat);
+  entryMat.rotation.x = -Math.PI / 2;
+  entryMat.position.set(0, 0.014, D / 2 - 2.6);
+  entryMat.userData.isFloor = true;
+  room.add(entryMat);
+  room.add(buildRopePosts([[-4.2, D / 2 - 1.2], [-4.2, D / 2 - 4.6]]));
+  room.add(buildRopePosts([[4.2, D / 2 - 1.2], [4.2, D / 2 - 4.6]]));
+
+  // ---------- 休息區（入口右側）＋ 禮賓櫃檯（入口左側）----------
+  const sofa1 = buildSofa();
+  sofa1.position.set(W / 2 - 13, 0, D / 2 - 5.5);
+  sofa1.rotation.y = Math.PI;
+  room.add(sofa1);
+  const sofa2 = buildSofa();
+  sofa2.position.set(W / 2 - 9.5, 0, D / 2 - 9);
+  sofa2.rotation.y = -Math.PI / 2;
+  room.add(sofa2);
+  const counter = buildCounter();
+  counter.position.set(-(W / 2 - 12), 0, D / 2 - 4.5);
+  room.add(counter);
+
+  // ---------- 盆栽點綴 ----------
+  for (const [px, pz] of [
+    [-21, -4], [21, -4], [-21, 10], [21, 10],
+    [-8, 23], [8, 23], [W / 2 - 6, D / 2 - 12], [-(W / 2 - 6), D / 2 - 12],
+    [-26, 20], [26, 20],
+  ]) {
+    const p = buildPlant();
+    p.position.set(px, 0, pz);
+    room.add(p);
   }
 
   // ---------- 牆面 ----------
@@ -195,11 +320,11 @@ export function buildCasino(scene) {
   refs.ambient = ambient;
   refs.hemi = hemi;
 
-  // 走道點光源（暖色）
+  // 全場暖色點光（中央 + 四象限 + 入口）
   refs.aisleLights = [];
-  for (const pz of [-D / 4, 0, D / 4]) {
+  for (const [px, pz] of [[0, -2], [-16, -11], [16, -11], [-15, 13], [15, 13], [0, D / 2 - 6]]) {
     const p = new THREE.PointLight(new THREE.Color(L.lights.aisleColor), L.lights.aisleIntensity, 26, 1.8);
-    p.position.set(0, H - 1.5, pz);
+    p.position.set(px, H - 1.5, pz);
     room.add(p);
     refs.aisleLights.push(p);
   }

@@ -366,50 +366,123 @@ function makeTickerTexture() {
   return { texture: tex, draw };
 }
 
-export function buildCarouselTotem(ceilingH = 10.5) {
+// 主題光球貼圖：主題色放射底 + 大圖示 + 遊戲名（畫兩份，球正反面都看得到）
+function makeOrbTexture(cfg) {
+  const c = document.createElement('canvas');
+  c.width = 1024; c.height = 512;
+  const g = c.getContext('2d');
+  g.fillStyle = '#1a0a14';
+  g.fillRect(0, 0, 1024, 512);
+  for (const cx of [256, 768]) {
+    const grad = g.createRadialGradient(cx, 256, 30, cx, 256, 280);
+    grad.addColorStop(0, cfg.color);
+    grad.addColorStop(1, '#1a0a14');
+    g.fillStyle = grad;
+    g.fillRect(cx - 256, 0, 512, 512);
+    g.globalAlpha = 0.2;
+    g.strokeStyle = '#ffffff';
+    g.lineWidth = 10;
+    for (let i = 0; i < 12; i++) {
+      const a = (i / 12) * Math.PI * 2;
+      g.beginPath();
+      g.moveTo(cx, 256);
+      g.lineTo(cx + Math.cos(a) * 300, 256 + Math.sin(a) * 300);
+      g.stroke();
+    }
+    g.globalAlpha = 1;
+    g.font = '150px sans-serif';
+    g.textAlign = 'center';
+    g.textBaseline = 'middle';
+    g.shadowColor = 'rgba(0,0,0,0.65)';
+    g.shadowBlur = 20;
+    g.fillText(cfg.icon, cx, 200);
+    g.font = 'bold 88px "PingFang TC", sans-serif';
+    g.shadowColor = cfg.color;
+    g.shadowBlur = 28;
+    g.fillStyle = '#ffffff';
+    g.fillText(cfg.name, cx, 372);
+  }
+  const t = new THREE.CanvasTexture(c);
+  t.colorSpace = THREE.SRGBColorSpace;
+  t.anisotropy = 4;
+  return t;
+}
+
+// 島台圖騰：cfg 為該島主題遊戲；big=中央大島（通天柱＋GRAND JACKPOT 燈環＋大光球）
+export function buildIslandTotem(cfg, { big = false, ceilingH = 10.5 } = {}) {
   const g = new THREE.Group();
-  // 主柱直通天花板（像真賭場的柱式島台）
+  const themeColor = new THREE.Color(cfg.color);
+  const pillarH = big ? ceilingH : 5.6;
   const pillar = new THREE.Mesh(
-    new THREE.CylinderGeometry(0.6, 0.8, ceilingH, 24),
+    new THREE.CylinderGeometry(big ? 0.6 : 0.45, big ? 0.8 : 0.6, pillarH, 24),
     new THREE.MeshStandardMaterial({ color: 0x1a1424, metalness: 0.7, roughness: 0.3 })
   );
-  pillar.position.y = ceilingH / 2;
+  pillar.position.y = pillarH / 2;
   g.add(pillar);
-  // 柱上霓虹環帶
+
+  // 柱上霓虹環帶（主題色）
   const bandMat = new THREE.MeshStandardMaterial({
-    color: 0xff2d78, emissive: 0xff2d78, emissiveIntensity: 1.8, metalness: 0.2, roughness: 0.4,
+    color: themeColor, emissive: themeColor, emissiveIntensity: 1.8, metalness: 0.2, roughness: 0.4,
   });
-  for (const by of [0.9, 1.7, 2.5, 6.0, 6.8]) {
-    const band = new THREE.Mesh(new THREE.TorusGeometry(0.78, 0.04, 10, 40), bandMat);
+  const bandYs = big ? [0.9, 1.7, 2.5, 6.4, 7.2] : [0.9, 1.7, 2.5];
+  for (const by of bandYs) {
+    const band = new THREE.Mesh(new THREE.TorusGeometry(big ? 0.78 : 0.6, 0.04, 10, 40), bandMat);
     band.rotation.x = Math.PI / 2;
     band.position.y = by;
     g.add(band);
   }
-  // 旋轉 GRAND JACKPOT 金額環（跑馬燈貼圖即時更新）
-  const ticker = makeTickerTexture();
-  const ring = new THREE.Mesh(
-    new THREE.CylinderGeometry(2.1, 2.1, 0.7, 48, 1, true),
+
+  // 主題光球（Dragon Link 式圓球招牌）
+  const orbR = big ? 1.5 : 1.05;
+  const orbY = big ? 5.9 : 4.35;
+  const orbTex = makeOrbTexture(cfg);
+  const orb = new THREE.Mesh(
+    new THREE.SphereGeometry(orbR, 36, 24),
     new THREE.MeshStandardMaterial({
-      color: 0xffffff, map: ticker.texture,
-      emissive: 0xffffff, emissiveMap: ticker.texture, emissiveIntensity: 1.3,
-      side: THREE.DoubleSide, metalness: 0.1, roughness: 0.5,
+      color: 0xffffff, map: orbTex,
+      emissive: 0xffffff, emissiveMap: orbTex, emissiveIntensity: 1.15,
+      metalness: 0.1, roughness: 0.5,
     })
   );
-  ring.position.y = 4.6;
-  ring.userData.spin = 0.35;   // 每秒弧度，主迴圈會轉它
-  g.add(ring);
-  // 上下金冠收邊
-  const capMat = new THREE.MeshStandardMaterial({ color: 0x8a6a2f, metalness: 1.0, roughness: 0.3 });
-  for (const [cy, r1, r2] of [[5.02, 2.18, 2.22], [4.18, 2.22, 2.18]]) {
-    const cap = new THREE.Mesh(new THREE.CylinderGeometry(r1, r2, 0.1, 48), capMat);
-    cap.position.y = cy;
-    g.add(cap);
+  orb.position.y = orbY;
+  orb.userData.spin = big ? 0.25 : 0.4;
+  g.add(orb);
+  // 光球金環底座
+  const orbBase = new THREE.Mesh(
+    new THREE.TorusGeometry(orbR * 0.72, 0.06, 10, 36),
+    new THREE.MeshStandardMaterial({ color: 0x8a6a2f, metalness: 1.0, roughness: 0.3 })
+  );
+  orbBase.rotation.x = Math.PI / 2;
+  orbBase.position.y = orbY - orbR * 0.8;
+  g.add(orbBase);
+
+  // 中央大島才有：旋轉 GRAND JACKPOT 金額環
+  if (big) {
+    const ticker = makeTickerTexture();
+    const ring = new THREE.Mesh(
+      new THREE.CylinderGeometry(2.1, 2.1, 0.7, 48, 1, true),
+      new THREE.MeshStandardMaterial({
+        color: 0xffffff, map: ticker.texture,
+        emissive: 0xffffff, emissiveMap: ticker.texture, emissiveIntensity: 1.3,
+        side: THREE.DoubleSide, metalness: 0.1, roughness: 0.5,
+      })
+    );
+    ring.position.y = 3.9;
+    ring.userData.spin = 0.35;
+    g.add(ring);
+    const capMat = new THREE.MeshStandardMaterial({ color: 0x8a6a2f, metalness: 1.0, roughness: 0.3 });
+    for (const [cy, r1, r2] of [[4.32, 2.18, 2.22], [3.48, 2.22, 2.18]]) {
+      const cap = new THREE.Mesh(new THREE.CylinderGeometry(r1, r2, 0.1, 48), capMat);
+      cap.position.y = cy;
+      g.add(cap);
+    }
+    g.userData.ticker = ticker;
   }
-  // 頂部暖色點光
-  const glow = new THREE.PointLight(0xffb060, 22, 15, 1.8);
-  glow.position.y = 5.5;
+
+  // 島頂暖光
+  const glow = new THREE.PointLight(big ? 0xffb060 : themeColor, big ? 22 : 10, big ? 15 : 9, 1.8);
+  glow.position.y = orbY + orbR + 0.4;
   g.add(glow);
-  g.userData.ticker = ticker;
   return g;
 }
 

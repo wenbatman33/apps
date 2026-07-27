@@ -28,25 +28,25 @@ export const MACHINES = [
 // LAYOUT — DEV 工具（按 D）可即時調整並匯出覆蓋這裡的數值
 // ============================================================
 export const LAYOUT = {
-  room:   { width: 60, depth: 44, height: 10.5 },
-  // 賭場式排列：中央圓形島台 + 兩側弧形機列 + 後排機牆
-  // 機台總數可超過遊戲數，同一款遊戲會像真賭場一樣佔多台機台
-  machines: {
-    total: 24,            // 場上機台總數
-    carouselCount: 8,     // 中央島台機台數
-    carouselRadius: 2.8,  // 島台半徑
-    carouselZ: 0,         // 島台中心前後位置
-    arcRadius: 8.0,       // 弧形機列的弧半徑
-    arcSpacing: 2.5,      // 弧列機台間距（沿弧長）
-    arcZ: 4.0,            // 弧列中心前後位置
-    aisleHalf: 6.2,       // 弧列離中軸距離
-    backRowCount: 6,      // 靠招牌的後排機牆台數
-    backRowSpacing: 2.6,  // 後排間距
-    backRowOffset: 5.0,   // 後排離後牆距離
-    scale: 1.0,
-  },
+  room:   { width: 80, depth: 60, height: 10.5 },
+  // ============================================================
+  // 樓面配置（參考真實賭場動線圖）：
+  // 中央大島（視線穿透焦點）+ 周圍主題島環繞 + 後排機牆
+  // 每座島固定一款遊戲（同款機海），點該島任一機台都轉址到該遊戲
+  // ============================================================
+  islands: [
+    { game: 'caishen',  x: 0,    z: -2,  count: 12, radius: 3.6, big: true },  // 中央大島
+    { game: 'sengoku',  x: -15,  z: -13, count: 7,  radius: 2.3 },
+    { game: 'sonic',    x: 15,   z: -13, count: 7,  radius: 2.3 },
+    { game: 'chuhan',   x: -17,  z: 2,   count: 7,  radius: 2.3 },
+    { game: 'dragon',   x: 17,   z: 2,   count: 7,  radius: 2.3 },
+    { game: 'doudizhu', x: -14,  z: 15,  count: 7,  radius: 2.3 },
+    { game: 'rooster',  x: 14,   z: 15,  count: 7,  radius: 2.3 },
+  ],
+  backRow: { count: 8, spacing: 2.7, offset: 4.6 },   // 後牆機牆（混合遊戲）
+  machineScale: 1.0,
   // polarMinDeg/polarMaxDeg：鏡頭俯仰限制（90 = 完全水平），把視角鎖在近水平帶
-  camera: { fov: 55, startY: 2.2, startZ: 17, minDist: 1.5, maxDist: 19, polarMinDeg: 76, polarMaxDeg: 88 },
+  camera: { fov: 55, startY: 2.3, startZ: 26, minDist: 1.5, maxDist: 27, polarMinDeg: 76, polarMaxDeg: 88 },
   lights: {
     ambient: 0.6, hemi: 0.85,
     aisleIntensity: 38, aisleColor: '#ffd9a0',
@@ -54,7 +54,7 @@ export const LAYOUT = {
     exposure: 1.4,
   },
   bloom:  { strength: 0.38, radius: 0.35, threshold: 0.82 },
-  fog:    { color: '#0a0612', density: 0.008 },
+  fog:    { color: '#0a0612', density: 0.007 },
   reels:  { speed: 1.0 },
   sign:   { text: 'ROYAL CASINO', sub: '★ 皇 家 娛 樂 城 ★', color: '#ff2d78' },
   // DEV 拖曳機台後的個別位移（匯出時會寫進來）
