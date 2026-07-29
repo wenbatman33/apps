@@ -6,7 +6,7 @@
     constructor(opts = {}) {
       this.difficulty = opts.difficulty || 'normal';
       this.base = opts.base != null ? opts.base : 500;   // 起始點數
-      this.durationMs = (opts.durationMin != null ? opts.durationMin : 30) * 60 * 1000;
+      this.durationMs = (opts.durationMin != null ? opts.durationMin : 10) * 60 * 1000;
       this.chips = this.base;
       this.hands = 0;       // 已完成局數
       this.wins = 0;        // 玩家獲勝局數

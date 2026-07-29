@@ -5,7 +5,11 @@
   const IMAGES = [
     { key: 'title', url: 'assets/title.png' },
     { key: 'avatar_a', url: 'assets/avatar_a.png' },
-    { key: 'avatar_b', url: 'assets/avatar_b.png' }
+    { key: 'avatar_b', url: 'assets/avatar_b.png' },
+    { key: 'fx_rocket', url: 'assets/fx_rocket.png' },       // 王炸：大火箭
+    { key: 'fx_boom', url: 'assets/fx_boom.png' },           // 炸弹：爆炸图
+    { key: 'fx_win_lord', url: 'assets/fx_win_lord.png' },   // 地主获胜：庆祝图
+    { key: 'fx_win_farmer', url: 'assets/fx_win_farmer.png' } // 农民获胜：庆祝图
   ];
 
   // 對手座位 1/2 對應的頭像 key

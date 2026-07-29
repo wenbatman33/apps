@@ -107,7 +107,7 @@
         return value;
       };
 
-      this.timeText = mk(L.width * 0.14, '剩余时间', '30:00');
+      this.timeText = mk(L.width * 0.14, '剩余时间', '10:00');
       this.chipText = mk(L.width * 0.395, '点数', String(this.session.chips), T.accentHex);
       this.handText = mk(L.width * 0.63, '局数', String(this.session.hands + 1));
       this.multText = mk(L.width * 0.86, '倍数', '×1', T.gold);
@@ -213,8 +213,8 @@
       me.name.setVisible(false);
       me.badge.setVisible(false);
       me.bubble.setY(0);
-      // 自己的角色标签放手牌左上方，避开气泡与手牌
-      me.role.setPosition(-256, 22);
+      // 自己的角色标签放手牌左上方，避开气泡与两排手牌
+      me.role.setPosition(-256, -60);
     }
 
     drawSeatRing(i, active) {
@@ -365,6 +365,11 @@
         window.SFX.play('sfx_deal');
         this.clearPlayArea();
         this.selected.clear();
+        // 重发牌（全不叫）时清掉旧的叫分气泡
+        this.seats.forEach(seat => {
+          this.tweens.killTweensOf(seat.bubble);
+          seat.bubble.setAlpha(0);
+        });
         this.renderHand(true);
         this.updateCounts();
         this.renderBottomCards(false);
@@ -389,8 +394,12 @@
 
       g.on('bid', ({ player, score }) => {
         window.SFX.play(score > 0 ? 'sfx_play' : 'sfx_pass');
-        this.bubble(player, score > 0 ? `${score} 分！` : '不叫',
-          score > 0 ? window.THEME.gold : undefined);
+        // 叫分结果持续挂在座位旁（不淡出），地主确定后才清掉
+        const b = this.seats[player].bubble;
+        this.tweens.killTweensOf(b);
+        b.setText(score > 0 ? `叫 ${score} 分！` : '不叫')
+          .setColor(score > 0 ? window.THEME.gold : window.THEME.textDim)
+          .setAlpha(1);
       });
 
       g.on('redeal', () => {
@@ -399,6 +408,11 @@
 
       g.on('landlord', ({ player, bid }) => {
         this.setBidButtonsVisible(false);
+        // 清掉叫分阶段留在座位旁的「不叫 / 叫 x 分」
+        this.seats.forEach(seat => {
+          this.tweens.killTweensOf(seat.bubble);
+          seat.bubble.setAlpha(0);
+        });
         window.SFX.play('sfx_coin');
         this.toast(`${SEAT_NAMES[player]} 当地主（${bid} 分）`, window.THEME.gold);
         this.refreshRoles();
@@ -428,6 +442,12 @@
       g.on('bomb', ({ mult }) => {
         this.updateTopBar();
         this.toast(`💥 倍数 ×${mult}`, window.THEME.gold);
+      });
+
+      // 炸弹 / 王炸 的视觉特效
+      g.on('play', ({ ev }) => {
+        if (ev.type === 'rocket') this.rocketEffect();
+        else if (ev.type === 'bomb') this.bombEffect();
       });
 
       g.on('pass', ({ player }) => { window.SFX.play('sfx_pass'); this.bubble(player, '不要'); });
@@ -479,31 +499,42 @@
       this.handViews.forEach(v => v.destroy());
       this.handViews = [];
 
-      // 手牌尽量摊开：在不超过 maxWidth 的前提下把间距拉到最大，越大越好点
-      const fit = (L.hand.maxWidth - L.card.w) / Math.max(1, hand.length - 1);
-      const step = Math.max(20, Math.min(L.card.w - L.hand.overlap, fit));
-      const totalW = L.card.w + step * (hand.length - 1);
-      const startX = (L.width - totalW) / 2 + L.card.w / 2;
+      // 张数多时分两排（上排在前、下排在后），每排间距各自拉到最大
+      const twoRows = hand.length >= (L.hand.twoRowMin || 12);
+      const half = Math.ceil(hand.length / 2);
+      const rows = twoRows ? [hand.slice(0, half), hand.slice(half)] : [hand];
+      const rowGap = L.hand.rowGap || 80;
 
-      hand.forEach((card, i) => {
-        const v = new window.CardView(this, card, true);
-        v.setCompact(true);
-        v.x = startX + step * i;
-        v.y = L.hand.y;
-        v.setDepth(i);
-        v.enableInput(view => this.onCardTap(view));
-        this.add.existing(v);
-        this.handLayer.add(v);
-        this.handViews.push(v);
+      let idx = 0;
+      rows.forEach((row, r) => {
+        const rowY = L.hand.y - (rows.length - 1 - r) * rowGap;
+        const fit = (L.hand.maxWidth - L.card.w) / Math.max(1, row.length - 1);
+        const step = Math.max(20, Math.min(L.card.w - L.hand.overlap, fit));
+        const totalW = L.card.w + step * (row.length - 1);
+        const startX = (L.width - totalW) / 2 + L.card.w / 2;
 
-        if (animate) {
-          v.y = L.hand.y + 220;
-          v.alpha = 0;
-          this.tweens.add({
-            targets: v, y: L.hand.y, alpha: 1,
-            duration: 320, delay: i * 22, ease: 'Cubic.easeOut'
-          });
-        }
+        row.forEach((card, i) => {
+          const v = new window.CardView(this, card, true);
+          v.setCompact(true);
+          v.x = startX + step * i;
+          v.y = rowY;
+          v.baseY = rowY;           // 选取上移/复位的基准
+          v.setDepth(idx);
+          v.enableInput(view => this.onCardTap(view));
+          this.add.existing(v);
+          this.handLayer.add(v);
+          this.handViews.push(v);
+
+          if (animate) {
+            v.y = rowY + 220;
+            v.alpha = 0;
+            this.tweens.add({
+              targets: v, y: rowY, alpha: 1,
+              duration: 320, delay: idx * 22, ease: 'Cubic.easeOut'
+            });
+          }
+          idx++;
+        });
       });
 
       this.refreshSelection();
@@ -524,7 +555,8 @@
       this.handViews.forEach(v => {
         const on = this.selected.has(v.card.id);
         v.setSelected(on);
-        const targetY = L.hand.y - (on ? L.hand.liftY : 0);
+        const baseY = v.baseY != null ? v.baseY : L.hand.y;
+        const targetY = baseY - (on ? L.hand.liftY : 0);
         if (v.y !== targetY) {
           this.tweens.add({ targets: v, y: targetY, duration: 110, ease: 'Quad.easeOut' });
         }
@@ -546,9 +578,10 @@
       this.playerMoves = moves;
 
       // 标示哪些牌完全出不掉，淡化处理
-      const usable = new Set();
-      moves.forEach(m => m.cards.forEach(c => usable.add(c.id)));
-      this.handViews.forEach(v => v.setPlayable(usable.has(v.card.id)));
+      // 用「点数」判定：同点数的牌可互换，避免两张一样的牌一亮一暗
+      const usableRanks = new Set();
+      moves.forEach(m => m.cards.forEach(c => usableRanks.add(c.rank)));
+      this.handViews.forEach(v => v.setPlayable(usableRanks.has(v.card.rank)));
 
       if (moves.length === 0) {
         // 没牌可出：自动不要，维持节奏不卡顿
@@ -651,6 +684,104 @@
       this.bubble(player, name);
     }
 
+    // ---------- 炸弹 / 王炸 特效 ----------
+    // 炸弹：中央爆炸图（缺图退回 💥）爆开 + 火花四射 + 震屏
+    bombEffect() {
+      const L = this.L;
+      const x = L.width / 2, y = L.play.y;
+      this.cameras.main.shake(250, 0.012);
+
+      let boom;
+      if (this.textures.exists('fx_boom')) {
+        boom = this.add.image(x, y, 'fx_boom').setOrigin(0.5).setDepth(900);
+        boom.setScale((L.width * 0.24) / boom.width);
+        this.tweens.add({
+          targets: boom, scale: (L.width * 0.9) / boom.width, alpha: 0,
+          duration: 680, ease: 'Cubic.easeOut', onComplete: () => boom.destroy()
+        });
+      } else {
+        boom = this.add.text(x, y, '💥', { fontSize: '96px' })
+          .setOrigin(0.5).setDepth(900).setScale(0.3);
+        this.tweens.add({
+          targets: boom, scale: 3.2, alpha: 0, duration: 620,
+          ease: 'Cubic.easeOut', onComplete: () => boom.destroy()
+        });
+      }
+
+      for (let i = 0; i < 12; i++) {
+        const p = this.add.text(x, y, i % 3 === 0 ? '🔥' : '✦', {
+          fontSize: '34px', color: '#fbbf24'
+        }).setOrigin(0.5).setDepth(899);
+        const ang = (i / 12) * Math.PI * 2 + Math.random() * 0.5;
+        const dist = 130 + Math.random() * 170;
+        this.tweens.add({
+          targets: p,
+          x: x + Math.cos(ang) * dist, y: y + Math.sin(ang) * dist,
+          alpha: 0, angle: Phaser.Math.Between(-180, 180),
+          duration: 480 + Math.random() * 260,
+          ease: 'Quad.easeOut', onComplete: () => p.destroy()
+        });
+      }
+    }
+
+    // 王炸：大火箭图从画面下方点火升空冲出顶端（缺图退回 🚀）+ 尾焰烟雾 + 震屏
+    rocketEffect() {
+      const L = this.L;
+      const x = L.width / 2;
+      this.cameras.main.shake(420, 0.009);
+
+      let rocket, rocketH;
+      if (this.textures.exists('fx_rocket')) {
+        rocket = this.add.image(x, 0, 'fx_rocket').setOrigin(0.5).setDepth(900);
+        rocket.setScale((L.width * 0.42) / rocket.width);
+        rocketH = rocket.height * rocket.scaleY;
+        rocket.y = L.height + rocketH / 2;          // 从画面底下整支升起
+        // 先缓慢点火抬升，再加速冲出画面顶端
+        this.tweens.chain({
+          targets: rocket,
+          tweens: [
+            { y: L.play.y + rocketH * 0.1, duration: 700, ease: 'Quad.easeOut' },
+            { y: -rocketH, duration: 820, ease: 'Cubic.easeIn' }
+          ],
+          onComplete: () => rocket.destroy()
+        });
+        // 升空时左右微晃，像引擎在抖
+        this.tweens.add({
+          targets: rocket, x: x + 6, duration: 60,
+          yoyo: true, repeat: 20
+        });
+      } else {
+        rocket = this.add.text(x, L.play.y + 130, '🚀', { fontSize: '84px' })
+          .setOrigin(0.5).setDepth(900).setAngle(-45);
+        rocketH = 100;
+        this.tweens.add({
+          targets: rocket, y: -140, duration: 950,
+          ease: 'Cubic.easeIn', onComplete: () => rocket.destroy()
+        });
+      }
+
+      // 尾焰与烟雾：跟著火箭尾部一路喷
+      this.time.addEvent({
+        delay: 45, repeat: 30,
+        callback: () => {
+          if (!rocket.active) return;
+          const tailY = rocket.y + (rocketH ? rocketH * 0.42 : 46);
+          const f = this.add.text(
+            rocket.x + Phaser.Math.Between(-22, 22), tailY,
+            Math.random() < 0.45 ? '🔥' : (Math.random() < 0.5 ? '💨' : '✨'),
+            { fontSize: Math.round(26 + Math.random() * 16) + 'px' }
+          ).setOrigin(0.5).setDepth(899);
+          this.tweens.add({
+            targets: f,
+            y: f.y + 90 + Math.random() * 60,
+            x: f.x + Phaser.Math.Between(-30, 30),
+            alpha: 0, scale: 0.4,
+            duration: 420, onComplete: () => f.destroy()
+          });
+        }
+      });
+    }
+
     clearPlayArea() {
       this.playViews.forEach(v => {
         this.tweens.add({
@@ -691,11 +822,20 @@
       bg.fillStyle(0x0b0d12, 0.94).fillRect(0, 0, L.width, L.height);
       overlay.add(bg);
 
-      const title = landlordWin ? '地主获胜' : '农民获胜';
-      overlay.add(this.add.text(L.width / 2, 380, title, {
+      // 胜方小动画：地主赢下金币皇冠雨、农民赢下彩带庆祝雨
+      this.winAnimation(overlay, landlordWin);
+
+      // 胜方庆祝图（生图素材，缺图时只显示文字标题）
+      this.addWinImage(overlay, landlordWin, 218);
+
+      const title = landlordWin ? '👑 地主获胜' : '🌾 农民获胜';
+      const titleText = this.add.text(L.width / 2, 380, title, {
         fontFamily: 'system-ui, "PingFang TC", sans-serif',
         fontSize: '60px', color: net > 0 ? T.accentHex : T.text, fontStyle: 'bold'
-      }).setOrigin(0.5));
+      }).setOrigin(0.5).setScale(0.2);
+      overlay.add(titleText);
+      // 标题弹跳进场
+      this.tweens.add({ targets: titleText, scale: 1, duration: 420, ease: 'Back.easeOut' });
 
       if (spring) {
         overlay.add(this.add.text(L.width / 2, 452, '🌸 春天！倍数再 ×2', {
@@ -764,7 +904,63 @@
       bg.on('pointerdown', () => { auto.remove(); next(); });
     }
 
-    // ---------- 整场（30 分钟）结算 ----------
+    // DEV 面板展示用：只播胜利动画与标题，不动计分，3.5 秒后自动收掉
+    demoWin(landlordWin) {
+      const L = this.L, T = window.THEME;
+      const ov = this.add.container(0, 0).setDepth(1500);
+      const bg = this.add.graphics();
+      bg.fillStyle(0x0b0d12, 0.9).fillRect(0, 0, L.width, L.height);
+      ov.add(bg);
+      this.winAnimation(ov, landlordWin);
+      this.addWinImage(ov, landlordWin, 240);
+      const t = this.add.text(L.width / 2, 420,
+        landlordWin ? '👑 地主获胜' : '🌾 农民获胜', {
+        fontFamily: 'system-ui, "PingFang TC", sans-serif',
+        fontSize: '60px', color: T.accentHex, fontStyle: 'bold'
+      }).setOrigin(0.5).setScale(0.2);
+      ov.add(t);
+      this.tweens.add({ targets: t, scale: 1, duration: 420, ease: 'Back.easeOut' });
+      window.SFX.play('sfx_win');
+      this.time.delayedCall(3500, () => ov.destroy());
+    }
+
+    // 胜方庆祝图：弹跳进场（地主/农民各一张生图素材）
+    addWinImage(overlay, landlordWin, y) {
+      const key = landlordWin ? 'fx_win_lord' : 'fx_win_farmer';
+      if (!this.textures.exists(key)) return;
+      const L = this.L;
+      const img = this.add.image(L.width / 2, y, key).setOrigin(0.5);
+      const target = (L.width * 0.46) / img.width;
+      img.setScale(target * 0.2);
+      overlay.add(img);
+      this.tweens.add({ targets: img, scale: target, duration: 480, ease: 'Back.easeOut' });
+    }
+
+    // 胜方庆祝雨：从画面顶端撒下表情符号，旋转飘落
+    winAnimation(overlay, landlordWin) {
+      const L = this.L;
+      const icons = landlordWin ? ['👑', '🪙', '💰', '✨'] : ['🎉', '🎊', '🌾', '✨'];
+      for (let i = 0; i < 26; i++) {
+        const e = this.add.text(
+          Phaser.Math.Between(30, L.width - 30),
+          -60 - Math.random() * 320,
+          icons[i % icons.length],
+          { fontSize: Math.round(26 + Math.random() * 24) + 'px' }
+        ).setOrigin(0.5);
+        overlay.add(e);
+        this.tweens.add({
+          targets: e,
+          y: L.height + 80,
+          angle: Phaser.Math.Between(-240, 240),
+          duration: 1700 + Math.random() * 1500,
+          delay: Math.random() * 700,
+          ease: 'Linear',
+          onComplete: () => e.destroy()
+        });
+      }
+    }
+
+    // ---------- 整场（10 分钟）结算 ----------
     showSessionEnd() {
       if (this.session.ended) return;
       this.session.ended = true;
@@ -784,7 +980,7 @@
       overlay.add(bg);
 
       const net = this.session.netTotal();
-      overlay.add(this.add.text(L.width / 2, 360, '30 分钟结算', {
+      overlay.add(this.add.text(L.width / 2, 360, '10 分钟结算', {
         fontFamily: 'system-ui, "PingFang TC", sans-serif',
         fontSize: '44px', color: T.textDim
       }).setOrigin(0.5));
@@ -818,7 +1014,7 @@
       const again = this.add.container(L.width / 2, 1070);
       const ag = this.add.graphics();
       ag.fillStyle(T.accent, 1).fillRoundedRect(-170, -46, 340, 92, 46);
-      again.add([ag, this.add.text(0, 0, '再玩 30 分钟', {
+      again.add([ag, this.add.text(0, 0, '再玩 10 分钟', {
         fontFamily: 'system-ui, "PingFang TC", sans-serif',
         fontSize: '34px', color: '#0f1115', fontStyle: 'bold'
       }).setOrigin(0.5)]);

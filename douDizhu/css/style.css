@@ -59,6 +59,33 @@ html, body {
   cursor: pointer;
 }
 
+/* 特效展示按鈕列 */
+.dev-fx {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  padding: 10px 14px;
+  border-bottom: 1px solid #2a3040;
+}
+
+.dev-fx-title {
+  grid-column: 1 / -1;
+  color: #9aa3b2;
+  font-size: 12px;
+}
+
+.dev-fx button {
+  padding: 10px 6px;
+  background: #1f2430;
+  border: 1px solid #333a48;
+  border-radius: 8px;
+  color: #e8eaf0;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.dev-fx button:hover { background: #262c3a; }
+
 .dev-rows {
   flex: 1;
   overflow-y: auto;

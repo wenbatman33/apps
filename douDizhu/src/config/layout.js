@@ -12,6 +12,7 @@ window.THEME = {
   danger: '#f87171',
   gold: '#fbbf24',         // 地主標記 / 倍數
   cardFace: 0xf7f8fa,
+  cardFaceDim: 0x9aa1ad,   // 出不掉的牌：不透明灰阶卡面（半透明会与下层牌叠出条纹）
   cardBack: 0x2a3040,
   cardBackLine: 0x3d4557,
   suitRed: '#e5484d',
@@ -26,8 +27,8 @@ window.LAYOUT_MOBILE = {
 
   card: { w: 96, h: 134, radius: 12, fontRank: 34, fontSuit: 30, fontCenter: 46 },
 
-  // 玩家手牌（最多 20 張，間距自動計算）
-  hand: { y: 1112, overlap: 0, liftY: 28, maxWidth: 710, tiltMax: 0 },
+  // 玩家手牌（最多 20 張，間距自動計算；張數多時自動分兩排）
+  hand: { y: 1112, overlap: 0, liftY: 28, maxWidth: 710, tiltMax: 0, rowGap: 80, twoRowMin: 12 },
 
   // 中央出牌區
   play: { y: 668, overlap: 40, scale: 0.92, maxWidth: 640 },

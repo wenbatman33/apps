@@ -10,6 +10,8 @@
     { path: 'card.fontSuit', label: '花色字级', min: 14, max: 60, step: 1 },
     { path: 'card.fontCenter', label: '中央花色字级', min: 20, max: 90, step: 1 },
     { path: 'hand.y', label: '手牌 Y', min: 900, max: 1300, step: 2 },
+    { path: 'hand.rowGap', label: '两排间距', min: 40, max: 140, step: 2 },
+    { path: 'hand.twoRowMin', label: '几张起分两排', min: 8, max: 21, step: 1 },
     { path: 'hand.liftY', label: '选取上移', min: 0, max: 80, step: 1 },
     { path: 'hand.maxWidth', label: '手牌最大宽', min: 400, max: 740, step: 5 },
     { path: 'play.y', label: '出牌区 Y', min: 400, max: 900, step: 2 },
@@ -50,6 +52,13 @@
         <span>DEV 微调</span>
         <button id="dev-close">✕</button>
       </div>
+      <div class="dev-fx">
+        <div class="dev-fx-title">特效展示（进对局后可点）</div>
+        <button data-fx="bomb">💥 炸弹</button>
+        <button data-fx="rocket">🚀 火箭</button>
+        <button data-fx="lord">👑 地主胜</button>
+        <button data-fx="farmer">🌾 农民胜</button>
+      </div>
       <div class="dev-rows"></div>
       <div class="dev-foot">
         <button id="dev-export">💾 汇出 JSON</button>
@@ -78,6 +87,23 @@
         apply();
       });
       rows.appendChild(row);
+    });
+
+    // 特效展示按钮：只在 Game 场景可用
+    el.querySelectorAll('.dev-fx button').forEach(btn => {
+      btn.onclick = () => {
+        const s = window.gameInstance && window.gameInstance.scene.getScene('Game');
+        if (!s || !s.bombEffect || !s.scene.isActive()) {
+          btn.blur();
+          alert('请先开始一局游戏再看特效');
+          return;
+        }
+        const fx = btn.dataset.fx;
+        if (fx === 'bomb') s.bombEffect();
+        else if (fx === 'rocket') s.rocketEffect();
+        else if (fx === 'lord') s.demoWin(true);
+        else if (fx === 'farmer') s.demoWin(false);
+      };
     });
 
     el.querySelector('#dev-close').onclick = () => toggle(scene);

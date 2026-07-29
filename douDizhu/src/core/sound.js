@@ -2,6 +2,9 @@
 // 用法：window.SFX.play('sfx_play')；靜音切換 window.SFX.toggle()
 
 (function () {
+  // 整體音量（使用者反映太大聲，全體乘 60%）
+  const MASTER = 0.6;
+
   // 各音效音量（牌/選取較輕、勝負較滿）
   const VOL = {
     sfx_deal: 0.5,
@@ -28,7 +31,7 @@
     if (!sm) return;
     // 音檔還沒載入好就略過，不報錯
     if (!window.gameInstance.cache.audio.exists(key)) return;
-    const vol = (opts && opts.volume != null) ? opts.volume : (VOL[key] != null ? VOL[key] : 0.5);
+    const vol = ((opts && opts.volume != null) ? opts.volume : (VOL[key] != null ? VOL[key] : 0.5)) * MASTER;
     try { sm.play(key, { volume: vol }); } catch (e) { /* 忽略播放失敗 */ }
   }
 

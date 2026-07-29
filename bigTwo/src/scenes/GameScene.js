@@ -102,7 +102,7 @@
         return value;
       };
 
-      this.timeText = mk(L.width * 0.2, '剩余时间', '30:00');
+      this.timeText = mk(L.width * 0.2, '剩余时间', '10:00');
       this.chipText = mk(L.width * 0.5, '点数', String(this.session.chips), T.accentHex);
       this.handText = mk(L.width * 0.8, '局数', String(this.session.hands + 1));
 
@@ -608,7 +608,7 @@
       bg.on('pointerdown', () => { auto.remove(); next(); });
     }
 
-    // ---------- 整场（30 分钟）结算 ----------
+    // ---------- 整场（10 分钟）结算 ----------
     showSessionEnd() {
       if (this.session.ended) return;
       this.session.ended = true;
@@ -628,7 +628,7 @@
       overlay.add(bg);
 
       const net = this.session.netTotal();
-      overlay.add(this.add.text(L.width / 2, 360, '30 分钟结算', {
+      overlay.add(this.add.text(L.width / 2, 360, '10 分钟结算', {
         fontFamily: 'system-ui, "PingFang TC", sans-serif',
         fontSize: '44px', color: T.textDim
       }).setOrigin(0.5));
@@ -661,7 +661,7 @@
       const again = this.add.container(L.width / 2, 1050);
       const ag = this.add.graphics();
       ag.fillStyle(T.accent, 1).fillRoundedRect(-170, -46, 340, 92, 46);
-      again.add([ag, this.add.text(0, 0, '再玩 30 分钟', {
+      again.add([ag, this.add.text(0, 0, '再玩 10 分钟', {
         fontFamily: 'system-ui, "PingFang TC", sans-serif',
         fontSize: '34px', color: '#0f1115', fontStyle: 'bold'
       }).setOrigin(0.5)]);

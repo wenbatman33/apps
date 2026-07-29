@@ -75,12 +75,16 @@
         return;
       }
 
-      // 出不掉的牌把卡面壓暗，但文字保持足夠對比，仍要看得清是什麼牌
-      const alpha = this.playable ? 1 : 0.5;
-      const textAlpha = this.playable ? 1 : 0.85;
-      g.fillStyle(T.cardFace, alpha).fillRoundedRect(-w / 2, -h / 2, w, h, r);
+      // 出不掉的牌改用「不透明」灰階卡面：半透明卡面會透出下層牌、疊出奇怪的條紋
+      const textAlpha = 1;
+      g.fillStyle(this.playable ? T.cardFace : T.cardFaceDim, 1)
+        .fillRoundedRect(-w / 2, -h / 2, w, h, r);
+      // 每張牌描一圈細框，重疊與上下兩排時才有層次、看得出一張一張
       if (this.selected) {
         g.lineStyle(5, T.selected, 1).strokeRoundedRect(-w / 2, -h / 2, w, h, r);
+      } else {
+        g.lineStyle(2, this.playable ? 0xb9bfca : 0x7e8592, 1)
+          .strokeRoundedRect(-w / 2, -h / 2, w, h, r);
       }
 
       if (this.isJoker()) {

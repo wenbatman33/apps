@@ -25,7 +25,7 @@
         }).setOrigin(0.5);
       }
 
-      this.add.text(L.width / 2, 660, 'DOU DIZHU · 30 分钟计分赛', {
+      this.add.text(L.width / 2, 660, 'DOU DIZHU · 10 分钟计分赛', {
         fontFamily: 'system-ui, "PingFang TC", sans-serif',
         fontSize: '26px', color: T.textDim
       }).setOrigin(0.5);
@@ -56,7 +56,7 @@
       this.refreshDiff();
 
       // 开始
-      this.makePill(L.width / 2, 1000, 360, 100, '开始 30 分钟挑战', () => {
+      this.makePill(L.width / 2, 1000, 360, 100, '开始 10 分钟挑战', () => {
         this.registry.remove('session');   // 清掉上一场，开新的计分赛
         this.scene.start('Game', { difficulty: this.difficulty });
       }, true);
