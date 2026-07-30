@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>浣熊推幣機 RACCOIN</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html,body { width:100%; height:100%; overflow:hidden; background:#12091f; touch-action:none; user-select:none; -webkit-user-select:none;
+    font-family:"Helvetica Neue",Arial,"PingFang TC","Microsoft JhengHei",sans-serif; }
+  #app { position:fixed; inset:0; }
+  canvas { display:block; }
+  button { font-family:inherit; cursor:pointer; }
+  .hidden { display:none !important; }
+
+  /* ============ HUD 共用 ============ */
+  .panel { position:fixed; z-index:10; color:#fff; background:rgba(14,8,28,.62); backdrop-filter:blur(6px);
+    border:1px solid rgba(255,255,255,.12); border-radius:12px; }
+  .panel.dragging { outline:2px dashed #ffd23f; }
+
+  /* 上方資訊列 */
+  #hud-top { left:50%; transform:translateX(-50%); top:calc(8px + env(safe-area-inset-top));
+    display:flex; align-items:center; gap:14px; padding:7px 16px; max-width:96vw; }
+  #round-label { font-size:15px; font-weight:900; color:#ffd23f; white-space:nowrap; }
+  #score-wrap { display:flex; flex-direction:column; gap:3px; min-width:150px; }
+  #score-nums { display:flex; justify-content:space-between; align-items:baseline; gap:8px; }
+  #score-cur { font-size:19px; font-weight:900; color:#7dffb0; }
+  #score-target { font-size:12px; color:#9fb0c8; }
+  #score-bar { height:7px; border-radius:4px; background:rgba(255,255,255,.13); overflow:hidden; }
+  #score-bar-fill { height:100%; width:0%; border-radius:4px; background:linear-gradient(90deg,#38c96f,#ffe66d); transition:width .25s; }
+  .stat-mini { font-size:11.5px; color:#9fb0c8; line-height:1.55; white-space:nowrap; }
+  .stat-mini b { color:#fff; }
+  #combo-box { text-align:center; min-width:56px; }
+  #combo-count { font-size:20px; font-weight:900; font-style:italic; color:#ff8de0; }
+  #combo-count.hot { color:#ff5252; text-shadow:0 0 12px rgba(255,80,80,.8); }
+  #combo-label { font-size:9.5px; color:#9fb0c8; letter-spacing:1px; }
+  #wheel-mini { display:flex; flex-direction:column; align-items:center; gap:3px; }
+  #wheel-energy { width:52px; height:7px; border-radius:4px; background:rgba(255,255,255,.13); overflow:hidden; }
+  #wheel-energy-fill { height:100%; width:0%; background:linear-gradient(90deg,#8f6bff,#ff8de0); transition:width .25s; }
+
+  /* 左側：角色與晶片 */
+  #hud-left { left:10px; top:calc(64px + env(safe-area-inset-top)); padding:9px 10px; width:132px; }
+  #char-box { display:flex; align-items:center; gap:8px; margin-bottom:7px; }
+  #char-avatar { font-size:27px; }
+  #char-name { font-size:12.5px; font-weight:800; }
+  #char-passive { font-size:9.5px; color:#9fb0c8; line-height:1.35; }
+  #chips-title { font-size:10px; color:#9fb0c8; letter-spacing:2px; margin:4px 0 4px; }
+  #chips-list { display:flex; flex-wrap:wrap; gap:5px; }
+  .chip-icon { width:26px; height:26px; border-radius:7px; background:rgba(143,107,255,.22); border:1px solid rgba(143,107,255,.55);
+    display:flex; align-items:center; justify-content:center; font-size:14px; }
+
+  /* 右側：道具 */
+  #hud-right { right:10px; top:calc(64px + env(safe-area-inset-top)); padding:9px 8px; width:74px;
+    display:flex; flex-direction:column; gap:7px; align-items:center; }
+  #prizes-title { font-size:10px; color:#9fb0c8; letter-spacing:2px; }
+  .prize-btn { width:56px; height:50px; border-radius:10px; border:1px solid rgba(255,210,63,.4); background:rgba(255,210,63,.1);
+    color:#fff; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:1px; }
+  .prize-btn .ic { font-size:19px; }
+  .prize-btn .n { font-size:9px; color:#ffd23f; }
+  .prize-btn:disabled { opacity:.35; }
+  .prize-btn.cooling { opacity:.5; }
+  #shake-btn { width:56px; height:44px; border-radius:10px; border:1px solid rgba(255,255,255,.25); background:rgba(255,255,255,.08);
+    color:#fff; font-size:11px; font-weight:800; line-height:1.25; }
+  #shake-btn:disabled { opacity:.35; }
+
+  /* 下方：投幣資源 */
+  #hud-bottom { left:50%; transform:translateX(-50%); bottom:calc(8px + env(safe-area-inset-bottom));
+    display:flex; align-items:center; gap:10px; padding:8px 12px; max-width:98vw; }
+  #hand-box { text-align:center; min-width:52px; }
+  #hand-coins { font-size:20px; font-weight:900; color:#ffd23f; }
+  .sub-label { font-size:9.5px; color:#9fb0c8; letter-spacing:1px; }
+  #clip { display:flex; gap:6px; }
+  .clip-slot { width:44px; height:52px; border-radius:9px; border:1.5px solid rgba(255,255,255,.18); background:rgba(255,255,255,.05);
+    display:flex; flex-direction:column; align-items:center; justify-content:center; gap:1px; color:#fff; position:relative; }
+  .clip-slot .ic { font-size:19px; }
+  .clip-slot .nm { font-size:8.5px; color:#cfd8ea; max-width:42px; overflow:hidden; white-space:nowrap; }
+  .clip-slot .key { position:absolute; top:1px; left:4px; font-size:8px; color:#9fb0c8; }
+  .clip-slot .cnt { position:absolute; top:1px; right:3px; font-size:9px; color:#ffd23f; font-weight:800; }
+  .clip-slot.selected { border-color:#ffe66d; background:rgba(255,230,109,.16); box-shadow:0 0 12px rgba(255,230,109,.4); }
+  .clip-slot.empty { opacity:.35; }
+  #ticket-box { text-align:center; min-width:52px; }
+  #tickets-label { font-size:18px; font-weight:900; color:#ff8de0; }
+  #exchange-btn { padding:7px 10px; border-radius:10px; border:none; font-size:11.5px; font-weight:800; line-height:1.3;
+    color:#fff; background:linear-gradient(180deg,#3e7bfa,#2450c8); box-shadow:0 3px 0 #16327f; }
+  #exchange-btn:active { transform:translateY(2px); box-shadow:0 1px 0 #16327f; }
+  #exchange-btn:disabled { opacity:.4; }
+  #shop-btn { padding:7px 12px; border-radius:10px; border:none; font-size:12.5px; font-weight:900; color:#3a2400;
+    background:linear-gradient(180deg,#ffe66d,#ffb03a); box-shadow:0 3px 0 #8f4e00, 0 0 16px rgba(255,220,90,.55);
+    animation:pulse 1.2s infinite; }
+  @keyframes pulse { 0%,100%{filter:brightness(1)} 50%{filter:brightness(1.25)} }
+  #speed-btn { width:36px; height:36px; border-radius:9px; border:1px solid rgba(255,255,255,.2); background:rgba(255,255,255,.07); color:#fff; font-size:15px; }
+  #speed-btn.on { background:rgba(56,201,111,.35); border-color:#38c96f; }
+
+  #dev-btn { position:fixed; right:8px; bottom:calc(8px + env(safe-area-inset-bottom)); z-index:60; width:30px; height:30px;
+    border-radius:8px; border:1px solid rgba(255,255,255,.15); background:rgba(255,255,255,.05); color:#8a93a8; font-size:14px; }
+  #pause-btn { position:fixed; left:8px; top:calc(8px + env(safe-area-inset-top)); z-index:60; width:32px; height:32px;
+    border-radius:8px; border:1px solid rgba(255,255,255,.15); background:rgba(14,8,28,.5); color:#cfd8ea; font-size:14px; }
+
+  /* 分數跳字層 */
+  #popup-layer { position:fixed; inset:0; z-index:8; pointer-events:none; overflow:hidden; }
+  .score-pop { position:absolute; font-weight:900; font-style:italic; color:#7dffb0; text-shadow:0 2px 4px rgba(0,0,0,.7);
+    animation:popup 1s ease-out forwards; will-change:transform,opacity; }
+  .score-pop.big { color:#ffe66d; }
+  .score-pop.huge { color:#ff8de0; }
+  .score-pop.bad { color:#ff5252; }
+  @keyframes popup { 0%{transform:translateY(0) scale(.7);opacity:0} 15%{opacity:1;transform:translateY(-10px) scale(1.15)} 100%{transform:translateY(-58px) scale(1);opacity:0} }
+
+  /* Toast */
+  #toast-area { position:fixed; left:50%; transform:translateX(-50%); top:calc(60px + env(safe-area-inset-top)); z-index:55;
+    display:flex; flex-direction:column; gap:6px; align-items:center; pointer-events:none; }
+  .toast { padding:7px 16px; border-radius:20px; background:rgba(14,8,28,.85); border:1px solid rgba(255,255,255,.2);
+    color:#fff; font-size:13px; font-weight:700; animation:toastIn 2.6s forwards; }
+  .toast.warn { border-color:#ff5252; color:#ffb0b0; }
+  .toast.good { border-color:#38c96f; color:#a8ffcb; }
+  @keyframes toastIn { 0%{opacity:0;transform:translateY(-8px)} 10%,80%{opacity:1;transform:translateY(0)} 100%{opacity:0} }
+
+  /* Tooltip */
+  #tooltip { position:fixed; z-index:70; max-width:230px; padding:8px 11px; border-radius:10px; background:rgba(10,6,22,.95);
+    border:1px solid rgba(255,255,255,.22); color:#fff; font-size:11.5px; line-height:1.5; pointer-events:none; }
+  #tooltip .tt-name { font-weight:900; color:#ffe66d; font-size:12.5px; }
+  #tooltip .tt-rar { font-size:10px; color:#9fb0c8; }
+  #tooltip .tt-desc { color:#cfd8ea; margin-top:3px; }
+
+  /* ============ 全螢幕畫面 ============ */
+  .screen { position:fixed; inset:0; z-index:80; display:flex; flex-direction:column; align-items:center; justify-content:center;
+    gap:16px; color:#fff; background:radial-gradient(ellipse at 50% 30%, #2a1748 0%, #12091f 72%); padding:20px; overflow-y:auto; }
+  .title-lg { font-size:min(11vw,56px); font-weight:900; letter-spacing:3px; text-align:center;
+    background:linear-gradient(180deg,#ffe66d 20%,#ff9f1c 55%,#ff4d6d 100%);
+    -webkit-background-clip:text; background-clip:text; color:transparent; filter:drop-shadow(0 4px 0 rgba(0,0,0,.45)); }
+  .subtitle { font-size:min(3.6vw,15px); color:#9fb0c8; letter-spacing:4px; font-weight:700; text-align:center; }
+  .menu-btn { min-width:min(70vw,280px); padding:14px 30px; font-size:18px; font-weight:900; color:#fff; border:none; border-radius:14px; letter-spacing:2px;
+    background:linear-gradient(180deg,#3e7bfa,#2450c8); box-shadow:0 5px 0 #16327f, 0 8px 18px rgba(0,0,0,.4); transition:transform .08s; }
+  .menu-btn:active { transform:translateY(4px); box-shadow:0 1px 0 #16327f; }
+  .menu-btn.gold { background:linear-gradient(180deg,#ffb03a,#e07b00); box-shadow:0 5px 0 #8f4e00; color:#3a2400; }
+  .menu-btn.gold:active { box-shadow:0 1px 0 #8f4e00; }
+  .char-card { display:flex; align-items:center; gap:14px; padding:14px 20px; border-radius:16px;
+    background:rgba(255,255,255,.06); border:2px solid rgba(255,230,109,.5); max-width:min(90vw,380px); }
+  .char-card .av { font-size:52px; }
+  .char-card .nm { font-size:17px; font-weight:900; color:#ffe66d; }
+  .char-card .ds { font-size:11.5px; color:#cfd8ea; line-height:1.5; margin-top:3px; }
+  .diff-row { display:flex; gap:10px; flex-wrap:wrap; justify-content:center; }
+  .diff-btn { padding:11px 20px; border-radius:12px; border:2px solid rgba(255,255,255,.18); background:rgba(255,255,255,.05);
+    color:#fff; font-size:14px; font-weight:800; min-width:96px; }
+  .diff-btn .d { display:block; font-size:9.5px; color:#9fb0c8; font-weight:600; margin-top:3px; }
+  .diff-btn.selected { border-color:#ffe66d; background:rgba(255,230,109,.14); }
+  #howto { font-size:11px; color:#8a93a8; line-height:1.7; text-align:center; max-width:min(92vw,420px); }
+
+  /* 回合橫幅 */
+  #round-banner { position:fixed; inset:0; z-index:75; display:flex; flex-direction:column; align-items:center; justify-content:center;
+    pointer-events:none; gap:8px; }
+  #round-banner .rb-main { font-size:min(12vw,54px); font-weight:900; font-style:italic; letter-spacing:4px; color:#ffe66d;
+    text-shadow:0 4px 0 rgba(0,0,0,.5), 0 0 30px rgba(255,220,90,.5); animation:bannerIn 2.1s forwards; }
+  #round-banner .rb-sub { font-size:min(4.5vw,19px); font-weight:800; color:#fff; text-shadow:0 2px 0 rgba(0,0,0,.6); animation:bannerIn 2.1s forwards; }
+  @keyframes bannerIn { 0%{opacity:0;transform:scale(.6)} 15%{opacity:1;transform:scale(1.08)} 25%{transform:scale(1)} 80%{opacity:1} 100%{opacity:0} }
+
+  /* ============ 彈窗 ============ */
+  .modal-mask { position:fixed; inset:0; z-index:78; background:rgba(5,3,12,.72); display:flex; align-items:center; justify-content:center; padding:12px; }
+  .modal { background:linear-gradient(180deg,#241340,#150b28); border:2px solid rgba(255,255,255,.16); border-radius:18px;
+    color:#fff; padding:18px; max-width:min(96vw,560px); max-height:92vh; overflow-y:auto; width:100%; }
+  .modal h2 { font-size:20px; font-weight:900; color:#ffe66d; letter-spacing:2px; margin-bottom:4px; text-align:center; }
+  .modal .m-sub { font-size:11.5px; color:#9fb0c8; text-align:center; margin-bottom:12px; }
+
+  /* 商店 */
+  .shop-sec-title { font-size:12px; color:#9fb0c8; letter-spacing:2px; margin:10px 0 6px; }
+  .shop-row { display:flex; gap:8px; flex-wrap:wrap; }
+  .shop-item { flex:1; min-width:96px; max-width:150px; border-radius:12px; padding:9px 7px; text-align:center;
+    background:rgba(255,255,255,.05); border:1.5px solid rgba(255,255,255,.14); position:relative; }
+  .shop-item .ic { font-size:25px; }
+  .shop-item .nm { font-size:11.5px; font-weight:800; margin-top:2px; }
+  .shop-item .rar { font-size:9px; margin-top:1px; }
+  .shop-item .ds { font-size:9.5px; color:#9fb0c8; line-height:1.35; margin-top:3px; min-height:26px; }
+  .shop-item .buy { margin-top:6px; width:100%; padding:5px 0; border-radius:8px; border:none; font-size:12px; font-weight:900;
+    background:linear-gradient(180deg,#ff8de0,#c94fae); color:#fff; }
+  .shop-item .buy:disabled { opacity:.35; }
+  .shop-item.sold { opacity:.4; }
+  .shop-item.sold::after { content:"已售出"; position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+    font-size:14px; font-weight:900; color:#ff8de0; background:rgba(10,6,20,.55); border-radius:12px; }
+  .shop-foot { display:flex; gap:10px; margin-top:14px; justify-content:center; flex-wrap:wrap; }
+  .shop-foot button { padding:10px 18px; border-radius:11px; border:none; font-size:14px; font-weight:900; color:#fff; }
+  #shop-reroll { background:linear-gradient(180deg,#8f6bff,#5b3bc4); }
+  #shop-reroll:disabled { opacity:.4; }
+  #shop-leave { background:linear-gradient(180deg,#38c96f,#1f9d4e); }
+  #shop-tickets { text-align:center; font-size:14px; font-weight:900; color:#ff8de0; margin-top:4px; }
+
+  /* 輪盤 */
+  #wheel-canvas { display:block; margin:6px auto; }
+  #wheel-result { text-align:center; font-size:15px; font-weight:900; color:#ffe66d; min-height:24px; }
+
+  .modal .center-btns { display:flex; justify-content:center; gap:10px; margin-top:14px; flex-wrap:wrap; }
+
+  /* ============ DEV 工具 ============ */
+  #dev-panel { position:fixed; right:0; top:0; bottom:0; z-index:90; width:min(320px,92vw); background:rgba(8,5,18,.96);
+    border-left:1px solid rgba(255,255,255,.2); color:#dfe7f3; overflow-y:auto; padding:12px; font-size:12px; }
+  #dev-panel h3 { color:#ffd23f; font-size:13px; margin:12px 0 6px; letter-spacing:1px; }
+  #dev-panel h3:first-child { margin-top:0; }
+  .dev-row { display:flex; align-items:center; gap:6px; margin:4px 0; }
+  .dev-row label { flex:0 0 108px; font-size:10.5px; color:#9fb0c8; }
+  .dev-row input[type=range] { flex:1; }
+  .dev-row .val { flex:0 0 44px; text-align:right; font-size:10.5px; color:#fff; }
+  .dev-btns { display:flex; flex-wrap:wrap; gap:5px; margin:6px 0; }
+  .dev-btns button, #dev-panel select { padding:5px 9px; border-radius:7px; border:1px solid rgba(255,255,255,.25);
+    background:rgba(255,255,255,.08); color:#fff; font-size:11px; }
+  #dev-export { width:100%; padding:9px; border-radius:9px; border:none; font-weight:900; font-size:13px;
+    background:linear-gradient(180deg,#ffe66d,#ffb03a); color:#3a2400; margin-top:10px; }
+  #dev-json { width:100%; height:90px; margin-top:6px; background:#0a0616; color:#7dffb0; font-size:10px; border:1px solid rgba(255,255,255,.2); border-radius:7px; padding:6px; }
+
+  /* ============ 手機直屏調整 ============ */
+  @media (max-aspect-ratio: 4/5) {
+    #hud-top { left:48px; right:4px; transform:none; max-width:none; justify-content:space-between; gap:7px; padding:5px 9px; flex-wrap:wrap; }
+    #score-wrap { flex:1; }
+    #round-label { font-size:12px; }
+    #score-cur { font-size:16px; }
+    #combo-count { font-size:16px; }
+    #score-wrap { min-width:96px; }
+    .stat-mini { display:none; }
+    #hud-bottom { flex-wrap:wrap; justify-content:center; max-width:96vw; }
+    #hud-left { width:110px; padding:7px 8px; top:calc(56px + env(safe-area-inset-top)); }
+    #char-passive { display:none; }
+    #hud-right { width:64px; top:calc(56px + env(safe-area-inset-top)); }
+    .prize-btn { width:50px; height:46px; }
+    .clip-slot { width:40px; height:48px; }
+    #hud-bottom { gap:7px; padding:7px 9px; }
+  }
+</style>
+</head>
+<body>
+<div id="app"></div>
+
+<!-- HUD -->
+<button id="pause-btn" class="hidden">⏸</button>
+<div id="hud-top" class="panel hidden" data-dev-drag="hudTop">
+  <div id="round-label">Round 1 / 15</div>
+  <div id="score-wrap">
+    <div id="score-nums"><span id="score-cur">0</span><span id="score-target">/ 100</span></div>
+    <div id="score-bar"><div id="score-bar-fill"></div></div>
+  </div>
+  <div class="stat-mini">倍率 <b id="rate-label">×1.0</b><br>轉換 <b id="conv-label">×0.1</b></div>
+  <div id="combo-box"><div id="combo-count">-</div><div id="combo-label">COMBO</div></div>
+  <div id="wheel-mini"><div id="wheel-energy"><div id="wheel-energy-fill"></div></div><div id="combo-label">輪盤</div></div>
+</div>
+
+<div id="hud-left" class="panel hidden" data-dev-drag="hudLeft">
+  <div id="char-box"><div id="char-avatar">🦝</div><div><div id="char-name">浣熊店長</div></div></div>
+  <div id="char-passive">每回合結束額外 +8 票券</div>
+  <div id="chips-title">晶片</div>
+  <div id="chips-list"></div>
+</div>
+
+<div id="hud-right" class="panel hidden" data-dev-drag="hudRight">
+  <div id="prizes-title">道具</div>
+  <div id="prizes-list" style="display:flex;flex-direction:column;gap:6px;"></div>
+  <button id="shake-btn">搖晃<br>機台</button>
+</div>
+
+<div id="hud-bottom" class="panel hidden" data-dev-drag="hudBottom">
+  <div id="hand-box"><div id="hand-coins">40</div><div class="sub-label">硬幣</div></div>
+  <div id="clip"></div>
+  <div id="ticket-box"><div id="tickets-label">0</div><div class="sub-label">🎟️票券</div></div>
+  <button id="exchange-btn">兌換<br><span id="exchange-cost">🎟️20 → +15枚</span></button>
+  <button id="shop-btn" class="hidden">🛒 進商店</button>
+  <button id="speed-btn">⏩</button>
+</div>
+
+<button id="dev-btn">⚙</button>
+<div id="popup-layer"></div>
+<div id="toast-area"></div>
+<div id="tooltip" class="hidden"></div>
+<div id="round-banner" class="hidden"></div>
+
+<!-- 開始畫面 -->
+<div id="start-screen" class="screen">
+  <div class="title-lg">🦝 浣熊推幣機</div>
+  <div class="subtitle">RACCOIN · 3D 推幣 Roguelike</div>
+  <div class="char-card">
+    <div class="av">🦝</div>
+    <div>
+      <div class="nm">浣熊店長</div>
+      <div class="ds">經濟型角色：每回合結束額外 +8 票券，兌換成本 −10%。<br>初始 30 票券、票券幣 ×1・手持硬幣會自動回充</div>
+    </div>
+  </div>
+  <div class="diff-row">
+    <button class="diff-btn selected" data-diff="0">輕鬆<span class="d">目標 ×1.0</span></button>
+    <button class="diff-btn" data-diff="1">標準<span class="d">目標 ×1.35・負面幣提早</span></button>
+    <button class="diff-btn" data-diff="2">困難<span class="d">目標 ×1.8・商店漲價</span></button>
+  </div>
+  <button id="start-btn" class="menu-btn gold">開始冒險</button>
+  <div id="howto">滑鼠移動瞄準・左鍵投幣｜手機：點擊機台投幣<br>數字鍵 1〜9 選特殊幣・右鍵/Esc 取消・Q/W/E/R 道具・Space 加速<br>達成每回合目標分數，完成 15 回合獲勝！</div>
+</div>
+
+<!-- 商店 -->
+<div id="shop-modal" class="modal-mask hidden">
+  <div class="modal">
+    <h2>🛒 浣熊商店</h2>
+    <div class="m-sub" id="shop-round-info">回合完成獎勵已發放</div>
+    <div id="shop-tickets">🎟️ 0</div>
+    <div class="shop-sec-title">特殊硬幣</div>
+    <div class="shop-row" id="shop-coins"></div>
+    <div class="shop-sec-title">晶片（被動）</div>
+    <div class="shop-row" id="shop-chips"></div>
+    <div class="shop-sec-title">獎品（主動道具）</div>
+    <div class="shop-row" id="shop-prizes"></div>
+    <div class="shop-sec-title">服務</div>
+    <div class="shop-row" id="shop-services"></div>
+    <div class="shop-foot">
+      <button id="shop-reroll">🔄 重抽 (🎟️10)</button>
+      <button id="shop-leave">▶ 下一回合</button>
+    </div>
+  </div>
+</div>
+
+<!-- 輪盤 -->
+<div id="wheel-modal" class="modal-mask hidden">
+  <div class="modal" style="max-width:min(94vw,400px);">
+    <h2>🎡 幸運輪盤</h2>
+    <div class="m-sub" id="wheel-level-label">LV.1</div>
+    <canvas id="wheel-canvas" width="300" height="300"></canvas>
+    <div id="wheel-result"></div>
+  </div>
+</div>
+
+<!-- 暫停 -->
+<div id="pause-modal" class="modal-mask hidden">
+  <div class="modal" style="max-width:320px;text-align:center;">
+    <h2>⏸ 暫停</h2>
+    <div class="center-btns">
+      <button class="menu-btn" id="resume-btn" style="min-width:200px;">繼續遊戲</button>
+      <button class="menu-btn" id="giveup-btn" style="min-width:200px;background:linear-gradient(180deg,#ff5252,#b71c1c);box-shadow:0 5px 0 #7a1010;">放棄本局</button>
+    </div>
+  </div>
+</div>
+
+<!-- 失敗 -->
+<div id="fail-modal" class="modal-mask hidden">
+  <div class="modal" style="max-width:340px;text-align:center;">
+    <h2>💀 冒險失敗</h2>
+    <div class="m-sub" id="fail-info"></div>
+    <div class="center-btns"><button class="menu-btn gold" id="fail-restart">再來一局</button></div>
+  </div>
+</div>
+
+<!-- 勝利 -->
+<div id="win-modal" class="modal-mask hidden">
+  <div class="modal" style="max-width:360px;text-align:center;">
+    <h2>🏆 冒險成功！</h2>
+    <div class="m-sub" id="win-info"></div>
+    <div class="center-btns">
+      <button class="menu-btn gold" id="endless-btn">♾ 進入無盡模式</button>
+      <button class="menu-btn" id="win-restart">重新開始</button>
+    </div>
+  </div>
+</div>
+
+<!-- DEV 面板 -->
+<div id="dev-panel" class="hidden"></div>
+
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/",
+    "cannon-es": "https://cdn.jsdelivr.net/npm/cannon-es@0.20.0/dist/cannon-es.js"
+  }
+}
+</script>
+<script type="module" src="src/main.js"></script>
+</body>
+</html>
