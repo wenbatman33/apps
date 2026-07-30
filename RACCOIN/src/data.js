@@ -22,7 +22,7 @@ export const LAYOUT = {
     towerEveryMax: 70,  // 不定時出塔：最長間隔（秒）
     towerSizeMin: 14,   // 一座塔最少幾枚
     towerSizeMax: 26,   // 一座塔最多幾枚
-    towerPushSpeed: 0.055, // 推板凹弧蹭動塔的速度（單位/秒，越小塔站越久）
+    towerErodePerHit: 2, // 推板每衝程從塔底擊落幾枚（越少塔站越久）
   },
   physics: {
     gravity: -22,

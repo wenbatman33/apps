@@ -105,7 +105,7 @@ function build() {
   sliderRow(panel, '前緣開口寬', mc, 'fieldFrontW', 7, 12, 0.1);
   sliderRow(panel, '出塔間隔min', mc, 'towerEveryMin', 5, 120, 1);
   sliderRow(panel, '出塔間隔max', mc, 'towerEveryMax', 10, 180, 1);
-  sliderRow(panel, '塔蹭動速度', mc, 'towerPushSpeed', 0.02, 0.3, 0.005);
+  sliderRow(panel, '塔每擊落幣數', mc, 'towerErodePerHit', 1, 5, 1);
   sliderRow(panel, '塔硬幣min', mc, 'towerSizeMin', 5, 30, 1);
   sliderRow(panel, '塔硬幣max', mc, 'towerSizeMax', 8, 40, 1);
   sliderRow(panel, '機台寬', mc, 'floorW', 5, 10, 0.1);

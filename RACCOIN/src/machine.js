@@ -133,6 +133,7 @@ export function initMachine(Gref) {
   world.gravity.set(0, LAYOUT.physics.gravity, 0);
   world.broadphase = new CANNON.SAPBroadphase(world);
   world.allowSleep = true;
+  world.solver.iterations = 14;   // 提高解算迭代：重壓下硬幣不易被擠穿牆面
   coinMat = new CANNON.Material('coin');
   staticMat = new CANNON.Material('static');
   world.addContactMaterial(new CANNON.ContactMaterial(coinMat, coinMat, {
@@ -257,26 +258,28 @@ export function buildMachine() {
   machineGroup.add(base);
 
   // 側牆：左右各一整面連續斜牆（後窄前寬、外八），並往地板下方延伸防擠出
+  // 牆做厚（1.2）：推板壓力再大，硬幣也擠不穿
+  const thickT = 1.2;
   const fullLen = frontZ - backZ;
   const theta = Math.atan(((fw - w) / 2) / fullLen);
   const slantLen = fullLen / Math.cos(theta) + 0.6;
   for (const sgn of [-1, 1]) {
-    const wx = sgn * ((w + fw) / 4 + wallT/2);
+    const wx = sgn * ((w + fw) / 4 + thickT/2);
     const wz = (backZ + frontZ) / 2;
     const slantBody = new CANNON.Body({ mass: 0, material: staticMat,
-      shape: new CANNON.Box(new CANNON.Vec3(wallT/2, (wallH + 3)/2, slantLen/2)) });
+      shape: new CANNON.Box(new CANNON.Vec3(thickT/2, (wallH + 3)/2, slantLen/2)) });
     slantBody.position.set(wx, (wallH + 3)/2 - 3.5, wz);
     slantBody.quaternion.setFromEuler(0, sgn * theta, 0);
     slantBody.userData = { isMachine: true };
     world.addBody(slantBody);
-    const slantMesh = new THREE.Mesh(new THREE.BoxGeometry(wallT, wallH + 3, slantLen), frameMatV);
+    const slantMesh = new THREE.Mesh(new THREE.BoxGeometry(thickT, wallH + 3, slantLen), frameMatV);
     slantMesh.position.copy(slantBody.position);
     slantMesh.quaternion.copy(slantBody.quaternion);
     machineGroup.add(slantMesh);
     // 玻璃沿斜牆內側
     const glass = new THREE.Mesh(new THREE.PlaneGeometry(slantLen - 0.6, wallH - 1), glassMatV);
     glass.rotation.y = sgn * (Math.PI / 2 + theta);
-    glass.position.set(wx - sgn * (wallT/2 + 0.02), wallH/2, wz);
+    glass.position.set(wx - sgn * (thickT/2 + 0.02), wallH/2, wz);
     machineGroup.add(glass);
   }
 
@@ -325,13 +328,13 @@ export function buildMachine() {
   // 凹口後方的本體
   pusherBody.addShape(new CANNON.Box(new CANNON.Vec3(R, ph/2, (pd - R)/2)),
     new CANNON.Vec3(0, 0, -R/2));
-  // 用四段弦逼近半圓凹弧
-  for (const deg of [202.5, 247.5, 292.5, 337.5]) {
+  // 用六段弦逼近半圓凹弧（段數越多，硬幣越不會陷進弧面）
+  for (const deg of [195, 225, 255, 285, 315, 345]) {
     const th = deg * Math.PI / 180;
     const q = new CANNON.Quaternion();
     q.setFromAxisAngle(new CANNON.Vec3(0, 1, 0), th + Math.PI / 2);
-    pusherBody.addShape(new CANNON.Box(new CANNON.Vec3(0.55, ph/2, 0.07)),
-      new CANNON.Vec3((R + 0.05) * Math.cos(th), 0, pd/2 + (R + 0.05) * Math.sin(th)), q);
+    pusherBody.addShape(new CANNON.Box(new CANNON.Vec3(0.34, ph/2, 0.06)),
+      new CANNON.Vec3((R + 0.03) * Math.cos(th), 0, pd/2 + (R + 0.03) * Math.sin(th)), q);
   }
   pusherBody.userData = { isMachine: true };
   world.addBody(pusherBody);
@@ -671,12 +674,28 @@ export function stepMachine(dt, timeScale = 1) {
   renderer.render(scene, camera);
 }
 
+// 任意 z 的檯面內部半寬（梯形）
+function interiorHalfAt(z) {
+  const M = LAYOUT.machine;
+  const t = Math.max(0, Math.min(1, (z - M.floorBackZ) / (M.floorFrontZ - M.floorBackZ)));
+  return (M.floorW + (M.fieldFrontW - M.floorW) * t) / 2;
+}
+
 // 掉落判定：得分 or 側溝流失
 function checkFallen() {
   const M = LAYOUT.machine;
   for (let i = coins.length - 1; i >= 0; i--) {
     const c = coins[i];
     const p = c.body.position;
+    // 越界救援：被壓力擠進/擠出牆面的硬幣，拉回檯面內側
+    if (p.y > -0.5 && p.z > M.floorBackZ && p.z < M.floorFrontZ) {
+      const ih = interiorHalfAt(p.z);
+      if (Math.abs(p.x) > ih - 0.1) {
+        c.body.position.x = Math.sign(p.x) * (ih - 0.5);
+        c.body.velocity.x = 0;
+        c.body.wakeUp();
+      }
+    }
     if (c.state.landedAt === null && p.y < LAYOUT.machine.pusherH + 0.4 && Math.abs(c.body.velocity.y) < 1) {
       c.state.landedAt = performance.now();
     }
@@ -757,6 +776,31 @@ export function crashTowers(forward = 1.2) {
   for (const t of [...dispenser.towers]) if (t.state !== 'rising') crashTower(t, forward);
 }
 
+// 從塔底擊落 k 枚硬幣射進幣海，塔跟著變矮
+function erodeTower(t, k) {
+  for (let i = 0; i < k && t.coins.length; i++) {
+    const c = t.coins.shift();
+    scene.remove(c.mesh);
+    t.totalH -= c.h;
+    spawnCoin(c.def.id, {
+      x: t.x + (Math.random() - 0.5) * 0.3, y: 0.25 + i * 0.15, z: t.z + 0.55,
+      value: c.value, force: true, rot: false,
+      vx: (Math.random() - 0.5) * 1.2, vy: 0.3, vz: 2.0 + Math.random() });
+  }
+  Sound.clink(3);
+  sparkleAt({ x: t.x, y: 0.3, z: t.z }, 0xffd23f);
+  // 縮短塔的碰撞圓柱
+  world.removeBody(t.body);
+  t.body = null;
+  if (t.totalH > 0.05) {
+    const r = LAYOUT.physics.coinRadius + 0.06;
+    t.body = new CANNON.Body({ mass: 0, type: CANNON.Body.KINEMATIC, material: coinMat,
+      shape: new CANNON.Cylinder(r, r, t.totalH, 10) });
+    t.body.position.set(t.x, t.totalH / 2 + 0.01, t.z);
+    world.addBody(t.body);
+  }
+}
+
 function updateTowers(dt) {
   const M = LAYOUT.machine;
   // 不定時出塔（遊戲進行中才計時）
@@ -772,17 +816,20 @@ function updateTowers(dt) {
       t.riseT += dt / 1.6;
       if (t.riseT >= 1) { t.riseT = 1; t.state = 'riding'; }
     } else {
-      // 腳本化推進：凹弧接觸時以固定速度慢慢蹭動塔（站得住多輪推板）
-      const target = pusherFront - M.notchR + 0.52;
+      // 塔緊貼凹弧被推（永不互相穿透）
+      const target = pusherFront - M.notchR + 0.56;
       if (target > t.z) {
-        t.z += Math.min(target - t.z, M.towerPushSpeed * dt);
-        t.body.position.z = t.z;
+        t.z = target;
+        if (t.body) t.body.position.z = t.z;
         for (const c of coinsNear({ x: t.x, y: 0.6, z: t.z }, 1.3)) c.body.wakeUp();
       }
-      // 被推出凹口就整座往前倒（門檻 = 凹弧最大伸出仍推得到的位置）
-      if (t.z > M.pusherMinZ + M.pusherRange - M.notchR + 0.42) {
-        crashTower(t, 2.0);
-        continue;
+      // 被推到凹口外緣後：推板每衝程從塔底擊落幾枚（塔逐漸變矮），剩少量才整座倒
+      t.erodeCd = (t.erodeCd ?? 0) - dt;
+      const atMouth = t.z > M.pusherMinZ + M.pusherRange - M.notchR + 0.45;
+      if (atMouth && target >= t.z - 0.03 && t.erodeCd <= 0) {
+        t.erodeCd = 1.1;
+        erodeTower(t, M.towerErodePerHit);
+        if (t.coins.length <= 5) { crashTower(t, 2.2); continue; }
       }
     }
     // 排列塔身硬幣 mesh
