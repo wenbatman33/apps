@@ -18,10 +18,11 @@ export const LAYOUT = {
     aimMaxX: 2.9,       // 瞄準左右極限
     notchR: 1.15,       // 推板前緣中央的半圓凹口半徑（凹字形）
     fieldFrontW: 9.2,   // 檯面前緣寬度（下方開口較大的梯形）
-    towerEveryMin: 14,  // 不定時出塔：最短間隔（秒）
-    towerEveryMax: 28,  // 不定時出塔：最長間隔（秒）
+    towerEveryMin: 35,  // 不定時出塔：最短間隔（秒）
+    towerEveryMax: 70,  // 不定時出塔：最長間隔（秒）
     towerSizeMin: 14,   // 一座塔最少幾枚
     towerSizeMax: 26,   // 一座塔最多幾枚
+    towerPushSpeed: 0.055, // 推板凹弧蹭動塔的速度（單位/秒，越小塔站越久）
   },
   physics: {
     gravity: -22,

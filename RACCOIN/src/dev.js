@@ -103,8 +103,9 @@ function build() {
   sliderRow(panel, '瞄準極限x', mc, 'aimMaxX', 1.5, 3.5, 0.05);
   sliderRow(panel, '凹口半徑', mc, 'notchR', 0.7, 1.8, 0.05);
   sliderRow(panel, '前緣開口寬', mc, 'fieldFrontW', 7, 12, 0.1);
-  sliderRow(panel, '出塔間隔min', mc, 'towerEveryMin', 5, 60, 1);
-  sliderRow(panel, '出塔間隔max', mc, 'towerEveryMax', 10, 90, 1);
+  sliderRow(panel, '出塔間隔min', mc, 'towerEveryMin', 5, 120, 1);
+  sliderRow(panel, '出塔間隔max', mc, 'towerEveryMax', 10, 180, 1);
+  sliderRow(panel, '塔蹭動速度', mc, 'towerPushSpeed', 0.02, 0.3, 0.005);
   sliderRow(panel, '塔硬幣min', mc, 'towerSizeMin', 5, 30, 1);
   sliderRow(panel, '塔硬幣max', mc, 'towerSizeMax', 8, 40, 1);
   sliderRow(panel, '機台寬', mc, 'floorW', 5, 10, 0.1);

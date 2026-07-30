@@ -695,7 +695,7 @@ function checkFallen() {
 // 機器不定時在推板凹口中央升出一座高塔（立在下層檯面上）。
 // 塔有一個直立圓柱實體，會被推板凹弧與幣海一路往前擠，
 // 擠到前緣就整座倒進幣海。
-const dispenser = { towers: [], nextIn: 6 };
+const dispenser = { towers: [], nextIn: 20 };
 let pusherFront = null, deckDelta = 0;
 
 export function towerCount() { return dispenser.towers.reduce((s, t) => s + t.coins.length, 0); }
@@ -710,8 +710,8 @@ export function dispenseTower(size = null, goldRatio = 0.12) {
   const M = LAYOUT.machine;
   if (dispenser.towers.length >= 1) return false;   // 凹口一次只站一座塔
   const n = size || Math.round(M.towerSizeMin + Math.random() * (M.towerSizeMax - M.towerSizeMin));
-  // 塔立在「推板最大伸出時凹口中央」的位置
-  const z0 = M.pusherMinZ + M.pusherRange - M.notchR + 0.32;
+  // 塔立在凹口深處：推板凹弧要蹭好幾輪才會慢慢把它擠出來
+  const z0 = M.pusherMinZ + M.pusherRange - M.notchR + 0.05;
   const t = { x: 0, z: z0, riseT: 0, state: 'rising', coins: [], body: null, totalH: 0 };
   for (let i = 0; i < n; i++) {
     const id = Math.random() < goldRatio ? 'gold' : (Math.random() < 0.25 ? 'silver' : 'copper');
@@ -772,10 +772,10 @@ function updateTowers(dt) {
       t.riseT += dt / 1.6;
       if (t.riseT >= 1) { t.riseT = 1; t.state = 'riding'; }
     } else {
-      // 腳本化推進：推板凹弧伸到哪，塔就被推到哪（單向前進）
+      // 腳本化推進：凹弧接觸時以固定速度慢慢蹭動塔（站得住多輪推板）
       const target = pusherFront - M.notchR + 0.52;
       if (target > t.z) {
-        t.z = target;
+        t.z += Math.min(target - t.z, M.towerPushSpeed * dt);
         t.body.position.z = t.z;
         for (const c of coinsNear({ x: t.x, y: 0.6, z: t.z }, 1.3)) c.body.wakeUp();
       }
