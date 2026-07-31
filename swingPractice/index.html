@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>全壘打王 HOMERUN KING</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html,body { width:100%; height:100%; overflow:hidden; background:#050810; touch-action:none;
+    user-select:none; -webkit-user-select:none;
+    font-family:"Helvetica Neue",Arial,"PingFang TC","Microsoft JhengHei",sans-serif; }
+  #app { position:fixed; inset:0; }
+  canvas { display:block; }
+  button { font-family:inherit; cursor:pointer; border:none; background:none; color:inherit; }
+  .hidden { display:none !important; }
+
+  :root{
+    --gold:#ffd23f; --gold2:#ff9f1c; --ink:rgba(9,14,26,.72); --line:rgba(255,255,255,.14);
+    --green:#5dffa0; --red:#ff5f6d; --blue:#5ec8ff;
+  }
+  .panel{ background:var(--ink); backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px);
+    border:1px solid var(--line); border-radius:14px; color:#fff; }
+
+  /* ===================== HUD ===================== */
+  #hud{ position:fixed; inset:0; pointer-events:none; z-index:10; color:#fff; }
+
+  #hud-top{ position:absolute; top:calc(10px + env(safe-area-inset-top)); left:50%; transform:translateX(-50%);
+    display:flex; align-items:center; gap:14px; padding:8px 18px; white-space:nowrap; }
+  .hstat{ display:flex; flex-direction:column; align-items:center; line-height:1.15; }
+  .hstat b{ font-size:20px; font-weight:900; font-style:italic; }
+  .hstat span{ font-size:9.5px; letter-spacing:1.5px; color:#94a6c0; }
+  .hsep{ width:1px; height:26px; background:rgba(255,255,255,.16); }
+  #st-score b{ color:var(--gold); }
+  #st-hr b{ color:var(--green); }
+  #st-far b{ color:var(--blue); }
+  #st-ball b{ color:#fff; }
+  #st-combo{ min-width:52px; }
+  #st-combo b{ color:#ff8de0; }
+  #st-combo.hot b{ color:#ff5252; text-shadow:0 0 14px rgba(255,90,90,.9); }
+
+  /* 剩餘球數點 */
+  #outs{ position:absolute; top:calc(64px + env(safe-area-inset-top)); left:50%; transform:translateX(-50%);
+    display:flex; gap:6px; }
+  #outs i{ width:9px; height:9px; border-radius:50%; background:rgba(255,255,255,.22); display:block; }
+  #outs i.used{ background:var(--red); }
+  #outs i.hit{ background:var(--green); }
+
+  /* 球種提示 */
+  #pitch-hint{ position:absolute; top:calc(96px + env(safe-area-inset-top)); left:50%; transform:translateX(-50%);
+    font-size:13px; font-weight:900; letter-spacing:2px; color:#ffe9a8; opacity:0; transition:opacity .2s; }
+  #pitch-hint.show{ opacity:1; }
+
+  /* 揮棒時機輔助條 */
+  #timing{ position:absolute; bottom:calc(152px + env(safe-area-inset-bottom)); left:50%; transform:translateX(-50%);
+    width:min(420px,74vw); height:26px; border-radius:13px; overflow:hidden;
+    background:rgba(8,12,22,.6); border:1px solid var(--line); }
+  #timing .zone{ position:absolute; top:0; bottom:0; }
+  #timing .z-ok{ left:34%; width:32%; background:rgba(93,255,160,.18); }
+  #timing .z-perfect{ left:47%; width:6%; background:rgba(255,210,63,.55); }
+  #timing .marker{ position:absolute; top:-3px; bottom:-3px; width:4px; border-radius:2px;
+    background:#fff; box-shadow:0 0 10px rgba(255,255,255,.9); left:0%; }
+  #timing.off{ display:none; }
+
+  /* 結果飛字 */
+  #result{ position:absolute; top:38%; left:50%; transform:translate(-50%,-50%) scale(.6); opacity:0;
+    text-align:center; transition:opacity .18s, transform .18s; }
+  #result.show{ opacity:1; transform:translate(-50%,-50%) scale(1); }
+  #result .r-main{ font-size:clamp(34px,8vw,72px); font-weight:900; font-style:italic; letter-spacing:2px;
+    -webkit-text-stroke:4px rgba(10,18,32,.82); paint-order:stroke fill;
+    text-shadow:0 6px 22px rgba(0,0,0,.55); }
+  #result .r-sub{ font-size:clamp(14px,3.4vw,22px); font-weight:800; color:#fff; margin-top:4px; letter-spacing:1px;
+    -webkit-text-stroke:3px rgba(10,18,32,.8); paint-order:stroke fill; }
+
+  /* 下一球倒數提示 */
+  #ready-cue{ position:absolute; top:60%; left:50%; transform:translate(-50%,-50%); text-align:center;
+    opacity:0; transition:opacity .25s; }
+  #ready-cue.show{ opacity:1; }
+  #ready-cue .rc-num{ font-size:clamp(52px,12vw,92px); font-weight:900; font-style:italic; line-height:1;
+    color:#fff; -webkit-text-stroke:3px rgba(12,20,36,.85); paint-order:stroke fill;
+    text-shadow:0 4px 20px rgba(0,0,0,.55); }
+  #ready-cue .rc-txt{ margin-top:4px; font-size:13px; font-weight:800; letter-spacing:5px; color:#fff;
+    -webkit-text-stroke:3px rgba(12,20,36,.8); paint-order:stroke fill; }
+  #ready-cue.hot .rc-num{ color:var(--gold); animation:pop .35s ease-out; }
+  @keyframes pop{ from{ transform:scale(1.45); } to{ transform:scale(1); } }
+
+  /* 底部控制 */
+  #ctrl{ position:absolute; bottom:calc(18px + env(safe-area-inset-bottom)); left:0; right:0;
+    display:flex; align-items:flex-end; justify-content:space-between; padding:0 16px; pointer-events:none; }
+  .cbtn{ pointer-events:auto; }
+  #btn-swing{ width:104px; height:104px; border-radius:50%; font-size:17px; font-weight:900; letter-spacing:1px;
+    color:#2b1a00; background:radial-gradient(circle at 34% 30%, #ffe98a, var(--gold) 45%, var(--gold2));
+    box-shadow:0 10px 28px rgba(255,160,30,.45), inset 0 -5px 12px rgba(140,70,0,.35);
+    border:2px solid rgba(255,255,255,.5); transition:transform .07s; }
+  #btn-swing:active{ transform:scale(.92); }
+  #left-stack{ display:grid; grid-template-columns:repeat(2, auto); gap:8px; }
+  .mini{ pointer-events:auto; padding:9px 13px; border-radius:11px; font-size:12px; font-weight:800;
+    background:var(--ink); border:1px solid var(--line); color:#cfe0f5; backdrop-filter:blur(6px); }
+  .mini.on{ color:#2b1a00; background:linear-gradient(180deg,#ffe98a,var(--gold)); border-color:#fff6; }
+  #hint-key{ position:absolute; bottom:calc(6px + env(safe-area-inset-bottom)); left:50%; transform:translateX(-50%);
+    font-size:11px; color:#e8f0fa; letter-spacing:.5px; text-shadow:0 1px 6px rgba(0,0,0,.85); }
+
+  /* ===================== 全螢幕面板 ===================== */
+  .screen{ position:fixed; inset:0; z-index:30; display:flex; align-items:center; justify-content:center;
+    padding:20px; background:radial-gradient(ellipse at 50% 30%, rgba(20,40,70,.55), rgba(3,6,14,.92) 70%);
+    backdrop-filter:blur(3px); overflow-y:auto; }
+  .card{ width:min(460px,94vw); padding:24px 22px 20px; border-radius:20px; text-align:center;
+    background:linear-gradient(180deg, rgba(18,26,44,.96), rgba(9,13,24,.97));
+    border:1px solid rgba(255,255,255,.16); box-shadow:0 30px 80px rgba(0,0,0,.6); color:#fff; }
+  .logo{ font-size:clamp(30px,7.4vw,46px); font-weight:900; font-style:italic; letter-spacing:1px; line-height:1.02;
+    background:linear-gradient(180deg,#fff7d6,var(--gold) 55%,var(--gold2));
+    -webkit-background-clip:text; background-clip:text; color:transparent;
+    filter:drop-shadow(0 4px 14px rgba(255,170,40,.35)); }
+  .logo small{ display:block; font-size:12px; letter-spacing:6px; color:#8fa4c2; -webkit-text-fill-color:#8fa4c2;
+    font-style:normal; font-weight:700; margin-top:6px; }
+  .sect{ margin-top:16px; text-align:left; }
+  .sect h4{ font-size:11px; letter-spacing:2px; color:#8fa4c2; margin-bottom:7px; font-weight:800; }
+  .row{ display:flex; gap:8px; }
+  .opt{ flex:1; padding:11px 6px; border-radius:12px; font-size:13px; font-weight:800; color:#c8d8ee;
+    background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.12); line-height:1.3; }
+  .opt small{ display:block; font-size:10px; font-weight:600; color:#7f93ae; margin-top:3px; }
+  .opt.sel{ color:#2b1a00; background:linear-gradient(180deg,#ffe98a,var(--gold)); border-color:#fff8; }
+  .opt.sel small{ color:#7a5200; }
+  input.name{ width:100%; padding:11px 13px; border-radius:12px; font-size:15px; font-weight:800; color:#fff;
+    background:rgba(255,255,255,.07); border:1px solid rgba(255,255,255,.14); outline:none; text-align:center; }
+  .cta{ margin-top:18px; width:100%; padding:15px; border-radius:14px; font-size:18px; font-weight:900; letter-spacing:2px;
+    color:#2b1a00; background:linear-gradient(180deg,#ffe98a,var(--gold) 50%,var(--gold2));
+    box-shadow:0 10px 26px rgba(255,160,30,.35); }
+  .cta:active{ transform:translateY(2px); }
+  .ghost{ margin-top:9px; width:100%; padding:11px; border-radius:12px; font-size:13px; font-weight:800; color:#b8c9e0;
+    background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.12); }
+
+  /* 排行榜 */
+  #lb-list{ margin-top:12px; max-height:46vh; overflow-y:auto; }
+  .lb-row{ display:flex; align-items:center; gap:10px; padding:9px 12px; border-radius:11px; margin-bottom:6px;
+    background:rgba(255,255,255,.05); font-size:13px; text-align:left; }
+  .lb-row .rk{ width:26px; font-weight:900; font-style:italic; color:#8fa4c2; }
+  .lb-row .nm{ flex:1; font-weight:800; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .lb-row .sc{ font-weight:900; color:var(--gold); }
+  .lb-row .ex{ font-size:10.5px; color:#8fa4c2; width:74px; text-align:right; }
+  .lb-row.me{ background:linear-gradient(90deg, rgba(255,210,63,.22), rgba(255,210,63,.06)); border:1px solid rgba(255,210,63,.35); }
+  .lb-row.r1 .rk{ color:#ffd23f; } .lb-row.r2 .rk{ color:#d8e3f0; } .lb-row.r3 .rk{ color:#e0a56b; }
+  .empty{ padding:24px; color:#7d90aa; font-size:13px; }
+
+  /* 結算數據 */
+  .grid2{ display:grid; grid-template-columns:1fr 1fr; gap:9px; margin-top:14px; }
+  .kv{ padding:11px; border-radius:12px; background:rgba(255,255,255,.05); }
+  .kv b{ display:block; font-size:23px; font-weight:900; font-style:italic; color:var(--gold); }
+  .kv span{ font-size:10px; letter-spacing:1.4px; color:#8fa4c2; }
+  .bigscore{ margin-top:14px; }
+  .bigscore b{ font-size:clamp(40px,10vw,62px); font-weight:900; font-style:italic; color:var(--gold);
+    text-shadow:0 6px 26px rgba(255,170,40,.35); }
+  .bigscore span{ display:block; font-size:11px; letter-spacing:3px; color:#8fa4c2; }
+
+  /* DEV 面板 */
+  #dev{ position:fixed; top:8px; right:8px; z-index:60; width:288px; max-height:92vh; overflow-y:auto;
+    padding:12px; font-size:11px; color:#dfe9f6; }
+  #dev h3{ font-size:12px; letter-spacing:1px; color:var(--gold); margin-bottom:8px; }
+  #dev .dgrp{ margin-bottom:9px; border-top:1px solid rgba(255,255,255,.1); padding-top:7px; }
+  #dev .dgrp>label{ display:block; font-size:10px; color:#8fa4c2; letter-spacing:1px; margin-bottom:5px; }
+  #dev .drow{ display:flex; align-items:center; gap:7px; margin-bottom:4px; }
+  #dev .drow span{ width:96px; color:#a9bdd6; font-size:10px; }
+  #dev .drow input[type=range]{ flex:1; height:16px; }
+  #dev .drow em{ width:46px; text-align:right; font-style:normal; color:var(--gold); font-size:10px; }
+  #dev .dbtns{ display:flex; gap:6px; flex-wrap:wrap; margin-top:8px; }
+  #dev .dbtn{ flex:1; min-width:64px; padding:7px 4px; border-radius:8px; font-size:10.5px; font-weight:800;
+    background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.14); color:#dfe9f6; }
+  #dev .dbtn.primary{ color:#2b1a00; background:linear-gradient(180deg,#ffe98a,var(--gold)); }
+  #dev-toggle{ position:fixed; right:8px; bottom:calc(140px + env(safe-area-inset-bottom)); z-index:59;
+    width:34px; height:34px; border-radius:9px; font-size:15px; opacity:.42;
+    background:var(--ink); border:1px solid var(--line); color:#fff; }
+  #dev-toggle:active{ opacity:1; }
+
+  /* 載入 */
+  #boot{ position:fixed; inset:0; z-index:80; display:flex; flex-direction:column; align-items:center; justify-content:center;
+    gap:14px; background:#050810; color:#8fa4c2; font-size:12px; letter-spacing:3px; }
+  #boot .ring{ width:44px; height:44px; border-radius:50%; border:3px solid rgba(255,255,255,.12);
+    border-top-color:var(--gold); animation:spin 1s linear infinite; }
+  @keyframes spin{ to{ transform:rotate(360deg); } }
+
+  @media (max-width:520px){
+    #hud-top{ gap:10px; padding:7px 12px; }
+    .hstat b{ font-size:17px; }
+    #btn-swing{ width:92px; height:92px; font-size:15px; }
+    #hint-key{ display:none; }
+  }
+</style>
+</head>
+<body>
+<div id="app"></div>
+
+<!-- ===================== HUD ===================== -->
+<div id="hud" class="hidden">
+  <div id="hud-top" class="panel">
+    <div class="hstat" id="st-score"><b>0</b><span>SCORE</span></div>
+    <div class="hsep"></div>
+    <div class="hstat" id="st-hr"><b>0</b><span>全壘打</span></div>
+    <div class="hsep"></div>
+    <div class="hstat" id="st-far"><b>0</b><span>最遠 M</span></div>
+    <div class="hsep"></div>
+    <div class="hstat" id="st-ball"><b>1/10</b><span>BALL</span></div>
+    <div class="hsep"></div>
+    <div class="hstat" id="st-combo"><b>0</b><span>COMBO</span></div>
+  </div>
+
+  <div id="outs"></div>
+  <div id="pitch-hint"></div>
+
+  <div id="timing">
+    <div class="zone z-ok"></div>
+    <div class="zone z-perfect"></div>
+    <div class="marker"></div>
+  </div>
+
+  <div id="result"><div class="r-main"></div><div class="r-sub"></div></div>
+
+  <div id="ready-cue">
+    <div class="rc-num"></div>
+    <div class="rc-txt">準備接球</div>
+  </div>
+
+  <div id="ctrl">
+    <div id="left-stack">
+      <button class="mini cbtn" id="btn-power">💪 強打 OFF</button>
+      <button class="mini cbtn" id="btn-assist">🎯 輔助 ON</button>
+      <button class="mini cbtn" id="btn-sound">🔊 音效 ON</button>
+      <button class="mini cbtn" id="btn-quit">✕ 結束</button>
+    </div>
+    <button class="cbtn" id="btn-swing">揮棒</button>
+  </div>
+  <div id="hint-key">空白鍵／點畫面 揮棒　·　P 強打　·　M 音效　·　D 開發者工具</div>
+</div>
+
+<!-- ===================== 開始畫面 ===================== -->
+<div class="screen" id="scr-menu">
+  <div class="card">
+    <div class="logo">全壘打王<small>HOMERUN KING</small></div>
+
+    <div class="sect">
+      <h4>難度</h4>
+      <div class="row" id="opt-diff">
+        <button class="opt sel" data-v="easy">新手<small>球慢·窗口寬</small></button>
+        <button class="opt" data-v="normal">職業<small>變化球登場</small></button>
+        <button class="opt" data-v="hard">大聯盟<small>159km·刁鑽</small></button>
+      </div>
+    </div>
+
+    <div class="sect">
+      <h4>模式</h4>
+      <div class="row" id="opt-mode">
+        <button class="opt sel" data-v="derby">10 球挑戰<small>比總分</small></button>
+        <button class="opt" data-v="survival">生存賽<small>揮空 3 次結束</small></button>
+      </div>
+    </div>
+
+    <div class="sect">
+      <h4>球員名稱</h4>
+      <input class="name" id="in-name" maxlength="10" placeholder="輸入名字">
+    </div>
+
+    <button class="cta" id="btn-start">開始打擊</button>
+    <button class="ghost" id="btn-lb">🏆 排行榜</button>
+  </div>
+</div>
+
+<!-- ===================== 結算 ===================== -->
+<div class="screen hidden" id="scr-over">
+  <div class="card">
+    <div class="logo" style="font-size:clamp(24px,6vw,34px)">打擊結束</div>
+    <div class="bigscore"><b id="ov-score">0</b><span>TOTAL SCORE</span></div>
+    <div class="grid2">
+      <div class="kv"><b id="ov-hr">0</b><span>全壘打</span></div>
+      <div class="kv"><b id="ov-far">0</b><span>最遠距離 M</span></div>
+      <div class="kv"><b id="ov-perfect">0</b><span>PERFECT</span></div>
+      <div class="kv"><b id="ov-avg">0</b><span>擊球率 %</span></div>
+    </div>
+    <div id="ov-rank" style="margin-top:12px; font-size:13px; font-weight:800; color:#ffe9a8;"></div>
+    <button class="cta" id="btn-again">再來一輪</button>
+    <button class="ghost" id="btn-over-lb">🏆 看排行榜</button>
+    <button class="ghost" id="btn-menu">回主選單</button>
+  </div>
+</div>
+
+<!-- ===================== 排行榜 ===================== -->
+<div class="screen hidden" id="scr-lb">
+  <div class="card">
+    <div class="logo" style="font-size:clamp(24px,6vw,34px)">🏆 排行榜</div>
+    <div class="row" id="opt-lbdiff" style="margin-top:14px">
+      <button class="opt sel" data-v="easy">新手</button>
+      <button class="opt" data-v="normal">職業</button>
+      <button class="opt" data-v="hard">大聯盟</button>
+    </div>
+    <div id="lb-list"></div>
+    <button class="ghost" id="btn-lb-clear" style="margin-top:12px">🗑 清空本難度紀錄</button>
+    <button class="cta" id="btn-lb-back">返回</button>
+  </div>
+</div>
+
+<!-- ===================== DEV ===================== -->
+<button id="dev-toggle" class="hidden">⚙</button>
+<div id="dev" class="panel hidden"></div>
+
+<div id="boot"><div class="ring"></div><div>LOADING STADIUM</div></div>
+
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+  }
+}
+</script>
+<script type="module" src="src/main.js"></script>
+</body>
+</html>
