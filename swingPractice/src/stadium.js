@@ -29,23 +29,14 @@ function fieldTexture(){
 
   x.fillStyle = '#43933e'; x.fillRect(0, 0, S, S);
 
-  // 同心弧割草帶（每 7m 一圈，深淺交替）— 這是主要的紋路
-  const bandPx = 7 * M2PX;
+  // 同心弧割草帶（每 9m 一圈，深淺交替）——人工草皮球場就是這種簡單的弧帶，
+  // 不要再疊放射狀，交叉起來會變成假假的棋盤格
+  const bandPx = 9 * M2PX;
   for (let i = 0, r = bandPx / 2; r < S; i++, r += bandPx){
     x.beginPath(); x.arc(cx, cy, r, 0, Math.PI * 2);
-    x.strokeStyle = i % 2 ? 'rgba(255,255,255,.072)' : 'rgba(0,45,0,.062)';
+    x.strokeStyle = i % 2 ? 'rgba(255,255,255,.075)' : 'rgba(0,50,0,.055)';
     x.lineWidth = bandPx; x.stroke();
   }
-  // 放射狀割草帶（只留淡淡一層，太強會變成棋盤格）
-  for (let a = 0; a < 360; a += 10){
-    x.save(); x.translate(cx, cy); x.rotate(a * DEG);
-    x.beginPath(); x.moveTo(0, 0); x.arc(0, 0, S, -5 * DEG, 5 * DEG); x.closePath();
-    x.fillStyle = (a / 10) % 2 ? 'rgba(255,255,255,.024)' : 'rgba(0,45,0,.02)';
-    x.fill(); x.restore();
-  }
-  // 內野草／外野草的交界弧
-  x.beginPath(); x.arc(cx, cy, 29.5 * M2PX, 0, Math.PI * 2);
-  x.strokeStyle = 'rgba(18,60,18,.18)'; x.lineWidth = 4; x.stroke();
 
   // 草絲質感：逐像素處理（比畫幾萬個小方塊快得多）
   const img = x.getImageData(0, 0, S, S), d = img.data;
@@ -85,7 +76,7 @@ function grassTexture(){
 function dirtTexture(){
   const s = 1024, c = document.createElement('canvas'); c.width = c.height = s;
   const x = c.getContext('2d');
-  x.fillStyle = '#a9714a'; x.fillRect(0, 0, s, s);
+  x.fillStyle = '#9c6440'; x.fillRect(0, 0, s, s);
   for (let r = 6; r < s * 1.4; r += 9){                 // 整地耙痕
     x.beginPath(); x.arc(s / 2, s / 2, r, 0, Math.PI * 2);
     x.strokeStyle = (r / 9) % 2 ? 'rgba(255,228,196,.11)' : 'rgba(88,44,20,.11)';
@@ -106,19 +97,24 @@ function dirtTexture(){
 function wallTexture(){
   const w = 2048, h = 128, c = document.createElement('canvas'); c.width = w; c.height = h;
   const x = c.getContext('2d');
-  x.fillStyle = '#1d6b48'; x.fillRect(0, 0, w, h);
-  x.fillStyle = 'rgba(255,255,255,.18)'; x.fillRect(0, h - 14, w, 5);
-  const ads = ['HOMERUN KING', '⚾ SWING', 'STADIUM', 'POWER', 'GRAND SLAM', 'CLAUDE PARK'];
-  const cols = ['#ffd23f', '#5ec8ff', '#ff8de0', '#5dffa0', '#ff9f1c', '#ffffff'];
+  // 深綠牆面 + 一塊塊白底廣告看板（パワプロ／東京巨蛋的樣子）
+  x.fillStyle = '#12492f'; x.fillRect(0, 0, w, h);
+  x.fillStyle = 'rgba(255,255,255,.22)'; x.fillRect(0, 0, w, 6);          // 牆頂白線
+  x.fillStyle = 'rgba(0,0,0,.25)'; x.fillRect(0, h - 10, w, 10);          // 牆底陰影
+  const ads = ['CLAUDE', 'HOMERUN', 'SWING', 'POWER', 'STADIUM', 'KING'];
+  const cols = ['#1b64c4', '#d0432f', '#e08a1e', '#1f8a4c', '#6b3fb5', '#0f9bbd'];
   x.textAlign = 'center'; x.textBaseline = 'middle';
-  for (let i = 0; i < 12; i++){
-    x.save(); x.translate((i + .5) * (w / 12), h / 2 - 4);
-    x.font = '900 italic 40px Helvetica, Arial';
-    x.fillStyle = cols[i % cols.length]; x.globalAlpha = .82;
-    x.fillText(ads[i % ads.length], 0, 0); x.restore();
+  const N = 10, bw = w / N;
+  for (let i = 0; i < N; i++){
+    const bx = i * bw + bw * .06, by = h * .16, bwid = bw * .88, bhei = h * .60;
+    x.fillStyle = '#f2f4f6'; x.fillRect(bx, by, bwid, bhei);             // 白色看板
+    x.strokeStyle = 'rgba(0,0,0,.22)'; x.lineWidth = 3; x.strokeRect(bx, by, bwid, bhei);
+    x.fillStyle = cols[i % cols.length];
+    x.font = '900 italic 34px Helvetica, Arial';
+    x.fillText(ads[i % ads.length], bx + bwid / 2, by + bhei / 2);
   }
   const t = new THREE.CanvasTexture(c);
-  t.wrapS = THREE.RepeatWrapping; t.repeat.set(6, 1);
+  t.wrapS = THREE.RepeatWrapping; t.repeat.set(5, 1);
   return t;
 }
 
@@ -192,10 +188,10 @@ function makeDome(){
 function seatTexture(){
   const w = 256, h = 64, c = document.createElement('canvas'); c.width = w; c.height = h;
   const x = c.getContext('2d');
-  x.fillStyle = '#22488f'; x.fillRect(0, 0, w, h);
+  x.fillStyle = '#16305f'; x.fillRect(0, 0, w, h);
   for (let i = 0; i < 32; i++){                        // 單張椅子
     const px = i * (w / 32);
-    x.fillStyle = '#2d5aa8'; x.fillRect(px + 1.5, 6, w / 32 - 3, h - 14);
+    x.fillStyle = '#1d3f79'; x.fillRect(px + 1.5, 6, w / 32 - 3, h - 14);
     x.fillStyle = 'rgba(255,255,255,.16)'; x.fillRect(px + 1.5, 6, w / 32 - 3, 4);
     x.fillStyle = 'rgba(6,14,30,.45)'; x.fillRect(px, 0, 1.5, h);
   }
@@ -335,28 +331,106 @@ function buildStands(){
   return { group: grp, crowd: inst, waveTime: uT, waveExcite: uE, crowdCount: n };
 }
 
-// ---------- 記分板 ----------
+// ---------- 好球帶線框（近景視角的瞄準參考） ----------
+export function buildStrikeZone(scene){
+  const W = 0.30, H = 0.34, T = 0.022;                   // 半寬 / 半高 / 邊框粗細
+  const zone = new THREE.Group();
+  const m = new THREE.MeshBasicMaterial({
+    color: 0xffffff, transparent: true, opacity: .62, depthTest: false, side: THREE.DoubleSide,
+  });
+  const bar = (w, h, x, y) => {
+    const b = new THREE.Mesh(new THREE.PlaneGeometry(w, h), m);
+    b.position.set(x, y, 0); b.renderOrder = 5; return b;
+  };
+  zone.add(bar(W * 2 + T, T, 0, H), bar(W * 2 + T, T, 0, -H),
+           bar(T, H * 2, -W, 0), bar(T, H * 2, W, 0));
+  zone.position.set(0, FIELD.plateY, 0.15);
+  zone.visible = false;
+  scene.add(zone);
+  return zone;
+}
+
+// ---------- 記分板（東京巨蛋式：中外野正上方的大型 LED 板） ----------
 function buildScoreboard(){
   const g = new THREE.Group();
-  const th = 6 * DEG, r = wallRadius(th) + 26;
+  const th = 2 * DEG, r = wallRadius(th) + 14;
   g.position.set(Math.sin(th) * r, 0, Math.cos(th) * r);
   g.lookAt(0, 0, 0);
-  const frame = new THREE.Mesh(new THREE.BoxGeometry(34, 15, 1.4), new THREE.MeshLambertMaterial({ color: 0x39445a }));
-  frame.position.y = 30; g.add(frame);
-  const c = document.createElement('canvas'); c.width = 1024; c.height = 448;
+
+  const W = 52, H = 19;
+  const frame = new THREE.Mesh(new THREE.BoxGeometry(W + 1.4, H + 1.4, 1.2),
+    new THREE.MeshLambertMaterial({ color: 0x2b3242 }));
+  frame.position.y = 27; g.add(frame);
+
+  const cw = 1536, ch = 560;
+  const c = document.createElement('canvas'); c.width = cw; c.height = ch;
   const x = c.getContext('2d');
-  x.fillStyle = '#070c16'; x.fillRect(0, 0, 1024, 448);
-  x.strokeStyle = '#1e2c46'; x.lineWidth = 6; x.strokeRect(10, 10, 1004, 428);
-  x.textAlign = 'center'; x.fillStyle = '#ffd23f';
-  x.font = '900 italic 118px Helvetica, Arial'; x.fillText('HOMERUN', 512, 160);
-  x.fillStyle = '#5ec8ff'; x.font = '900 italic 96px Helvetica, Arial'; x.fillText('KING', 512, 268);
-  x.fillStyle = '#7d90aa'; x.font = '700 44px Helvetica, Arial'; x.fillText('★ CLAUDE PARK ★', 512, 372);
-  const tex = new THREE.CanvasTexture(c);
-  const panel = new THREE.Mesh(new THREE.PlaneGeometry(31, 13.6), new THREE.MeshBasicMaterial({ map: tex }));
-  panel.position.set(0, 30, 0.85); g.add(panel);    // group 已 lookAt 本壘（+z 朝本壘），面板法線同向
-  const legL = new THREE.Mesh(new THREE.BoxGeometry(1.6, 23, 1.6), new THREE.MeshLambertMaterial({ color: 0x515e78 }));
-  legL.position.set(-12, 11.5, 0); g.add(legL);
-  const legR = legL.clone(); legR.position.x = 12; g.add(legR);
+  x.fillStyle = '#05070d'; x.fillRect(0, 0, cw, ch);
+
+  // 左側：LED 逐球顯示區
+  x.fillStyle = '#0b1220'; x.fillRect(24, 24, 470, ch - 48);
+  x.strokeStyle = '#22304a'; x.lineWidth = 3; x.strokeRect(24, 24, 470, ch - 48);
+  x.fillStyle = '#e8b53a'; x.font = '900 40px Helvetica, Arial'; x.textAlign = 'left';
+  x.fillText('TOKYO', 48, 84); x.fillText('DOME CITY', 48, 132);
+  x.fillStyle = '#7d90aa'; x.font = '700 26px Helvetica, Arial';
+  x.fillText('HOME RUN DERBY', 48, 182);
+  // 球數燈（B / S / O）
+  const lamps = [['B', 4, '#f0c419'], ['S', 3, '#e05a3a'], ['O', 3, '#3fa85a']];
+  lamps.forEach(([lab, cnt, col], row) => {
+    const ly = 246 + row * 74;
+    x.fillStyle = '#cfe0f5'; x.font = '900 40px Helvetica, Arial'; x.fillText(lab, 48, ly + 14);
+    for (let i = 0; i < cnt; i++){
+      x.beginPath(); x.arc(120 + i * 62, ly, 22, 0, Math.PI * 2);
+      x.fillStyle = i < (row === 0 ? 2 : 1) ? col : '#1a2438'; x.fill();
+      x.strokeStyle = '#2c3a55'; x.lineWidth = 3; x.stroke();
+    }
+  });
+
+  // 右側：局數比分表
+  const gx = 530, gw = cw - gx - 24;
+  const cols = 11, cellW = gw / cols;
+  x.strokeStyle = '#22304a'; x.lineWidth = 2;
+  x.textAlign = 'center'; x.textBaseline = 'middle';
+  for (let rrow = 0; rrow < 3; rrow++){
+    const ry = 24 + rrow * 96;
+    for (let i = 0; i < cols; i++){
+      x.strokeRect(gx + i * cellW, ry, cellW, 96);
+      x.font = rrow === 0 ? '700 30px Helvetica, Arial' : '900 40px Helvetica, Arial';
+      if (rrow === 0){
+        x.fillStyle = '#7d90aa';
+        x.fillText(i === 0 ? '' : (i <= 9 ? String(i) : 'R'), gx + i * cellW + cellW / 2, ry + 48);
+      } else {
+        if (i === 0){
+          x.fillStyle = rrow === 1 ? '#e8b53a' : '#5ec8ff';
+          x.font = '900 34px Helvetica, Arial';
+          x.fillText(rrow === 1 ? 'HOME' : 'AWAY', gx + cellW / 2, ry + 48);
+        } else if (i <= 9){
+          x.fillStyle = '#cfe0f5';
+          x.fillText(['0','1','0','0','2','0','1','0','—'][i - 1], gx + i * cellW + cellW / 2, ry + 48);
+        } else {
+          x.fillStyle = '#ffd23f';
+          x.fillText(rrow === 1 ? '4' : '2', gx + i * cellW + cellW / 2, ry + 48);
+        }
+      }
+    }
+  }
+  // 底部跑馬燈
+  x.fillStyle = '#0b1220'; x.fillRect(gx, 336, gw, 200);
+  x.strokeStyle = '#22304a'; x.strokeRect(gx, 336, gw, 200);
+  x.fillStyle = '#ffd23f'; x.font = '900 italic 92px Helvetica, Arial';
+  x.fillText('HOMERUN KING', gx + gw / 2, 412);
+  x.fillStyle = '#5ec8ff'; x.font = '900 48px Helvetica, Arial';
+  x.fillText('★ CLAUDE PARK ★', gx + gw / 2, 486);
+
+  const panel = new THREE.Mesh(new THREE.PlaneGeometry(W, H),
+    new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(c) }));
+  panel.position.set(0, 27, 0.75); g.add(panel);
+
+  const legMat = new THREE.MeshLambertMaterial({ color: 0x424b60 });
+  for (const lx of [-W * .36, W * .36]){
+    const leg = new THREE.Mesh(new THREE.BoxGeometry(1.8, 18, 1.8), legMat);
+    leg.position.set(lx, 9, 0); g.add(leg);
+  }
   return g;
 }
 
@@ -399,24 +473,27 @@ export function buildStadium(scene){
   turf.receiveShadow = true;
   scene.add(turf);
 
-  const dirtMat = new THREE.MeshLambertMaterial({ map: dirtTexture(), color: 0xe8bd93 });
+  const dirtMat = new THREE.MeshLambertMaterial({ map: dirtTexture(), color: 0xd8a578 });
 
-  // 內野土（扇形 ~ 半徑 29，公平區）
-  const inf = new THREE.Mesh(new THREE.CircleGeometry(29.5, 48, -Math.PI / 4 + Math.PI / 2 - Math.PI / 2, Math.PI / 2), dirtMat);
-  inf.rotation.x = -Math.PI / 2; inf.rotation.z = -Math.PI / 4 - Math.PI / 2; inf.position.y = 0.02;
-  inf.receiveShadow = true;
-  scene.add(inf);
+  // 人工草皮球場（東京巨蛋式）：內野「不是」一大片土，
+  // 只有本壘周邊、投手丘、四個壘包附近與壘間路徑是土，其餘全是草。
+  const B = 27.43 / Math.SQRT2;
+  const basePts = [[0, 0], [B, B], [0, 27.43], [-B, B]];   // 本壘 → 一壘 → 二壘 → 三壘
 
-  // 內野草（菱形內圈）
-  const grassIn = new THREE.Mesh(new THREE.CircleGeometry(23.5, 40), new THREE.MeshLambertMaterial({ map: grassTexture(), color: 0xe6f5da }));
-  grassIn.rotation.x = -Math.PI / 2; grassIn.position.set(0, 0.03, 20.5); grassIn.receiveShadow = true;
-  scene.add(grassIn);
-
-  // 本壘周邊土（含捕手、裁判所在的後方區域）
-  const homeDirt = new THREE.Mesh(new THREE.CircleGeometry(8.6, 40), dirtMat);
-  homeDirt.rotation.x = -Math.PI / 2; homeDirt.position.set(0, 0.04, -1.6);
-  homeDirt.scale.set(1, 0.92, 1); homeDirt.receiveShadow = true;
+  // 本壘周邊土（含捕手／裁判站的後方）
+  const homeDirt = new THREE.Mesh(new THREE.CircleGeometry(5.4, 40), dirtMat);
+  homeDirt.rotation.x = -Math.PI / 2; homeDirt.position.set(0, 0.04, -1.2);
+  homeDirt.scale.set(1.15, 0.95, 1); homeDirt.receiveShadow = true;
   scene.add(homeDirt);
+
+  // 各壘包周邊的土圈。東京巨蛋是全人工草皮，壘「間」沒有連續土路徑，
+  // 只有壘包周圍是滑壘用的土圈——做成連續土路是內野土球場的樣子，不是這裡。
+  for (let i = 1; i < 4; i++){
+    const [bx, bz] = basePts[i];
+    const d = new THREE.Mesh(new THREE.CircleGeometry(3.6, 28), dirtMat);
+    d.rotation.x = -Math.PI / 2; d.position.set(bx, 0.03, bz); d.receiveShadow = true;
+    scene.add(d);
+  }
 
   // 投手丘
   const mound = new THREE.Mesh(new THREE.CylinderGeometry(2.8, 3.4, .32, 28), dirtMat);
@@ -444,7 +521,6 @@ export function buildStadium(scene){
 
   // 壘包 + 壘線
   const baseMat = new THREE.MeshLambertMaterial({ color: 0xffffff });
-  const B = 27.43 / Math.SQRT2;
   const bases = [[B, 0, B], [0, 0, 27.43], [-B, 0, B]];
   for (const [bx, , bz] of bases){
     const m = new THREE.Mesh(new THREE.BoxGeometry(.46, .07, .46), baseMat);

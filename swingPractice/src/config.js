@@ -6,7 +6,7 @@ export const FIELD = {
   moundZ: 18.44,        // 投手丘距本壘
   releaseY: 1.34,       // 出手高度（Q 版身高 1.52m ＋ 投手丘 0.3m）
   releaseX: 0.28,       // 出手橫向偏移（右投：投手面向 -z，右手在世界 +x 側）
-  plateY: 0.72,         // 通過本壘的平均高度（Q 版打者的好球帶中心）
+  plateY: 0.78,         // 通過本壘的平均高度（對齊 Q 版打者揮棒時球棒掃過的高度）
   contactZ: 0.35,       // 理想擊球點（本壘板前方一點）
   wallL: 100,           // 左外野角落全壘打牆距離
   wallC: 122,           // 中外野
@@ -28,7 +28,10 @@ export const SWING = {
   good: 62,
   ok: 105,
   poor: 165,            // 超過 = 揮空
-  barrelDelay: 95,      // 按下到棒頭進入擊球區的延遲（人體反應補償）
+  // 按下到棒頭進入擊球區的延遲。必須等於「揮棒動畫跑到接觸幀」的時間
+  // （contactAt / swingSpeed = 0.42 / 2.6 ≈ 162ms），否則畫面與判定會錯開
+  barrelDelay: 162,
+  swingSpeed: 2.6,      // 揮棒動畫速度（越小越慢、越看得清楚出棒）
   assistBonus: 1.18,    // 輔助模式的判定窗口放大倍率
   powerWindow: 0.74,    // 強打模式窗口縮小倍率
   powerVelo: 1.13,      // 強打模式初速加成
@@ -65,17 +68,26 @@ export const PACE = {
   firstBall: 2.2,       // 開局第一球前的等待
   afterPlay: 3.2,       // 一般結果後到下一球
   afterHR: 4.6,         // 全壘打後（讓歡呼與鏡頭走完）
-  windupSpeed: 0.82,    // 投手預備動作速度（越小越慢）
+  windupSpeed: 0.58,    // 投手預備動作速度（越小越慢）
   countdown: 1.9,       // 顯示倒數提示的秒數（要短於 afterPlay - 結果字停留時間，避免重疊）
-  flightSpeed: 2.1,     // 擊出後的播放倍速（真實滯空 6 秒太拖，只加快播放不改物理結果）
+  flightSpeed: 2.9,     // 擊出後的播放倍速（真實滯空 6 秒太拖，只加快播放不改物理結果）
+  swingHold: 0.52,      // 擊中後鏡頭停在打擊視角的秒數（看完揮棒動作再追球）
+  hitstop: 0.075,       // 擊中瞬間的畫面凍結（動作遊戲的打擊感來源）
+  windupSpeedSlow: 0.58,
 };
 
 // 相機（DEV 可調）
 export const CAM = {
-  batY: 2.45, batZ: -7.4, batX: -0.55, batLookY: 0.98, batLookZ: 9,  // 打擊視角
-  fov: 52, fovMobile: 64,
+  // 打擊視角：打者近景、鏡頭低而平、視線直看投手（打者會落在畫面右側）
+  // batY 要明顯高過打者頭頂(1.49)，否則揮棒時球棒整支被身體擋住
+  batX: 0.52, batY: 1.78, batZ: -3.15,
+  batLookX: 0.02, batLookY: 1.00, batLookZ: 16,
+  portraitX: -0.58, portraitY: 0.30, portraitZ: -1.5,   // 直屏視野窄，退後並把打者往畫面內帶
+  fov: 52, fovMobile: 62,
   followLerp: 0.09,
-  shake: 0.6,
+  shake: 1.15,          // 擊中的鏡頭震動
+  hitZoom: 6,           // 擊中瞬間的 FOV 縮進（衝擊感）
+  showCatcher: 0,                      // 0 = 不顯示捕手與裁判（會擋住近景視角）
 };
 
 // UI 版面（DEV 可調位置的元素）

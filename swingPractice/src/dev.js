@@ -8,6 +8,9 @@ const SPEC = [
     [PACE, 'afterHR', 1, 10, .1, '全壘打後'],
     [PACE, 'firstBall', .5, 6, .1, '開局等待'],
     [PACE, 'flightSpeed', 1, 4, .1, '飛球播放倍速'],
+    [PACE, 'swingHold', 0, 1.5, .02, '擊球後鏡頭停留'],
+    [PACE, 'hitstop', 0, 0.25, .005, '擊中頓幀'],
+    [SWING, 'swingSpeed', 1.2, 5, .1, '揮棒動畫速度'],
     [PACE, 'windupSpeed', .3, 2, .05, '投球動作速度'],
     [PACE, 'countdown', 0, 5, .1, '倒數顯示秒數'],
   ]],
@@ -43,15 +46,20 @@ const SPEC = [
     [FIELD, 'releaseY', 0.8, 2.2, 0.02, '出手高度'],
   ]],
   ['相機', [
-    [CAM, 'batX', -4, 4, 0.05, '打擊視角 X'],
-    [CAM, 'batY', 0.8, 8, 0.05, '打擊視角 Y'],
-    [CAM, 'batZ', -20, -2, 0.1, '打擊視角 Z'],
-    [CAM, 'batLookY', 0, 4, 0.05, '注視 Y'],
-    [CAM, 'batLookZ', 0, 30, 0.5, '注視 Z'],
+    [CAM, 'batX', -4, 4, 0.02, '打擊視角 X'],
+    [CAM, 'batY', 0.6, 8, 0.02, '打擊視角 Y'],
+    [CAM, 'batZ', -20, -0.5, 0.05, '打擊視角 Z'],
+    [CAM, 'batLookX', -3, 3, 0.02, '注視 X'],
+    [CAM, 'batLookY', 0, 4, 0.02, '注視 Y'],
+    [CAM, 'batLookZ', 0, 40, 0.5, '注視 Z'],
+    [CAM, 'portraitX', -3, 3, 0.02, '直屏 X 偏移'],
+    [CAM, 'portraitY', -1, 3, 0.02, '直屏 Y 偏移'],
+    [CAM, 'portraitZ', -4, 2, 0.05, '直屏 Z 偏移'],
     [CAM, 'fov', 30, 90, 1, 'FOV (PC)'],
     [CAM, 'fovMobile', 40, 100, 1, 'FOV (手機)'],
     [CAM, 'followLerp', 0.02, 0.4, 0.01, '追球平滑'],
-    [CAM, 'shake', 0, 3, 0.05, '震動'],
+    [CAM, 'shake', 0, 3, 0.05, '擊中震動'],
+    [CAM, 'hitZoom', 0, 20, 0.5, '擊中鏡頭縮進'],
   ]],
 ];
 
@@ -75,6 +83,7 @@ export function initDev(G){
     <button class="dbtn primary" id="dv-save">💾 匯出</button>
     <button class="dbtn" id="dv-test">⚾ 測試擊球</button>
     <button class="dbtn" id="dv-cam">📷 循環鏡頭</button>
+    <button class="dbtn" id="dv-catcher">👤 捕手／裁判</button>
     <button class="dbtn" id="dv-reset">↺ 全部重置</button>
   </div>
   <div style="margin-top:8px;font-size:10px;color:#7d90aa;line-height:1.5">
@@ -108,6 +117,9 @@ export function initDev(G){
     B.state = 'hit'; B.landed = null; B.hr = false; B.foul = false; B.dist = 0; B.trailPts.length = 0;
     hitBall(B, HIT.veloMax, HIT.angleBest, 0);
     if (G.game) { G.game.camMode = 'follow'; G.game._devWatch = 2.5; }
+  });
+  document.getElementById('dv-catcher').addEventListener('click', () => {
+    G.setCatcherVisible && G.setCatcherVisible(!CAM.showCatcher);
   });
   document.getElementById('dv-cam').addEventListener('click', () => {
     if (!G.game) return;

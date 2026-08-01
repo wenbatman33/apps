@@ -97,7 +97,9 @@ export function initGame(G){
     if (g.phase === 'windup'){ return; }               // 太早，忽略（不罰）
     if (g.phase !== 'pitching' || g.swungThisPitch) return;
     g.swungThisPitch = true; g.swings++;
-    triggerSwing(bat, g.power);
+    // 揮棒平面跟著這球的高低走，球棒才會真的掃過球
+    const aim = THREE.MathUtils.clamp((g.pending.targetY - FIELD.plateY) * 0.7, -0.2, 0.2);
+    triggerSwing(bat, g.power, aim);
 
     const scale = DIFF[g.diff].windowScale * (g.assist ? SWING.assistBonus : 1) * (g.power ? SWING.powerWindow : 1);
     const err = (SWING.barrelDelay / 1000 - timeToContact(B)) * 1000;   // ms，負=太早
@@ -107,8 +109,10 @@ export function initGame(G){
     const wPerf = SWING.perfect * scale, wGood = SWING.good * scale,
           wOk = SWING.ok * scale, wPoor = SWING.poor * scale;
 
+    Sound.whoosh();                                    // 每次出棒都有風聲，才聽得出「揮了」
+
     if (ae > wPoor){                                   // 揮空
-      setTimeout(() => Sound.whoosh(), 60);
+      setTimeout(() => Sound.sigh(), 260);
       g.resultPending = { kind: 'miss' };
       g.phase = 'result'; g.timer = 1.15;
       return;
@@ -133,20 +137,33 @@ export function initGame(G){
     let spray = err * HIT.sprayK + gauss() * HIT.spraySpread;
     spray = THREE.MathUtils.clamp(spray, -58, 58);
 
-    // 擊球點：把球移到棒子接觸位置附近
-    B.mesh.position.set(-0.5, Math.max(.42, B.mesh.position.y), FIELD.contactZ);
-    hitBall(B, velo, angle, spray);
-
-    Sound.crack(q);
-    fx.spark(B.mesh.position, q);
-    g.shake = CAM.shake * (0.5 + q);
-    g.excite = Math.max(g.excite, .3 + q * .5);
-
+    // 判定已完成，但球要等揮棒動畫掃到接觸幀才飛出去——
+    // 否則會出現「一按下去球就飛走、球棒事後才掃過來」的錯位
     g.resultPending = { kind: 'hit', grade, q, velo, angle, spray };
-    g.phase = 'result'; g.timer = 0.28;                 // 稍後切追球鏡頭
-    G.ui.showResultFlash(grade, velo);
-    if (velo > 42) { g.slowmo = 0.55; }
+    g.pendingHit = { grade, q, velo, angle, spray };
+    g.phase = 'result'; g.timer = 0.28;
   };
+
+  // 揮棒動畫掃到接觸幀時，才真正把球打出去
+  function executeHit(){
+    const h = g.pendingHit;
+    g.pendingHit = null;
+
+    // 對齊揮棒時球棒中段（甜蜜點）的位置，看起來才是「打中」而不是被握把碰到
+    B.mesh.position.set(-0.78, Math.max(.5, B.mesh.position.y), FIELD.contactZ + 0.16);
+    hitBall(B, h.velo, h.angle, h.spray);
+
+    // ---- 打擊感：頓幀 → 鏡頭縮進 → 震動 → 火花 → 慢動作 ----
+    Sound.crack(h.q);
+    fx.spark(B.mesh.position, h.q);
+    g.hitstop = PACE.hitstop * (0.55 + h.q * 0.75);      // 擊中那一下畫面先卡住
+    g.hitZoom = CAM.hitZoom * (0.5 + h.q * 0.7);         // 再猛地縮進
+    g.shake = CAM.shake * (0.5 + h.q);
+    g.excite = Math.max(g.excite, .3 + h.q * .5);
+    g.hitHold = PACE.swingHold;
+    G.ui.showResultFlash(h.grade, h.velo);
+    if (h.velo > 36) g.slowmo = 0.4 + h.q * 0.25;
+  }
 
   // ---------------- 結果結算 ----------------
   function settle(){
@@ -156,7 +173,6 @@ export function initGame(G){
     if (r.kind === 'miss'){
       g.combo = 0; g.outs++;
       title = '揮 空'; sub = g.lastErr < 0 ? '揮太早了' : '慢了半拍';
-      Sound.sigh();
       g.pitchLog.push({ r: 'miss' });
     } else if (r.kind === 'take'){
       g.combo = 0;
@@ -207,11 +223,16 @@ export function initGame(G){
 
   // ---------------- 每幀 ----------------
   g.update = (dt, t) => {
+    // 好球帶只在等球／投球時顯示
+    if (G.strikeZone){
+      G.strikeZone.position.y = FIELD.plateY;
+      G.strikeZone.visible = g.assist && (g.phase === 'windup' || g.phase === 'pitching');
+    }
     if (g.phase === 'menu' || g.phase === 'over') return;
 
     g.excite = Math.max(0, g.excite - dt * .35);
-    g.shake = Math.max(0, g.shake - dt * 2.2);
-    if (g.slowmo > 0){ g.slowmo -= dt; }
+    g.shake = Math.max(0, g.shake - dt * 2.6);
+    // 注意：slowmo / hitstop 由 main.js 用「未縮放」的真實 dt 遞減，這裡不能扣
 
     // 打者蓄力（球飛行中前半段）
     if (g.phase === 'windup') bat.loaded = Math.min(1, bat.loaded + dt * 2.2);
@@ -230,10 +251,20 @@ export function initGame(G){
     }
 
     if (g.phase === 'result'){
-      // 擊出後改追球鏡頭
-      if (g.resultPending?.kind === 'hit' && B.state === 'hit') g.camMode = 'follow';
+      // 揮棒動畫掃到接觸幀 → 球才飛出去
+      if (g.pendingHit){
+        // 時機差很多時球會先飛過本壘板，先藏起來免得穿過鏡頭
+        if (B.mesh.position.z < -1.2) B.mesh.visible = false;
+        if (bat.swing >= bat.contactAt){ B.mesh.visible = true; executeHit(); }
+      }
+      // 擊出後先讓鏡頭停在打擊視角看完揮棒，再切去追球
+      if (g.resultPending?.kind === 'hit' && B.state === 'hit'){
+        g.hitHold -= dt;
+        if (g.hitHold <= 0) g.camMode = 'follow';
+      }
       g.timer -= dt;
-      const flying = g.resultPending?.kind === 'hit' && B.state === 'hit';
+      // 等接觸幀的球還沒打出去，也不能提前結算
+      const flying = g.resultPending?.kind === 'hit' && (B.state === 'hit' || !!g.pendingHit);
       if (flying) g.timer = Math.max(g.timer, .05);      // 球還在飛就等
       if (!flying && g.timer <= 0) settle();
     } else if (g.phase === 'ready'){
@@ -300,7 +331,10 @@ function makeFX(scene){
   }
 
   return {
-    spark(p, q){ emit(p, 22, 1, 4 + q * 7, new THREE.Color(0xffd23f)); },
+    spark(p, q){                                        // 擊中的爆裂火花
+      emit(p, 26 + Math.round(q * 22), 1, 6 + q * 11, new THREE.Color(0xffe071));
+      emit(p, 10, 1, 3 + q * 5, new THREE.Color(0xffffff));
+    },
     firework(p){
       emit(p, 46, 1, 13, new THREE.Color(0xff8de0));
       setTimeout(() => emit(p, 40, 1, 10, new THREE.Color(0x5ec8ff)), 180);
