@@ -65,8 +65,8 @@ export function aiWantsItem(kart, karts, dt) {
   kart.itemCd -= dt;
   if (kart.itemCd > 0) return false;
   kart.itemCd = 0.8 + Math.random() * 2.2;
-  // 紅龜殼/閃電看時機，其他隨緣
-  if (kart.item === 'redShell') {
+  // 追蹤彈看時機，其他隨緣
+  if (kart.item === 'missile') {
     return karts.some(o => o !== kart && !o.finished && o.progress > kart.progress);
   }
   return Math.random() < 0.75;

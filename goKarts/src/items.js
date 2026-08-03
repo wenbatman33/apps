@@ -1,9 +1,8 @@
-// 道具系統：道具箱、輪盤、綠龜殼/紅龜殼/香蕉/蘑菇/閃電
+// 道具系統：道具箱、輪盤、足球/追蹤彈/油漬/氮氣/落雷
 import * as THREE from 'three';
 import { angleDiff } from './physics.js';
 
-export const ITEM_ICONS = { greenShell: '🐢', redShell: '🎯', banana: '🍌', mushroom: '🍄', lightning: '⚡' };
-const ICON_LIST = Object.keys(ITEM_ICONS);
+export const ITEM_ICONS = { ball: '⚽', missile: '🚀', oil: '🛢️', nitro: '💨', thunder: '⚡' };
 
 export class ItemManager {
   constructor(scene, track, karts, sound) {
@@ -30,9 +29,9 @@ export class ItemManager {
     const total = this.karts.length;
     const r = kart.rank, rnd = Math.random();
     let table;
-    if (r === 1) table = [['banana', .42], ['greenShell', .38], ['mushroom', .15], ['redShell', .05]];
-    else if (r <= Math.ceil(total / 2)) table = [['greenShell', .25], ['redShell', .28], ['banana', .14], ['mushroom', .28], ['lightning', .05]];
-    else table = [['redShell', .30], ['mushroom', .33], ['lightning', .18], ['greenShell', .14], ['banana', .05]];
+    if (r === 1) table = [['oil', .42], ['ball', .38], ['nitro', .15], ['missile', .05]];
+    else if (r <= Math.ceil(total / 2)) table = [['ball', .25], ['missile', .28], ['oil', .14], ['nitro', .28], ['thunder', .05]];
+    else table = [['missile', .30], ['nitro', .33], ['thunder', .18], ['ball', .14], ['oil', .05]];
     let acc = 0;
     for (const [it, w] of table) { acc += w; if (rnd < acc) return it; }
     return table[0][0];
@@ -42,44 +41,54 @@ export class ItemManager {
   use(kart) {
     if (!kart.item || kart.rouletteT > 0) return false;
     const item = kart.item; kart.item = null;
-    const t = this.track, N = t.N;
-    if (item === 'mushroom') {
+    const t = this.track;
+    if (item === 'nitro') {
+      // 氮氣：立即噴射
       kart.boost = Math.max(kart.boost, 1.6);
       this.sound.boost();
       return true;
     }
-    if (item === 'lightning') {
+    if (item === 'thunder') {
+      // 落雷：全場對手遭雷擊（有明確的落雷視覺）
       for (const o of this.karts) {
         if (o === kart || o.finished) continue;
         o.spinT = Math.max(o.spinT, 0.9); o.shrinkT = 5; o.speed *= 0.4;
+        this.spawnBolt(o);
       }
       this.sound.lightning();
       if (kart.isPlayer) flashScreen('rgba(255,255,160,0.55)');
       return true;
     }
-    if (item === 'banana') {
-      // 丟在車後方
+    if (item === 'oil') {
+      // 油漬：丟在車後方的黑色滑油區
       const back = kart.pos.clone();
-      back.x -= Math.sin(kart.heading) * 3.2; back.z -= Math.cos(kart.heading) * 3.2;
+      back.x -= Math.sin(kart.heading) * 3.4; back.z -= Math.cos(kart.heading) * 3.4;
       const q = t.query(back, kart.idx);
-      back.y = t.surfaceY(q.idx, Math.max(0, Math.min(1, q.frac)), q.lateral) + 0.35;
-      const mesh = bananaMesh();
+      const frac = THREE.MathUtils.clamp(q.frac, 0, 1);
+      back.y = t.surfaceY(q.idx, frac, q.lateral) + 0.06;
+      const mesh = oilMesh();
+      // 貼合路面法線
+      const s = t.samples[q.idx];
+      const side3 = s.side.clone(); side3.y += s.bankSlope; side3.normalize();
+      const n = new THREE.Vector3().crossVectors(side3, s.tan).normalize();
+      if (n.y < 0) n.negate();
+      mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), n);
       mesh.position.copy(back);
       this.scene.add(mesh);
-      this.entities.push({ kind: 'banana', pos: back, idx: q.idx, lateral: q.lateral, mesh, life: 30, owner: kart, armT: 0.4 });
+      this.entities.push({ kind: 'oil', pos: back, idx: q.idx, lateral: q.lateral, mesh, life: 30, owner: kart, armT: 0.4 });
       this.sound.itemThrow();
       return true;
     }
-    if (item === 'greenShell' || item === 'redShell') {
-      const red = item === 'redShell';
+    if (item === 'ball' || item === 'missile') {
+      const missile = item === 'missile';
       const pos = kart.pos.clone();
-      pos.x += Math.sin(kart.heading) * 2.6; pos.z += Math.cos(kart.heading) * 2.6; pos.y += 0.5;
-      const mesh = shellMesh(red ? 0xe33b3b : 0x2fb757);
+      pos.x += Math.sin(kart.heading) * 2.6; pos.z += Math.cos(kart.heading) * 2.6; pos.y += 0.55;
+      const mesh = missile ? missileMesh() : ballMesh();
       mesh.position.copy(pos);
       this.scene.add(mesh);
-      // 紅殼鎖定前方最近對手
+      // 追蹤彈鎖定前方最近對手
       let target = null;
-      if (red) {
+      if (missile) {
         let bestGap = Infinity;
         for (const o of this.karts) {
           if (o === kart || o.finished) continue;
@@ -88,8 +97,10 @@ export class ItemManager {
         }
       }
       this.entities.push({
-        kind: 'shell', red, pos, heading: kart.heading, speed: 58,
-        idx: kart.idx, lateral: kart.lateral, mesh, life: 9, bounces: 6,
+        kind: missile ? 'missile' : 'ball',
+        pos, heading: kart.heading, speed: missile ? 66 : 52,
+        idx: kart.idx, lateral: kart.lateral, mesh,
+        life: missile ? 8 : 10, bounces: missile ? 1 : 8,
         owner: kart, armT: 0.45, target,
       });
       this.sound.itemThrow();
@@ -98,9 +109,17 @@ export class ItemManager {
     return false;
   }
 
-  // AI 避障用：目前場上的陷阱/殼
+  // 落雷視覺：從天而降的鋸齒閃電，短暫顯示後淡出
+  spawnBolt(victim) {
+    const g = boltMesh();
+    g.position.copy(victim.pos);
+    this.scene.add(g);
+    this.entities.push({ kind: 'bolt', pos: victim.pos.clone(), idx: victim.idx, lateral: victim.lateral, mesh: g, life: 0.5, maxLife: 0.5, owner: null, armT: 0 });
+  }
+
+  // AI 避障用：目前場上的陷阱/投射物
   hazards() {
-    return this.entities.map(e => ({ idx: e.idx, lateral: e.lateral }));
+    return this.entities.filter(e => e.kind !== 'bolt').map(e => ({ idx: e.idx, lateral: e.lateral }));
   }
 
   update(dt, raceTime) {
@@ -145,19 +164,25 @@ export class ItemManager {
       e.life -= dt; e.armT = Math.max(0, e.armT - dt);
       if (e.life <= 0) { this.remove(i); continue; }
 
-      if (e.kind === 'shell') {
-        // 紅殼導引：沿賽道追目標
-        if (e.red && e.target && !e.target.finished) {
+      // 落雷：只做視覺淡出，無碰撞
+      if (e.kind === 'bolt') {
+        const f = e.life / e.maxLife;
+        e.mesh.traverse(o => { if (o.material) o.material.opacity = f; });
+        e.mesh.rotation.y += dt * 3;
+        continue;
+      }
+
+      if (e.kind === 'ball' || e.kind === 'missile') {
+        // 追蹤彈導引：沿賽道追目標
+        if (e.kind === 'missile' && e.target && !e.target.finished) {
           const gap = ((e.target.idx - e.idx) % N + N) % N;
           if (gap < 26) {
-            // 近距離直接追
             const th = Math.atan2(e.target.pos.x - e.pos.x, e.target.pos.z - e.pos.z);
-            e.heading += THREE.MathUtils.clamp(angleDiff(th, e.heading), -3.2 * dt, 3.2 * dt);
+            e.heading += THREE.MathUtils.clamp(angleDiff(th, e.heading), -3.6 * dt, 3.6 * dt);
           } else {
-            // 遠距離沿賽道中線
             const s = t.samples[(e.idx + 8) % N];
             const th = Math.atan2(s.pos.x - e.pos.x, s.pos.z - e.pos.z);
-            e.heading += THREE.MathUtils.clamp(angleDiff(th, e.heading), -2.4 * dt, 2.4 * dt);
+            e.heading += THREE.MathUtils.clamp(angleDiff(th, e.heading), -2.6 * dt, 2.6 * dt);
           }
         }
         e.pos.x += Math.sin(e.heading) * e.speed * dt;
@@ -165,9 +190,14 @@ export class ItemManager {
         const q = t.query(e.pos, e.idx);
         e.idx = q.idx; e.lateral = q.lateral;
         const s = t.samples[q.idx];
-        // 撞牆反彈
+        // 撞牆：足球反彈、追蹤彈爆掉
         const lim = t.wallD - 0.6;
         if (Math.abs(q.lateral) > lim) {
+          e.bounces--;
+          if (e.bounces <= 0) {
+            if (e.kind === 'missile') this.sound.hit(false);
+            this.remove(i); continue;
+          }
           const segLen = t.totalLen / N;
           const base = s.pos.clone().addScaledVector(s.tan, THREE.MathUtils.clamp(q.frac, 0, 1) * segLen);
           const sign = Math.sign(q.lateral);
@@ -175,27 +205,38 @@ export class ItemManager {
           e.pos.z = base.z + s.side.z * lim * sign;
           const trackH = Math.atan2(s.tan.x, s.tan.z);
           e.heading = trackH - angleDiff(e.heading, trackH); // 鏡射反彈
-          e.bounces--;
           this.sound.shellBounce();
-          if (e.bounces <= 0) { this.remove(i); continue; }
         }
-        e.pos.y = t.surfaceY(e.idx, THREE.MathUtils.clamp(q.frac, 0, 1), THREE.MathUtils.clamp(q.lateral, -lim, lim)) + 0.45;
+        e.pos.y = t.surfaceY(e.idx, THREE.MathUtils.clamp(q.frac, 0, 1), THREE.MathUtils.clamp(q.lateral, -lim, lim)) + (e.kind === 'ball' ? 0.5 : 0.45);
         e.mesh.position.copy(e.pos);
-        e.mesh.rotation.y += dt * 12;
+        if (e.kind === 'ball') {
+          // 足球滾動
+          e.mesh.rotation.y = e.heading;
+          e.mesh.rotation.x += e.speed * dt / 0.5;
+        } else {
+          // 追蹤彈朝向飛行方向
+          e.mesh.rotation.y = e.heading;
+        }
       }
 
       // ---- 命中判定 ----
       for (const k of this.karts) {
         if (k.finished || k.spinT > 0) continue;
         if (e.owner === k && e.armT > 0) continue;
-        const rr = e.kind === 'shell' ? 2.4 : 2.0;
+        const rr = e.kind === 'oil' ? 2.6 : 2.4;
         if (k.pos.distanceToSquared(e.pos) < rr) {
-          k.spinT = Math.max(k.spinT, e.kind === 'shell' ? 1.3 : 1.0);
-          k.speed *= e.kind === 'shell' ? 0.25 : 0.4;
+          if (e.kind === 'oil') {
+            k.spinT = Math.max(k.spinT, 0.9); k.speed *= 0.5;
+          } else if (e.kind === 'missile') {
+            k.spinT = Math.max(k.spinT, 1.4); k.speed *= 0.2;
+          } else {
+            k.spinT = Math.max(k.spinT, 1.2); k.speed *= 0.3;
+          }
           if (k.drift.active) { k.drift.active = false; k.drift.dir = 0; k.drift.charge = 0; }
           this.sound.hit(k.isPlayer);
           if (k.isPlayer) flashScreen('rgba(255,80,60,0.35)');
-          this.remove(i);
+          // 油漬踩過不消失（留在原地），投射物命中即消失
+          if (e.kind !== 'oil') this.remove(i);
           break;
         }
       }
@@ -215,32 +256,111 @@ export class ItemManager {
   }
 }
 
-// ---- 模型 ----
-function shellMesh(color) {
+// ============ 模型 ============
+let _ballTex = null;
+function ballTexture() {
+  if (_ballTex) return _ballTex;
+  const c = document.createElement('canvas'); c.width = 128; c.height = 64;
+  const g = c.getContext('2d');
+  g.fillStyle = '#f4f4f4'; g.fillRect(0, 0, 128, 64);
+  g.fillStyle = '#181818';
+  for (let i = 0; i < 10; i++) {
+    const x = (i % 5) * 26 + (i >= 5 ? 13 : 0) + 6, y = i >= 5 ? 42 : 12;
+    g.beginPath();
+    for (let k = 0; k < 5; k++) {
+      const a = k / 5 * Math.PI * 2 - Math.PI / 2;
+      const px = x + Math.cos(a) * 7, py = y + Math.sin(a) * 7;
+      k === 0 ? g.moveTo(px, py) : g.lineTo(px, py);
+    }
+    g.closePath(); g.fill();
+  }
+  _ballTex = new THREE.CanvasTexture(c);
+  return _ballTex;
+}
+
+function ballMesh() {
+  return new THREE.Mesh(
+    new THREE.SphereGeometry(0.5, 14, 10),
+    new THREE.MeshLambertMaterial({ map: ballTexture() })
+  );
+}
+
+function missileMesh() {
   const g = new THREE.Group();
-  const dome = new THREE.Mesh(new THREE.SphereGeometry(0.55, 10, 8, 0, Math.PI * 2, 0, Math.PI * 0.55),
-    new THREE.MeshLambertMaterial({ color }));
-  g.add(dome);
-  const rim = new THREE.Mesh(new THREE.CylinderGeometry(0.56, 0.5, 0.18, 12),
-    new THREE.MeshLambertMaterial({ color: 0xf5f0dc }));
-  rim.position.y = -0.02; g.add(rim);
+  const grey = new THREE.MeshLambertMaterial({ color: 0x9aa4b5 });
+  const red = new THREE.MeshLambertMaterial({ color: 0xd8352f });
+  const body = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.16, 0.95, 10), grey);
+  body.rotation.x = Math.PI / 2; g.add(body);
+  const nose = new THREE.Mesh(new THREE.ConeGeometry(0.16, 0.4, 10), red);
+  nose.rotation.x = Math.PI / 2; nose.position.z = 0.67; g.add(nose);
+  for (const [fx, fy] of [[0.22, 0], [-0.22, 0], [0, 0.22], [0, -0.22]]) {
+    const fin = new THREE.Mesh(new THREE.BoxGeometry(fx ? 0.3 : 0.04, fy ? 0.3 : 0.04, 0.22), red);
+    fin.position.set(fx, fy, -0.42); g.add(fin);
+  }
+  const flame = new THREE.Mesh(new THREE.ConeGeometry(0.13, 0.5, 8),
+    new THREE.MeshBasicMaterial({ color: 0xffa229, transparent: true, opacity: 0.9 }));
+  flame.rotation.x = -Math.PI / 2; flame.position.z = -0.75; g.add(flame);
   return g;
 }
 
-function bananaMesh() {
+function oilMesh() {
   const g = new THREE.Group();
-  const mat = new THREE.MeshLambertMaterial({ color: 0xffd428 });
-  const seg1 = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.22, 0.75, 7), mat);
-  seg1.rotation.z = 0.6; seg1.position.set(-0.2, 0.3, 0); g.add(seg1);
-  const seg2 = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.16, 0.75, 7), mat);
-  seg2.rotation.z = -0.6; seg2.position.set(0.2, 0.3, 0); g.add(seg2);
-  const tip = new THREE.Mesh(new THREE.SphereGeometry(0.09, 6, 5), new THREE.MeshLambertMaterial({ color: 0x6b4a1f }));
-  tip.position.set(-0.5, 0.58, 0); g.add(tip);
-  g.scale.setScalar(1.4); // 放大避免玩家看不見
+  const mat = new THREE.MeshBasicMaterial({ color: 0x14161c, transparent: true, opacity: 0.88 });
+  // 不規則油漬：主橢圓 + 幾滴小圓
+  const main = new THREE.Mesh(new THREE.CircleGeometry(1.15, 18), mat);
+  main.rotation.x = -Math.PI / 2; main.scale.z = 0.75; g.add(main);
+  for (const [ox, oz, r] of [[0.9, 0.55, 0.3], [-0.85, -0.4, 0.35], [0.2, -0.85, 0.24]]) {
+    const drop = new THREE.Mesh(new THREE.CircleGeometry(r, 10), mat);
+    drop.rotation.x = -Math.PI / 2; drop.position.set(ox, 0.001, oz); g.add(drop);
+  }
+  // 油光
+  const sheen = new THREE.Mesh(new THREE.CircleGeometry(0.5, 12),
+    new THREE.MeshBasicMaterial({ color: 0x4a5a78, transparent: true, opacity: 0.5 }));
+  sheen.rotation.x = -Math.PI / 2; sheen.position.set(-0.2, 0.002, 0.1); g.add(sheen);
   return g;
 }
 
-// 全螢幕閃光（被閃電/被擊中回饋）
+let _boltTex = null;
+function boltTexture() {
+  if (_boltTex) return _boltTex;
+  const c = document.createElement('canvas'); c.width = 64; c.height = 256;
+  const g = c.getContext('2d');
+  g.clearRect(0, 0, 64, 256);
+  // 鋸齒主幹
+  g.strokeStyle = '#fffbe0'; g.lineWidth = 7; g.lineJoin = 'miter';
+  g.shadowColor = '#ffe66d'; g.shadowBlur = 12;
+  g.beginPath();
+  const pts = [[32, 0], [22, 48], [40, 88], [24, 132], [42, 176], [28, 214], [34, 256]];
+  pts.forEach(([x, y], i) => i === 0 ? g.moveTo(x, y) : g.lineTo(x, y));
+  g.stroke();
+  // 分岔
+  g.lineWidth = 4;
+  g.beginPath(); g.moveTo(40, 88); g.lineTo(54, 120); g.stroke();
+  g.beginPath(); g.moveTo(24, 132); g.lineTo(10, 168); g.stroke();
+  _boltTex = new THREE.CanvasTexture(c);
+  return _boltTex;
+}
+
+function boltMesh() {
+  const g = new THREE.Group();
+  const mat = new THREE.MeshBasicMaterial({
+    map: boltTexture(), transparent: true, opacity: 1,
+    side: THREE.DoubleSide, depthWrite: false, blending: THREE.AdditiveBlending,
+  });
+  for (const ry of [0, Math.PI / 2]) {
+    const p = new THREE.Mesh(new THREE.PlaneGeometry(4, 16), mat.clone());
+    p.position.y = 8; p.rotation.y = ry;
+    g.add(p);
+  }
+  // 地面光圈
+  const ring = new THREE.Mesh(new THREE.RingGeometry(0.6, 1.6, 20),
+    new THREE.MeshBasicMaterial({ color: 0xffe66d, transparent: true, opacity: 0.8, side: THREE.DoubleSide, depthWrite: false }));
+  ring.rotation.x = -Math.PI / 2; ring.position.y = 0.1;
+  g.add(ring);
+  return g;
+}
+
+// 全螢幕閃光（被落雷/被擊中回饋）
 let _flashEl = null;
 export function flashScreen(color) {
   if (!_flashEl) {
