@@ -1,104 +1,95 @@
-// 车辆模组：6 台车型属性 + Kenney 赛车模型（CC0）载入，失败时退回低多边形自建车
+// 车辆模组：6 台车型属性 + 复古皮卡 FBX 模型载入，失败时退回低多边形自建车
 import * as THREE from 'three';
-import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { FBXLoader } from 'three/addons/loaders/FBXLoader.js';
 
+// 每台车型对应一款实体车(不同车壳), color 取自该车实际车漆色 → UI 与游戏内完全一致
 // topSpeed: 极速(单位/秒)  accel: 加速度  handling: 转向灵敏  weight: 重量(碰撞优势)  drift: 漂移增压效率
 export const KART_TYPES = [
-  { id: 'red',    name: '疾风红魂', color: 0xe33b3b, accent: 0xffd23f, topSpeed: 42, accel: 26, handling: 1.00, weight: 1.0, drift: 1.0,  desc: '全能均衡・新手首选' },
-  { id: 'yellow', name: '雷霆闪电', color: 0xffc21f, accent: 0x222222, topSpeed: 46, accel: 22, handling: 0.82, weight: 1.0, drift: 0.9,  desc: '极速最强・转向偏重' },
-  { id: 'green',  name: '碧绿精灵', color: 0x2fb757, accent: 0xd8f7e0, topSpeed: 40, accel: 27, handling: 1.22, weight: 0.85, drift: 1.05, desc: '神级操控・灵活过弯' },
-  { id: 'blue',   name: '深海重炮', color: 0x2f5fd0, accent: 0x9fd0ff, topSpeed: 43, accel: 21, handling: 0.88, weight: 1.5, drift: 0.9,  desc: '重量级・碰撞不吃亏' },
-  { id: 'pink',   name: '粉红甜心', color: 0xff6fb0, accent: 0xffffff, topSpeed: 40, accel: 30, handling: 1.08, weight: 0.8, drift: 1.0,  desc: '起步火箭・轻巧敏捷' },
-  { id: 'purple', name: '暗夜紫影', color: 0x8447d6, accent: 0x3ce6ff, topSpeed: 42, accel: 24, handling: 1.02, weight: 0.95, drift: 1.35, desc: '漂移大师・弯道超车' },
+  { id: 'red',    model: 'Pickup_08', name: '疾风红魂', color: 0xff674a, accent: 0xffd23f, topSpeed: 42, accel: 26, handling: 1.00, weight: 1.0, drift: 1.0,  desc: '全能均衡・新手首选' },
+  { id: 'yellow', model: 'Pickup_05', name: '雷霆闪电', color: 0xf2ae42, accent: 0x222222, topSpeed: 46, accel: 22, handling: 0.82, weight: 1.0, drift: 0.9,  desc: '极速最强・转向偏重' },
+  { id: 'green',  model: 'Pickup_03', name: '碧绿精灵', color: 0x5ac696, accent: 0xd8f7e0, topSpeed: 40, accel: 27, handling: 1.22, weight: 0.85, drift: 1.05, desc: '神级操控・灵活过弯' },
+  { id: 'blue',   model: 'Pickup_02', name: '深海重炮', color: 0x6595c6, accent: 0x9fd0ff, topSpeed: 43, accel: 21, handling: 0.88, weight: 1.5, drift: 0.9,  desc: '重量级・碰撞不吃亏' },
+  { id: 'pink',   model: 'Pickup_04', name: '粉红甜心', color: 0xf28fc0, accent: 0xffffff, topSpeed: 40, accel: 30, handling: 1.08, weight: 0.8, drift: 1.0,  desc: '起步火箭・轻巧敏捷' },
+  { id: 'purple', model: 'Pickup_07', name: '暗夜紫影', color: 0x774aab, accent: 0x3ce6ff, topSpeed: 42, accel: 24, handling: 1.02, weight: 0.95, drift: 1.35, desc: '漂移大师・弯道超车' },
 ];
 
 // AI 车手名字池
 export const AI_NAMES = ['小灰', '阿boost', '狂飙哥', '奶油圈', '尾速仔', '甜甜圈', '橡皮糖'];
 
-// ============ Kenney 模型载入（CC0，assets/kenney/）============
-const MODEL_FILES = {
-  red: 'vehicle-truck-red.glb',
-  yellow: 'vehicle-truck-yellow.glb',
-  green: 'vehicle-truck-green.glb',
-  purple: 'vehicle-truck-purple.glb',
-};
+// ============ 复古皮卡 FBX 载入（assets/3d/karts/）============
+// 六款车共用一张色票图集(atlas.png)，各车的车漆色由其 UV 对应到不同色块，
+// 因此不需换色处理，天然就是不同配色。
+const MODEL_DIR = 'assets/3d/karts/';
 let templates = null;
 let loadPromise = null;
 
 export function loadKartModels() {
   if (loadPromise) return loadPromise;
-  const loader = new GLTFLoader();
-  loadPromise = Promise.all(
-    Object.entries(MODEL_FILES).map(([id, f]) =>
-      loader.loadAsync('assets/kenney/' + f).then(g => [id, g.scene])
-    )
-  ).then(pairs => {
-    templates = Object.fromEntries(pairs);
-    // 蓝色与粉色：以红色版换色贴图生成
-    templates.blue = recolorTemplate(templates.red, 0.585, 0.9, 0.95);
-    templates.pink = recolorTemplate(templates.red, 0.905, 0.8, 1.25);
+  const texLoader = new THREE.TextureLoader();
+  const loader = new FBXLoader();
+
+  const atlasP = texLoader.loadAsync(MODEL_DIR + 'atlas.png').then(t => {
+    // flipY 保持 Three.js 预设 true —— FBX 的 UV 就是按这个惯例导出的,
+    // 设成 false 会让取样落到错误色块(车漆错色、挡风玻璃变橘)
+    t.colorSpace = THREE.SRGBColorSpace;
+    t.magFilter = THREE.LinearFilter;
+    t.minFilter = THREE.LinearMipmapLinearFilter;
+    return t;
+  });
+
+  loadPromise = Promise.all([
+    atlasP,
+    ...KART_TYPES.map(t => loader.loadAsync(MODEL_DIR + t.model + '.fbx').then(o => [t.id, o])),
+  ]).then(([atlas, ...pairs]) => {
+    const mat = new THREE.MeshStandardMaterial({ map: atlas, roughness: 0.62, metalness: 0.05 });
+    templates = {};
+    for (const [id, obj] of pairs) {
+      obj.traverse(o => { if (o.isMesh) o.material = mat; });
+      templates[id] = obj;
+    }
   }).catch(e => {
-    console.warn('Kenney 车辆模型载入失败，改用内建模型', e);
+    console.warn('皮卡模型载入失败，改用内建模型', e);
     templates = null;
   });
   return loadPromise;
 }
 
-// 把贴图中红色系像素换成目标色相（HSL），产生新配色的模板
-function recolorTemplate(src, targetH, sMul, lMul) {
-  const clone = src.clone(true);
-  let srcMat = null;
-  src.traverse(o => { if (o.isMesh && !srcMat) srcMat = o.material; });
-  const img = srcMat.map.image;
-  const c = document.createElement('canvas');
-  c.width = img.width; c.height = img.height;
-  const g = c.getContext('2d');
-  g.drawImage(img, 0, 0);
-  const data = g.getImageData(0, 0, c.width, c.height);
-  const px = data.data;
-  for (let i = 0; i < px.length; i += 4) {
-    const [h, s, l] = rgb2hsl(px[i], px[i + 1], px[i + 2]);
-    if (s > 0.3 && (h < 0.055 || h > 0.93)) {
-      const [r2, g2, b2] = hsl2rgb(targetH, Math.min(1, s * sMul), Math.min(0.92, l * lMul));
-      px[i] = r2; px[i + 1] = g2; px[i + 2] = b2;
-    }
-  }
-  g.putImageData(data, 0, 0);
-  const tex = new THREE.CanvasTexture(c);
-  tex.flipY = false; // glTF UV 惯例
-  tex.colorSpace = THREE.SRGBColorSpace;
-  tex.magFilter = srcMat.map.magFilter;
-  tex.minFilter = srcMat.map.minFilter;
-  const mat = srcMat.clone();
-  mat.map = tex;
-  clone.traverse(o => { if (o.isMesh) o.material = mat; });
-  return clone;
-}
+// ============ 选车卡片缩图：离屏渲染实际模型，确保 UI 与游戏内一致 ============
+export function renderKartThumbnail(type, w = 400, h = 300) {
+  if (!templates || !templates[type.id]) return null;
+  const canvas = document.createElement('canvas');
+  canvas.width = w; canvas.height = h;
+  const r = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+  r.setPixelRatio(1);
+  r.setSize(w, h, false);
+  r.outputColorSpace = THREE.SRGBColorSpace;
 
-function rgb2hsl(r, g, b) {
-  r /= 255; g /= 255; b /= 255;
-  const mx = Math.max(r, g, b), mn = Math.min(r, g, b), l = (mx + mn) / 2;
-  if (mx === mn) return [0, 0, l];
-  const d = mx - mn;
-  const s = l > 0.5 ? d / (2 - mx - mn) : d / (mx + mn);
-  let h;
-  if (mx === r) h = ((g - b) / d + (g < b ? 6 : 0)) / 6;
-  else if (mx === g) h = ((b - r) / d + 2) / 6;
-  else h = ((r - g) / d + 4) / 6;
-  return [h, s, l];
-}
+  const scene = new THREE.Scene();
+  scene.add(new THREE.HemisphereLight(0xdfe8ff, 0x3a3f4c, 1.25));
+  const key = new THREE.DirectionalLight(0xffffff, 2.1);
+  key.position.set(3, 5, 4);
+  const rim = new THREE.DirectionalLight(0xbfd4ff, 0.6);
+  rim.position.set(-4, 3, -3);
+  scene.add(key, rim);
 
-function hsl2rgb(h, s, l) {
-  const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
-  const p = 2 * l - q;
-  const f = t => {
-    t = ((t % 1) + 1) % 1;
-    if (t < 1 / 6) return p + (q - p) * 6 * t;
-    if (t < 1 / 2) return q;
-    if (t < 2 / 3) return p + (q - p) * (2 / 3 - t) * 6;
-    return p;
-  };
-  return [f(h + 1 / 3) * 255 | 0, f(h) * 255 | 0, f(h - 1 / 3) * 255 | 0];
+  const { mesh } = buildKartMesh(type);
+  mesh.rotation.y = Math.PI * 0.78; // 3/4 前左视角
+  scene.add(mesh);
+
+  const box = new THREE.Box3().setFromObject(mesh);
+  const c = box.getCenter(new THREE.Vector3());
+  const size = box.getSize(new THREE.Vector3());
+  // 只取车体本身(排除脚下阴影贴片)决定取景半径, 让车尽量填满卡片
+  const radius = Math.max(size.x, size.z) * 0.5;
+  const cam = new THREE.PerspectiveCamera(34, w / h, 0.1, 100);
+  const dist = radius / Math.sin((cam.fov * Math.PI / 180) / 2) * 1.02;
+  cam.position.set(c.x + dist * 0.6, c.y + dist * 0.34, c.z + dist * 0.62);
+  cam.lookAt(c.x, c.y - size.y * 0.05, c.z);
+  r.render(scene, cam);
+
+  const url = canvas.toDataURL('image/png');
+  r.dispose();
+  return url;
 }
 
 // ============ 车辆建构 ============
@@ -126,17 +117,22 @@ function buildFromTemplate(type) {
   model.position.y -= bbox2.min.y;
   g.add(model);
 
-  // 车轮：包一层转向用 wrapper，轮体本身滚动
+  // 车轮：以轮心为支点包一层 wrapper（外层转向 yaw、内层轮体滚动）
+  // FBX 节点名如 Pickup_08_FL_Tire / _RR_Tire
   const wheels = [];
   const wheelNodes = [];
-  model.traverse(o => { if (o.name && o.name.startsWith('wheel')) wheelNodes.push(o); });
+  model.traverse(o => { if (/_(FL|FR|RL|RR)_Tire/i.test(o.name || '')) wheelNodes.push(o); });
+  const _c = new THREE.Vector3();
   for (const o of wheelNodes) {
+    const parent = o.parent;
+    new THREE.Box3().setFromObject(o).getCenter(_c);
+    const centerLocal = parent.worldToLocal(_c.clone());
     const wrapper = new THREE.Group();
-    wrapper.position.copy(o.position);
-    wrapper.userData.front = o.name.includes('front');
+    wrapper.position.copy(centerLocal);
+    wrapper.userData.front = /_F[LR]_Tire/i.test(o.name);
     wrapper.userData.spin = [o];
-    o.parent.add(wrapper);
-    o.position.set(0, 0, 0);
+    parent.add(wrapper);
+    o.position.sub(centerLocal); // 保持轮体世界位置不变
     wrapper.add(o);
     wheels.push(wrapper);
   }

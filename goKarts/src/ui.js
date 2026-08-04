@@ -1,6 +1,6 @@
 // UI 模组：画面流程、赛道/车辆选择、暂停、结算、排行榜（localStorage）
 import { TRACKS } from './track.js';
-import { KART_TYPES } from './karts.js';
+import { KART_TYPES, renderKartThumbnail } from './karts.js';
 import { fmtTime } from './hud.js';
 
 const LB_KEY = id => `gokarts_lb_${id}`;
@@ -76,7 +76,7 @@ export class UI {
       el.className = 'sel-card kart-card' + (i === this.kartIdx ? ' selected' : '');
       const hex = '#' + k.color.toString(16).padStart(6, '0');
       el.innerHTML = `
-        <div class="kthumb" style="background-image:url('assets/img/kart-${k.id}.jpg'), linear-gradient(180deg,${hex}66,#10131f)"></div>
+        <div class="kthumb" data-kart="${k.id}" style="background-image:linear-gradient(180deg,${hex}55,#10131f)"></div>
         <div class="nm">${k.name}</div>
         <div class="statbar"><span class="lb">极速</span><div class="bg"><div class="fg" style="width:${bar(k.topSpeed, 37, 47)}%"></div></div></div>
         <div class="statbar"><span class="lb">加速</span><div class="bg"><div class="fg" style="width:${bar(k.accel, 19, 31)}%"></div></div></div>
@@ -89,6 +89,19 @@ export class UI {
       };
       wrap.appendChild(el);
     });
+  }
+
+  // 模型载入完成后，用实际 3D 模型渲染卡片缩图（UI 与游戏内 100% 一致）
+  fillKartThumbnails() {
+    if (this._thumbsDone) return;
+    let ok = 0;
+    for (const k of KART_TYPES) {
+      const url = renderKartThumbnail(k);
+      if (!url) continue;
+      const el = document.querySelector(`.kthumb[data-kart="${k.id}"]`);
+      if (el) { el.style.backgroundImage = `url('${url}')`; el.style.backgroundSize = 'contain'; ok++; }
+    }
+    if (ok === KART_TYPES.length) this._thumbsDone = true;
   }
 
   showPause() { document.getElementById('scr-pause').classList.remove('hidden'); }

@@ -498,5 +498,7 @@ function shuffle(a) {
 window.addEventListener('pointerdown', () => sound.ensure(), { once: true });
 
 ui.show('scr-main');
-loadKartModels(); loadDecoModels(); // 进主选单即开始预载模型
+// 进主选单即开始预载模型；车辆就绪后用实际模型渲染选车卡片缩图
+loadKartModels().then(() => ui.fillKartThumbnails());
+loadDecoModels();
 tick();
