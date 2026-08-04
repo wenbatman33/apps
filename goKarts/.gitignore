@@ -1,0 +1,17 @@
+# 原始素材来源包（保留在本机备查, 不进 repo）
+# 游戏实际使用的是 assets/3d/karts/ 里挑出的 6 台车 + atlas.png
+assets/3d/Unity fbx/
+assets/3d/Unreal fbx/
+assets/3d/VehiclesScene.fbx
+assets/3d/mini_pickup_truck_2.glb
+
+# BGM 原始档（游戏用的是已转档的 assets/audio/bgm-*.m4a）
+assets/audio/*.wav
+assets/audio/*.mp3
+assets/audio/*.ogg
+
+# 生成脚本的执行日志
+scripts/gen.out
+scripts/gen_music.log
+
+.DS_Store
