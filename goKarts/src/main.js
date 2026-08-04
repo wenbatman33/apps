@@ -6,6 +6,7 @@ import { makeKartState, updateKart, collideKarts, updateKartVisual } from './phy
 import { aiInput, aiWantsItem } from './ai.js';
 import { ItemManager } from './items.js';
 import { SoundManager } from './sound.js';
+import { ParticleSystem } from './particles.js';
 import { HUD } from './hud.js';
 import { UI } from './ui.js';
 
@@ -120,24 +121,25 @@ function buildRace(mode, trackDef, kartType) {
     k.mesh = mesh; k.wheels = wheels;
     scene.add(mesh);
     updateKartVisual(k, track, 0.016);
-    // 喷射火焰 & 漂移火花
-    k.flame = new THREE.Mesh(new THREE.ConeGeometry(0.32, 1.5, 7),
-      new THREE.MeshBasicMaterial({ color: 0xffa229, transparent: true, opacity: 0.9 }));
-    k.flame.rotation.x = Math.PI / 2; k.flame.position.set(0, 0.6, -2.0); k.flame.visible = false;
+    // 喷射火焰：内白外橘双层火舌（喷发时抖动，烟雾由粒子系统处理）
+    k.flame = new THREE.Group();
+    const flameOut = new THREE.Mesh(new THREE.ConeGeometry(0.30, 1.6, 8),
+      new THREE.MeshBasicMaterial({ color: 0xff7a1a, transparent: true, opacity: 0.75, blending: THREE.AdditiveBlending, depthWrite: false }));
+    flameOut.rotation.x = Math.PI / 2;
+    const flameCore = new THREE.Mesh(new THREE.ConeGeometry(0.15, 1.0, 8),
+      new THREE.MeshBasicMaterial({ color: 0xfff3c0, transparent: true, opacity: 0.95, blending: THREE.AdditiveBlending, depthWrite: false }));
+    flameCore.rotation.x = Math.PI / 2; flameCore.position.z = 0.18;
+    k.flame.add(flameOut, flameCore);
+    k.flame.position.set(0, 0.6, -1.95); k.flame.visible = false;
     mesh.add(k.flame);
-    k.sparks = [];
-    for (const sx of [-0.85, 0.85]) {
-      const sp = new THREE.Mesh(new THREE.SphereGeometry(0.2, 6, 5),
-        new THREE.MeshBasicMaterial({ color: 0x66aaff, transparent: true, opacity: 0.9 }));
-      sp.position.set(sx, 0.25, -1.1); sp.visible = false;
-      mesh.add(sp); k.sparks.push(sp);
-    }
+    k._fxAcc = 0;
   }
 
   const items = isTT ? null : new ItemManager(scene, track, karts, sound);
+  const particles = new ParticleSystem(scene);
 
   race = {
-    mode, trackDef, kartType, scene, track, karts, player, items,
+    mode, trackDef, kartType, scene, track, karts, player, items, particles,
     state: 'countdown', countT: 3.6, raceMs: 0,
     bestLap: 0, camPos: null, wrongWayT: 0, endT: 0,
   };
@@ -280,17 +282,13 @@ function tick() {
       if ((prevCharge < 1.1 && k.drift.charge >= 1.1) || (prevCharge < 2.4 && k.drift.charge >= 2.4)) sound.driftTick();
     } else if (k._miniTurbo) k._miniTurbo = 0;
 
-    // 火焰 / 火花视觉
+    // 火焰视觉：喷发时长度/宽度随机抖动
     k.flame.visible = k.boost > 0;
-    if (k.flame.visible) k.flame.scale.setScalar(0.7 + Math.random() * 0.6);
-    const sparkOn = k.drift.active && k.drift.charge > 0.4;
-    for (const sp of k.sparks) {
-      sp.visible = sparkOn;
-      if (sparkOn) {
-        sp.material.color.setHex(k.drift.charge > 2.4 ? 0xff9a1f : k.drift.charge > 1.1 ? 0x66aaff : 0xcccccc);
-        sp.scale.setScalar(0.6 + Math.random() * 0.8);
-      }
+    if (k.flame.visible) {
+      k.flame.scale.set(0.85 + Math.random() * 0.3, 0.85 + Math.random() * 0.3, 0.65 + Math.random() * 0.7);
     }
+    // 烟雾/火星/尘土粒子
+    emitKartFX(k, dt, r);
 
     // ---- 跨线事件 ----
     if (k._crossedLine) {
@@ -317,6 +315,7 @@ function tick() {
 
   collideKarts(r.karts);
   if (r.items) r.items.update(dt, r.raceMs / 1000);
+  r.particles.update(dt);
 
   // ---- 名次 ----
   const finished = r.karts.filter(k => k.finished).sort((a, b) => a.finishTime - b.finishTime);
@@ -358,6 +357,67 @@ function tick() {
 
   updateCamera(r, dt, false);
   renderer.render(r.scene, camera);
+}
+
+// ============ 车辆特效粒子发射 ============
+const _fx = new THREE.Vector3(), _fxv = new THREE.Vector3();
+// 把车身局部座标转世界座标
+function kartLocal(k, x, y, z, out) {
+  return out.set(x, y, z).applyQuaternion(k.mesh.quaternion).add(k.mesh.position);
+}
+
+function emitKartFX(k, dt, r) {
+  const P = r.particles;
+  const speed = Math.abs(k.speed);
+  const rate = k.isPlayer ? 1 : 0.55; // AI 减量保帧率
+  const fwdX = Math.sin(k.heading), fwdZ = Math.cos(k.heading);
+  k._fxAcc += dt * 60 * rate;
+
+  while (k._fxAcc >= 1) {
+    k._fxAcc -= 1;
+    const roll = Math.random();
+
+    // 喷射中：排气管喷出火星 + 滚滚深灰废烟
+    if (k.boost > 0) {
+      const sx = Math.random() > 0.5 ? 0.3 : -0.3;
+      kartLocal(k, sx, 0.55, -1.6, _fx);
+      // 废烟：向后喷出、上飘、变大消散
+      _fxv.set(-fwdX * (speed * 0.4 + 5) + (Math.random() - 0.5) * 2, 0.6 + Math.random(), -fwdZ * (speed * 0.4 + 5) + (Math.random() - 0.5) * 2);
+      P.spawn({ pos: _fx, vel: _fxv, life: 0.55 + Math.random() * 0.35, size0: 0.35, size1: 1.5, color: 0x4a4a52, opacity: 0.42, rise: 2.2, damp: 3 });
+      // 火星：小而亮、快速熄灭
+      if (roll < 0.7) {
+        _fxv.set(-fwdX * (speed * 0.5 + 9) + (Math.random() - 0.5) * 3, (Math.random() - 0.2) * 2, -fwdZ * (speed * 0.5 + 9) + (Math.random() - 0.5) * 3);
+        P.spawn({ pos: _fx, vel: _fxv, life: 0.16 + Math.random() * 0.1, size0: 0.32, size1: 0.08, color: Math.random() > 0.4 ? 0xffa229 : 0xfff3c0, opacity: 0.95, additive: true, rise: 0, damp: 1 });
+      }
+    }
+
+    // 漂移：后轮扬起白灰轮胎烟 + 依蓄力等级喷火花
+    if (k.drift.active && speed > 12) {
+      const wx = k.drift.dir > 0 ? -0.85 : 0.85; // 外侧后轮烟较浓
+      kartLocal(k, roll > 0.35 ? wx : -wx, 0.2, -1.05, _fx);
+      _fxv.set(-fwdX * speed * 0.25 + (Math.random() - 0.5) * 2.5, 0.8 + Math.random() * 0.8, -fwdZ * speed * 0.25 + (Math.random() - 0.5) * 2.5);
+      P.spawn({ pos: _fx, vel: _fxv, life: 0.5 + Math.random() * 0.4, size0: 0.3, size1: 1.3, color: 0xd8d8dc, opacity: 0.3, rise: 1.6, damp: 3.5 });
+      if (k.drift.charge > 0.4 && roll < 0.55) {
+        const col = k.drift.charge > 2.4 ? 0xff9a1f : k.drift.charge > 1.1 ? 0x66aaff : 0xbbbbbb;
+        kartLocal(k, wx, 0.18, -1.0, _fx);
+        _fxv.set((Math.random() - 0.5) * 5 - fwdX * 3, 0.5 + Math.random() * 2, (Math.random() - 0.5) * 5 - fwdZ * 3);
+        P.spawn({ pos: _fx, vel: _fxv, life: 0.2 + Math.random() * 0.15, size0: 0.22, size1: 0.05, color: col, opacity: 1, additive: true, rise: -2, damp: 0.5 });
+      }
+    }
+    // 越野：扬起尘土
+    else if (k.offroad && speed > 8 && roll < 0.6) {
+      kartLocal(k, Math.random() > 0.5 ? 0.8 : -0.8, 0.15, -1.0, _fx);
+      _fxv.set(-fwdX * speed * 0.2 + (Math.random() - 0.5) * 2, 0.5 + Math.random() * 0.8, -fwdZ * speed * 0.2 + (Math.random() - 0.5) * 2);
+      P.spawn({ pos: _fx, vel: _fxv, life: 0.6 + Math.random() * 0.4, size0: 0.4, size1: 1.6, color: r.trackDef.theme === 'canyon' ? 0xc09760 : 0x9a8a62, opacity: 0.32, rise: 1.2, damp: 3 });
+    }
+
+    // 打滑旋转中：冒烟
+    if (k.spinT > 0 && roll < 0.5) {
+      kartLocal(k, (Math.random() - 0.5) * 1.4, 0.3, (Math.random() - 0.5) * 2, _fx);
+      _fxv.set((Math.random() - 0.5) * 3, 1.2 + Math.random(), (Math.random() - 0.5) * 3);
+      P.spawn({ pos: _fx, vel: _fxv, life: 0.6, size0: 0.4, size1: 1.4, color: 0x707078, opacity: 0.4, rise: 2, damp: 2.5 });
+    }
+  }
 }
 
 function onPlayerFinish(r) {
