@@ -1,12 +1,12 @@
 <!DOCTYPE html>
-<html lang="zh-Hant">
+<html lang="zh-Hans">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-<title>瘋狂卡丁車 GO — Crazy Karts GO</title>
+<title>疯狂卡丁车 GO — Crazy Karts GO</title>
 <style>
   * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
-  html,body { width:100%; height:100%; overflow:hidden; background:#0b1020; font-family:"Helvetica Neue",Arial,"PingFang TC","Microsoft JhengHei",sans-serif; touch-action:none; }
+  html,body { width:100%; height:100%; overflow:hidden; background:#0b1020; font-family:"Helvetica Neue",Arial,"PingFang SC","Microsoft YaHei",sans-serif; touch-action:none; }
   #app { position:fixed; inset:0; }
   canvas { display:block; }
   button { font-family:inherit; }
@@ -14,10 +14,28 @@
   /* ============ 共用 ============ */
   .screen { position:fixed; inset:0; z-index:40; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:18px; color:#fff; background:radial-gradient(ellipse at 50% 30%, #1d2b53 0%, #0b1020 70%); }
   .hidden { display:none !important; }
+  /* 主选单：主视觉背景 + 上下滚动格纹旗带 */
+  #scr-main { background:
+    linear-gradient(180deg, rgba(11,16,32,.30) 0%, rgba(11,16,32,.62) 55%, rgba(9,12,24,.90) 100%),
+    url('assets/img/hero.jpg') center 30%/cover no-repeat,
+    radial-gradient(ellipse at 50% 30%, #1d2b53 0%, #0b1020 70%); }
+  #scr-main::before, #scr-main::after { content:""; position:absolute; left:-60px; right:-60px; height:16px; z-index:1;
+    background:conic-gradient(#f2f2f2 90deg, #15181f 90deg 180deg, #f2f2f2 180deg 270deg, #15181f 270deg) 0 0/32px 32px;
+    animation:checker-slide 1.6s linear infinite; opacity:.9; }
+  #scr-main::before { top:0; transform:rotate(-1.2deg); }
+  #scr-main::after { bottom:0; transform:rotate(1.2deg); animation-direction:reverse; }
+  @keyframes checker-slide { to { background-position-x:32px; } }
   .title-lg { font-size:min(9vw,58px); font-weight:900; font-style:italic; letter-spacing:2px;
     background:linear-gradient(180deg,#ffe66d 20%,#ff9f1c 55%,#ff4d6d 100%);
     -webkit-background-clip:text; background-clip:text; color:transparent;
-    filter:drop-shadow(0 4px 0 rgba(0,0,0,.45)); text-align:center; }
+    filter:drop-shadow(0 4px 0 rgba(0,0,0,.45)); text-align:center;
+    animation:title-bob 2.8s ease-in-out infinite; }
+  @keyframes title-bob {
+    0%, 100% { transform:translateY(0) rotate(-1deg); }
+    50% { transform:translateY(-7px) rotate(1deg); }
+  }
+  .menu-btn { transition:transform .12s, box-shadow .08s, filter .12s; }
+  .menu-btn:hover { transform:translateY(-2px) scale(1.03); filter:brightness(1.08); }
   .subtitle { font-size:min(4vw,17px); color:#9fb0c8; letter-spacing:6px; font-weight:700; }
   .menu-btn { min-width:min(70vw,300px); padding:15px 34px; font-size:19px; font-weight:800; color:#fff; cursor:pointer;
     border:none; border-radius:14px; letter-spacing:2px;
@@ -32,7 +50,7 @@
     background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.18); border-radius:10px; cursor:pointer; z-index:5; }
   .screen h2 { font-size:min(6.5vw,32px); font-weight:900; letter-spacing:3px; color:#ffe66d; text-shadow:0 3px 0 rgba(0,0,0,.4); }
 
-  /* ============ 選卡片 ============ */
+  /* ============ 选卡片 ============ */
   .card-row { display:flex; gap:14px; flex-wrap:wrap; justify-content:center; max-width:min(96vw,900px); }
   .sel-card { width:min(28vw,215px); border-radius:16px; padding:12px; cursor:pointer; text-align:center; color:#fff;
     background:rgba(255,255,255,.06); border:2px solid rgba(255,255,255,.14); transition:transform .12s,border-color .12s,background .12s; }
@@ -41,9 +59,12 @@
   .sel-card .thumb { width:100%; aspect-ratio:16/10; border-radius:10px; margin-bottom:8px; background-size:cover; background-position:center; }
   .sel-card .nm { font-size:15px; font-weight:800; letter-spacing:1px; }
   .sel-card .ds { font-size:11px; color:#9fb0c8; margin-top:3px; line-height:1.5; }
-  .kart-card { width:min(27vw,150px); }
-  .kart-card .swatch { width:64px; height:44px; margin:4px auto 8px; border-radius:10px 10px 6px 6px; position:relative; }
-  .kart-card .swatch::after { content:""; position:absolute; left:6px; right:6px; bottom:-6px; height:10px; border-radius:6px; background:#222; }
+  /* 车辆选择：3 栏网格（手机 2 栏），含车图 */
+  #kart-cards { display:grid; grid-template-columns:repeat(3, min(29vw, 210px)); gap:14px; justify-content:center; }
+  @media (max-width: 620px) { #kart-cards { grid-template-columns:repeat(2, 44vw); gap:10px; } }
+  .kart-card { width:auto; }
+  .kart-card .kthumb { width:100%; aspect-ratio:4/3; border-radius:10px; margin-bottom:8px;
+    background-size:cover; background-position:center; }
   .statbar { display:flex; align-items:center; gap:5px; margin-top:4px; }
   .statbar .lb { font-size:10px; color:#9fb0c8; width:26px; text-align:right; flex:none; }
   .statbar .bg { flex:1; height:6px; border-radius:3px; background:rgba(255,255,255,.12); overflow:hidden; }
@@ -84,7 +105,7 @@
     background:rgba(8,12,20,.55); border:1px solid rgba(255,255,255,.15); color:#fff; font-size:17px; cursor:pointer; }
   body.touch #btn-mute { top:calc(74px + env(safe-area-inset-top)); left:64px; }
 
-  /* ============ 虛擬按鍵 ============ */
+  /* ============ 虚拟按键 ============ */
   #vpad { position:fixed; inset:0; z-index:20; display:none; pointer-events:none; }
   body.touch.racing #vpad { display:block; }
   .vbtn { position:absolute; pointer-events:auto; display:flex; align-items:center; justify-content:center;
@@ -98,7 +119,7 @@
   #vb-item  { right:calc(18px + env(safe-area-inset-right)); bottom:calc(104px + env(safe-area-inset-bottom)); width:62px; height:62px; font-size:24px; background:rgba(255,180,60,.18); border-color:rgba(255,200,90,.5); }
   #vb-brake { right:calc(14px + env(safe-area-inset-right)); bottom:calc(26px + env(safe-area-inset-bottom)); width:64px; height:64px; font-size:14px; background:rgba(255,90,90,.16); border-color:rgba(255,120,120,.45); }
 
-  /* ============ 結算/排行榜 ============ */
+  /* ============ 结算/排行榜 ============ */
   .result-panel { background:rgba(10,16,28,.88); border:1px solid rgba(255,255,255,.14); border-radius:18px;
     padding:22px 26px; max-width:min(92vw,460px); width:100%; max-height:78vh; overflow-y:auto; }
   .result-panel h3 { font-size:22px; color:#ffe66d; letter-spacing:2px; margin-bottom:12px; text-align:center; }
@@ -136,63 +157,63 @@
 <body>
 <div id="app"></div>
 
-<!-- ============ 主選單 ============ -->
+<!-- ============ 主选单 ============ -->
 <div id="scr-main" class="screen">
-  <div class="title-lg">瘋狂卡丁車 GO</div>
+  <div class="title-lg">疯狂卡丁车 GO</div>
   <div class="subtitle">CRAZY KARTS GO</div>
   <div style="height:8px"></div>
-  <button class="menu-btn green" id="btn-gp">🏁 大獎賽（道具戰）</button>
-  <button class="menu-btn" id="btn-tt">⏱️ 計時挑戰</button>
+  <button class="menu-btn green" id="btn-gp">🏁 大奖赛（道具战）</button>
+  <button class="menu-btn" id="btn-tt">⏱️ 计时挑战</button>
   <button class="menu-btn gold" id="btn-lb">🏆 排行榜</button>
   <div id="controls-hint">
-    <div class="ch-row"><span class="ch-tag">💻 PC</span>↑/W 油門 · ←→/AD 轉向 · <b>按住 Shift 或空白鍵＋轉向＝漂移</b>（放開噴射加速）· <b>Enter 或 E＝丟道具</b></div>
-    <div class="ch-row"><span class="ch-tag">📱 手機</span>自動油門 · ◀▶ 轉向 · <b>按住「漂移」鍵過彎</b>（放開噴射）· <b>點 🎁＝丟道具</b></div>
-    <div class="ch-row" style="opacity:.65">建議開啟聲音體驗 🔊</div>
+    <div class="ch-row"><span class="ch-tag">💻 PC</span>↑/W 油门 · ←→/AD 转向 · <b>按住 Shift 或空白键＋转向＝漂移</b>（放开喷射加速）· <b>Enter 或 E＝丢道具</b></div>
+    <div class="ch-row"><span class="ch-tag">📱 手机</span>自动油门 · ◀▶ 转向 · <b>按住「漂移」键过弯</b>（放开喷射）· <b>点 🎁＝丢道具</b></div>
+    <div class="ch-row" style="opacity:.65">建议开启声音体验 🔊</div>
   </div>
 </div>
 
-<!-- ============ 賽道選擇 ============ -->
+<!-- ============ 赛道选择 ============ -->
 <div id="scr-track" class="screen hidden">
   <button class="back-btn" data-back="scr-main">← 返回</button>
-  <h2>選擇賽道</h2>
+  <h2>选择赛道</h2>
   <div class="card-row" id="track-cards"></div>
   <button class="menu-btn green" id="btn-track-next">下一步 →</button>
 </div>
 
-<!-- ============ 車輛選擇 ============ -->
+<!-- ============ 车辆选择 ============ -->
 <div id="scr-kart" class="screen hidden">
   <button class="back-btn" data-back="scr-track">← 返回</button>
-  <h2>選擇車輛</h2>
+  <h2>选择车辆</h2>
   <div class="card-row" id="kart-cards"></div>
-  <button class="menu-btn green" id="btn-kart-go">出發！🏁</button>
+  <button class="menu-btn green" id="btn-kart-go">出发！🏁</button>
 </div>
 
 <!-- ============ 排行榜 ============ -->
 <div id="scr-lb" class="screen hidden">
   <button class="back-btn" data-back="scr-main">← 返回</button>
-  <h2>🏆 計時賽排行榜</h2>
+  <h2>🏆 计时赛排行榜</h2>
   <div class="result-panel">
     <div class="lb-tabs" id="lb-tabs"></div>
     <div id="lb-content"></div>
   </div>
 </div>
 
-<!-- ============ 暫停 ============ -->
+<!-- ============ 暂停 ============ -->
 <div id="scr-pause" class="screen hidden" style="background:rgba(5,8,16,.72)">
-  <h2>暫停</h2>
-  <button class="menu-btn green" id="btn-resume">▶ 繼續</button>
-  <button class="menu-btn" id="btn-restart">↻ 重新開始</button>
-  <button class="menu-btn gold" id="btn-quit">🏠 回主選單</button>
+  <h2>暂停</h2>
+  <button class="menu-btn green" id="btn-resume">▶ 继续</button>
+  <button class="menu-btn" id="btn-restart">↻ 重新开始</button>
+  <button class="menu-btn gold" id="btn-quit">🏠 回主选单</button>
 </div>
 
-<!-- ============ 結算 ============ -->
+<!-- ============ 结算 ============ -->
 <div id="scr-result" class="screen hidden" style="background:rgba(5,8,16,.8)">
   <div class="result-panel">
-    <h3 id="result-title">比賽結束</h3>
+    <h3 id="result-title">比赛结束</h3>
     <div id="result-body"></div>
     <div class="btn-row">
       <button class="btn-sm green" id="btn-r-retry">↻ 再跑一次</button>
-      <button class="btn-sm blue" id="btn-r-menu">🏠 主選單</button>
+      <button class="btn-sm blue" id="btn-r-menu">🏠 主选单</button>
     </div>
   </div>
 </div>
@@ -201,9 +222,9 @@
 <div id="hud-root" class="hidden">
   <div id="hud-pos" class="hud hud-panel"><span class="p">1st</span><span class="lap">LAP 1/3</span></div>
   <div id="hud-times" class="hud hud-panel">
-    <div class="row cur"><span class="lbl">單圈</span><span class="val" id="t-cur">0:00.000</span></div>
+    <div class="row cur"><span class="lbl">单圈</span><span class="val" id="t-cur">0:00.000</span></div>
     <div class="row best"><span class="lbl">最速圈</span><span class="val" id="t-best">--:--.---</span></div>
-    <div class="row"><span class="lbl">總時間</span><span class="val" id="t-total">0:00.000</span></div>
+    <div class="row"><span class="lbl">总时间</span><span class="val" id="t-total">0:00.000</span></div>
   </div>
   <div id="hud-item" class="hud hud-panel"></div>
   <div id="hud-speed" class="hud"><span class="kmh">0</span><span class="unit"> km/h</span></div>
@@ -214,13 +235,13 @@
   <button id="btn-mute">🔊</button>
 </div>
 
-<!-- ============ 虛擬按鍵 ============ -->
+<!-- ============ 虚拟按键 ============ -->
 <div id="vpad">
   <div class="vbtn" id="vb-left">◀</div>
   <div class="vbtn" id="vb-right">▶</div>
   <div class="vbtn" id="vb-drift">漂移</div>
   <div class="vbtn" id="vb-item">🎁</div>
-  <div class="vbtn" id="vb-brake">煞車</div>
+  <div class="vbtn" id="vb-brake">煞车</div>
 </div>
 
 <div id="fade"></div>

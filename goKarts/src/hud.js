@@ -1,4 +1,4 @@
-// HUD 模組：名次/圈數/計時/車速/道具/迷你地圖/中央訊息
+// HUD 模组：名次/圈数/计时/车速/道具/迷你地图/中央讯息
 import { ITEM_ICONS } from './items.js';
 
 const ICONS = Object.values(ITEM_ICONS);
@@ -67,7 +67,7 @@ export class HUD {
     if (dur > 0) this.msgTimer = setTimeout(() => { this.elMsg.textContent = ''; }, dur * 1000);
   }
 
-  // ---- 迷你地圖 ----
+  // ---- 迷你地图 ----
   initMap(track) {
     const size = this.mapCv.width;
     const off = document.createElement('canvas');
@@ -83,7 +83,7 @@ export class HUD {
       i === 0 ? g.moveTo(px, pz) : g.lineTo(px, pz);
     });
     g.closePath(); g.stroke();
-    // 起點
+    // 起点
     const [sx, sz] = track.minimap.pts[0];
     g.fillStyle = '#ffd23f';
     g.beginPath(); g.arc(sx * size, sz * size, 3.4, 0, 7); g.fill();
@@ -101,7 +101,7 @@ export class HUD {
       g.fillStyle = '#' + k.type.color.toString(16).padStart(6, '0');
       g.beginPath(); g.arc(x * size, z * size, 3.2, 0, 7); g.fill();
     }
-    // 玩家最上層、加白邊
+    // 玩家最上层、加白边
     const [x, z] = track.minimap.toMap(player.pos.x, player.pos.z);
     g.fillStyle = '#' + player.type.color.toString(16).padStart(6, '0');
     g.strokeStyle = '#fff'; g.lineWidth = 2;

@@ -1,4 +1,4 @@
-// UI 模組：畫面流程、賽道/車輛選擇、暫停、結算、排行榜（localStorage）
+// UI 模组：画面流程、赛道/车辆选择、暂停、结算、排行榜（localStorage）
 import { TRACKS } from './track.js';
 import { KART_TYPES } from './karts.js';
 import { fmtTime } from './hud.js';
@@ -56,8 +56,8 @@ export class UI {
       const el = document.createElement('div');
       el.className = 'sel-card' + (i === this.trackIdx ? ' selected' : '');
       el.innerHTML = `
-        <div class="thumb" style="background:${THUMB_BG[t.theme]}; display:flex; align-items:center; justify-content:center; font-size:44px;">${t.emoji}</div>
-        <div class="nm">${t.name}</div>
+        <div class="thumb" style="background-image:url('assets/img/track-${t.id}.jpg'), ${THUMB_BG[t.theme]};"></div>
+        <div class="nm">${t.emoji} ${t.name}</div>
         <div class="ds">${t.desc}</div>`;
       el.onclick = () => {
         this.click(); this.trackIdx = i;
@@ -76,9 +76,9 @@ export class UI {
       el.className = 'sel-card kart-card' + (i === this.kartIdx ? ' selected' : '');
       const hex = '#' + k.color.toString(16).padStart(6, '0');
       el.innerHTML = `
-        <div class="swatch" style="background:linear-gradient(180deg,${hex},${hex}cc)"></div>
+        <div class="kthumb" style="background-image:url('assets/img/kart-${k.id}.jpg'), linear-gradient(180deg,${hex}66,#10131f)"></div>
         <div class="nm">${k.name}</div>
-        <div class="statbar"><span class="lb">極速</span><div class="bg"><div class="fg" style="width:${bar(k.topSpeed, 37, 47)}%"></div></div></div>
+        <div class="statbar"><span class="lb">极速</span><div class="bg"><div class="fg" style="width:${bar(k.topSpeed, 37, 47)}%"></div></div></div>
         <div class="statbar"><span class="lb">加速</span><div class="bg"><div class="fg" style="width:${bar(k.accel, 19, 31)}%"></div></div></div>
         <div class="statbar"><span class="lb">操控</span><div class="bg"><div class="fg" style="width:${bar(k.handling, 0.75, 1.3)}%"></div></div></div>
         <div class="statbar"><span class="lb">漂移</span><div class="bg"><div class="fg" style="width:${bar(k.drift, 0.8, 1.4)}%"></div></div></div>
@@ -116,7 +116,7 @@ export class UI {
 
   lbTableHtml(trackId, hiIdx = -1) {
     const lb = this.getLb(trackId);
-    if (!lb.length) return `<div class="empty-note">尚無紀錄 — 快去計時挑戰創下第一筆！</div>`;
+    if (!lb.length) return `<div class="empty-note">尚无纪录 — 快去计时挑战创下第一笔！</div>`;
     let rows = lb.map((e, i) => `
       <tr class="${i === hiIdx ? 'me' : ''}">
         <td class="rank">${['🥇', '🥈', '🥉'][i] || (i + 1)}</td>
@@ -124,7 +124,7 @@ export class UI {
         <td>${escapeHtml(e.kart || '')}</td>
         <td class="tval">${fmtTime(e.ms)}</td>
       </tr>`).join('');
-    return `<table class="rtable"><tr><th></th><th>玩家</th><th>車輛</th><th>總時間</th></tr>${rows}</table>`;
+    return `<table class="rtable"><tr><th></th><th>玩家</th><th>车辆</th><th>总时间</th></tr>${rows}</table>`;
   }
 
   renderLbScreen(activeIdx) {
@@ -140,10 +140,10 @@ export class UI {
     document.getElementById('lb-content').innerHTML = this.lbTableHtml(TRACKS[activeIdx].id);
   }
 
-  // ============ 結算 ============
+  // ============ 结算 ============
   showGPResult(standings, player) {
     const rank = standings.indexOf(player) + 1;
-    const title = rank === 1 ? '🏆 冠軍！' : rank <= 3 ? `🎉 第 ${rank} 名` : `第 ${rank} 名 — 再接再厲`;
+    const title = rank === 1 ? '🏆 冠军！' : rank <= 3 ? `🎉 第 ${rank} 名` : `第 ${rank} 名 — 再接再厉`;
     document.getElementById('result-title').textContent = title;
     const rows = standings.map((k, i) => `
       <tr class="${k.isPlayer ? 'me' : ''}">
@@ -153,28 +153,28 @@ export class UI {
         <td class="tval">${k.finished ? fmtTime(k.finishTime) : 'DNF'}</td>
       </tr>`).join('');
     document.getElementById('result-body').innerHTML =
-      `<table class="rtable"><tr><th></th><th>車手</th><th>車輛</th><th>時間</th></tr>${rows}</table>`;
+      `<table class="rtable"><tr><th></th><th>车手</th><th>车辆</th><th>时间</th></tr>${rows}</table>`;
     document.getElementById('scr-result').classList.remove('hidden');
   }
 
   showTTResult({ trackId, totalMs, lapTimes, bestLap, kartName }) {
-    document.getElementById('result-title').textContent = '⏱️ 完賽！';
+    document.getElementById('result-title').textContent = '⏱️ 完赛！';
     const lapRows = lapTimes.map((t, i) => `
       <tr><td class="rank">L${i + 1}</td><td></td>
       <td class="tval ${t === bestLap ? 'me' : ''}">${fmtTime(t)}</td></tr>`).join('');
     let html = `
       <table class="rtable">
-        <tr><th colspan="2">總時間</th><td class="tval me" style="font-size:18px">${fmtTime(totalMs)}</td></tr>
+        <tr><th colspan="2">总时间</th><td class="tval me" style="font-size:18px">${fmtTime(totalMs)}</td></tr>
         ${lapRows}
         <tr><th colspan="2">最速圈</th><td class="tval" style="color:#c478ff">${fmtTime(bestLap)}</td></tr>
       </table>`;
     const qualified = this.qualifies(trackId, totalMs);
     if (qualified) {
       html += `
-        <div style="text-align:center;color:#ffe66d;font-weight:800;margin-top:12px">🎊 進入排行榜！輸入你的名字：</div>
+        <div style="text-align:center;color:#ffe66d;font-weight:800;margin-top:12px">🎊 进入排行榜！输入你的名字：</div>
         <div id="name-entry">
           <input id="name-input" maxlength="12" placeholder="你的名字" value="${escapeHtml(localStorage.getItem('gokarts_name') || '')}">
-          <button class="btn-sm green" id="btn-save-score">儲存</button>
+          <button class="btn-sm green" id="btn-save-score">储存</button>
         </div>
         <div id="lb-after"></div>`;
     } else {
@@ -185,7 +185,7 @@ export class UI {
     if (qualified) {
       document.getElementById('btn-save-score').onclick = () => {
         this.click();
-        const name = (document.getElementById('name-input').value.trim() || '無名英雄').slice(0, 12);
+        const name = (document.getElementById('name-input').value.trim() || '无名英雄').slice(0, 12);
         localStorage.setItem('gokarts_name', name);
         const entry = { name, ms: totalMs, kart: kartName, date: Date.now() };
         this.insertLb(trackId, entry);

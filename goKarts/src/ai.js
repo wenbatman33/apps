@@ -1,4 +1,4 @@
-// AI 車手：路線跟隨、彎前減速、漂移、避開陷阱、橡皮筋平衡
+// AI 车手：路线跟随、弯前减速、漂移、避开陷阱、橡皮筋平衡
 import * as THREE from 'three';
 import { angleDiff } from './physics.js';
 
@@ -6,12 +6,12 @@ export function aiInput(kart, track, player, hazards, dt) {
   const N = track.N;
   const t = performance.now() / 1000;
 
-  // ---- 個性化路線偏移（緩慢游移 + 避障）----
+  // ---- 个性化路线偏移（缓慢游移 + 避障）----
   kart.aiThink -= dt;
   if (kart.aiThink <= 0) {
     kart.aiThink = 0.5 + Math.random() * 0.5;
     let want = Math.sin(t * 0.35 + kart.aiSeed) * track.halfW * 0.42;
-    // 前方陷阱 → 側移閃避
+    // 前方陷阱 → 侧移闪避
     for (const h of hazards) {
       const rel = (h.idx - kart.idx + N) % N;
       if (rel > 2 && rel < 46 && Math.abs(h.lateral - want) < 3.2) {
@@ -22,7 +22,7 @@ export function aiInput(kart, track, player, hazards, dt) {
     kart.aiOffset += (want - kart.aiOffset) * 0.6;
   }
 
-  // ---- 追蹤前方目標點（彎中縮短視距、出界時瞄回路中央）----
+  // ---- 追踪前方目标点（弯中缩短视距、出界时瞄回路中央）----
   const curveNow = track.samples[(kart.idx + 10) % N].curve;
   let la = Math.floor((13 + kart.speed * 0.6) * (1 - Math.min(0.55, curveNow * 3)));
   let offset = kart.aiOffset;
@@ -34,7 +34,7 @@ export function aiInput(kart, track, player, hazards, dt) {
   const dh = angleDiff(targetH, kart.heading);
   const steer = THREE.MathUtils.clamp(dh * 2.4, -1, 1);
 
-  // ---- 彎前減速（依真實曲率推算過彎速度）----
+  // ---- 弯前减速（依真实曲率推算过弯速度）----
   let maxCurve = 0;
   for (let k = 12; k < 70; k += 4) {
     maxCurve = Math.max(maxCurve, track.samples[(kart.idx + k) % N].curve);
@@ -45,7 +45,7 @@ export function aiInput(kart, track, player, hazards, dt) {
   else if (kart.speed > cornerSpeed) throttle = 0.25;
   if (Math.abs(dh) > 1.1 && kart.speed > 20) brake = true;
 
-  // ---- 橡皮筋：落後追快、領先放慢 ----
+  // ---- 橡皮筋：落后追快、领先放慢 ----
   if (player && !player.finished) {
     const gap = kart.progress - player.progress;
     kart.aiTopScale = gap > 260 ? 0.90 : gap < -260 ? 1.10 : 1.0;
@@ -53,7 +53,7 @@ export function aiInput(kart, track, player, hazards, dt) {
     kart.aiTopScale = 1.0;
   }
 
-  // ---- 漂移時機 ----
+  // ---- 漂移时机 ----
   const drift = Math.abs(steer) > 0.82 && kart.speed > 24 && maxCurve > 0.18;
 
   return { steer, throttle, brake, drift };
@@ -65,7 +65,7 @@ export function aiWantsItem(kart, karts, dt) {
   kart.itemCd -= dt;
   if (kart.itemCd > 0) return false;
   kart.itemCd = 0.8 + Math.random() * 2.2;
-  // 追蹤彈看時機，其他隨緣
+  // 追踪弹看时机，其他随缘
   if (kart.item === 'missile') {
     return karts.some(o => o !== kart && !o.finished && o.progress > kart.progress);
   }

@@ -1,4 +1,4 @@
-// 道具系統：道具箱、輪盤、足球/追蹤彈/油漬/氮氣/落雷
+// 道具系统：道具箱、轮盘、足球/追踪弹/油渍/氮气/落雷
 import * as THREE from 'three';
 import { angleDiff } from './physics.js';
 
@@ -10,7 +10,7 @@ export class ItemManager {
     this.entities = [];
     this.boxes = [];
 
-    // 道具箱：發光旋轉方塊
+    // 道具箱：发光旋转方块
     const boxGeo = new THREE.BoxGeometry(1.5, 1.5, 1.5);
     for (const spot of track.itemSpots) {
       const mat = new THREE.MeshBasicMaterial({ color: 0x64d8ff, transparent: true, opacity: 0.65 });
@@ -24,7 +24,7 @@ export class ItemManager {
     }
   }
 
-  // ---- 依名次加權抽道具 ----
+  // ---- 依名次加权抽道具 ----
   roll(kart) {
     const total = this.karts.length;
     const r = kart.rank, rnd = Math.random();
@@ -43,13 +43,13 @@ export class ItemManager {
     const item = kart.item; kart.item = null;
     const t = this.track;
     if (item === 'nitro') {
-      // 氮氣：立即噴射
+      // 氮气：立即喷射
       kart.boost = Math.max(kart.boost, 1.6);
       this.sound.boost();
       return true;
     }
     if (item === 'thunder') {
-      // 落雷：全場對手遭雷擊（有明確的落雷視覺）
+      // 落雷：全场对手遭雷击（有明确的落雷视觉）
       for (const o of this.karts) {
         if (o === kart || o.finished) continue;
         o.spinT = Math.max(o.spinT, 0.9); o.shrinkT = 5; o.speed *= 0.4;
@@ -60,14 +60,14 @@ export class ItemManager {
       return true;
     }
     if (item === 'oil') {
-      // 油漬：丟在車後方的黑色滑油區
+      // 油渍：丢在车后方的黑色滑油区
       const back = kart.pos.clone();
       back.x -= Math.sin(kart.heading) * 3.4; back.z -= Math.cos(kart.heading) * 3.4;
       const q = t.query(back, kart.idx);
       const frac = THREE.MathUtils.clamp(q.frac, 0, 1);
       back.y = t.surfaceY(q.idx, frac, q.lateral) + 0.06;
       const mesh = oilMesh();
-      // 貼合路面法線
+      // 贴合路面法线
       const s = t.samples[q.idx];
       const side3 = s.side.clone(); side3.y += s.bankSlope; side3.normalize();
       const n = new THREE.Vector3().crossVectors(side3, s.tan).normalize();
@@ -86,7 +86,7 @@ export class ItemManager {
       const mesh = missile ? missileMesh() : ballMesh();
       mesh.position.copy(pos);
       this.scene.add(mesh);
-      // 追蹤彈鎖定前方最近對手
+      // 追踪弹锁定前方最近对手
       let target = null;
       if (missile) {
         let bestGap = Infinity;
@@ -109,7 +109,7 @@ export class ItemManager {
     return false;
   }
 
-  // 落雷視覺：從天而降的鋸齒閃電，短暫顯示後淡出
+  // 落雷视觉：从天而降的锯齿闪电，短暂显示后淡出
   spawnBolt(victim) {
     const g = boltMesh();
     g.position.copy(victim.pos);
@@ -117,7 +117,7 @@ export class ItemManager {
     this.entities.push({ kind: 'bolt', pos: victim.pos.clone(), idx: victim.idx, lateral: victim.lateral, mesh: g, life: 0.5, maxLife: 0.5, owner: null, armT: 0 });
   }
 
-  // AI 避障用：目前場上的陷阱/投射物
+  // AI 避障用：目前场上的陷阱/投射物
   hazards() {
     return this.entities.filter(e => e.kind !== 'bolt').map(e => ({ idx: e.idx, lateral: e.lateral }));
   }
@@ -136,7 +136,7 @@ export class ItemManager {
       b.mesh.position.y = b.spot.pos.y + Math.sin(raceTime * 2 + b.spot.idx) * 0.15;
       for (const k of this.karts) {
         if (k.finished || k.item || k.rouletteT > 0) continue;
-        // 用水平距離判定（道具箱懸浮 1.1m，3D 距離會誤殺大半判定範圍）
+        // 用水平距离判定（道具箱悬浮 1.1m，3D 距离会误杀大半判定范围）
         const dx = k.pos.x - b.mesh.position.x, dz = k.pos.z - b.mesh.position.z;
         if (dx * dx + dz * dz < 4.8) {
           b.active = false; b.mesh.visible = false; b.respawn = 3;
@@ -147,7 +147,7 @@ export class ItemManager {
       }
     }
 
-    // ---- 輪盤 ----
+    // ---- 轮盘 ----
     for (const k of this.karts) {
       if (k.rouletteT > 0) {
         k.rouletteT -= dt;
@@ -158,13 +158,13 @@ export class ItemManager {
       }
     }
 
-    // ---- 場上實體 ----
+    // ---- 场上实体 ----
     for (let i = this.entities.length - 1; i >= 0; i--) {
       const e = this.entities[i];
       e.life -= dt; e.armT = Math.max(0, e.armT - dt);
       if (e.life <= 0) { this.remove(i); continue; }
 
-      // 落雷：只做視覺淡出，無碰撞
+      // 落雷：只做视觉淡出，无碰撞
       if (e.kind === 'bolt') {
         const f = e.life / e.maxLife;
         e.mesh.traverse(o => { if (o.material) o.material.opacity = f; });
@@ -173,7 +173,7 @@ export class ItemManager {
       }
 
       if (e.kind === 'ball' || e.kind === 'missile') {
-        // 追蹤彈導引：沿賽道追目標
+        // 追踪弹导引：沿赛道追目标
         if (e.kind === 'missile' && e.target && !e.target.finished) {
           const gap = ((e.target.idx - e.idx) % N + N) % N;
           if (gap < 26) {
@@ -190,7 +190,7 @@ export class ItemManager {
         const q = t.query(e.pos, e.idx);
         e.idx = q.idx; e.lateral = q.lateral;
         const s = t.samples[q.idx];
-        // 撞牆：足球反彈、追蹤彈爆掉
+        // 撞墙：足球反弹、追踪弹爆掉
         const lim = t.wallD - 0.6;
         if (Math.abs(q.lateral) > lim) {
           e.bounces--;
@@ -204,17 +204,17 @@ export class ItemManager {
           e.pos.x = base.x + s.side.x * lim * sign;
           e.pos.z = base.z + s.side.z * lim * sign;
           const trackH = Math.atan2(s.tan.x, s.tan.z);
-          e.heading = trackH - angleDiff(e.heading, trackH); // 鏡射反彈
+          e.heading = trackH - angleDiff(e.heading, trackH); // 镜射反弹
           this.sound.shellBounce();
         }
         e.pos.y = t.surfaceY(e.idx, THREE.MathUtils.clamp(q.frac, 0, 1), THREE.MathUtils.clamp(q.lateral, -lim, lim)) + (e.kind === 'ball' ? 0.5 : 0.45);
         e.mesh.position.copy(e.pos);
         if (e.kind === 'ball') {
-          // 足球滾動
+          // 足球滚动
           e.mesh.rotation.y = e.heading;
           e.mesh.rotation.x += e.speed * dt / 0.5;
         } else {
-          // 追蹤彈朝向飛行方向
+          // 追踪弹朝向飞行方向
           e.mesh.rotation.y = e.heading;
         }
       }
@@ -235,7 +235,7 @@ export class ItemManager {
           if (k.drift.active) { k.drift.active = false; k.drift.dir = 0; k.drift.charge = 0; }
           this.sound.hit(k.isPlayer);
           if (k.isPlayer) flashScreen('rgba(255,80,60,0.35)');
-          // 油漬踩過不消失（留在原地），投射物命中即消失
+          // 油渍踩过不消失（留在原地），投射物命中即消失
           if (e.kind !== 'oil') this.remove(i);
           break;
         }
@@ -306,7 +306,7 @@ function missileMesh() {
 function oilMesh() {
   const g = new THREE.Group();
   const mat = new THREE.MeshBasicMaterial({ color: 0x14161c, transparent: true, opacity: 0.88 });
-  // 不規則油漬：主橢圓 + 幾滴小圓
+  // 不规则油渍：主椭圆 + 几滴小圆
   const main = new THREE.Mesh(new THREE.CircleGeometry(1.15, 18), mat);
   main.rotation.x = -Math.PI / 2; main.scale.z = 0.75; g.add(main);
   for (const [ox, oz, r] of [[0.9, 0.55, 0.3], [-0.85, -0.4, 0.35], [0.2, -0.85, 0.24]]) {
@@ -326,7 +326,7 @@ function boltTexture() {
   const c = document.createElement('canvas'); c.width = 64; c.height = 256;
   const g = c.getContext('2d');
   g.clearRect(0, 0, 64, 256);
-  // 鋸齒主幹
+  // 锯齿主干
   g.strokeStyle = '#fffbe0'; g.lineWidth = 7; g.lineJoin = 'miter';
   g.shadowColor = '#ffe66d'; g.shadowBlur = 12;
   g.beginPath();
@@ -360,7 +360,7 @@ function boltMesh() {
   return g;
 }
 
-// 全螢幕閃光（被落雷/被擊中回饋）
+// 全萤幕闪光（被落雷/被击中回馈）
 let _flashEl = null;
 export function flashScreen(color) {
   if (!_flashEl) {

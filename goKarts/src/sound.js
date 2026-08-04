@@ -1,7 +1,7 @@
-// 音效模組：WebAudio 程序化音效 + 每賽道專屬背景音樂
+// 音效模组：WebAudio 程序化音效 + 每赛道专属背景音乐
 const midi = m => 440 * Math.pow(2, (m - 69) / 12);
 
-// 每個主題的 BGM 音序（midi 音高，null = 休止）
+// 每个主题的 BGM 音序（midi 音高，null = 休止）
 const MUSIC = {
   meadow: {
     bpm: 128, leadType: 'square', bassType: 'triangle',
@@ -29,6 +29,8 @@ export class SoundManager {
     this.muted = localStorage.getItem('gokarts_mute') === '1';
     this.engineOn = false;
     this.musicTimer = null;
+    this.musicSrc = null;
+    this._musicToken = 0;
   }
 
   ensure() {
@@ -95,7 +97,7 @@ export class SoundManager {
     this.skidGain.gain.setTargetAtTime(drifting ? 0.10 + speed01 * 0.06 : 0, t, 0.05);
   }
 
-  // ============ 基礎合成 ============
+  // ============ 基础合成 ============
   tone(freq, dur, type = 'square', vol = 0.2, when = 0, glideTo = null) {
     if (!this.ctx) return;
     const c = this.ctx, t0 = c.currentTime + when;
@@ -151,10 +153,41 @@ export class SoundManager {
   }
   finishLose()   { [523, 440, 349, 262].forEach((f, i) => this.tone(f, 0.3, 'triangle', 0.22, i * 0.22)); }
 
-  // ============ 背景音樂 ============
+  // ============ 背景音乐 ============
+  // 优先播放 assets/audio/bgm-<theme>.m4a（MusicGen 生成），没有档案时退回程序化音序器
   startMusic(theme) {
     this.ensure();
     this.stopMusic();
+    const token = ++this._musicToken;
+    this.loadBgm(theme).then(buf => {
+      if (token !== this._musicToken) return; // 期间已停止或切歌
+      if (buf) {
+        if (!this.bgmGain) {
+          this.bgmGain = this.ctx.createGain();
+          this.bgmGain.gain.value = 0.32;
+          this.bgmGain.connect(this.master);
+        }
+        const src = this.ctx.createBufferSource();
+        src.buffer = buf; src.loop = true;
+        src.connect(this.bgmGain); src.start();
+        this.musicSrc = src;
+      } else {
+        this.startSequencer(theme);
+      }
+    });
+  }
+
+  loadBgm(theme) {
+    this.bgmCache = this.bgmCache || {};
+    if (this.bgmCache[theme] !== undefined) return Promise.resolve(this.bgmCache[theme]);
+    return fetch(`assets/audio/bgm-${theme}.m4a`)
+      .then(r => { if (!r.ok) throw new Error('no bgm file'); return r.arrayBuffer(); })
+      .then(ab => this.ctx.decodeAudioData(ab))
+      .then(b => (this.bgmCache[theme] = b))
+      .catch(() => (this.bgmCache[theme] = null));
+  }
+
+  startSequencer(theme) {
     const m = MUSIC[theme]; if (!m) return;
     const stepDur = 60 / m.bpm / 2; // 八分音符
     let step = 0;
@@ -197,6 +230,11 @@ export class SoundManager {
   }
 
   stopMusic() {
+    this._musicToken++;
     if (this.musicTimer) { clearInterval(this.musicTimer); this.musicTimer = null; }
+    if (this.musicSrc) {
+      try { this.musicSrc.stop(); } catch (e) {}
+      this.musicSrc = null;
+    }
   }
 }

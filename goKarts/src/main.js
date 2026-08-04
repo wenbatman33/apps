@@ -1,4 +1,4 @@
-// 主程式：場景管理、輸入（鍵盤+虛擬按鍵）、比賽流程、攝影機、遊戲迴圈
+// 主程式：场景管理、输入（键盘+虚拟按键）、比赛流程、摄影机、游戏回圈
 import * as THREE from 'three';
 import { TRACKS, buildTrack, buildSky, loadDecoModels } from './track.js';
 import { KART_TYPES, AI_NAMES, buildKartMesh, loadKartModels } from './karts.js';
@@ -9,7 +9,7 @@ import { SoundManager } from './sound.js';
 import { HUD } from './hud.js';
 import { UI } from './ui.js';
 
-// ============ 基礎設置 ============
+// ============ 基础设置 ============
 const app = document.getElementById('app');
 const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
@@ -31,7 +31,7 @@ const hud = new HUD();
 const ui = new UI(sound);
 const fade = document.getElementById('fade');
 
-// ============ 輸入 ============
+// ============ 输入 ============
 const keys = {};
 window.addEventListener('keydown', e => {
   keys[e.code] = true;
@@ -39,7 +39,7 @@ window.addEventListener('keydown', e => {
   if (e.code === 'Escape' && race && (race.state === 'racing' || race.state === 'countdown')) togglePause();
 });
 window.addEventListener('keyup', e => { keys[e.code] = false; });
-// 失焦時清空按鍵，避免 keyup 遺失造成方向卡死
+// 失焦时清空按键，避免 keyup 遗失造成方向卡死
 window.addEventListener('blur', () => { for (const k in keys) keys[k] = false; });
 document.addEventListener('visibilitychange', () => {
   if (document.hidden) for (const k in keys) keys[k] = false;
@@ -63,16 +63,16 @@ let itemKeyLatch = false;
 function playerInput() {
   const left = keys.ArrowLeft || keys.KeyA || vkeys.left;
   const right = keys.ArrowRight || keys.KeyD || vkeys.right;
-  const steer = (left ? 1 : 0) + (right ? -1 : 0); // 賽道座標：左為正
+  const steer = (left ? 1 : 0) + (right ? -1 : 0); // 赛道座标：左为正
   const brake = !!(keys.ArrowDown || keys.KeyS || vkeys.brake);
-  // 手機：自動油門輔助（預設開）；PC：↑/W
+  // 手机：自动油门辅助（预设开）；PC：↑/W
   const throttle = isTouch ? (brake ? 0 : 1) : (keys.ArrowUp || keys.KeyW ? 1 : 0);
   const drift = !!(keys.ShiftLeft || keys.ShiftRight || keys.Space || vkeys.drift);
   const useItem = !!(keys.Enter || keys.KeyE || vkeys.item);
   return { steer, throttle, brake, drift, useItem };
 }
 
-// ============ 比賽狀態 ============
+// ============ 比赛状态 ============
 let race = null;
 let lastT = performance.now();
 
@@ -80,7 +80,7 @@ function startRace(mode, trackDef, kartType) {
   sound.ensure();
   fade.classList.add('on');
   setTimeout(async () => {
-    await Promise.all([loadKartModels(), loadDecoModels()]); // 模型就緒後才建場（已載入則立即返回）
+    await Promise.all([loadKartModels(), loadDecoModels()]); // 模型就绪后才建场（已载入则立即返回）
     disposeRace();
     buildRace(mode, trackDef, kartType);
     fade.classList.remove('on');
@@ -99,7 +99,7 @@ function buildRace(mode, trackDef, kartType) {
   const track = buildTrack(trackDef);
   scene.add(track.group);
 
-  // ---- 車輛 ----
+  // ---- 车辆 ----
   const isTT = mode === 'tt';
   const karts = [];
   const player = makeKartState(kartType, track.startPositions[isTT ? 0 : 3], true, '你');
@@ -120,7 +120,7 @@ function buildRace(mode, trackDef, kartType) {
     k.mesh = mesh; k.wheels = wheels;
     scene.add(mesh);
     updateKartVisual(k, track, 0.016);
-    // 噴射火焰 & 漂移火花
+    // 喷射火焰 & 漂移火花
     k.flame = new THREE.Mesh(new THREE.ConeGeometry(0.32, 1.5, 7),
       new THREE.MeshBasicMaterial({ color: 0xffa229, transparent: true, opacity: 0.9 }));
     k.flame.rotation.x = Math.PI / 2; k.flame.position.set(0, 0.6, -2.0); k.flame.visible = false;
@@ -142,7 +142,7 @@ function buildRace(mode, trackDef, kartType) {
     bestLap: 0, camPos: null, wrongWayT: 0, endT: 0,
   };
 
-  // 攝影機初始位置
+  // 摄影机初始位置
   const fwd = new THREE.Vector3(Math.sin(player.heading), 0, Math.cos(player.heading));
   camera.position.copy(player.pos).addScaledVector(fwd, -8).add(new THREE.Vector3(0, 4, 0));
   race.camPos = camera.position.clone();
@@ -174,7 +174,7 @@ function disposeRace() {
   race = null;
 }
 
-// ============ 暫停 ============
+// ============ 暂停 ============
 function togglePause() {
   if (!race) return;
   if (race.state === 'paused') {
@@ -213,7 +213,7 @@ ui.onQuit = () => {
   setTimeout(() => { disposeRace(); ui.show('scr-main'); fade.classList.remove('on'); }, 380);
 };
 
-// ============ 主迴圈 ============
+// ============ 主回圈 ============
 const _fwd = new THREE.Vector3(), _camTarget = new THREE.Vector3(), _look = new THREE.Vector3();
 
 function tick() {
@@ -227,7 +227,7 @@ function tick() {
 
   if (r.state === 'paused') { renderer.render(r.scene, camera); return; }
 
-  // ---- 倒數 ----
+  // ---- 倒数 ----
   if (r.state === 'countdown') {
     const prev = Math.ceil(r.countT);
     r.countT -= dt;
@@ -240,14 +240,14 @@ function tick() {
       sound.startMusic(r.trackDef.theme);
       for (const k of r.karts) k.lapStart = 0;
     }
-    // 倒數期間引擎怠速
+    // 倒数期间引擎怠速
     sound.setEngine(0, playerInput().throttle * 0.3, false, false);
     updateCamera(r, dt, true);
     renderer.render(r.scene, camera);
     return;
   }
 
-  // ---- 比賽中 ----
+  // ---- 比赛中 ----
   r.raceMs += dt * 1000;
   const laps = r.trackDef.laps;
   const hazards = r.items ? r.items.hazards() : [];
@@ -255,9 +255,9 @@ function tick() {
   for (const k of r.karts) {
     let input;
     if (k.isPlayer) {
-      // 完賽後鬆油門滑行停止（不能給 brake：停住後會轉為倒車）
+      // 完赛后松油门滑行停止（不能给 brake：停住后会转为倒车）
       input = k.finished ? { steer: 0, throttle: 0, brake: false, drift: false } : playerInput();
-      // 道具（按鍵防連發）
+      // 道具（按键防连发）
       if (input.useItem && !itemKeyLatch && r.items && !k.finished) r.items.use(k);
       itemKeyLatch = input.useItem;
     } else {
@@ -271,7 +271,7 @@ function tick() {
     updateKart(k, input, r.track, dt);
     updateKartVisual(k, r.track, dt);
 
-    // 事件音效／訊息
+    // 事件音效／讯息
     if (k.isPlayer) {
       if (k._wallHit > 4) sound.wallHit(k._wallHit);
       if (k._bump > 6) { sound.bump(); k._bump = 0; }
@@ -280,7 +280,7 @@ function tick() {
       if ((prevCharge < 1.1 && k.drift.charge >= 1.1) || (prevCharge < 2.4 && k.drift.charge >= 2.4)) sound.driftTick();
     } else if (k._miniTurbo) k._miniTurbo = 0;
 
-    // 火焰 / 火花視覺
+    // 火焰 / 火花视觉
     k.flame.visible = k.boost > 0;
     if (k.flame.visible) k.flame.scale.setScalar(0.7 + Math.random() * 0.6);
     const sparkOn = k.drift.active && k.drift.charge > 0.4;
@@ -292,7 +292,7 @@ function tick() {
       }
     }
 
-    // ---- 跨線事件 ----
+    // ---- 跨线事件 ----
     if (k._crossedLine) {
       if (k.lap >= 1) {
         const lapT = r.raceMs - k.lapStart;
@@ -303,10 +303,10 @@ function tick() {
         }
       }
       k.lapStart = r.raceMs;
-      if (k.isPlayer && k.lap === laps - 1) { hud.center('最後一圈！', 1.4, 'min(9vw,56px)'); sound.lapJingle(); }
+      if (k.isPlayer && k.lap === laps - 1) { hud.center('最后一圈！', 1.4, 'min(9vw,56px)'); sound.lapJingle(); }
       else if (k.isPlayer && k.lap >= 1 && k.lap < laps) sound.lapJingle();
 
-      // 完賽
+      // 完赛
       if (k.lap >= laps && !k.finished) {
         k.finished = true;
         k.finishTime = r.raceMs;
@@ -330,11 +330,11 @@ function tick() {
     const dot = Math.sin(p.heading) * s.tan.x + Math.cos(p.heading) * s.tan.z;
     if (dot < -0.25 && p.speed > 6) {
       r.wrongWayT += dt;
-      if (r.wrongWayT > 0.9) hud.msg('⚠️ 逆向行駛！', 0.5);
+      if (r.wrongWayT > 0.9) hud.msg('⚠️ 逆向行驶！', 0.5);
     } else r.wrongWayT = 0;
   }
 
-  // ---- 引擎聲 ----
+  // ---- 引擎声 ----
   const in_ = p.finished ? { throttle: 0 } : playerInput();
   sound.setEngine(
     Math.min(1, Math.abs(p.speed) / p.type.topSpeed),
@@ -347,7 +347,7 @@ function tick() {
   hud.setRace(p, laps, r.raceMs, p.bestLap);
   hud.drawMap(r.track, r.karts, p);
 
-  // ---- 結束流程 ----
+  // ---- 结束流程 ----
   if (r.state === 'ending') {
     r.endT -= dt;
     if (r.endT <= 0) {
@@ -381,7 +381,7 @@ function showResults(r) {
       kartName: r.kartType.name,
     });
   } else {
-    // 未完賽 AI 依進度排序列入
+    // 未完赛 AI 依进度排序列入
     const standings = [
       ...r.karts.filter(k => k.finished).sort((a, b) => a.finishTime - b.finishTime),
       ...r.karts.filter(k => !k.finished).sort((a, b) => b.progress - a.progress),
@@ -390,7 +390,7 @@ function showResults(r) {
   }
 }
 
-// ============ 攝影機 ============
+// ============ 摄影机 ============
 function updateCamera(r, dt, countdown) {
   const p = r.player;
   _fwd.set(Math.sin(p.heading), 0, Math.cos(p.heading));
@@ -400,9 +400,9 @@ function updateCamera(r, dt, countdown) {
   _camTarget.copy(p.pos).addScaledVector(_fwd, -dist);
   _camTarget.y = p.pos.y + h;
   if (countdown) {
-    // 倒數運鏡：從側前方環繞，收尾正好停在車尾追焦位置
+    // 倒数运镜：从侧前方环绕，收尾正好停在车尾追焦位置
     const t = Math.max(0, r.countT / 3.6);
-    const orbA = p.heading + Math.PI + t * 2.2; // t=0 時 = 車正後方
+    const orbA = p.heading + Math.PI + t * 2.2; // t=0 时 = 车正后方
     const orbDist = dist + t * 4;
     _camTarget.set(
       p.pos.x + Math.sin(orbA) * orbDist,
@@ -412,7 +412,7 @@ function updateCamera(r, dt, countdown) {
   }
   const damp = countdown ? 1 - Math.pow(0.02, dt) : 1 - Math.pow(0.0004, dt);
   r.camPos.lerp(_camTarget, damp);
-  // 避免攝影機低於路面
+  // 避免摄影机低于路面
   const q = r.track.query(r.camPos, p.idx);
   const minY = q.surfaceY + 1.4;
   if (r.camPos.y < minY) r.camPos.y = minY;
@@ -420,7 +420,7 @@ function updateCamera(r, dt, countdown) {
   _look.copy(p.pos).addScaledVector(_fwd, 5.5);
   _look.y += 1.3;
   camera.lookAt(_look);
-  // 加速時視野拉寬
+  // 加速时视野拉宽
   const targetFov = 68 + (p.boost > 0 ? 12 : 0) + speedF * 4;
   camera.fov += (targetFov - camera.fov) * Math.min(1, 5 * dt);
   camera.updateProjectionMatrix();
@@ -434,9 +434,9 @@ function shuffle(a) {
   return a;
 }
 
-// 首次互動解鎖音訊（行動裝置需要）
+// 首次互动解锁音讯（行动装置需要）
 window.addEventListener('pointerdown', () => sound.ensure(), { once: true });
 
 ui.show('scr-main');
-loadKartModels(); loadDecoModels(); // 進主選單即開始預載模型
+loadKartModels(); loadDecoModels(); // 进主选单即开始预载模型
 tick();

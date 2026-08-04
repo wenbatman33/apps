@@ -1,0 +1,16 @@
+{
+  "outDir": "assets/img",
+  "style": "low-poly 3D cartoon video game art, bright cheerful colors, soft lighting, clean composition, no text, no watermark",
+  "items": [
+    { "id": "hero", "w": 1536, "h": 864, "prompt": "Wide hero keyart for a cute low-poly 3D kart racing web game: three colorful cartoon pickup race trucks (red, yellow, blue) racing toward the camera on an asphalt track with red-and-white striped curbs, a checkered start banner overhead, rolling green hills and pine trees behind, blue sky with floating colorful balloons and confetti, dynamic low camera angle, energetic and fun" },
+    { "id": "track-meadow", "w": 1024, "h": 640, "prompt": "A low-poly cartoon racing track winding through a sunny green meadow, red-and-white striped curbs, clusters of pine trees, distant soft green mountains, clear blue sky, a small festival tent area beside the start line, bright daylight" },
+    { "id": "track-canyon", "w": 1024, "h": 640, "prompt": "A low-poly cartoon desert canyon racing road with elevation changes and a banked hairpin curve, orange rock mesas and cacti, warm sunset orange sky, red-and-white striped curbs, dramatic long shadows" },
+    { "id": "track-neon", "w": 1024, "h": 640, "prompt": "A low-poly cartoon night city elevated highway racing track between neon-lit skyscrapers, glowing cyan guard rails, purple and pink neon rooftop lights, starry night sky, street lamps along the road, cyberpunk-lite mood" },
+    { "id": "kart-red", "w": 512, "h": 512, "prompt": "A single low-poly 3D cartoon RED pickup race truck, three-quarter front view facing slightly left, black wheels with grey hubs, studio soft lighting, centered on a plain very dark navy blue background" },
+    { "id": "kart-yellow", "w": 512, "h": 512, "prompt": "A single low-poly 3D cartoon YELLOW pickup race truck, three-quarter front view facing slightly left, black wheels with grey hubs, studio soft lighting, centered on a plain very dark navy blue background" },
+    { "id": "kart-green", "w": 512, "h": 512, "prompt": "A single low-poly 3D cartoon GREEN pickup race truck, three-quarter front view facing slightly left, black wheels with grey hubs, studio soft lighting, centered on a plain very dark navy blue background" },
+    { "id": "kart-blue", "w": 512, "h": 512, "prompt": "A single low-poly 3D cartoon DEEP BLUE pickup race truck, three-quarter front view facing slightly left, black wheels with grey hubs, studio soft lighting, centered on a plain very dark navy blue background" },
+    { "id": "kart-pink", "w": 512, "h": 512, "prompt": "A single low-poly 3D cartoon PINK pickup race truck, three-quarter front view facing slightly left, black wheels with grey hubs, studio soft lighting, centered on a plain very dark navy blue background" },
+    { "id": "kart-purple", "w": 512, "h": 512, "prompt": "A single low-poly 3D cartoon PURPLE pickup race truck, three-quarter front view facing slightly left, black wheels with grey hubs, studio soft lighting, centered on a plain very dark navy blue background" }
+  ]
+}

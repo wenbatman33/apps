@@ -1,21 +1,21 @@
-// 車輛模組：6 台車型屬性 + Kenney 賽車模型（CC0）載入，失敗時退回低多邊形自建車
+// 车辆模组：6 台车型属性 + Kenney 赛车模型（CC0）载入，失败时退回低多边形自建车
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 
-// topSpeed: 極速(單位/秒)  accel: 加速度  handling: 轉向靈敏  weight: 重量(碰撞優勢)  drift: 漂移增壓效率
+// topSpeed: 极速(单位/秒)  accel: 加速度  handling: 转向灵敏  weight: 重量(碰撞优势)  drift: 漂移增压效率
 export const KART_TYPES = [
-  { id: 'red',    name: '疾風紅魂', color: 0xe33b3b, accent: 0xffd23f, topSpeed: 42, accel: 26, handling: 1.00, weight: 1.0, drift: 1.0,  desc: '全能均衡・新手首選' },
-  { id: 'yellow', name: '雷霆閃電', color: 0xffc21f, accent: 0x222222, topSpeed: 46, accel: 22, handling: 0.82, weight: 1.0, drift: 0.9,  desc: '極速最強・轉向偏重' },
-  { id: 'green',  name: '碧綠精靈', color: 0x2fb757, accent: 0xd8f7e0, topSpeed: 40, accel: 27, handling: 1.22, weight: 0.85, drift: 1.05, desc: '神級操控・靈活過彎' },
-  { id: 'blue',   name: '深海重砲', color: 0x2f5fd0, accent: 0x9fd0ff, topSpeed: 43, accel: 21, handling: 0.88, weight: 1.5, drift: 0.9,  desc: '重量級・碰撞不吃虧' },
-  { id: 'pink',   name: '粉紅甜心', color: 0xff6fb0, accent: 0xffffff, topSpeed: 40, accel: 30, handling: 1.08, weight: 0.8, drift: 1.0,  desc: '起步火箭・輕巧敏捷' },
-  { id: 'purple', name: '暗夜紫影', color: 0x8447d6, accent: 0x3ce6ff, topSpeed: 42, accel: 24, handling: 1.02, weight: 0.95, drift: 1.35, desc: '漂移大師・彎道超車' },
+  { id: 'red',    name: '疾风红魂', color: 0xe33b3b, accent: 0xffd23f, topSpeed: 42, accel: 26, handling: 1.00, weight: 1.0, drift: 1.0,  desc: '全能均衡・新手首选' },
+  { id: 'yellow', name: '雷霆闪电', color: 0xffc21f, accent: 0x222222, topSpeed: 46, accel: 22, handling: 0.82, weight: 1.0, drift: 0.9,  desc: '极速最强・转向偏重' },
+  { id: 'green',  name: '碧绿精灵', color: 0x2fb757, accent: 0xd8f7e0, topSpeed: 40, accel: 27, handling: 1.22, weight: 0.85, drift: 1.05, desc: '神级操控・灵活过弯' },
+  { id: 'blue',   name: '深海重炮', color: 0x2f5fd0, accent: 0x9fd0ff, topSpeed: 43, accel: 21, handling: 0.88, weight: 1.5, drift: 0.9,  desc: '重量级・碰撞不吃亏' },
+  { id: 'pink',   name: '粉红甜心', color: 0xff6fb0, accent: 0xffffff, topSpeed: 40, accel: 30, handling: 1.08, weight: 0.8, drift: 1.0,  desc: '起步火箭・轻巧敏捷' },
+  { id: 'purple', name: '暗夜紫影', color: 0x8447d6, accent: 0x3ce6ff, topSpeed: 42, accel: 24, handling: 1.02, weight: 0.95, drift: 1.35, desc: '漂移大师・弯道超车' },
 ];
 
-// AI 車手名字池
-export const AI_NAMES = ['小灰', '阿boost', '狂飆哥', '奶油圈', '尾速仔', '甜甜圈', '橡皮糖'];
+// AI 车手名字池
+export const AI_NAMES = ['小灰', '阿boost', '狂飙哥', '奶油圈', '尾速仔', '甜甜圈', '橡皮糖'];
 
-// ============ Kenney 模型載入（CC0，assets/kenney/）============
+// ============ Kenney 模型载入（CC0，assets/kenney/）============
 const MODEL_FILES = {
   red: 'vehicle-truck-red.glb',
   yellow: 'vehicle-truck-yellow.glb',
@@ -34,17 +34,17 @@ export function loadKartModels() {
     )
   ).then(pairs => {
     templates = Object.fromEntries(pairs);
-    // 藍色與粉色：以紅色版換色貼圖生成
+    // 蓝色与粉色：以红色版换色贴图生成
     templates.blue = recolorTemplate(templates.red, 0.585, 0.9, 0.95);
     templates.pink = recolorTemplate(templates.red, 0.905, 0.8, 1.25);
   }).catch(e => {
-    console.warn('Kenney 車輛模型載入失敗，改用內建模型', e);
+    console.warn('Kenney 车辆模型载入失败，改用内建模型', e);
     templates = null;
   });
   return loadPromise;
 }
 
-// 把貼圖中紅色系像素換成目標色相（HSL），產生新配色的模板
+// 把贴图中红色系像素换成目标色相（HSL），产生新配色的模板
 function recolorTemplate(src, targetH, sMul, lMul) {
   const clone = src.clone(true);
   let srcMat = null;
@@ -65,7 +65,7 @@ function recolorTemplate(src, targetH, sMul, lMul) {
   }
   g.putImageData(data, 0, 0);
   const tex = new THREE.CanvasTexture(c);
-  tex.flipY = false; // glTF UV 慣例
+  tex.flipY = false; // glTF UV 惯例
   tex.colorSpace = THREE.SRGBColorSpace;
   tex.magFilter = srcMat.map.magFilter;
   tex.minFilter = srcMat.map.minFilter;
@@ -101,12 +101,12 @@ function hsl2rgb(h, s, l) {
   return [f(h + 1 / 3) * 255 | 0, f(h) * 255 | 0, f(h - 1 / 3) * 255 | 0];
 }
 
-// ============ 車輛建構 ============
+// ============ 车辆建构 ============
 export function buildKartMesh(type) {
   const built = templates && templates[type.id]
     ? buildFromTemplate(type)
     : buildBoxKart(type);
-  // 假陰影（blob shadow — 手機效能友善）
+  // 假阴影（blob shadow — 手机效能友善）
   const shadow = new THREE.Mesh(new THREE.PlaneGeometry(2.6, 3.4),
     new THREE.MeshBasicMaterial({ map: blobShadowTexture(), transparent: true, depthWrite: false }));
   shadow.rotation.x = -Math.PI / 2; shadow.position.y = 0.06;
@@ -117,7 +117,7 @@ export function buildKartMesh(type) {
 function buildFromTemplate(type) {
   const g = new THREE.Group();
   const model = templates[type.id].clone(true);
-  // 尺寸校正：車長貼齊 2.7、車底貼地
+  // 尺寸校正：车长贴齐 2.7、车底贴地
   const bbox = new THREE.Box3().setFromObject(model);
   const size = bbox.getSize(new THREE.Vector3());
   const len = Math.max(size.x, size.z);
@@ -126,7 +126,7 @@ function buildFromTemplate(type) {
   model.position.y -= bbox2.min.y;
   g.add(model);
 
-  // 車輪：包一層轉向用 wrapper，輪體本身滾動
+  // 车轮：包一层转向用 wrapper，轮体本身滚动
   const wheels = [];
   const wheelNodes = [];
   model.traverse(o => { if (o.name && o.name.startsWith('wheel')) wheelNodes.push(o); });
@@ -143,7 +143,7 @@ function buildFromTemplate(type) {
   return { mesh: g, wheels };
 }
 
-// ---- 內建低多邊形車（模型載入失敗時的後備）----
+// ---- 内建低多边形车（模型载入失败时的后备）----
 function buildBoxKart(type) {
   const g = new THREE.Group();
   const body = new THREE.MeshLambertMaterial({ color: type.color });

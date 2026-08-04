@@ -1,10 +1,10 @@
-// 賽道模組：3 條立體賽道定義 + 建構器（道路網格、傾斜彎、裝飾、迷你地圖資料）
+// 赛道模组：3 条立体赛道定义 + 建构器（道路网格、倾斜弯、装饰、迷你地图资料）
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 
 const UP = new THREE.Vector3(0, 1, 0);
 
-// ---- Kenney 場景裝飾模型（CC0）----
+// ---- Kenney 场景装饰模型（CC0）----
 let deco = null, decoPromise = null;
 export function loadDecoModels() {
   if (decoPromise) return decoPromise;
@@ -14,15 +14,15 @@ export function loadDecoModels() {
       loader.loadAsync(`assets/kenney/${n}.glb`).then(g => [n, g.scene])
     )
   ).then(pairs => { deco = Object.fromEntries(pairs); })
-   .catch(e => { console.warn('裝飾模型載入失敗，略過', e); deco = null; });
+   .catch(e => { console.warn('装饰模型载入失败，略过', e); deco = null; });
   return decoPromise;
 }
 
-// ============ 三條賽道定義 ============
+// ============ 三条赛道定义 ============
 export const TRACKS = [
   {
-    id: 'meadow', name: '翠綠草原', emoji: '🌿',
-    desc: '丘陵起伏的陽光草原，適合入門的高速流暢路線',
+    id: 'meadow', name: '翠绿草原', emoji: '🌿',
+    desc: '丘陵起伏的阳光草原，适合入门的高速流畅路线',
     laps: 3, width: 15, shoulder: 6, wallExtra: 7.5,
     theme: 'meadow', bankFactor: 0, maxBank: 0.001,
     sky: { top: '#4aa3ff', bottom: '#cfe9ff' }, fog: { color: 0xcfe9ff, near: 140, far: 520 },
@@ -38,8 +38,8 @@ export const TRACKS = [
     itemIdx: [0.16, 0.45, 0.74], boostIdx: [0.32, 0.86],
   },
   {
-    id: 'canyon', name: '烈日峽谷', emoji: '🏜️',
-    desc: '巨岩峽谷間的大落差山路，髮夾彎與陡坡俯衝',
+    id: 'canyon', name: '烈日峡谷', emoji: '🏜️',
+    desc: '巨岩峡谷间的大落差山路，发夹弯与陡坡俯冲',
     laps: 3, width: 14, shoulder: 3.5, wallExtra: 4.5,
     theme: 'canyon', bankFactor: 14, maxBank: 0.16,
     sky: { top: '#ff9e4f', bottom: '#ffe3b3' }, fog: { color: 0xffd9a0, near: 120, far: 480 },
@@ -55,7 +55,7 @@ export const TRACKS = [
   },
   {
     id: 'neon', name: '星夜霓虹城', emoji: '🌃',
-    desc: '穿梭摩天樓間的夜間高架賽道，霓虹燈海與立體交叉',
+    desc: '穿梭摩天楼间的夜间高架赛道，霓虹灯海与立体交叉',
     laps: 3, width: 14, shoulder: 1.6, wallExtra: 2.4,
     theme: 'neon', bankFactor: 12, maxBank: 0.15,
     sky: { top: '#060818', bottom: '#1b1040' }, fog: { color: 0x11081f, near: 110, far: 430 },
@@ -71,7 +71,7 @@ export const TRACKS = [
   },
 ];
 
-// ============ 程序化貼圖 ============
+// ============ 程序化贴图 ============
 function canvasTex(w, h, draw) {
   const c = document.createElement('canvas'); c.width = w; c.height = h;
   draw(c.getContext('2d'), w, h);
@@ -85,16 +85,16 @@ function roadTexture(theme) {
   return canvasTex(256, 256, (g, w, h) => {
     const base = theme === 'neon' ? '#1c2030' : theme === 'canyon' ? '#4a4038' : '#3c3f46';
     g.fillStyle = base; g.fillRect(0, 0, w, h);
-    // 柏油顆粒
+    // 柏油颗粒
     for (let i = 0; i < 2600; i++) {
       const v = Math.random() * 30 - 15;
       g.fillStyle = `rgba(${128 + v},${128 + v},${132 + v},0.08)`;
       g.fillRect(Math.random() * w, Math.random() * h, 2, 2);
     }
-    // 兩側白邊線
+    // 两侧白边线
     g.fillStyle = theme === 'neon' ? '#59f7ff' : '#e8e8e8';
     g.fillRect(6, 0, 7, h); g.fillRect(w - 13, 0, 7, h);
-    // 中央虛線
+    // 中央虚线
     g.fillStyle = theme === 'neon' ? '#ff5fd0' : '#ffd23f';
     for (let y = 0; y < h; y += 64) g.fillRect(w / 2 - 4, y, 8, 34);
   });
@@ -129,7 +129,7 @@ function groundTexture(hex, theme) {
       g.fillStyle = `rgba(${c.r * 255 + v | 0},${c.g * 255 + v | 0},${c.b * 255 + v | 0},0.35)`;
       g.fillRect(Math.random() * w, Math.random() * h, 3, 3);
     }
-    if (theme === 'neon') { // 城市地面格線
+    if (theme === 'neon') { // 城市地面格线
       g.strokeStyle = 'rgba(80,110,255,0.25)'; g.lineWidth = 2;
       for (let i = 0; i <= 8; i++) {
         g.beginPath(); g.moveTo(i * 32, 0); g.lineTo(i * 32, h); g.stroke();
@@ -139,7 +139,7 @@ function groundTexture(hex, theme) {
   });
 }
 
-// ============ 賽道建構 ============
+// ============ 赛道建构 ============
 export const N_SAMPLES = 900;
 
 export function buildTrack(def) {
@@ -147,41 +147,41 @@ export function buildTrack(def) {
   const pts = def.points.map(p => new THREE.Vector3(p[0], p[1], p[2]));
   const curve = new THREE.CatmullRomCurve3(pts, true, 'catmullrom', 0.55);
   const N = N_SAMPLES;
-  const raw = curve.getSpacedPoints(N); // N+1 點，首尾相同
+  const raw = curve.getSpacedPoints(N); // N+1 点，首尾相同
   raw.pop();
   const totalLen = curve.getLength();
   const halfW = def.width / 2;
 
-  // ---- 取樣：位置/切線/側向/傾斜 ----
+  // ---- 取样：位置/切线/侧向/倾斜 ----
   const samples = [];
   for (let i = 0; i < N; i++) {
     const p = raw[i];
     const tan = raw[(i + 1) % N].clone().sub(raw[(i - 1 + N) % N]).normalize();
-    const side = new THREE.Vector3().crossVectors(UP, tan).normalize(); // 行進方向左側
+    const side = new THREE.Vector3().crossVectors(UP, tan).normalize(); // 行进方向左侧
     samples.push({ pos: p, tan, side, bank: 0, bankSlope: 0 });
   }
-  // 由曲率算彎道傾斜（內高外低的斜坡），再平滑
+  // 由曲率算弯道倾斜（内高外低的斜坡），再平滑
   const rawBank = new Float32Array(N);
   for (let i = 0; i < N; i++) {
     const t0 = samples[(i - 2 + N) % N].tan, t1 = samples[(i + 2) % N].tan;
-    const cy = t0.x * t1.z - t0.z * t1.x; // 轉向符號
+    const cy = t0.x * t1.z - t0.z * t1.x; // 转向符号
     rawBank[i] = THREE.MathUtils.clamp(cy * def.bankFactor, -def.maxBank, def.maxBank);
   }
-  // 傾斜過渡拉長（±26 取樣 ≈ 25m），避免 S 彎中傾斜方向急翻造成路面扭曲
+  // 倾斜过渡拉长（±26 取样 ≈ 25m），避免 S 弯中倾斜方向急翻造成路面扭曲
   for (let i = 0; i < N; i++) {
     let s = 0;
     for (let k = -26; k <= 26; k++) s += rawBank[(i + k + N) % N];
     samples[i].bank = s / 53;
     samples[i].bankSlope = Math.tan(samples[i].bank);
   }
-  // 真實曲率（切線夾角），供 AI 彎前減速用，與傾斜度脫鉤
+  // 真实曲率（切线夹角），供 AI 弯前减速用，与倾斜度脱钩
   for (let i = 0; i < N; i++) {
     const t0 = samples[(i - 3 + N) % N].tan, t1 = samples[(i + 3) % N].tan;
     const dot = THREE.MathUtils.clamp(t0.x * t1.x + t0.y * t1.y + t0.z * t1.z, -1, 1);
     samples[i].curve = Math.acos(dot);
   }
 
-  // ---- 表面高度查詢 ----
+  // ---- 表面高度查询 ----
   function surfaceY(idx, frac, lateral) {
     const a = samples[idx], b = samples[(idx + 1) % N];
     const y = a.pos.y + (b.pos.y - a.pos.y) * frac;
@@ -189,9 +189,9 @@ export function buildTrack(def) {
     return y + slope * lateral;
   }
 
-  // ---- 最近取樣點查詢 ----
-  // 窗口刻意縮小（±12）：連續追蹤下每幀移動 <1 取樣點，
-  // 窗口太大會在髮夾彎被吸附到對面路段，造成瞬間出界/高度跳動的「隱形陷阱」
+  // ---- 最近取样点查询 ----
+  // 窗口刻意缩小（±12）：连续追踪下每帧移动 <1 取样点，
+  // 窗口太大会在发夹弯被吸附到对面路段，造成瞬间出界/高度跳动的「隐形陷阱」
   const tmp = new THREE.Vector3();
   function query(pos, hint) {
     let best = hint, bestD = Infinity;
@@ -200,7 +200,7 @@ export function buildTrack(def) {
       const d = tmp.subVectors(pos, samples[i].pos).setY(0).lengthSq();
       if (d < bestD) { bestD = d; best = i; }
     }
-    // 追蹤丟失（距離 >20m）時才全域重新搜尋
+    // 追踪丢失（距离 >20m）时才全域重新搜寻
     if (bestD > 400) {
       for (let i = 0; i < N; i += 2) {
         const d = tmp.subVectors(pos, samples[i].pos).setY(0).lengthSq();
@@ -209,17 +209,17 @@ export function buildTrack(def) {
     }
     const s = samples[best];
     const dx = pos.x - s.pos.x, dz = pos.z - s.pos.z;
-    const along = dx * s.tan.x + dz * s.tan.z;            // 沿切線的投影
-    const lateral = dx * s.side.x + dz * s.side.z;        // 側向偏移（左正）
+    const along = dx * s.tan.x + dz * s.tan.z;            // 沿切线的投影
+    const lateral = dx * s.side.x + dz * s.side.z;        // 侧向偏移（左正）
     const segLen = totalLen / N;
     const frac = THREE.MathUtils.clamp(along / segLen, -0.5, 1.5);
     return { idx: best, frac, lateral, surfaceY: surfaceY(best, THREE.MathUtils.clamp(frac, 0, 1), lateral) };
   }
 
-  // ---- 道路網格 ----
+  // ---- 道路网格 ----
   const roadGeo = new THREE.BufferGeometry();
   const vtx = [], uv = [], idxArr = [];
-  const vScale = totalLen / (def.width * 2.2); // 貼圖沿路重複數
+  const vScale = totalLen / (def.width * 2.2); // 贴图沿路重复数
   for (let i = 0; i <= N; i++) {
     const s = samples[i % N];
     const l = s.pos.clone().addScaledVector(s.side, halfW); l.y += s.bankSlope * halfW;
@@ -236,7 +236,7 @@ export function buildTrack(def) {
   road.receiveShadow = false;
   group.add(road);
 
-  // 貼合路面的條帶（起跑線、加速帶等用，避免平面貼片在坡道上破圖）
+  // 贴合路面的条带（起跑线、加速带等用，避免平面贴片在坡道上破图）
   function buildStrip(i0, len, halfWidth, yOff, mat, vTiles) {
     const g = new THREE.BufferGeometry();
     const v = [], u = [], id = [];
@@ -256,7 +256,7 @@ export function buildTrack(def) {
     return new THREE.Mesh(g, mat);
   }
 
-  // ---- 路緣（紅白curb）----
+  // ---- 路缘（红白curb）----
   const curbT = curbTexture();
   for (const sign of [1, -1]) {
     const g2 = new THREE.BufferGeometry();
@@ -277,7 +277,7 @@ export function buildTrack(def) {
     group.add(new THREE.Mesh(g2, new THREE.MeshLambertMaterial({ map: curbT, side: THREE.DoubleSide })));
   }
 
-  // ---- 路肩（路緣外到護欄的實體地面，與物理高度外推一致）----
+  // ---- 路肩（路缘外到护栏的实体地面，与物理高度外推一致）----
   const wallD = halfW + def.wallExtra;
   const shT = groundTexture(def.offroadColor, def.theme);
   shT.repeat.set(1, 60);
@@ -300,11 +300,11 @@ export function buildTrack(def) {
     group.add(new THREE.Mesh(g4, new THREE.MeshLambertMaterial({ map: shT, side: THREE.DoubleSide })));
   }
 
-  // ---- 護欄 / 霓虹燈條 ----
+  // ---- 护栏 / 霓虹灯条 ----
   const railMat = def.theme === 'neon'
     ? new THREE.MeshBasicMaterial({ color: 0x3ce6ff, transparent: true, opacity: 0.9 })
     : new THREE.MeshLambertMaterial({ color: def.theme === 'canyon' ? 0xa9743c : 0xe8e2d2 });
-  // 實體護欄：內側面 + 頂面 + 外側面（有厚度）
+  // 实体护栏：内侧面 + 顶面 + 外侧面（有厚度）
   const wallH = def.theme === 'canyon' ? 2.4 : 1.1;
   const wallT = def.theme === 'neon' ? 0.55 : 0.85;
   for (const sign of [1, -1]) {
@@ -316,7 +316,7 @@ export function buildTrack(def) {
       inn.y += s.bankSlope * sign * wallD;
       const out = s.pos.clone().addScaledVector(s.side, sign * (wallD + wallT));
       out.y += s.bankSlope * sign * (wallD + wallT);
-      // 每取樣 4 點：內下、內上、外上、外下（底部略埋入地面）
+      // 每取样 4 点：内下、内上、外上、外下（底部略埋入地面）
       v3.push(
         inn.x, inn.y - 0.25, inn.z,
         inn.x, inn.y + wallH, inn.z,
@@ -326,9 +326,9 @@ export function buildTrack(def) {
       if (i < N) {
         const a = i * 4;
         i3.push(
-          a, a + 1, a + 4, a + 1, a + 5, a + 4,       // 內側面
-          a + 1, a + 2, a + 5, a + 2, a + 6, a + 5,   // 頂面
-          a + 2, a + 3, a + 6, a + 3, a + 7, a + 6    // 外側面
+          a, a + 1, a + 4, a + 1, a + 5, a + 4,       // 内侧面
+          a + 1, a + 2, a + 5, a + 2, a + 6, a + 5,   // 顶面
+          a + 2, a + 3, a + 6, a + 3, a + 7, a + 6    // 外侧面
         );
       }
     }
@@ -339,7 +339,7 @@ export function buildTrack(def) {
     group.add(new THREE.Mesh(g3, mat));
   }
 
-  // ---- 起跑線 + 拱門 ----
+  // ---- 起跑线 + 拱门 ----
   const s0 = samples[0];
   group.add(buildStrip(N - 2, 4, halfW, 0.045, new THREE.MeshBasicMaterial({ map: checkerTexture() }), 1));
 
@@ -362,14 +362,14 @@ export function buildTrack(def) {
   ground.rotation.x = -Math.PI / 2; ground.position.y = -0.6;
   group.add(ground);
 
-  // ---- 主題裝飾 ----
+  // ---- 主题装饰 ----
   addDecorations(group, def, samples, halfW, N);
 
-  // ---- 加速帶（貼路面的箭頭條帶）----
+  // ---- 加速带（贴路面的箭头条带）----
   const boostPads = [];
   const padTex = canvasTex(64, 64, (g, w, h) => {
     g.clearRect(0, 0, w, h);
-    // V 型箭頭（尖端朝行進方向）
+    // V 型箭头（尖端朝行进方向）
     g.fillStyle = 'rgba(255,154,31,0.92)';
     g.beginPath();
     g.moveTo(6, 36); g.lineTo(32, 8); g.lineTo(58, 36);
@@ -407,7 +407,7 @@ export function buildTrack(def) {
     startPositions.push({ pos: p, heading: Math.atan2(s.tan.x, s.tan.z), idx, lat });
   }
 
-  // ---- 迷你地圖點位（xz 正規化）----
+  // ---- 迷你地图点位（xz 正规化）----
   let minX = 1e9, maxX = -1e9, minZ = 1e9, maxZ = -1e9;
   for (const s of samples) {
     minX = Math.min(minX, s.pos.x); maxX = Math.max(maxX, s.pos.x);
@@ -423,10 +423,10 @@ export function buildTrack(def) {
   return { def, group, samples, N, totalLen, halfW, shoulderW: def.shoulder, wallD, query, surfaceY, boostPads, itemSpots, startPositions, minimap };
 }
 
-// ============ 主題裝飾 ============
+// ============ 主题装饰 ============
 function addDecorations(group, def, samples, halfW, N) {
   const rng = mulberry32(def.id === 'meadow' ? 7 : def.id === 'canyon' ? 21 : 42);
-  // 判斷位置是否離賽道太近（避免壓到路面）
+  // 判断位置是否离赛道太近（避免压到路面）
   const clearOf = (x, z, min) => {
     for (let i = 0; i < N; i += 4) {
       const dx = x - samples[i].pos.x, dz = z - samples[i].pos.z;
@@ -449,7 +449,7 @@ function addDecorations(group, def, samples, halfW, N) {
 
   if (def.theme === 'meadow') {
     if (deco && deco['decoration-forest']) {
-      // Kenney 森林叢（取代自建圓錐樹）
+      // Kenney 森林丛（取代自建圆锥树）
       const fSrc = deco['decoration-forest'];
       const fb = new THREE.Box3().setFromObject(fSrc);
       const fSize = fb.getSize(new THREE.Vector3());
@@ -461,7 +461,7 @@ function addDecorations(group, def, samples, halfW, N) {
         m.rotation.y = r() * Math.PI * 2;
         group.add(m);
       });
-      // 起點旁帳篷觀眾區
+      // 起点旁帐篷观众区
       const tSrc = deco['decoration-tents'];
       if (tSrc) {
         const tb = new THREE.Box3().setFromObject(tSrc);
@@ -478,7 +478,7 @@ function addDecorations(group, def, samples, halfW, N) {
         }
       }
     } else {
-      // 後備：自建圓錐樹（instanced）
+      // 后备：自建圆锥树（instanced）
       const trunkG = new THREE.CylinderGeometry(0.35, 0.5, 2.4, 6);
       const leafG = new THREE.ConeGeometry(2.6, 5.5, 8);
       const trunk = new THREE.InstancedMesh(trunkG, new THREE.MeshLambertMaterial({ color: 0x7a4f2a }), 90);
@@ -494,7 +494,7 @@ function addDecorations(group, def, samples, halfW, N) {
       trunk.count = leaf.count = ti;
       group.add(trunk, leaf);
     }
-    // 遠山
+    // 远山
     for (let i = 0; i < 9; i++) {
       const h = 30 + rng() * 45;
       const hill = new THREE.Mesh(new THREE.ConeGeometry(60 + rng() * 60, h, 7),
@@ -503,7 +503,7 @@ function addDecorations(group, def, samples, halfW, N) {
       hill.position.set(Math.cos(ang) * r, h / 2 - 8, Math.sin(ang) * r);
       group.add(hill);
     }
-    // 氣球
+    // 气球
     for (let i = 0; i < 12; i++) {
       const b = new THREE.Mesh(new THREE.SphereGeometry(1.6, 10, 8),
         new THREE.MeshLambertMaterial({ color: new THREE.Color().setHSL(rng(), 0.8, 0.6) }));
@@ -515,7 +515,7 @@ function addDecorations(group, def, samples, halfW, N) {
   }
 
   if (def.theme === 'canyon') {
-    // 巨岩台地（淨空隨岩石半徑，避免壓到路面）
+    // 巨岩台地（净空随岩石半径，避免压到路面）
     for (let n = 0, tries = 0; n < 34 && tries < 1000; tries++) {
       const i = Math.floor(rng() * N);
       const s = samples[i];
@@ -543,7 +543,7 @@ function addDecorations(group, def, samples, halfW, N) {
       const sc = 0.7 + r() * 0.9; g.scale.setScalar(sc);
       group.add(g);
     });
-    // 遠景峽谷壁
+    // 远景峡谷壁
     for (let i = 0; i < 10; i++) {
       const h = 50 + rng() * 60;
       const wall = new THREE.Mesh(new THREE.BoxGeometry(90 + rng() * 80, h, 26),
@@ -556,12 +556,12 @@ function addDecorations(group, def, samples, halfW, N) {
   }
 
   if (def.theme === 'neon') {
-    // 高架橋墩
+    // 高架桥墩
     const pierMat = new THREE.MeshLambertMaterial({ color: 0x2a2f45 });
     for (let i = 0; i < N; i += 36) {
       const s = samples[i];
       if (s.pos.y < 3) continue;
-      // 立體交叉處下方有別段路面 → 不放橋墩
+      // 立体交叉处下方有别段路面 → 不放桥墩
       let overRoad = false;
       for (let j = 0; j < N; j += 3) {
         const d = Math.min(Math.abs(i - j), N - Math.abs(i - j));
@@ -571,13 +571,13 @@ function addDecorations(group, def, samples, halfW, N) {
         if (dx * dx + dz * dz < 144 && o.pos.y < s.pos.y - 2) { overRoad = true; break; }
       }
       if (overRoad) continue;
-      // 橋墩頂壓在路面中心下方 0.7，避免傾斜彎道時刺穿路面
+      // 桥墩顶压在路面中心下方 0.7，避免倾斜弯道时刺穿路面
       const h = s.pos.y - 0.1;
       const pier = new THREE.Mesh(new THREE.BoxGeometry(2.4, h, 2.4), pierMat);
       pier.position.set(s.pos.x, s.pos.y / 2 - 0.65, s.pos.z);
       group.add(pier);
     }
-    // 霓虹大樓（instanced 主體 + 發光窗）
+    // 霓虹大楼（instanced 主体 + 发光窗）
     const buildings = [];
     scatter(70, halfW + 22, halfW + 120, halfW + 21, (x, z, s, r) => buildings.push({ x, z, h: 14 + r() * 58, w: 6 + r() * 10, hue: r() }));
     const boxG = new THREE.BoxGeometry(1, 1, 1);
@@ -587,7 +587,7 @@ function addDecorations(group, def, samples, halfW, N) {
     buildings.forEach((b, i) => {
       m.makeScale(b.w, b.h, b.w).setPosition(b.x, b.h / 2 - 1, b.z);
       bodyIM.setMatrixAt(i, m);
-      m.makeScale(b.w * 1.02, 0.7, b.w * 1.02).setPosition(b.x, b.h - 0.6, b.z); // 頂部霓虹框
+      m.makeScale(b.w * 1.02, 0.7, b.w * 1.02).setPosition(b.x, b.h - 0.6, b.z); // 顶部霓虹框
       glowIM.setMatrixAt(i, m);
       glowIM.setColorAt(i, new THREE.Color().setHSL(0.5 + b.hue * 0.45, 1, 0.6));
     });
@@ -601,10 +601,10 @@ function addDecorations(group, def, samples, halfW, N) {
     }
     starG.setAttribute('position', new THREE.Float32BufferAttribute(starV, 3));
     group.add(new THREE.Points(starG, new THREE.PointsMaterial({ color: 0xcfe0ff, size: 1.6, sizeAttenuation: false })));
-    // 路燈（貼合路肩表面，含彎道傾斜高度）
+    // 路灯（贴合路肩表面，含弯道倾斜高度）
     for (let i = 0; i < N; i += 60) {
       const s = samples[i];
-      const sgn = (i / 60) % 2 === 0 ? 1 : -1; // 左右交錯
+      const sgn = (i / 60) % 2 === 0 ? 1 : -1; // 左右交错
       const L = halfW + 1.9;
       const baseX = s.pos.x + s.side.x * sgn * L;
       const baseZ = s.pos.z + s.side.z * sgn * L;
@@ -620,7 +620,7 @@ function addDecorations(group, def, samples, halfW, N) {
   }
 }
 
-// 可重現亂數
+// 可重现乱数
 function mulberry32(a) {
   return function () {
     a |= 0; a = a + 0x6D2B79F5 | 0;
@@ -630,7 +630,7 @@ function mulberry32(a) {
   };
 }
 
-// 天空漸層（大球體 + 頂點色）
+// 天空渐层（大球体 + 顶点色）
 export function buildSky(def) {
   const geo = new THREE.SphereGeometry(600, 20, 12);
   const top = new THREE.Color(def.sky.top), bot = new THREE.Color(def.sky.bottom);
