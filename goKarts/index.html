@@ -12,14 +12,19 @@
   button { font-family:inherit; }
 
   /* ============ 共用 ============ */
-  .screen { position:fixed; inset:0; z-index:40; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:18px; color:#fff; background:radial-gradient(ellipse at 50% 30%, #1d2b53 0%, #0b1020 70%); }
+  .screen { position:fixed; inset:0; z-index:40; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:18px; color:#fff; background:radial-gradient(ellipse at 50% 30%, #1d2b53 0%, #0b1020 70%);
+    overflow-y:auto; -webkit-overflow-scrolling:touch;
+    padding:calc(14px + env(safe-area-inset-top)) 10px calc(14px + env(safe-area-inset-bottom)); }
+  /* 内容高於視窗時, flex 置中會把頂部裁掉且捲不到 → safe center 改為靠上並可捲動 */
+  .screen { justify-content:safe center; }
+  .screen > * { flex-shrink:0; }
   .hidden { display:none !important; }
   /* 主选单：主视觉背景 + 上下滚动格纹旗带 */
   #scr-main { background:
     linear-gradient(180deg, rgba(11,16,32,.30) 0%, rgba(11,16,32,.62) 55%, rgba(9,12,24,.90) 100%),
     url('assets/img/hero.jpg') center 30%/cover no-repeat,
     radial-gradient(ellipse at 50% 30%, #1d2b53 0%, #0b1020 70%); }
-  #scr-main::before, #scr-main::after { content:""; position:absolute; left:-60px; right:-60px; height:16px; z-index:1;
+  #scr-main::before, #scr-main::after { content:""; position:fixed; left:-60px; right:-60px; height:16px; z-index:1;
     background:conic-gradient(#f2f2f2 90deg, #15181f 90deg 180deg, #f2f2f2 180deg 270deg, #15181f 270deg) 0 0/32px 32px;
     animation:checker-slide 1.6s linear infinite; opacity:.9; }
   #scr-main::before { top:0; transform:rotate(-1.2deg); }
@@ -46,8 +51,14 @@
   .menu-btn.green:active { box-shadow:0 1px 0 #10662f; }
   .menu-btn.gold { background:linear-gradient(180deg,#ffb03a,#e07b00); box-shadow:0 5px 0 #8f4e00, 0 8px 18px rgba(0,0,0,.4); }
   .menu-btn.gold:active { box-shadow:0 1px 0 #8f4e00; }
-  .back-btn { position:absolute; left:16px; top:calc(14px + env(safe-area-inset-top)); padding:9px 18px; font-size:15px; font-weight:700; color:#dfe7f3;
-    background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.18); border-radius:10px; cursor:pointer; z-index:5; }
+  .back-btn { position:fixed; left:16px; top:calc(14px + env(safe-area-inset-top)); padding:9px 18px; font-size:15px; font-weight:700; color:#dfe7f3;
+    background:rgba(8,12,20,.75); backdrop-filter:blur(4px); border:1px solid rgba(255,255,255,.18); border-radius:10px; cursor:pointer; z-index:6; }
+  /* 主行動按鈕貼底: 內容再長也一定看得到「下一步 / 出發」 */
+  .cta-sticky { position:sticky; bottom:0; z-index:5; margin-top:4px;
+    width:calc(100% + 20px); margin-left:-10px; margin-right:-10px;
+    display:flex; justify-content:center;
+    padding:16px 0 calc(8px + env(safe-area-inset-bottom));
+    background:linear-gradient(180deg, rgba(11,16,32,0) 0%, rgba(11,16,32,.92) 40%, rgba(11,16,32,1) 100%); }
   .screen h2 { font-size:min(6.5vw,32px); font-weight:900; letter-spacing:3px; color:#ffe66d; text-shadow:0 3px 0 rgba(0,0,0,.4); }
 
   /* ============ 选卡片 ============ */
@@ -61,7 +72,20 @@
   .sel-card .ds { font-size:11px; color:#9fb0c8; margin-top:3px; line-height:1.5; }
   /* 车辆选择：3 栏网格（手机 2 栏），含车图 */
   #kart-cards { display:grid; grid-template-columns:repeat(3, min(29vw, 210px)); gap:14px; justify-content:center; }
-  @media (max-width: 620px) { #kart-cards { grid-template-columns:repeat(2, 44vw); gap:10px; } }
+  @media (max-width: 620px) {
+    /* 手機: 2 欄 + 卡片緊湊化, 縮短捲動距離 */
+    #kart-cards { grid-template-columns:repeat(2, 43vw); gap:9px; }
+    .kart-card { padding:8px; }
+    .kart-card .kthumb { aspect-ratio:1/1; margin-bottom:5px; }
+    .sel-card .nm { font-size:13.5px; }
+    .sel-card .ds { font-size:10px; margin-top:2px; }
+    .statbar { margin-top:2px; }
+    .statbar .bg { height:5px; }
+    .screen h2 { font-size:22px; }
+    .card-row { gap:9px; }
+    .sel-card { width:min(43vw,215px); padding:8px; }
+    .sel-card .thumb { margin-bottom:5px; }
+  }
   .kart-card { width:auto; }
   .kart-card .kthumb { width:100%; aspect-ratio:4/3; border-radius:10px; margin-bottom:8px;
     background-size:cover; background-position:center; }
@@ -177,7 +201,7 @@
   <button class="back-btn" data-back="scr-main">← 返回</button>
   <h2>选择赛道</h2>
   <div class="card-row" id="track-cards"></div>
-  <button class="menu-btn green" id="btn-track-next">下一步 →</button>
+  <div class="cta-sticky"><button class="menu-btn green" id="btn-track-next">下一步 →</button></div>
 </div>
 
 <!-- ============ 车辆选择 ============ -->
@@ -185,7 +209,7 @@
   <button class="back-btn" data-back="scr-track">← 返回</button>
   <h2>选择车辆</h2>
   <div class="card-row" id="kart-cards"></div>
-  <button class="menu-btn green" id="btn-kart-go">出发！🏁</button>
+  <div class="cta-sticky"><button class="menu-btn green" id="btn-kart-go">出发！🏁</button></div>
 </div>
 
 <!-- ============ 排行榜 ============ -->
