@@ -29,7 +29,7 @@
     },
     render: { antialias: true, roundPixels: false },
     input: { activePointers: 3 },
-    scene: [TD.BootScene, TD.TitleScene, TD.GameScene],
+    scene: [TD.BootScene, TD.TitleScene, TD.CodexScene, TD.GameScene],
   };
 
   TD.game = new Phaser.Game(config);

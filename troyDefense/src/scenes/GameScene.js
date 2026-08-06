@@ -32,7 +32,12 @@ TD.GameScene = class GameScene extends Phaser.Scene {
     this.hpScale = 1; this.enemyScale = 1;
     this.phaseIdx = 0; this.reversed = false;
     this.heelHintShown = false;
+    this.seenTypes = new Set();
+    this.fxDustOn = true;   // 腳步塵土
+    this.barricades = []; this.barricadeMode = false;
 
+    this.boon = TD.newBoonState();
+    this.waveCount = 0;
     this.applyHeroPassives();
 
     this.fx = new TD.Fx(this);
@@ -60,9 +65,9 @@ TD.GameScene = class GameScene extends Phaser.Scene {
   // ══════════════ 建構 ══════════════
   buildBackground() {
     const B = TD.LAYOUT.battle, LV = this.level;
-    // 空拍俯視地圖，維持 1:1
-    this.bg = this.add.image(B.x + B.w / 2, B.y + B.h / 2, LV.bg)
-      .setDisplaySize(B.w, B.h).setDepth(TD.DEPTH.BG);
+    // 地圖以 cover 填滿戰場（等比放大後裁掉兩側裝飾），把空間讓給棋盤
+    this.bg = this.add.image(B.x + B.w / 2, B.y + B.h / 2, LV.bg).setDepth(TD.DEPTH.BG);
+    this.fitBackground();
     if (LV.tint) this.bg.setTint(LV.tint);
 
     // 戰場上下的面板底色
@@ -70,9 +75,9 @@ TD.GameScene = class GameScene extends Phaser.Scene {
     const hudG = this.add.graphics().setDepth(TD.DEPTH.PANEL - 1);
     this.woodPanel(hudG, -30, -46, TD.GAME_W + 60, H0.h + 62, 28);
     // 文字底條：確保在木紋上依然清晰
-    hudG.fillStyle(0x2A1A0C, 0.55).fillRoundedRect(18, 24, TD.GAME_W - 36, 74, 16);
+    hudG.fillStyle(TD.PALETTE.blueDark, 0.55).fillRoundedRect(18, 24, TD.GAME_W - 36, 74, 16);
     const botG = this.add.graphics().setDepth(TD.DEPTH.PANEL - 1);
-    botG.fillStyle(0x5E3A18, 1).fillRect(0, B.y + B.h, TD.GAME_W, TD.GAME_H - (B.y + B.h));
+    botG.fillStyle(TD.PALETTE.blueDark, 1).fillRect(0, B.y + B.h, TD.GAME_W, TD.GAME_H - (B.y + B.h));
 
     // 危險暈染（HP 低時亮起）
     this.dangerVig = this.add.graphics().setDepth(TD.DEPTH.FX_TOP - 1).setAlpha(0);
@@ -83,18 +88,56 @@ TD.GameScene = class GameScene extends Phaser.Scene {
     this.dangerVig.fillRect(B.x + B.w - 70, B.y, 70, B.h);
   }
 
+  /** 讓地圖等比 cover 戰場，超出的部分用遮罩裁掉，把空間留給棋盤 */
+  fitBackground() {
+    const B = TD.LAYOUT.battle;
+    if (!this.bg) return;
+    let sw = 1024, sh = 1024;
+    try {
+      const tex = this.textures.get(this.bg.texture.key);
+      const src = tex && tex.getSourceImage && tex.getSourceImage();
+      if (src && src.width) { sw = src.width; sh = src.height; }
+    } catch (e) { /* 用預設值 */ }
+
+    const sc = Math.max(B.w / sw, B.h / sh);
+    this.bg.setPosition(B.x + B.w / 2, B.y + B.h / 2).setDisplaySize(sw * sc, sh * sc);
+
+    try {
+      if (this.bgMaskG) this.bgMaskG.destroy();
+      this.bgMaskG = this.make.graphics({ add: false });
+      this.bgMaskG.fillStyle(0xffffff).fillRect(B.x, B.y, B.w, B.h);
+      this.bg.setMask(this.bgMaskG.createGeometryMask());
+    } catch (e) { /* 遮罩失敗就讓它超出，不影響玩法 */ }
+  }
+
   /** 戰場網格：任意空格可建塔，敵人自動繞路 */
   buildGrid() {
     this.grid = new TD.Grid(this);
     this.slots = [];       // 合成台格子；戰場格子由 grid.cells 提供
   }
 
-  /** 圓潤木質面板（明亮手遊風） */
-  woodPanel(g, x, y, w, h, r = 20) {
-    g.fillStyle(0x5E3A18, 1).fillRoundedRect(x, y, w, h, r);
-    g.fillStyle(0x8B5A2B, 1).fillRoundedRect(x + 5, y + 5, w - 10, h - 12, r - 4);
-    g.fillStyle(0xB57C42, 0.55).fillRoundedRect(x + 5, y + 5, w - 10, (h - 12) * 0.34, r - 4);
-    g.lineStyle(4, 0x4A2E12, 0.9).strokeRoundedRect(x, y, w, h, r);
+  /** 立體面板：深藍底 + 大理石白描邊 + 頂部亮藍反光 */
+  woodPanel(g, x, y, w, h, r = 22) {
+    const P = TD.PALETTE;
+    g.fillStyle(P.blueDark, 1).fillRoundedRect(x, y, w, h, r);
+    g.fillStyle(P.blue, 1).fillRoundedRect(x + 5, y + 5, w - 10, h - 13, r - 4);
+    g.fillStyle(P.blueLight, 0.45).fillRoundedRect(x + 5, y + 5, w - 10, (h - 13) * 0.32, r - 4);
+    g.lineStyle(4, P.marble, 0.92).strokeRoundedRect(x, y, w, h, r);
+  }
+
+  /** 立體按鈕：頂部高光 / 主色面 / 底部厚邊 —— CR 那種「可以按」的實體感 */
+  btn3D(g, x, y, w, h, color, opt = {}) {
+    const lip = opt.lip || 8;
+    const r = opt.radius || 22;
+    const dark = Phaser.Display.Color.IntegerToColor(color).darken(32).color;
+    g.fillStyle(dark, 1).fillRoundedRect(x, y + lip, w, h - lip, r);
+    g.fillStyle(color, 1).fillRoundedRect(x, y, w, h - lip, r);
+    g.fillStyle(0xFFFFFF, opt.gloss === false ? 0.14 : 0.34)
+      .fillRoundedRect(x + 8, y + 5, w - 16, (h - lip) * 0.36, r - 6);
+    if (opt.stroke !== false) {
+      g.lineStyle(3, TD.PALETTE.marble, opt.strokeAlpha || 0.55)
+        .strokeRoundedRect(x, y, w, h, r);
+    }
   }
 
   makeSlot(type, idx, x, y, size) {
@@ -115,11 +158,12 @@ TD.GameScene = class GameScene extends Phaser.Scene {
       g.fillStyle(0x000000, 0.45).fillRoundedRect(s.x - r, s.y - r, r * 2, r * 2, 14);
       return;
     }
-    g.fillStyle(0x4A2E12, 0.55).fillRoundedRect(s.x - r, s.y - r, r * 2, r * 2, 16);
-    g.fillStyle(0x6B4423, 0.75).fillRoundedRect(s.x - r + 4, s.y - r + 4, r * 2 - 8, r * 2 - 8, 13);
-    g.lineStyle(hl ? 6 : 3, hl ? 0xFFC72C : 0x4A2E12, hl ? 1 : 0.75)
+    const P = TD.PALETTE;
+    g.fillStyle(P.blueDark, 0.75).fillRoundedRect(s.x - r, s.y - r, r * 2, r * 2, 16);
+    g.fillStyle(0x0B2140, 0.55).fillRoundedRect(s.x - r + 4, s.y - r + 4, r * 2 - 8, r * 2 - 8, 13);
+    g.lineStyle(hl ? 6 : 2, hl ? P.gold : P.blueLight, hl ? 1 : 0.55)
       .strokeRoundedRect(s.x - r, s.y - r, r * 2, r * 2, 16);
-    if (hl) g.fillStyle(0xFFC72C, 0.22).fillRoundedRect(s.x - r, s.y - r, r * 2, r * 2, 16);
+    if (hl) g.fillStyle(P.gold, 0.24).fillRoundedRect(s.x - r, s.y - r, r * 2, r * 2, 16);
   }
 
   buildBench() {
@@ -143,7 +187,7 @@ TD.GameScene = class GameScene extends Phaser.Scene {
     const mk = (x, y, txt, size, color, origin = 0) =>
       this.add.text(x, y, txt, {
         fontFamily: TD.FONT, fontSize: `${size}px`, color,
-        stroke: '#4A2E12', strokeThickness: 5,
+        stroke: TD.STROKE, strokeThickness: 6,
       }).setOrigin(origin, 0).setDepth(TD.DEPTH.HUD);
 
     this.txtLevel = mk(H.levelX, H.levelY, '', H.levelSize, TD.CSS.ivory);
@@ -195,11 +239,11 @@ TD.GameScene = class GameScene extends Phaser.Scene {
     const c = this.add.container(x, y).setDepth(TD.DEPTH.HUD);
 
     const ring = this.add.graphics();
-    ring.fillStyle(0x4A2E12, 1).fillCircle(0, 6, 66);
-    ring.fillStyle(0x8B5A2B, 1).fillCircle(0, 0, 66);
-    ring.fillStyle(0xFFF6E0, 0.18).fillEllipse(0, -26, 100, 46);
+    ring.fillStyle(TD.PALETTE.blueDark, 1).fillCircle(0, 7, 66);
+    ring.fillStyle(TD.PALETTE.blue, 1).fillCircle(0, 0, 66);
+    ring.fillStyle(TD.PALETTE.blueLight, 0.40).fillEllipse(0, -26, 102, 48);
     ring.lineStyle(6, HERO.color, 1).strokeCircle(0, 0, 66);
-    ring.lineStyle(3, 0x4A2E12, 0.8).strokeCircle(0, 0, 70);
+    ring.lineStyle(3, TD.PALETTE.marble, 0.85).strokeCircle(0, 0, 71);
 
     const img = this.add.image(0, -4, HERO.tex).setDisplaySize(112, 112);
     const mask = this.make.graphics().fillCircle(x, y - 4, 56);
@@ -207,8 +251,8 @@ TD.GameScene = class GameScene extends Phaser.Scene {
 
     const cdArc = this.add.graphics();
     const plate = this.add.graphics();
-    plate.fillStyle(0x4A2E12, 0.92).fillRoundedRect(-62, 64, 124, 32, 10);
-    plate.lineStyle(2, 0xC98B4B, 0.9).strokeRoundedRect(-62, 64, 124, 32, 10);
+    plate.fillStyle(TD.PALETTE.blueDark, 0.94).fillRoundedRect(-64, 64, 128, 34, 12);
+    plate.lineStyle(2, TD.PALETTE.marble, 0.8).strokeRoundedRect(-64, 64, 128, 34, 12);
     const label = this.add.text(0, 80, HERO.skill.name, {
       fontFamily: TD.FONT, fontSize: '21px', color: '#FFF6E0',
     }).setOrigin(0.5);
@@ -248,13 +292,28 @@ TD.GameScene = class GameScene extends Phaser.Scene {
     this.recruitZone.on('pointerdown', () => this.doRecruit());
     this.drawRecruit();
 
+    // 路障鈕
+    this.barBtn = this.add.container(BT.barricadeX || 300, BT.y).setDepth(TD.DEPTH.HUD);
+    this.barBg = this.add.graphics();
+    this.txtBar = this.add.text(0, -12, '🧱 路障', {
+      fontFamily: TD.FONT, fontSize: '30px', color: '#4A2E12',
+    }).setOrigin(0.5);
+    this.txtBarCost = this.add.text(0, 24, '', {
+      fontFamily: TD.FONT, fontSize: '22px', color: '#6B4423',
+    }).setOrigin(0.5);
+    this.barBtn.add([this.barBg, this.txtBar, this.txtBarCost]);
+    this.barZone = this.add.zone(BT.barricadeX || 300, BT.y, 200, BT.recruitH)
+      .setInteractive({ useHandCursor: true }).setDepth(TD.DEPTH.HUD + 1);
+    this.barZone.on('pointerdown', () => this.toggleBarricadeMode());
+    this.drawBarricadeBtn();
+
     // 提前召喚鈕
     this.rushBtn = this.add.container(BT.skillX, BT.y).setDepth(TD.DEPTH.HUD);
     const rg = this.add.graphics();
-    rg.fillStyle(0xA8352B, 1).fillCircle(0, 5, BT.skillR);
-    rg.fillStyle(0xE0483C, 1).fillCircle(0, 0, BT.skillR);
-    rg.fillStyle(0xFFFFFF, 0.26).fillEllipse(0, -BT.skillR * 0.42, BT.skillR * 1.1, BT.skillR * 0.55);
-    rg.lineStyle(5, 0xFFE066, 1).strokeCircle(0, 0, BT.skillR);
+    rg.fillStyle(0xB03A2E, 1).fillCircle(0, 7, BT.skillR);
+    rg.fillStyle(0xE74C3C, 1).fillCircle(0, 0, BT.skillR);
+    rg.fillStyle(0xFFFFFF, 0.30).fillEllipse(0, -BT.skillR * 0.40, BT.skillR * 1.15, BT.skillR * 0.58);
+    rg.lineStyle(4, TD.PALETTE.marble, 0.9).strokeCircle(0, 0, BT.skillR);
     const rt = this.add.text(0, 0, '⏩', { fontSize: '48px' }).setOrigin(0.5);
     this.rushBtn.add([rg, rt]);
     this.rushZone = this.add.zone(BT.skillX, BT.y, BT.skillR * 2.2, BT.skillR * 2.2)
@@ -271,7 +330,7 @@ TD.GameScene = class GameScene extends Phaser.Scene {
     this.recruitBg.lineStyle(4, can ? 0xFFF0A8 : 0x8B5A2B, 1)
       .strokeRoundedRect(-BT.recruitW / 2, -BT.recruitH / 2, BT.recruitW, BT.recruitH, 16);
     this.txtRecruitCost.setText(`💰 ${this.recruitCost}`);
-    this.txtRecruit.setColor(can ? '#5E3A18' : '#C9A87C');
+    this.txtRecruit.setColor(can ? '#4A3308' : '#C4CCD4');
   }
 
   /** DEV 工具改動 LAYOUT 後即時重建版面 */
@@ -279,7 +338,7 @@ TD.GameScene = class GameScene extends Phaser.Scene {
     const L = TD.LAYOUT, B = L.battle;
 
     // 戰場地圖與網格
-    this.bg.setPosition(B.x + B.w / 2, B.y + B.h / 2).setDisplaySize(B.w, B.h);
+    this.fitBackground();
     this.grid.redraw();
 
     // 合成台重建（戰場單位不動，只跟著格子座標走）
@@ -338,10 +397,124 @@ TD.GameScene = class GameScene extends Phaser.Scene {
     this.enemies.forEach(e => e.repath());
   }
 
+  // ══════════════ 路障：把敵人導去你要的路線 ══════════════
+  drawBarricadeBtn() {
+    const BT = TD.LAYOUT.bottom;
+    const n = this.barricades.length;
+    const cost = TD.barricadeCost(n);
+    const full = n >= TD.BARRICADE.max;
+    const can = !full && this.gold >= cost;
+    const on = this.barricadeMode;
+    const W = 200, H = BT.recruitH;
+    const g = this.barBg;
+    g.clear();
+    const base = on ? TD.PALETTE.ok : (can ? TD.PALETTE.blueLight : 0x6E7C8A);
+    this.btn3D(g, -W / 2, -H / 2, W, H, base,
+               { gloss: can || on, strokeAlpha: on ? 1 : 0.55 });
+    this.txtBar.setText(on ? '🧱 放置中' : '🧱 路障');
+    this.txtBarCost.setText(full ? `已達上限 ${TD.BARRICADE.max}` : `💰 ${cost}　剩 ${TD.BARRICADE.max - n}`);
+  }
+
+  toggleBarricadeMode() {
+    if (this.state !== 'playing') return;
+    this.barricadeMode = !this.barricadeMode;
+    if (this.barricadeMode) {
+      this.closeTowerPanel();
+      this.grid.drawGrid(true);
+      this.floatLabel(TD.GAME_W / 2, TD.LAYOUT.battle.y + TD.LAYOUT.battle.h * 0.5,
+        '點戰場空格放置路障\n路障只擋路、不會攻擊\n再按一次按鈕結束', '#8CE99A', 32, 2600);
+    } else {
+      this.grid.clearHighlight();
+    }
+    this.audio.place();
+    this.drawBarricadeBtn();
+  }
+
+  placeBarricade(cell) {
+    const n = this.barricades.length;
+    const cost = TD.barricadeCost(n);
+    if (n >= TD.BARRICADE.max) {
+      this.audio.deny();
+      this.floatLabel(cell.x, cell.y - 60, `路障已達上限 ${TD.BARRICADE.max}`, '#FF6B6B', 28);
+      return;
+    }
+    if (this.gold < cost) {
+      this.audio.deny();
+      this.floatLabel(cell.x, cell.y - 60, '金幣不足', '#FF6B6B', 30);
+      return;
+    }
+    if (!this.grid.buildable(cell) || cell.isWall) {
+      this.audio.deny();
+      this.floatLabel(cell.x, cell.y - 60, '這格不能放', '#FF6B6B', 28);
+      return;
+    }
+    if (this.grid.wouldSealOff(cell)) {
+      this.audio.deny();
+      this.fx.ring(cell.x, cell.y, 130, 0xFF4D4D, 300);
+      this.floatLabel(cell.x, cell.y - 70, '不能完全封死通路', '#FF6B6B', 30);
+      return;
+    }
+
+    this.gold -= cost;
+    const size = this.grid.cellW * 0.94;
+    let img;
+    if (this.textures.exists('U_barricade')) {
+      img = this.add.image(cell.x, cell.y, 'U_barricade').setDisplaySize(size, size);
+    } else {
+      img = this.add.rectangle(cell.x, cell.y, size * 0.8, size * 0.8, 0x8B5A2B)
+        .setStrokeStyle(4, 0x4A2E12);
+    }
+    img.setDepth(TD.DEPTH.TOWER + cell.y / 1000);
+    cell.barricade = img;
+    this.barricades.push({ cell, img });
+
+    img.setScale(img.scaleX * 0.4);
+    this.tweens.add({ targets: img, scaleX: img.scaleX / 0.4, scaleY: img.scaleY / 0.4,
+                      duration: 220, ease: 'Back.easeOut' });
+    this.fx.ring(cell.x, cell.y, 110, 0x9FD3FF, 280);
+    this.audio.place();
+    this.onGridChanged();
+    this.drawBarricadeBtn();
+    this.drawRecruit();
+  }
+
+  removeBarricade(cell) {
+    const i = this.barricades.findIndex(b => b.cell === cell);
+    if (i < 0) return;
+    const back = Math.round(TD.barricadeCost(i) * TD.BARRICADE.sellRate);
+    this.gold += back;
+    this.barricades[i].img.destroy();
+    this.barricades.splice(i, 1);
+    cell.barricade = null;
+    this.fx.coin(cell.x, cell.y, back);
+    this.floatLabel(cell.x, cell.y - 60, `+${back}`, '#FFC72C', 30);
+    this.audio.coin();
+    this.onGridChanged();
+    this.drawBarricadeBtn();
+    this.drawRecruit();
+  }
+
   // ══════════════ 輸入與拖曳（自製，不依賴 Phaser 的 Container hit test）══════════════
   setupInput() {
     this.input.on('pointerdown', (p) => {
       if (this.state !== 'playing' || this.dragging) return;
+
+      // 路障放置模式
+      if (this.barricadeMode) {
+        const cell = this.grid.xyToCell(p.worldX, p.worldY);
+        if (cell) {
+          if (cell.barricade) this.removeBarricade(cell);
+          else this.placeBarricade(cell);
+          return;
+        }
+      }
+      // 非放置模式下，點既有路障可拆除退款
+      const bc = this.grid.xyToCell(p.worldX, p.worldY);
+      if (bc && bc.barricade) { this.removeBarricade(bc); return; }
+
+      if (this.towerPanel && !this.panelHit(p.worldX, p.worldY)) this.closeTowerPanel();
+      // 先看是不是點在「弱點顯露中的 BOSS」身上
+      if (this.tapBoss(p.worldX, p.worldY)) return;
       const u = this.unitAt(p.worldX, p.worldY);
       if (!u) return;
       this.tweens.killTweensOf(u);      // 停掉進場/歸位動畫，否則會蓋掉拖曳位置
@@ -356,13 +529,18 @@ TD.GameScene = class GameScene extends Phaser.Scene {
     });
 
     this.input.on('pointermove', (p) => {
+      if (this.barricadeMode && !this.dragging) {
+        const cell = this.grid.xyToCell(p.worldX, p.worldY);
+        this.grid.highlight(cell, null);
+        return;
+      }
       const u = this.dragging;
       if (!u) return;
       u.x = p.worldX + this.dragDX;
       u.y = p.worldY + this.dragDY;
       if (Math.abs(this.dragDX) > 0 || true) this.dragMoved = true;
 
-      const slot = this.slotAt(u.x, u.y);
+      const slot = this.slotAt(u.x, u.y, u);
       if (slot !== this._hoverSlot) {
         if (this._hoverSlot && this._hoverSlot.type !== 'field') this.drawSlot(this._hoverSlot, false);
         this._hoverSlot = slot;
@@ -381,11 +559,25 @@ TD.GameScene = class GameScene extends Phaser.Scene {
       // 用放開時的指標位置判定落點，最可靠
       const dx = p.worldX + this.dragDX, dy = p.worldY + this.dragDY;
       const moved = Phaser.Math.Distance.Between(dx, dy, u.slot.x, u.slot.y) > 16;
-      if (!moved) { u.moveToSlot(u.slot, false); this.showUnitInfo(u); return; }
-      this.resolveDrop(u, this.slotAt(dx, dy));
+      if (!moved) {
+        u.moveToSlot(u.slot, false);
+        if (u.onField) this.openTowerPanel(u); else this.showUnitInfo(u);
+        return;
+      }
+      this.resolveDrop(u, this.slotAt(dx, dy, u));
     };
     this.input.on('pointerup', drop);
     this.input.on('pointerupoutside', drop);
+  }
+
+  /** 點擊弱點顯露中的 BOSS */
+  tapBoss(x, y) {
+    for (const e of this.enemies) {
+      if (!e.def.heelTapPct || !e.active) continue;
+      if (Phaser.Math.Distance.Between(x, y, e.x, e.y) > e.bodyW * 1.6) continue;
+      if (e.tapHeel()) return true;
+    }
+    return false;
   }
 
   /** 用座標找最近的單位（命中範圍放寬，手機好操作） */
@@ -393,7 +585,8 @@ TD.GameScene = class GameScene extends Phaser.Scene {
     let best = null, bd = Infinity;
     for (const u of this.units) {
       if (!u.slot) continue;
-      const size = u.slot.type === 'field' ? this.grid.cellW : TD.LAYOUT.bench.cell;
+      const fp = u.footprint || 1;
+      const size = u.slot.type === 'field' ? this.grid.cellW * fp : TD.LAYOUT.bench.cell;
       const r = size * 0.56;
       const d = Phaser.Math.Distance.Squared(x, y, u.x, u.y);
       if (d < bd && d < r * r) { bd = d; best = u; }
@@ -494,7 +687,7 @@ TD.GameScene = class GameScene extends Phaser.Scene {
     this.drawRecruit();
   }
 
-  slotAt(x, y) {
+  slotAt(x, y, unit) {
     // 先看合成台
     let best = null, bd = 1e9;
     for (const s of this.slots) {
@@ -502,8 +695,13 @@ TD.GameScene = class GameScene extends Phaser.Scene {
       if (d < bd && d < (s.size * 0.62) ** 2) { bd = d; best = s; }
     }
     if (best) return best;
-    // 再看戰場格子
-    return this.grid.xyToCell(x, y);
+    // 再看戰場格子；2×2 單位要吸附成合法的左上角
+    let cell = this.grid.xyToCell(x, y);
+    if (!cell) return null;
+    cell = this.grid.mainCell(cell);
+    const fp = unit ? (unit.footprint || 1) : 1;
+    if (fp > 1) cell = this.grid.anchorFor(cell, fp);
+    return cell;
   }
 
   freeSlot() { return this.slots.find(s => s.type === 'bench' && !s.unit && !s.locked); }
@@ -529,11 +727,11 @@ TD.GameScene = class GameScene extends Phaser.Scene {
     }
     this.gold -= this.recruitCost;
     this.recruits++;
-    this.recruitCost += TD.RECRUIT_STEP;
+    this.applyBoonSideEffects();
     const pool = TD.RECRUIT_POOL;
     const kind = pool[Phaser.Math.Between(0, pool.length - 1)];
-    // 隨關卡提升初始階級
-    const lv = Math.random() < Math.min(0.35, 0.04 * this.levelId) ? 2 : 1;
+    const lv2p = Math.min(0.35, 0.04 * this.levelId) + (this.boon.luckyLv2 || 0);
+    const lv = Math.random() < lv2p ? 2 : 1;
     const u = this.addUnit(kind, lv);
     if (u) {
       u.setScale(0.2);
@@ -566,6 +764,176 @@ TD.GameScene = class GameScene extends Phaser.Scene {
       g.fillStyle(K.tint, 0.06).fillCircle(u.x, u.y, st.range);
       this.tweens.add({ targets: g, alpha: 0, duration: 1400, onComplete: () => g.destroy() });
     }
+  }
+
+  // ══════════════ 塔操作面板 ══════════════
+  panelHit(x, y) {
+    const r = this.panelRect;
+    return r && x >= r.x && x <= r.x + r.w && y >= r.y && y <= r.y + r.h;
+  }
+
+  openTowerPanel(u) {
+    this.closeTowerPanel();
+    this.panelUnit = u;
+    const W = 1000, H = 250, X = (TD.GAME_W - W) / 2, Y = TD.LAYOUT.battle.y + TD.LAYOUT.battle.h - H - 16;
+    this.panelRect = { x: X, y: Y, w: W, h: H };
+
+    const c = this.add.container(0, 0).setDepth(TD.DEPTH.BANNER);
+    this.towerPanel = c;
+
+    const g = this.add.graphics();
+    this.woodPanel(g, X, Y, W, H, 22);
+    c.add(g);
+
+    // 射程圈
+    const st = u.stats, K = TD.getKind(u.kind);
+    const ring = this.add.graphics().setDepth(TD.DEPTH.FX);
+    if (st.range) {
+      ring.lineStyle(4, K.tint, 0.75).strokeCircle(u.x, u.y, st.range);
+      ring.fillStyle(K.tint, 0.10).fillCircle(u.x, u.y, st.range);
+    }
+    c.add(ring);
+    const mark = this.add.graphics();
+    mark.lineStyle(5, 0xFFE066, 1).strokeCircle(u.x, u.y, this.grid.cellW * 0.52);
+    c.add(mark);
+
+    // 資訊
+    c.add(this.add.text(X + 26, Y + 20, `${TD.nameOf(u.kind, u.lv)}  Lv.${u.lv}`, {
+      fontFamily: TD.FONT, fontSize: '38px', color: '#FFF6E0', stroke: '#4A2E12', strokeThickness: 5,
+    }));
+    if (st.isGiant) {
+      c.add(this.add.text(X + W - 26, Y + 66, '🗿 巨人單位（2×2）', {
+        fontFamily: TD.FONT, fontSize: '24px', color: '#D9A8FF',
+        stroke: TD.STROKE, strokeThickness: 4,
+      }).setOrigin(1, 0));
+    }
+    if (st.onWallBonus) {
+      c.add(this.add.text(X + W - 26, Y + 30, '🏰 居高臨下加成中', {
+        fontFamily: TD.FONT, fontSize: '25px', color: '#8FD0FF',
+        stroke: '#4A2E12', strokeThickness: 4,
+      }).setOrigin(1, 0));
+    }
+    const line2 = st.dmg
+      ? `傷害 ${st.dmg}   射速 ${(1000 / st.cd).toFixed(1)}/s   射程 ${st.range}`
+      : `光環增傷 +${Math.round(st.buff * 100)}%   減速 ${Math.round(st.slow * 100)}%   範圍 ${st.range}`;
+    c.add(this.add.text(X + 26, Y + 68, line2, {
+      fontFamily: TD.FONT, fontSize: '26px', color: '#FFE9B8', stroke: '#4A2E12', strokeThickness: 4,
+    }));
+
+    const btn = (bx, by, bw, bh, label, sub, color, cb, enabled = true) => {
+      const bg = this.add.graphics();
+      const dark = Phaser.Display.Color.IntegerToColor(color).darken(30).color;
+      bg.fillStyle(enabled ? dark : 0x6B5136, 1).fillRoundedRect(bx, by + 6, bw, bh, 16);
+      bg.fillStyle(enabled ? color : 0x8B7355, 1).fillRoundedRect(bx, by, bw, bh - 4, 16);
+      bg.fillStyle(0xFFFFFF, enabled ? 0.28 : 0.08)
+        .fillRoundedRect(bx + 8, by + 6, bw - 16, (bh - 4) * 0.34, 12);
+      c.add(bg);
+      c.add(this.add.text(bx + bw / 2, by + bh * 0.32, label, {
+        fontFamily: TD.FONT, fontSize: '30px', color: enabled ? '#4A2E12' : '#C9A87C',
+      }).setOrigin(0.5));
+      if (sub) c.add(this.add.text(bx + bw / 2, by + bh * 0.70, sub, {
+        fontFamily: TD.FONT, fontSize: '22px', color: enabled ? '#6B4423' : '#A6743C',
+      }).setOrigin(0.5));
+      const z = this.add.zone(bx + bw / 2, by + bh / 2, bw, bh).setInteractive({ useHandCursor: true });
+      z.on('pointerdown', () => { if (enabled) cb(); else this.audio.deny(); });
+      c.add(z);
+    };
+
+    const bw = 300, bh = 96, by = Y + 128;
+    const maxed = u.lv >= TD.MAX_LV || TD.isFused(u.kind);
+    const canGiant = maxed && !u.giant && u.footprint === 1;
+    if (canGiant) {
+      // 滿階塔改成提供「巨人化」
+      btn(X + 26, by, bw, bh, '🗿 巨人化', `💰 ${TD.GIANT.cost}　佔 2×2`, 0xB06CD8,
+          () => this.giantify(u), this.gold >= TD.GIANT.cost);
+    } else {
+      const cost = TD.upgradeCost(u.lv);
+      btn(X + 26, by, bw, bh, u.giant ? '已巨人化' : (maxed ? '已滿階' : '升級'),
+          (u.giant || maxed) ? '' : `💰 ${cost}`, 0xFFC72C,
+          () => this.upgradeTower(u), !maxed && this.gold >= cost);
+    }
+
+    const pri = TD.PRIORITIES.find(p => p.key === u.priority) || TD.PRIORITIES[0];
+    btn(X + 26 + bw + 22, by, bw, bh, `目標：${pri.name}`, pri.desc, 0x8FC94B,
+        () => { this.cyclePriority(u); });
+
+    btn(X + 26 + (bw + 22) * 2, by, bw, bh, '賣出', `+💰 ${TD.sellValue(u.lv)}`, 0xE0483C,
+        () => this.sellTower(u));
+  }
+
+  closeTowerPanel() {
+    if (this.towerPanel) { this.towerPanel.destroy(true); this.towerPanel = null; }
+    this.panelUnit = null; this.panelRect = null;
+  }
+
+  upgradeTower(u) {
+    const cost = TD.upgradeCost(u.lv);
+    if (u.lv >= TD.MAX_LV || TD.isFused(u.kind) || this.gold < cost) { this.audio.deny(); return; }
+    this.gold -= cost;
+    u.upgradeTo(u.kind, u.lv + 1);
+    this.fx.mergeBurst(u.x, u.y, TD.getKind(u.kind).tint);
+    this.audio.merge(u.lv);
+    this.floatLabel(u.x, u.y - 80, `Lv.${u.lv} ${TD.nameOf(u.kind, u.lv)}`, '#FFE066', 32);
+    this.addScore(40 * u.lv);
+    this.afterBoardChange();
+    this.openTowerPanel(u);
+  }
+
+  /** 巨人化：需要 2×2 空間，且不能把路封死 */
+  giantify(u) {
+    if (u.giant || this.gold < TD.GIANT.cost) { this.audio.deny(); return; }
+    const g = this.grid, slot = u.slot;
+    const anchor = g.anchorFor(slot, 2);
+    if (!anchor || !g.buildableArea(anchor, 2, u)) {
+      this.audio.deny();
+      this.floatLabel(u.x, u.y - 80, '周圍空間不足，需要 2×2', '#FF6E6E', 30);
+      return;
+    }
+    if (!anchor.isWall && g.wouldSealOffArea(anchor, 2, u)) {
+      this.audio.deny();
+      this.floatLabel(u.x, u.y - 80, '巨人化會把路封死', '#FF6E6E', 30);
+      return;
+    }
+    this.gold -= TD.GIANT.cost;
+    g.release(slot, 1);
+    u.slot = null;
+    u.giant = true;
+    u.moveToSlot(anchor, false);
+    u.becomeGiant();
+    this.fx.mergeBurst(u.x, u.y, 0xB06CD8);
+    this.fx.ring(u.x, u.y, 240, 0xB06CD8, 480);
+    this.fx.shake(0.010, 260);
+    this.audio.fuse();
+    this.floatLabel(u.x, u.y - 110, `🗿 ${TD.nameOf(u.kind, u.lv)} 巨人化`, '#D9A8FF', 40);
+    this.addScore(800);
+    this.onGridChanged();
+    this.afterBoardChange();
+    this.closeTowerPanel();
+  }
+
+  sellTower(u) {
+    const val = TD.sellValue(u.lv);
+    this.gold += val;
+    this.fx.coin(u.x, u.y, val);
+    this.floatLabel(u.x, u.y - 70, `+${val}`, '#FFC72C', 34);
+    this.fx.ring(u.x, u.y, 130, 0xFFC72C, 300);
+    this.audio.coin();
+    if (u.slot) {
+      if (u.slot.type === 'field') this.grid.release(u.slot, u.footprint);
+      else u.slot.unit = null;
+    }
+    this.units = this.units.filter(x => x !== u);
+    u.destroy();
+    this.closeTowerPanel();
+    this.onGridChanged();
+    this.afterBoardChange();
+  }
+
+  cyclePriority(u) {
+    const i = TD.PRIORITIES.findIndex(p => p.key === u.priority);
+    u.priority = TD.PRIORITIES[(i + 1) % TD.PRIORITIES.length].key;
+    this.audio.place();
+    this.openTowerPanel(u);
   }
 
   floatLabel(x, y, txt, color = '#FFF6E0', size = 32, dur = 900) {
@@ -602,21 +970,28 @@ TD.GameScene = class GameScene extends Phaser.Scene {
 
   // ══════════════ 目標與攻擊 ══════════════
   findTarget(unit, range, mode) {
-    let best = null, bestDist = -1;
+    let best = null, bestScore = -Infinity;
     const r2 = range * range;
+    const pri = unit.priority || 'first';
     for (const e of this.enemies) {
       if (!e.targetable) continue;
       const d2 = Phaser.Math.Distance.Squared(unit.x, unit.y, e.x, e.y);
       if (d2 > r2) continue;
-      // 優先打最接近城牆的
-      const prog = e.progress;
-      if (prog > bestDist) { bestDist = prog; best = e; }
+      let score;
+      switch (pri) {
+        case 'strong': score = e.hp; break;
+        case 'weak':   score = -e.hp; break;
+        case 'near':   score = -d2; break;
+        default:       score = e.progress;      // 最前方
+      }
+      if (score > bestScore) { bestScore = score; best = e; }
     }
     return best;
   }
 
   spawnProjectile(unit, target, st, K, ox, oy) {
-    const crit = K.target === 'single' && Math.random() < (this.archerCrit || 0) && unit.kind.includes('archer');
+    const critRate = (this.archerCrit || 0) * (unit.kind.includes('archer') ? 1 : 0) + (this.boon.critAdd || 0);
+    const crit = K.target === 'single' && Math.random() < critRate;
 
     if (K.target === 'single') {
       this.audio.shootArrow();
@@ -657,8 +1032,8 @@ TD.GameScene = class GameScene extends Phaser.Scene {
 
     const line = new Phaser.Geom.Line(unit.x, unit.y, ex, ey);
     let hit = 0;
-    this.enemies.forEach(e => {
-      if (!e.targetable) return;
+    this.enemies.slice().forEach(e => {
+      if (!e.targetable || !e.alive) return;
       if (Phaser.Geom.Intersects.LineToCircle(line, new Phaser.Geom.Circle(e.x, e.y - 20, e.bodyW * 0.5))) {
         const d = e.takeDamage(st.dmg, { bossMul: st.bossMul });
         if (d > 0) { this.fx.dmgText(e.x, e.y - 70, d); this.fx.hit(e.x, e.y - 30, 0xFFF176, 6); hit++; }
@@ -676,8 +1051,8 @@ TD.GameScene = class GameScene extends Phaser.Scene {
     g.fillPath();
     this.tweens.add({ targets: g, alpha: 0, duration: 260, onComplete: () => g.destroy() });
 
-    this.enemies.forEach(e => {
-      if (!e.targetable) return;
+    this.enemies.slice().forEach(e => {
+      if (!e.targetable || !e.alive) return;
       if (e.y > unit.y) return;      // 只打前方
       if (Phaser.Math.Distance.Between(unit.x, unit.y, e.x, e.y) > r) return;
       const d = e.takeDamage(st.dmg, { ignoreArmor: true });
@@ -724,8 +1099,8 @@ TD.GameScene = class GameScene extends Phaser.Scene {
         if (k >= 1) {
           this.fx.explode(p.tx, p.ty, p.aoe);
           this.audio.explode();
-          this.enemies.forEach(e => {
-            if (!e.targetable) return;
+          this.enemies.slice().forEach(e => {
+            if (!e.targetable || !e.alive) return;
             const d = Phaser.Math.Distance.Between(p.tx, p.ty, e.x, e.y);
             if (d > p.aoe) return;
             const fall = 1 - (d / p.aoe) * 0.45;
@@ -742,6 +1117,15 @@ TD.GameScene = class GameScene extends Phaser.Scene {
     }
   }
 
+  /** 焦土戰術：踩在走道上的敵人持續受傷 */
+  applyGroundBurn(dt) {
+    const dps = this.boon.groundBurn;
+    this.enemies.slice().forEach(e => {
+      if (!e.alive || e.def.flying) return;
+      e.takeDamage(dps * dt / 1000, { silent: true, ignoreArmor: true });
+    });
+  }
+
   addFirePool(x, y, r, dur, dps) {
     const pool = { x, y, r, until: this.now + dur, dps };
     (this.pools = this.pools || []).push(pool);
@@ -751,8 +1135,8 @@ TD.GameScene = class GameScene extends Phaser.Scene {
     if (!this.pools) return;
     this.pools = this.pools.filter(p => p.until > this.now);
     this.pools.forEach(p => {
-      this.enemies.forEach(e => {
-        if (!e.targetable) return;
+      this.enemies.slice().forEach(e => {
+        if (!e.targetable || !e.alive) return;
         if (Phaser.Math.Distance.Between(p.x, p.y, e.x, e.y) < p.r) {
           e.takeDamage(p.dps * dt / 1000, { silent: true, ignoreArmor: true });
         }
@@ -775,6 +1159,46 @@ TD.GameScene = class GameScene extends Phaser.Scene {
       }
     }
     return e;
+  }
+
+  /** 新敵人第一次登場時，直接告訴玩家它的機制與應對 */
+  introEnemy(e) {
+    const D = e.def;
+    const hint = D.title || (D.heal ? '會治療周圍同伴' : D.flying ? '飛行，無視你的迷宮'
+      : D.split ? '死亡會分裂' : D.haste ? '讓周圍同伴加速' : null);
+    if (!hint || D.structure) return;
+
+    const W = 880, H = 190, X = (TD.GAME_W - W) / 2;
+    const Y = TD.LAYOUT.battle.y + 40;
+    const c = this.add.container(0, 0).setDepth(TD.DEPTH.BANNER);
+
+    const g = this.add.graphics();
+    g.fillStyle(0x2A1A0C, 0.92).fillRoundedRect(X, Y, W, H, 22);
+    g.lineStyle(5, D.boss ? 0xFFC72C : 0xFF8A3C, 1).strokeRoundedRect(X, Y, W, H, 22);
+    c.add(g);
+
+    if (this.textures.exists(D.tex)) {
+      c.add(this.add.image(X + 92, Y + H / 2, D.tex).setDisplaySize(150, 150));
+    }
+    c.add(this.add.text(X + 186, Y + 26, `新敵人：${D.name}`, {
+      fontFamily: TD.FONT, fontSize: '36px', color: D.boss ? '#FFE066' : '#FFF6E0',
+      stroke: '#4A2E12', strokeThickness: 5,
+    }));
+    c.add(this.add.text(X + 186, Y + 84, hint, {
+      fontFamily: TD.FONT, fontSize: '27px', color: '#FFCFA8',
+      wordWrap: { width: W - 220 }, lineSpacing: 6,
+    }));
+    c.add(this.add.text(X + W - 24, Y + H - 34, '圖鑑可查看全部敵人', {
+      fontFamily: TD.FONT, fontSize: '20px', color: '#C9A87C',
+    }).setOrigin(1, 0.5));
+
+    c.setAlpha(0); c.y = -30;
+    this.tweens.add({ targets: c, alpha: 1, y: 0, duration: 260, ease: 'Back.easeOut' });
+    this.tweens.add({
+      targets: c, alpha: 0, y: -30, delay: 3200, duration: 320,
+      onComplete: () => c.destroy(true),
+    });
+    this.audio.bell();
   }
 
   updateWaves(dt) {
@@ -802,13 +1226,93 @@ TD.GameScene = class GameScene extends Phaser.Scene {
 
   fireWave(w) {
     const D = TD.ENEMIES[w.type];
+    this.waveCount++;
     if (D && D.boss && !D.structure) {
-      // BOSS 單獨生成
       this.spawnEnemy(w.type, w.lane);
-      return;
+    } else {
+      this.pending.push({ type: w.type, n: w.count, lane: w.lane, gap: w.gap, left: 0 });
+      if (w.count >= 6) this.fx.waveWarn(`第 ${this.waveCount} 波 · ${D ? D.name : ''} ×${w.count}`);
     }
-    this.pending.push({ type: w.type, n: w.count, lane: w.lane, gap: w.gap, left: 0 });
-    if (w.count >= 8) this.fx.waveWarn(`第 ${++this.waveCount || (this.waveCount = 1)} 波 · ${D ? D.name : ''} ×${w.count}`);
+    // 每 3 波給一次 3 選 1
+    if (this.waveCount % 3 === 0) this.time.delayedCall(900, () => this.showBoonPicker());
+  }
+
+  // ══════════════ 波次間 3 選 1 ══════════════
+  showBoonPicker() {
+    if (this.state !== 'playing') return;
+    this.state = 'boon';
+    this.closeTowerPanel();
+    const cards = TD.rollBoons(this.boon, 3);
+    if (!cards.length) { this.state = 'playing'; return; }
+    this.audio.bell();
+
+    const c = this.add.container(0, 0).setDepth(TD.DEPTH.DIALOG);
+    const bg = this.add.rectangle(TD.GAME_W / 2, TD.GAME_H / 2, TD.GAME_W, TD.GAME_H, 0x1B1008, 0.82)
+      .setInteractive();
+    c.add(bg);
+
+    const title = this.add.text(TD.GAME_W / 2, 300, '選擇一項強化', {
+      fontFamily: TD.FONT, fontSize: '76px', color: '#FFC72C',
+      stroke: '#4A2E12', strokeThickness: 10,
+    }).setOrigin(0.5);
+    const sub = this.add.text(TD.GAME_W / 2, 380, `第 ${this.waveCount} 波結束 · 三選一`, {
+      fontFamily: TD.FONT, fontSize: '30px', color: '#FFE9B8',
+    }).setOrigin(0.5);
+    c.add([title, sub]);
+
+    const CW = 880, CH = 260, GAP = 34;
+    const y0 = 500;
+    cards.forEach((b, i) => {
+      const x = TD.GAME_W / 2, y = y0 + i * (CH + GAP);
+      const g = this.add.graphics();
+      this.woodPanel(g, x - CW / 2, y, CW, CH, 24);
+      g.fillStyle(0x4A2E12, 0.45).fillRoundedRect(x - CW / 2 + 22, y + 20, 150, 150, 20);
+      c.add(g);
+
+      c.add(this.add.text(x - CW / 2 + 97, y + 95, b.icon, { fontSize: '84px' }).setOrigin(0.5));
+      c.add(this.add.text(x - CW / 2 + 200, y + 34, b.name, {
+        fontFamily: TD.FONT, fontSize: '46px', color: '#FFF6E0',
+        stroke: '#4A2E12', strokeThickness: 5,
+      }));
+      c.add(this.add.text(x - CW / 2 + 200, y + 100, b.desc, {
+        fontFamily: TD.FONT, fontSize: '30px', color: '#FFE9B8',
+        wordWrap: { width: CW - 240 }, lineSpacing: 8,
+      }));
+      const tagBg = this.add.graphics();
+      tagBg.fillStyle(0xE0483C, 0.9).fillRoundedRect(x + CW / 2 - 150, y + 200, 120, 42, 12);
+      c.add(tagBg);
+      c.add(this.add.text(x + CW / 2 - 90, y + 221, b.tag, {
+        fontFamily: TD.FONT, fontSize: '24px', color: '#FFF6E0',
+      }).setOrigin(0.5));
+
+      const z = this.add.zone(x, y + CH / 2, CW, CH).setInteractive({ useHandCursor: true });
+      z.on('pointerdown', () => {
+        this.takeBoon(b);
+        c.destroy(true);
+        this.state = 'playing';
+      });
+      c.add(z);
+    });
+
+    this.boonUI = c;
+  }
+
+  takeBoon(b) {
+    this.boon.taken.push(b.id);
+    if (b.apply) b.apply(this.boon);
+    if (b.instant) b.instant(this);
+    this.fx.flash(0xFFC72C, 240, 0.35);
+    this.audio.fuse();
+    this.floatLabel(TD.GAME_W / 2, TD.LAYOUT.battle.y + 400, `${b.icon} ${b.name}`, '#FFE066', 52, 1400);
+    this.applyBoonSideEffects();
+    this.drawRecruit();
+  }
+
+  applyBoonSideEffects() {
+    // 徵兵折扣重算
+    const base = TD.RECRUIT_BASE + this.recruits * TD.RECRUIT_STEP;
+    const disc = (this.boon.recruitDisc || 0) + (this.recruitDiscount ? -this.recruitDiscount : 0);
+    this.recruitCost = Math.max(10, Math.round(base * (1 - Math.min(0.7, disc))));
   }
 
   rushWave() {
@@ -831,11 +1335,18 @@ TD.GameScene = class GameScene extends Phaser.Scene {
   onEnemyKilled(e) {
     this.enemies = this.enemies.filter(x => x !== e);
     this.kills++;
-    const goldMul = (this.level.goldPenalty || 1) * (1 + (this.goldGain || 0));
+    const goldMul = (this.level.goldPenalty || 1) * (1 + (this.goldGain || 0)) * (this.boon.goldMul || 1);
     const gold = Math.round(e.def.gold * goldMul);
     this.gold += gold;
     this.mana = Math.min(this.manaMax, this.mana + (e.isBoss ? 25 : 2) * (1 + (this.manaGain || 0)));
 
+    if (this.boon.killHeal) {
+      this._healCount = (this._healCount || 0) + 1;
+      if (this._healCount >= this.boon.killHeal) {
+        this._healCount = 0;
+        this.wallHp = Math.min(this.wallMax, this.wallHp + 1);
+      }
+    }
     this.combo++; this.comboTimer = 2600;
     this.maxCombo = Math.max(this.maxCombo, this.combo);
     const comboMul = 1 + Math.min(1.0, Math.floor(this.combo / 5) * 0.1);
@@ -910,7 +1421,7 @@ TD.GameScene = class GameScene extends Phaser.Scene {
     const btn = this.heroBtns.find(b => b.key === heroKey);
     const H = TD.HEROES[heroKey];
     if (!btn || this.now < btn.ready) { this.audio.deny(); return; }
-    btn.ready = this.now + H.skill.cd;
+    btn.ready = this.now + H.skill.cd * (this.boon.heroCdMul || 1);
     this.audio.skill();
     this.fx.flash(H.color, 160, 0.3);
 
@@ -929,7 +1440,7 @@ TD.GameScene = class GameScene extends Phaser.Scene {
       const targets = [...this.enemies].filter(e => e.targetable)
         .sort((a, b) => b.hp - a.hp).slice(0, 3);
       targets.forEach((t, i) => this.time.delayedCall(i * 180, () => {
-        if (!t.active) return;
+        if (!t.alive) return;
         this.fx.pillar(t.x, t.y, 0x81D4FA, 420);
         const d = t.takeDamage(t.maxHp * 0.45 + 600, { trueDmg: true, ignoreArmor: true });
         this.fx.dmgText(t.x, t.y - 80, d, { crit: true });
@@ -939,7 +1450,7 @@ TD.GameScene = class GameScene extends Phaser.Scene {
 
     } else if (eff === 'foresee') {
       this.foreseeUntil = this.now + H.skill.dur;
-      this.enemies.forEach(e => e.applySlow(0.4, H.skill.dur));
+      this.enemies.slice().forEach(e => { if (e.alive) e.applySlow(0.4, H.skill.dur); });
       this.fx.flash(0xCE93D8, 200, 0.25);
       const nx = this.waves.filter(w => !w.done).slice(0, 3)
         .map(w => `${TD.ENEMIES[w.type] ? TD.ENEMIES[w.type].name : w.type}×${w.count}`).join('\n');
@@ -951,17 +1462,19 @@ TD.GameScene = class GameScene extends Phaser.Scene {
         const p = this.grid.cellXY(en.c, Math.floor(this.grid.rows * 0.55));
         this.fx.ring(p.x, p.y, 300, 0xFFAB91, 520);
       });
-      this.enemies.forEach(e => {
+      this.enemies.slice().forEach(e => {
+        if (!e.alive) return;
+        const ex = e.x, ey = e.y;
+        e.knockback(260);                       // 先擊退，再結算傷害
         const d = e.takeDamage(900, { ignoreArmor: true });
-        e.knockback(260);
-        if (d > 0) this.fx.dmgText(e.x, e.y - 70, d, { crit: true });
+        if (d > 0) this.fx.dmgText(ex, ey - 70, d, { crit: true });
       });
       this.fx.shake(0.016, 400);
       this.floatLabel(TD.GAME_W / 2, TD.LAYOUT.battle.y + 260, '狂戰衝鋒', '#FFAB91', 48);
 
     } else if (eff === 'dawn') {
-      this.enemies.forEach((e, i) => this.time.delayedCall(i * 60, () => {
-        if (!e.active) return;
+      this.enemies.slice().forEach((e, i) => this.time.delayedCall(i * 60, () => {
+        if (!e.alive) return;
         this.fx.pillar(e.x, e.y, 0xFFF176, 400);
         const d = e.takeDamage(700, { trueDmg: true, ignoreArmor: true });
         if (d > 0) this.fx.dmgText(e.x, e.y - 70, d, { real: true });
@@ -1021,14 +1534,22 @@ TD.GameScene = class GameScene extends Phaser.Scene {
   }
 
   runTutorial() {
+    const B = TD.LAYOUT.battle;
     const steps = [
-      { y: TD.LAYOUT.bottom.y - 130, txt: '① 點「徵兵」召集守軍', dur: 3000 },
-      { y: TD.LAYOUT.bench.y + 120, txt: '② 把兩個相同的守軍拖在一起 → 升階', dur: 3400 },
-      { y: TD.LAYOUT.battle.y + TD.LAYOUT.battle.h * 0.5, txt: '③ 拖到戰場任一空格建塔\n塔會擋路，敵人得繞遠', dur: 4000 },
+      { y: B.y + B.h * 0.28,
+        txt: '敵人會從上方紅圈進場，一路走到下方的城門\n黃色箭頭就是他們的行進路線', dur: 4200 },
+      { y: B.y + B.h * 0.50,
+        txt: '把守軍拖到戰場任一空格就能建塔\n塔會擋住去路，敵人只能繞遠 → 你就有更多輸出時間', dur: 4400 },
+      { y: B.y + B.h * 0.62,
+        txt: '按底部「🧱 路障」可以買便宜的純擋路障礙\n用它把敵人導去你想要的路線，再點一次可拆掉退款', dur: 4600 },
+      { y: TD.LAYOUT.bench.y - 70,
+        txt: '兩個「相同兵種、相同等級」拖在一起 → 升一階\n兩個「不同兵種、相同等級」→ 融合成特殊單位', dur: 4600 },
+      { y: B.y + B.h * 0.72,
+        txt: '點擊已建好的塔：可以升級、賣掉、或改它的攻擊優先順序', dur: 4000 },
     ];
-    steps.forEach((s, i) => this.time.delayedCall(1200 + i * 3600, () => {
+    steps.forEach((s, i) => this.time.delayedCall(1000 + i * 4600, () => {
       if (this.state !== 'playing') return;
-      this.floatLabel(TD.GAME_W / 2, s.y, s.txt, '#FFE066', 34, s.dur);
+      this.floatLabel(TD.GAME_W / 2, s.y, s.txt, '#FFE066', 30, s.dur);
     }));
   }
 
@@ -1071,7 +1592,7 @@ TD.GameScene = class GameScene extends Phaser.Scene {
     const parts = {
       kill: this.score,
       wall: Math.round(wallPct * 5000),
-      time: Math.round((this.timeLeft / 1000) * 80),
+      time: Math.round((this.timeLeft / 1000) * 80 * (this.boon.timeBonus || 1)),
       eff: Math.round((this.kills / Math.max(1, this.recruits)) * 300),
     };
     parts.total = parts.kill + parts.wall + parts.time + parts.eff;
@@ -1165,7 +1686,8 @@ TD.GameScene = class GameScene extends Phaser.Scene {
     this.enemies = [];
 
     if (ph.bg && this.textures.exists(ph.bg)) {
-      this.bg.setTexture(ph.bg).setDisplaySize(TD.GAME_W, TD.LAYOUT.battle.h).clearTint();
+      this.bg.setTexture(ph.bg).clearTint();
+      this.fitBackground();
     }
     if (ph.reversed) this.reverseLanes();
     if (ph.collapse) this.collapseEvery = ph.collapse * 1000, this.collapseTimer = ph.collapse * 1000;
@@ -1206,7 +1728,9 @@ TD.GameScene = class GameScene extends Phaser.Scene {
     if (target.unit) {
       const u = target.unit;
       const free = this.freeSlot();
-      target.unit = null;
+      const main = G.mainCell(target);
+      G.release(main, u.footprint);
+      u.giant = false;
       if (free) u.moveToSlot(free);
       else { this.units = this.units.filter(x => x !== u); u.destroy(); }
     }
@@ -1253,6 +1777,7 @@ TD.GameScene = class GameScene extends Phaser.Scene {
           e.applySlow(a.st.slow, 300);
       });
     });
+    if (this.boon.groundBurn) this.applyGroundBurn(dt);
     this.updateProjectiles(dt);
     this.updatePools(dt);
     this.updateWaves(dt);
@@ -1263,6 +1788,8 @@ TD.GameScene = class GameScene extends Phaser.Scene {
       if (this.comboTimer <= 0) this.combo = 0;
     }
 
+    // 路徑箭頭脈動，讓行進方向更醒目
+    this.grid.drawArrows(0.55 + 0.45 * Math.abs(Math.sin(this.now / 520)));
     this.updateHud(dt);
     this.updateTension(dt);
   }
@@ -1293,13 +1820,13 @@ TD.GameScene = class GameScene extends Phaser.Scene {
     const H = TD.LAYOUT.hud, r = this.wallHp / this.wallMax;
     const g = this.hpGfx;
     g.clear();
-    g.fillStyle(0x3A2416, 1).fillRoundedRect(H.hpBarX, H.hpBarY, H.hpBarW, H.hpBarH, 11);
-    const col = r > 0.5 ? 0x4CD97B : (r > 0.25 ? 0xFFC72C : 0xFF4D4D);
+    g.fillStyle(TD.PALETTE.blueDark, 1).fillRoundedRect(H.hpBarX, H.hpBarY, H.hpBarW, H.hpBarH, 11);
+    const col = r > 0.5 ? TD.PALETTE.heal : (r > 0.25 ? TD.PALETTE.gold : TD.PALETTE.danger);
     const fw = Math.max(0, (H.hpBarW - 8) * r);
     g.fillStyle(col, 1).fillRoundedRect(H.hpBarX + 4, H.hpBarY + 4, fw, H.hpBarH - 8, 8);
     if (fw > 20) g.fillStyle(0xFFFFFF, 0.35)
       .fillRoundedRect(H.hpBarX + 7, H.hpBarY + 6, fw - 6, (H.hpBarH - 8) * 0.42, 6);
-    g.lineStyle(3, 0x6B4423, 1).strokeRoundedRect(H.hpBarX, H.hpBarY, H.hpBarW, H.hpBarH, 11);
+    g.lineStyle(3, TD.PALETTE.marble, 0.8).strokeRoundedRect(H.hpBarX, H.hpBarY, H.hpBarW, H.hpBarH, 11);
     // 裂痕
     if (r < 0.6) {
       g.lineStyle(2, 0x5E3A18, 0.8);
@@ -1336,7 +1863,7 @@ TD.GameScene = class GameScene extends Phaser.Scene {
       const left = Math.max(0, b.ready - this.now);
       b.cdArc.clear();
       if (left > 0) {
-        const k = left / H2.skill.cd;
+        const k = left / (H2.skill.cd * (this.boon.heroCdMul || 1));
         b.cdArc.fillStyle(0x000000, 0.62);
         b.cdArc.slice(0, 0, 62, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * k, false);
         b.cdArc.fillPath();

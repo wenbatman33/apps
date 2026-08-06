@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>防守特洛伊 — 素材與動畫展示</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html,body { width:100%; height:100%; overflow:hidden; background:#0E2B4D; touch-action:none;
+    font-family:"PingFang TC","Hiragino Sans TC","Microsoft JhengHei",serif; }
+  #app { position:fixed; inset:0; }
+  canvas { display:block; margin:0 auto; }
+  #back { position:fixed; left:12px; bottom:12px; z-index:10;
+    background:#FFC83D; color:#4A3308; border:none; border-radius:14px;
+    padding:12px 20px; font-size:15px; font-weight:700; box-shadow:0 4px 0 #C8901A; cursor:pointer;
+    font-family:inherit; }
+  #back:active { transform:translateY(3px); box-shadow:0 1px 0 #C8901A; }
+</style>
+</head>
+<body>
+<div id="app"></div>
+<button id="back" onclick="location.href='index.html'">← 回遊戲</button>
+
+<script src="vendor/phaser.min.js"></script>
+
+<script src="src/config/layout.js"></script>
+<script src="src/config/units.js"></script>
+<script src="src/config/enemies.js"></script>
+<script src="src/config/levels.js"></script>
+<script src="src/config/heroes.js"></script>
+<script src="src/config/boons.js"></script>
+
+<script src="src/game/Save.js"></script>
+<script src="src/game/Audio.js"></script>
+
+<script src="src/scenes/BootScene.js"></script>
+<script src="src/preview/PreviewScene.js"></script>
+
+<script>
+// Boot 完成後直接進展示頁
+(function () {
+  const Boot = class extends TD.BootScene {
+    create() { super.create(); }
+  };
+  // 覆寫 BootScene 結束後要去的場景
+  const origCreate = TD.BootScene.prototype.create;
+  TD.BootScene.prototype.create = function () {
+    this.missing.forEach(key => this.makePlaceholder(key));
+    TD.MISSING = this.missing;
+    this.makeParticleTextures();
+    this.buildWalkAnims();          // 行走分鏡動畫
+    this.scene.start('Preview');
+  };
+
+  TD.previewGame = new Phaser.Game({
+    type: Phaser.AUTO,
+    parent: 'app',
+    width: TD.GAME_W,
+    height: TD.GAME_H,
+    backgroundColor: '#0E2B4D',
+    scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH },
+    render: { antialias: true },
+    scene: [TD.BootScene, TD.PreviewScene],
+  });
+})();
+</script>
+</body>
+</html>

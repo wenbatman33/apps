@@ -80,8 +80,8 @@ TD.Fx = class Fx {
       onComplete: () => t.destroy(),
     });
     if (crit) {
-      this.s.cameras.main.zoomTo(1.02, 60, 'Sine.Out', true);
-      this.s.time.delayedCall(90, () => this.s.cameras.main.zoomTo(1, 120, 'Sine.Out', true));
+      this.s.cameras.main.zoomTo(1.02, 60, 'Sine.easeOut', true);
+      this.s.time.delayedCall(90, () => this.s.cameras.main.zoomTo(1, 120, 'Sine.easeOut', true));
     }
   }
 

@@ -44,14 +44,24 @@ TD.BootScene = class BootScene extends Phaser.Scene {
      'T_stone_1', 'T_stone_3', 'T_stone_6', 'T_oil_1', 'T_oil_3', 'T_oil_6',
      'T_priest_1', 'T_priest_3', 'T_priest_6'].forEach(id => P('T', id));
 
-    ['E_soldier', 'E_shield', 'E_runner', 'E_siege', 'E_fire',
-     'E_achilles', 'E_ajax', 'E_odysseus', 'E_diomedes', 'E_agamemnon'].forEach(id => P('E', id));
+    // 敵人是 4 幀行走循環 sprite sheet
+    TD.WALK_FRAMES = 4;
+    TD.SHEET_W = 1536; TD.SHEET_H = 1024;
+    this.sheetIds = ['E_soldier', 'E_shield', 'E_runner', 'E_siege', 'E_fire',
+      'E_achilles', 'E_ajax', 'E_odysseus', 'E_diomedes', 'E_agamemnon',
+      'E_healer', 'E_flyer', 'E_myrmidon', 'E_drummer'];
+    this.sheetIds.forEach(id => this.load.spritesheet(id, `E/${id}.png`, {
+      frameWidth: TD.SHEET_W / TD.WALK_FRAMES, frameHeight: TD.SHEET_H,
+    }));
 
     ['H_hector', 'H_paris', 'H_cassandra', 'H_aeneas', 'H_penthesilea'].forEach(id => P('H', id));
 
     ['B_field_sq', 'B_field_night_sq', 'B_city_sq', 'B_horse'].forEach(id => P('B', id));
 
-    ['U_title', 'U_coin', 'U_base'].forEach(id => P('U', id));
+    ['U_title', 'U_coin', 'U_barricade'].forEach(id => P('U', id));
+
+    // 大型融合器械（2×2）
+    ['F_ballista', 'F_greekfire'].forEach(id => P('F', id));
   }
 
   create() {
@@ -64,7 +74,25 @@ TD.BootScene = class BootScene extends Phaser.Scene {
     TD.MISSING = this.missing;
 
     this.makeParticleTextures();
+    this.buildWalkAnims();
     this.scene.start('Title');
+  }
+
+  /** 為每個敵人建立行走循環動畫；素材缺失時退回單幀 */
+  buildWalkAnims() {
+    (this.sheetIds || []).forEach(id => {
+      if (!this.textures.exists(id)) return;
+      const total = this.textures.get(id).frameTotal - 1;   // 扣掉 __BASE
+      if (this.anims.exists(id + '_walk')) return;
+      this.anims.create({
+        key: id + '_walk',
+        frames: this.anims.generateFrameNumbers(id, {
+          start: 0, end: Math.max(0, Math.min(TD.WALK_FRAMES - 1, total - 1)),
+        }),
+        frameRate: 8,
+        repeat: -1,
+      });
+    });
   }
 
   // ── 程序生成的替代貼圖（希臘陶器風剪影）──
@@ -187,12 +215,19 @@ TD.BootScene = class BootScene extends Phaser.Scene {
       H_cassandra: { color: '#CE93D8', shape: 'staff', label: '卡珊德拉' },
       H_aeneas: { color: '#FF8A65', shape: 'spear', label: '埃涅阿斯' },
       H_penthesilea: { color: '#FFAB91', shape: 'spear', label: '女王' },
+      E_healer: { color: '#7FC97F', shape: 'staff', label: '祭司' },
+      E_flyer: { color: '#B08968', shape: 'spear', label: '鳥妖' },
+      E_myrmidon: { color: '#3A3A3A', shape: 'spear', label: '蟻兵' },
+      E_drummer: { color: '#C46A3A', shape: 'stone', label: '鼓手' },
       E_diomedes: { color: '#C9A227', shape: 'spear', label: '狄俄墨得斯' },
       E_agamemnon: { color: '#A63A3A', shape: 'spear', label: '阿伽門農' },
       B_horse: { color: '#8A6B47', shape: 'stone', label: '木馬' },
       B_gate: { color: '#C98B4B', shape: 'stone', label: '城門' },
       U_frame: { color: '#9C7A3C', shape: 'stone', label: '' },
       U_coin: { color: '#FFC72C', shape: 'stone', label: '' },
+      U_barricade: { color: '#8B5A2B', shape: 'stone', label: '路障' },
+      F_ballista: { color: '#C9A227', shape: 'spear', label: '攻城弩' },
+      F_greekfire: { color: '#69F0AE', shape: 'stone', label: '希臘火' },
     };
     for (const k in m) if (key.startsWith(k)) return m[k];
     return { color: '#7A6A55', shape: 'spear', label: '' };

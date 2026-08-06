@@ -48,11 +48,13 @@ TD.TitleScene = class TitleScene extends Phaser.Scene {
       fontFamily: TD.FONT, fontSize: '36px', color: '#FFE066', stroke: '#4A2E12', strokeThickness: 6, shadow: { offsetX: 0, offsetY: 3, color: '#3A2416', blur: 6, fill: true },
     }).setOrigin(0.5).setDepth(10);
 
-    this.bigBtn(TD.GAME_W / 2, 1080, '開始防守', () => { this.page = 'levels'; this.build(); });
-    this.bigBtn(TD.GAME_W / 2, 1230, '英雄編隊', () => { this.page = 'heroes'; this.build(); }, 0xC98B4B, '#FFF6E0');
+    this.bigBtn(TD.GAME_W / 2, 1040, '開始防守', () => { this.page = 'levels'; this.build(); });
+    this.bigBtn(TD.GAME_W / 2, 1178, '英雄編隊', () => { this.page = 'heroes'; this.build(); }, 0xC98B4B, '#FFF6E0');
+    this.bigBtn(TD.GAME_W / 2, 1316, '📖 圖鑑 · 新手必看',
+      () => { TD.audio.init(); TD.audio.resume(); this.scene.start('Codex'); }, 0x8FC94B, '#2E4A12');
 
-    this.add.text(TD.GAME_W / 2, 1420,
-      '手機直屏 · 合成式塔防\n拖曳合成守軍，撐過特洛伊戰爭的十年', {
+    this.add.text(TD.GAME_W / 2, 1440,
+      '格狀塔防 · 塔會擋路，敵人會繞\n把路擋得越長，你的守軍打得越久', {
         fontFamily: TD.FONT, fontSize: '28px', color: '#FFF6E0', align: 'center', lineSpacing: 10, stroke: '#4A2E12', strokeThickness: 6, shadow: { offsetX: 0, offsetY: 3, color: '#3A2416', blur: 6, fill: true },
       }).setOrigin(0.5).setDepth(10);
 

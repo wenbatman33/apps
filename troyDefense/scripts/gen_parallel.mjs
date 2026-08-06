@@ -16,30 +16,17 @@ const WORKERS = parseInt(process.argv[2] || "4", 10);
 
 const manifest = JSON.parse(readFileSync(path.join(ROOT, "scripts/asset_manifest.json"), "utf-8"));
 
-const STYLE = "Pixar / Disney / Mario Odyssey 那種 3D Q版卡通渲染風格（不是 2D 插畫、不是寫實、不是古典油畫）。" +
-  "明亮飽和的色彩、清新討喜、柔和的光線與軟陰影、subsurface scattering 般的通透質感、" +
-  "造型圓潤無銳角、Q版比例（頭約佔身高三分之一）、五官大而可愛、" +
-  "材質乾淨有光澤、輪廓清晰易辨識。就像高品質手機塔防遊戲裡的角色模型。" +
-  "**絕對不要暗沉、不要斑駁做舊、不要陶器質感、不要寫實比例**。";
+const STYLE = "Supercell《Clash Royale》的美術風格：高品質 3D 卡通渲染，誇張有戲劇性的角色設計，大頭、粗壯手腳、體積厚實，表情強烈有個性，強烈方向光與明確陰影，飽和度高，輪廓極清楚。絕對不要甜美可愛風、不要精緻小擺飾感。";
 
-const SIZE = { unit: "1024x1024", enemy: "1024x1024", square: "1024x1024", icon: "1024x1024", portrait: "1024x1536" };
+const SIZE = { unit: "1024x1024", enemy: "1024x1024", sheet: "1536x1024", square: "1024x1024", icon: "1024x1024", portrait: "1024x1536" };
 const sizeFor = (it) => SIZE[it.size] || "1024x1024";
 
 // 戰場單位一律 45° 斜俯視 — 這是塔防遊戲單位的正確視角
-const TOPDOWN = `**視角：手機塔防遊戲棋盤上的 3D 單位**。鏡頭略微俯視（約 25 度角），` +
-  `主要看見單位的正面、以及一點點頭頂，單位站姿或架設在小基座上、置中、佔滿畫面，` +
-  `腳下有一圈柔和的橢圓陰影。輪廓要飽滿好認，小小一顆放在格子上也看得出是什麼。`;
+const SHEETVIEW = "**視角極為重要——這是俯視棋盤遊戲的單位，不是角色卡立繪**：\n鏡頭架在單位的**斜上方約 45 度往下俯瞰**（top-down 3/4 game view），必須呈現：\n  ・清楚看得見**頭頂／頭盔的上表面**與**肩膀的上表面**\n  ・身體因俯視透視而**縱向壓縮**，腿看起來比正面站姿明顯短\n  ・腳下有一圈**橢圓形落地陰影**，看得到腳邊的地面\n  ・面向畫面下方（朝鏡頭方向）\n**絕對不可畫成平視的正面站姿立繪或角色卡插圖**。\n\n**同時這是一張行走循環 sprite sheet**：把畫面**平均分成橫向 4 格**，每格是同一角色的一個行走幀，由左到右：\n  第1格 左腳向前跨、第2格 雙腳交會身體最高、第3格 右腳向前跨、第4格 雙腳再次交會\n四格的體型、服裝、配色、配件、俯視角度必須完全一致，大小與垂直位置也一致，**唯一差別只有四肢姿勢與高低起伏**。每格角色置中、均勻分佈、不重疊。";
 
-const ENEMYVIEW = `**視角：手機塔防遊戲裡會走動的 3D 敵人單位**。鏡頭略微俯視（約 25 度角），` +
-  `看見角色正面與一點點頭頂，正朝畫面前方（下方）行進的動態姿勢，` +
-  `腳下只有一小片柔和的橢圓陰影。` +
-  `**絕對不可以有任何底座、基座、石台、圓盤或平台**——這是會移動的小兵，不是擺飾模型，` +
-  `牠的腳要直接踩在地面上。`;
+const TOPDOWN = "**視角極為重要——這是俯視棋盤遊戲的單位，不是角色卡立繪**：\n鏡頭架在單位的**斜上方約 45 度往下俯瞰**（top-down 3/4 game view），必須呈現：\n  ・清楚看得見**頭頂／頭盔的上表面**與**肩膀的上表面**\n  ・身體因俯視透視而**縱向壓縮**，腿看起來比正面站姿明顯短\n  ・腳下有一圈**橢圓形落地陰影**，看得到腳邊的地面\n  ・面向畫面下方（朝鏡頭方向）\n**絕對不可畫成平視的正面站姿立繪或角色卡插圖**。";
 
-const MAP = `**視角：3D 卡通塔防遊戲的關卡地圖，由斜上方約 40 度俯視**。` +
-  `中央是一大片平坦、乾淨、顏色均勻的開闊地面（遊戲要在上面疊格子，所以中央區域` +
-  `**必須保持空曠平整、不可有道路、石頭、樹木或任何雜物**），` +
-  `四周才是裝飾性的景物邊框。明亮清新、色彩飽和。`;
+const BIGNOTE = "\n\n**這是佔 2×2 格的巨型單位**：體積要明顯比一般小兵大上一倍，填滿該有的畫面範圍，帶有壓迫感與份量感。";
 
 function buildPrompt(item) {
   const out = `${ROOT}/public/assets/${item.cat}/${item.id}.png`;
@@ -48,8 +35,9 @@ function buildPrompt(item) {
     "不要外框、不要文字。";
 
   let view = "", bgRule = "";
-  if (item.size === "unit") { view = TOPDOWN; bgRule = chroma; }
-  else if (item.size === "enemy") { view = ENEMYVIEW; bgRule = chroma; }
+  if (item.size === "sheet") { view = SHEETVIEW; bgRule = chroma; }
+  else if (item.size === "unit") { view = TOPDOWN; bgRule = chroma; }
+  if (item.big) view += BIGNOTE;
   else if (item.size === "icon") { view = ""; bgRule = chroma; }
   else if (item.size === "square") { view = MAP; bgRule = "**滿版地圖**，不要透明、不要留白邊，正方形構圖。"; }
   else { view = ""; bgRule = "**滿版背景圖**，不要透明、不要留白邊，直式 2:3 構圖。"; }

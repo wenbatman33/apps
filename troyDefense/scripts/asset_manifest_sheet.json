@@ -1,0 +1,11 @@
+{
+  "project": "sheet-test",
+  "items": [
+    {
+      "id": "SHEET_soldier",
+      "cat": "CRTEST",
+      "size": "sheet",
+      "prompt": "希臘步兵：青銅科林斯頭盔（露出兇狠的臉）、短劍、圓盾、皮甲，行軍前進"
+    }
+  ]
+}

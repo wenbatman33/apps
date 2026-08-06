@@ -21,8 +21,8 @@ TD.LAYOUT = {
 
   // ── 戰場（空拍俯視地圖，維持 1:1 才不會變形）──
   battle: {
-    x: 0, y: 150, w: 1080, h: 1080,
-    goalT: 1.0,          // 敵人走到路徑此進度即抵達城門
+    x: 0, y: 146, w: 1080, h: 1190,   // 比 1:1 更高，地圖以 cover 裁掉兩側裝飾
+    goalT: 1.0,
   },
 
   // ── 戰場網格：玩家可在任意空格建塔，敵人自動繞路 ──
@@ -31,23 +31,27 @@ TD.LAYOUT = {
     cols: 9, rows: 9,     // 最後一列是「城牆列」：敵人不能通行，但可以佈署守軍
     entries: [1, 4, 7],   // 頂部入口所在的欄
     exitCol: 4,           // 城門所在的欄
-    insetL: 0.135, insetR: 0.135, insetT: 0.150, insetB: 0.060,
+    insetL: 0.102, insetR: 0.102, insetT: 0.150, insetB: 0.060,
+    // 城牆守備位「居高臨下」加成：站得高、看得遠、打得準
+    wallRangeMul: 1.45,
+    wallDmgMul: 1.20,
   },
 
   // ── 波次進度條 ──
-  waveBar: { x: 30, y: 1244, w: 1020, h: 12 },
+  waveBar: { x: 30, y: 1350, w: 1020, h: 12 },
 
   // ── 合成台（2 列 × 6 欄，緊湊不佔空間）──
   bench: {
-    x: 108, y: 1284, cols: 6, rows: 2, cell: 144, gap: 8,
+    x: 95, y: 1372, cols: 8, rows: 2, cell: 106, gap: 6,
   },
 
   // ── 底部操作列 ──
   bottom: {
-    y: 1706,
-    coinX: 148, coinSize: 40,
-    recruitX: 540, recruitW: 330, recruitH: 92,
-    skillX: 952, skillR: 52,
+    y: 1712,
+    coinX: 132, coinSize: 38,
+    recruitX: 520, recruitW: 250, recruitH: 92,
+    barricadeX: 742,          // 路障鈕
+    skillX: 962, skillR: 50,
   },
 
   // ── 單位顯示 ──
@@ -67,18 +71,33 @@ TD.fieldPoint = (nx, ny) => {
 
 // ── 配色（希臘黑繪陶器）──
 TD.PALETTE = {
-  grass: 0x7CC93B, grassDark: 0x5FA22B,
-  wood: 0x8B5A2B, woodLight: 0xB57C42, woodDark: 0x5E3A18,
-  gold: 0xFFC72C, goldLight: 0xFFE066, sky: 0x2FA8E0,
-  cream: 0xFFF6E0, ink: 0x3A2416,
-  danger: 0xFF4D4D, heal: 0x4CD97B, mana: 0x5B8FF9, purple: 0xB06CD8,
+  // ── 結構藍（UI 主色）──
+  blue: 0x1E5FA8, blueDark: 0x123E70, blueLight: 0x3E8FD4,
+  // ── 大理石白 ──
+  marble: 0xF2EFE4, marbleDim: 0xD8D3C4,
+  // ── 強調金 ──
+  gold: 0xFFC83D, goldDark: 0xC8901A, goldLight: 0xFFE08A,
+  // ── 戰場地磚（Clash Royale 式鮮綠草皮，深淺交替）──
+  tileA: 0x8CC63F, tileB: 0x79B233, tileLine: 0x5E9130,
+  lane: 0xD9BE86, laneDark: 0xB99C64,   // 草地中的淺色石板路
+  // ── 城牆地磚（大理石）──
+  wallTileA: 0xE4EDF5, wallTileB: 0xCFDEEC, wallLine: 0x9FB6CC,
+  // ── 狀態 ──
+  ok: 0x6FE08A, danger: 0xFF5C5C, heal: 0x4CD97B, mana: 0x5B8FF9,
+  ink: 0x1A2A3A, purple: 0xB06CD8,
+  // 舊名保留，避免既有引用變成 undefined
+  wood: 0x1E5FA8, woodLight: 0x3E8FD4, woodDark: 0x123E70, cream: 0xF2EFE4,
 };
 TD.CSS = {
-  grass: '#7CC93B', wood: '#8B5A2B', woodDark: '#5E3A18',
-  gold: '#FFC72C', goldLight: '#FFE066', cream: '#FFF6E0',
-  ivory: '#FFF6E0',              // 舊名保留，避免顏色變成 undefined
-  ink: '#3A2416', danger: '#FF4D4D',
+  blue: '#1E5FA8', blueDark: '#123E70', blueLight: '#3E8FD4',
+  marble: '#F2EFE4', gold: '#FFC83D', goldLight: '#FFE08A',
+  ok: '#6FE08A', danger: '#FF5C5C',
+  ivory: '#F2EFE4', cream: '#F2EFE4', ink: '#1A2A3A',
+  wood: '#1E5FA8', woodDark: '#123E70',
 };
+
+// 文字統一描邊色（深藍，比黑色柔和且與 UI 同調）
+TD.STROKE = '#0E2B4D';
 
 TD.FONT = '"PingFang TC","Hiragino Sans TC","Microsoft JhengHei",serif';
 

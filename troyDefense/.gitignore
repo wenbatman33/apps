@@ -13,3 +13,7 @@ public/assets/B/B_field_day.png
 public/assets/B/B_field_night.png
 public/assets/B/B_gate.png
 public/assets/U/U_frame.png
+
+# 各版本美術風格的備份與生圖測試（本機保留，不進 repo）
+public/assets/_qcute_backup/
+public/assets/CRTEST/

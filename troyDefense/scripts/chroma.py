@@ -26,6 +26,8 @@ def dechroma(path):
         return "skip(滿版背景)"
 
     im = Image.open(path).convert("RGBA")
+    # sprite sheet（橫向 4 格，寬高比約 1.5）不可裁切縮放，否則分格會壞掉
+    is_sheet = im.width > im.height * 1.3
     data = bytearray(im.tobytes())
     n = len(data)
 
@@ -50,8 +52,8 @@ def dechroma(path):
 
     img = Image.frombytes("RGBA", im.size, bytes(data))
 
-    # 裁掉透明邊界，等比放回正方形（主體更大更清楚）
-    bbox = img.getbbox()
+    # 裁掉透明邊界，等比放回正方形（主體更大更清楚）；sprite sheet 跳過
+    bbox = None if is_sheet else img.getbbox()
     if bbox:
         cropped = img.crop(bbox)
         w, h = cropped.size

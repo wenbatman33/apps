@@ -1,0 +1,11 @@
+{
+  "project": "topdown-test",
+  "items": [
+    {
+      "id": "TOP_soldier",
+      "cat": "CRTEST",
+      "size": "sheet",
+      "prompt": "希臘步兵：青銅科林斯頭盔、短劍、圓盾、皮甲，正在往前行軍"
+    }
+  ]
+}

@@ -51,8 +51,8 @@ TD.FUSED = {
     desc: '箭矢附帶燃燒，可引爆地面油池',
   },
   ballista: {
-    name: '攻城弩', icon: '⚔', tint: 0xFFE066, target: 'single',
-    tex: { 1: 'T_spear_6' }, lvNames: ['攻城弩'],
+    name: '攻城弩', icon: '⚔', tint: 0xFFE066, target: 'single', footprint: 2,
+    tex: { 1: 'F_ballista' }, lvNames: ['攻城弩'],
     base: { dmg: 150, cd: 2000, range: 700, knock: 90 }, fused: true,
     desc: '超遠程單體巨傷並擊退',
   },
@@ -63,8 +63,8 @@ TD.FUSED = {
     desc: '全場弓兵射速 +30%、傷害 +30%',
   },
   greekFire: {
-    name: '希臘火投石機', icon: '💥', tint: 0x69F0AE, target: 'aoe',
-    tex: { 1: 'T_stone_6' }, lvNames: ['希臘火投石機'],
+    name: '希臘火投石機', icon: '💥', tint: 0x69F0AE, target: 'aoe', footprint: 2,
+    tex: { 1: 'F_greekfire' }, lvNames: ['希臘火投石機'],
     base: { dmg: 90, cd: 2600, range: 620, aoe: 150, pool: 8000 }, fused: true,
     desc: '落點形成持續 8 秒的火海',
   },
@@ -129,6 +129,45 @@ TD.nameOf = (kind, lv) => {
   const K = TD.getKind(kind);
   return (K.lvNames && K.lvNames[Math.min(lv, K.lvNames.length) - 1]) || K.name;
 };
+
+// ── 單塔升級／賣出 ──
+TD.upgradeCost = (lv) => Math.round(70 * Math.pow(1.78, lv - 1));
+TD.sellValue = (lv) => Math.round(46 * (Math.pow(1.78, lv) - 1) / 0.78 * 0.65);
+
+// ── 目標優先權 ──
+TD.PRIORITIES = [
+  { key: 'first',  name: '最前方', desc: '離城門最近的敵人' },
+  { key: 'strong', name: '血最多', desc: '優先集火硬目標' },
+  { key: 'weak',   name: '血最少', desc: '快速清場、串連擊' },
+  { key: 'near',   name: '最靠近', desc: '離這座塔最近的敵人' },
+];
+
+// ── 佔位大小：1 = 一格，2 = 2×2 四格 ──
+TD.footprintOf = (kind, lv, giant) => {
+  if (giant) return 2;
+  const K = TD.getKind(kind);
+  if (K && K.footprint) return K.footprint;
+  return 1;
+};
+
+// ── 巨人化：Lv6 專屬的終極升級，變強但吃掉 4 格 ──
+TD.GIANT = {
+  cost: 520,
+  dmgMul: 2.2,
+  rangeMul: 1.25,
+  rateMul: 1.15,
+  desc: '傷害 ×2.2、射程 +25%、攻速 +15%，但佔用 2×2 四格',
+};
+
+// ── 路障：純擋路、不攻擊，用來把敵人導向你要的路線 ──
+TD.BARRICADE = {
+  name: '路障', tex: 'U_barricade',
+  baseCost: 35,      // 首個價格
+  step: 14,          // 每放一個漲價
+  sellRate: 0.7,     // 賣出返還比例
+  max: 14,           // 每關上限，避免整場鋪滿
+};
+TD.barricadeCost = (n) => TD.BARRICADE.baseCost + n * TD.BARRICADE.step;
 
 // ── 徵兵 ──
 TD.RECRUIT_BASE = 50;
