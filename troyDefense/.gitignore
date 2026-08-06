@@ -1,0 +1,15 @@
+# 生圖中間產物與風格備份（本機保留，不進 repo）
+public/assets/_raw/
+public/assets/_greek_style/
+public/assets/_portrait/
+
+# 生圖腳本輸出
+scripts/*.log
+scripts/*.out
+
+# 舊「希臘陶器」風格遺留素材，程式已不引用（本機保留，另有 _greek_style 備份）
+public/assets/B/B_city_burn.png
+public/assets/B/B_field_day.png
+public/assets/B/B_field_night.png
+public/assets/B/B_gate.png
+public/assets/U/U_frame.png
