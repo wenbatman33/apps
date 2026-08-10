@@ -17,7 +17,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             super().log_message(fmt, *args)
 
 
-socketserver.TCPServer.allow_reuse_address = True
-with socketserver.TCPServer(('', PORT), Handler) as httpd:
+socketserver.ThreadingTCPServer.allow_reuse_address = True
+with socketserver.ThreadingTCPServer(('', PORT), Handler) as httpd:
     print(f'防守特洛伊 → http://localhost:{PORT}')
     httpd.serve_forever()

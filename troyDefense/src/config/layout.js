@@ -1,8 +1,7 @@
-/* 防守特洛伊 — 版面常數
- * 邏輯解析度 1080×1920（9:16 直屏），Phaser Scale.FIT 自動縮放
- * 戰場是一張 1:1 的空拍俯視地圖，路徑與塔位座標都用「相對於戰場的 0~1 比例」定義，
- * 所以調整戰場大小時，路徑與塔位會自動跟著對齊背景圖。
- * 這裡所有數值都是 DEV 微調工具（按 D）的調整目標。
+/* 防守特洛伊 v2 — 版面常數
+ * 邏輯解析度 1080×1920（9:16 直向），Phaser Scale.FIT
+ * 場景全部由獨立模組件組裝（海/灘/地/牆段/垛口/城門/擺設），
+ * 每一件的座標都在這裡，DEV 工具（按 D）可即時調整。
  */
 window.TD = window.TD || {};
 
@@ -10,103 +9,111 @@ TD.GAME_W = 1080;
 TD.GAME_H = 1920;
 
 TD.LAYOUT = {
-  // ── 頂部 HUD ──
+  // ── 頂部 HUD（半透明、不遮戰場）──
   hud: {
-    h: 150,
-    levelX: 34, levelY: 44, levelSize: 34,
-    timerX: 540, timerY: 34, timerSize: 58,
-    scoreX: 1046, scoreY: 44, scoreSize: 34,
-    hpBarX: 34, hpBarY: 108, hpBarW: 1012, hpBarH: 22,
+    h: 108,
+    levelX: 30, levelY: 26, levelSize: 32,
+    waveX: 540, waveY: 26, waveSize: 34,
+    scoreX: 1050, scoreY: 26, scoreSize: 32,
   },
 
-  // ── 戰場（空拍俯視地圖，維持 1:1 才不會變形）──
-  battle: {
-    x: 0, y: 146, w: 1080, h: 1190,   // 比 1:1 更高，地圖以 cover 裁掉兩側裝飾
-    goalT: 1.0,
+  // ── 場景分帶（戰場美術圖以 cover 方式鋪滿到城牆線）──
+  field: { y: 110, h: 950 },           // 敵軍推進區（顯示範圍）
+
+  // ── 三條進攻路徑（X 座標，對齊戰場圖的三條泥土路）──
+  lanes: { xs: [320, 540, 760], spawnY: 250, jitter: 42 },
+
+  // ── 城牆（真實實體；美術圖自帶五個部署槽位）──
+  wall: {
+    topY: 1060,        // 城牆圖頂端（敵人停在這條線上方攻城）
+    faceH: 350,        // 城牆顯示高度
+    stopGap: 46,       // 敵人停下的位置與接觸線的距離
+    merlonH: 56,
+    slotXs: [186, 357, 536, 704, 880],   // 對齊美術圖的 5 個凹槽
+    slotY: 1232,       // 守軍站立 Y（牆頂走道的槽位）
+    slotR: 62,
+    unitScale: 1.0,    // 守軍體型倍率（基準高 TD.BASE_DEF_H）
   },
 
-  // ── 戰場網格：玩家可在任意空格建塔，敵人自動繞路 ──
-  // inset 是網格在地圖圖片中的可用範圍（避開兩側岩石、上方海灣、下方城牆）
-  grid: {
-    cols: 9, rows: 9,     // 最後一列是「城牆列」：敵人不能通行，但可以佈署守軍
-    entries: [1, 4, 7],   // 頂部入口所在的欄
-    exitCol: 4,           // 城門所在的欄
-    insetL: 0.102, insetR: 0.102, insetT: 0.150, insetB: 0.060,
-    // 城牆守備位「居高臨下」加成：站得高、看得遠、打得準
-    wallRangeMul: 1.45,
-    wallDmgMul: 1.20,
+  // ── 城門（主目標，位於牆基中央）──
+  gate: {
+    x: 540, w: 286, topY: 1248, h: 162,
+    hpBarW: 230, hpBarH: 15, hpBarDy: 30,
   },
 
-  // ── 波次進度條 ──
-  waveBar: { x: 30, y: 1350, w: 1020, h: 12 },
+  city: { y: 1420, h: 60, houseXs: [] },
 
-  // ── 合成台（2 列 × 6 欄，緊湊不佔空間）──
+  // ── 合成台 ──
   bench: {
-    x: 95, y: 1372, cols: 8, rows: 2, cell: 106, gap: 6,
+    x: 52, y: 1470, cols: 4, rows: 2, cell: 132, gap: 10,
+  },
+
+  // ── 主動技能鈕（合成台右側一列）──
+  skills: {
+    xs: [706, 848, 990], y: 1600, r: 58,
   },
 
   // ── 底部操作列 ──
   bottom: {
-    y: 1712,
-    coinX: 132, coinSize: 38,
-    recruitX: 520, recruitW: 250, recruitH: 92,
-    barricadeX: 742,          // 路障鈕
-    skillX: 962, skillR: 50,
+    y: 1848,
+    coinX: 120, coinSize: 40,
+    recruitX: 500, recruitW: 300, recruitH: 84,
+    mergeX: 790, mergeW: 156,
   },
 
   // ── 單位顯示 ──
   unit: {
-    imgScale: 0.98,      // 相對於格子大小
-    fieldScale: 1.18,    // 放到戰場上時再放大一點，讓塔有存在感
-    badgeSize: 26,
-    yOffset: -4,
+    enemyScale: 1.0,       // 敵人體型倍率（基準高 TD.BASE_ENEMY_H）
+    badgeSize: 30,
   },
 };
 
-// ── 比例座標 → 畫面座標 ──
-TD.fieldPoint = (nx, ny) => {
-  const B = TD.LAYOUT.battle;
-  return { x: B.x + nx * B.w, y: B.y + ny * B.h };
+// 單位顯示基準高（邏輯 px）——實際 scale = 目標高 ÷ 圖檔原始高，與素材解析度脫鉤
+TD.BASE_ENEMY_H = 132;
+TD.BASE_DEF_H = 126;
+
+// ── 二次貝茲（拋物線彈道）──
+TD.qBezier = (p0, p1, p2, t) => (1 - t) * (1 - t) * p0 + 2 * (1 - t) * t * p1 + t * t * p2;
+
+// ── 戰火特效參數（DEV 可調）──
+TD.FXP = {
+  sparkMul: 1.0,       // 火花數量倍率
+  emberRate: 0.55,     // 全場漂浮餘燼密度（顆/秒）
+  shakeMul: 1.0,       // 震屏倍率
+  fireScale: 1.0,      // 火焰大小倍率
+  maxParticles: 600,   // 全域粒子上限
+  hitStop: 1.0,        // 慢動作倍率
 };
 
-// ── 配色（希臘黑繪陶器）──
+// ── 配色 ──
 TD.PALETTE = {
-  // ── 結構藍（UI 主色）──
-  blue: 0x1E5FA8, blueDark: 0x123E70, blueLight: 0x3E8FD4,
-  // ── 大理石白 ──
-  marble: 0xF2EFE4, marbleDim: 0xD8D3C4,
-  // ── 強調金 ──
   gold: 0xFFC83D, goldDark: 0xC8901A, goldLight: 0xFFE08A,
-  // ── 戰場地磚（Clash Royale 式鮮綠草皮，深淺交替）──
-  tileA: 0x8CC63F, tileB: 0x79B233, tileLine: 0x5E9130,
-  lane: 0xD9BE86, laneDark: 0xB99C64,   // 草地中的淺色石板路
-  // ── 城牆地磚（大理石）──
-  wallTileA: 0xE4EDF5, wallTileB: 0xCFDEEC, wallLine: 0x9FB6CC,
-  // ── 狀態 ──
-  ok: 0x6FE08A, danger: 0xFF5C5C, heal: 0x4CD97B, mana: 0x5B8FF9,
-  ink: 0x1A2A3A, purple: 0xB06CD8,
-  // 舊名保留，避免既有引用變成 undefined
-  wood: 0x1E5FA8, woodLight: 0x3E8FD4, woodDark: 0x123E70, cream: 0xF2EFE4,
+  marble: 0xF2EFE4, marbleDim: 0xD8D3C4,
+  fire: 0xFF7A1A, fireHot: 0xFFD23C, fireDeep: 0xC8321E,
+  smoke: 0x5A5048,
+  ok: 0x6FE08A, danger: 0xFF5C5C, mana: 0x5B8FF9,
+  ink: 0x1A140E, night: 0x101823,
+  uiBg: 0x241A10, uiEdge: 0x8B5A2B, uiPanel: 0x332414,
+  grass: 0x79B233, sand: 0xD9BE86, sea: 0x1E5FA8,
 };
 TD.CSS = {
-  blue: '#1E5FA8', blueDark: '#123E70', blueLight: '#3E8FD4',
-  marble: '#F2EFE4', gold: '#FFC83D', goldLight: '#FFE08A',
-  ok: '#6FE08A', danger: '#FF5C5C',
-  ivory: '#F2EFE4', cream: '#F2EFE4', ink: '#1A2A3A',
-  wood: '#1E5FA8', woodDark: '#123E70',
+  gold: '#FFC83D', goldLight: '#FFE08A', marble: '#F2EFE4',
+  fire: '#FF7A1A', fireHot: '#FFD23C', danger: '#FF5C5C',
+  ok: '#6FE08A', ink: '#1A140E', dim: '#C9B08A',
 };
-
-// 文字統一描邊色（深藍，比黑色柔和且與 UI 同調）
-TD.STROKE = '#0E2B4D';
-
+TD.STROKE = '#1A0E06';
 TD.FONT = '"PingFang TC","Hiragino Sans TC","Microsoft JhengHei",serif';
 
 // ── 繪製層級 ──
 TD.DEPTH = {
-  BG: 0, PATH: 5, POOL: 8,
-  SLOT: 10, SHADOW: 14,
-  ENEMY: 20, TOWER: 40, PROJ: 50,
-  FX: 60, FX_TOP: 70,
-  PANEL: 100, BENCH_SLOT: 105, UNIT: 110, DRAG: 130,
-  HUD: 200, BANNER: 300, FLASH: 320, DIALOG: 400, DEV: 500,
+  SKY: 0, SEA: 2, BEACH: 4, FIELD: 6, PROP: 8,
+  DECAL: 10,                 // 地面焦痕、油漬
+  GROUNDFIRE: 14,
+  ENEMY: 20,                 // 敵人依 y 再加權
+  SIEGE: 22,
+  WALL: 40, GATE: 42, MERLON: 44, CITY: 38,
+  DEFENDER: 48, LADDER: 46,
+  PROJ: 55, FX: 60, FX_TOP: 70,
+  PANEL: 100, BENCH: 105, UNIT: 110,
+  HUD: 200, BANNER: 300, VIGNETTE: 310, FLASH: 320, DIALOG: 400, DEV: 500,
 };

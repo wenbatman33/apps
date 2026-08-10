@@ -1,0 +1,217 @@
+{
+  "style": "premium mobile strategy game art in the style of Clash of Clans / Clash Royale: chunky stylized cartoon 3D look, bold silhouette, polished painterly rendering with soft shading, ambient occlusion and specular highlights, vibrant saturated colors, viewed from a 3/4 top-down bird's-eye camera (tilted about 60 degrees, same camera as Clash of Clans buildings), clean pure white background unless stated otherwise.",
+  "items": [
+    {
+      "id": "T_sea",
+      "out": "/Users/batman_work/claude/apps/troyDefense/public/assets/V4/T_sea.png",
+      "size": "512x512",
+      "prompt": "seamless tileable deep blue Aegean sea water texture, gentle cartoon wave crests and foam highlights, lush painterly style, full-bleed texture with NO white background, edges tile seamlessly left-right and top-bottom"
+    },
+    {
+      "id": "T_sand",
+      "out": "/Users/batman_work/claude/apps/troyDefense/public/assets/V4/T_sand.png",
+      "size": "512x512",
+      "prompt": "seamless tileable warm beach sand texture, soft cartoon dunes ripples, few tiny pebbles and shells, painterly style, full-bleed texture with NO white background, edges tile seamlessly"
+    },
+    {
+      "id": "T_road",
+      "out": "/Users/batman_work/claude/apps/troyDefense/public/assets/V4/T_road.png",
+      "size": "512x512",
+      "prompt": "seamless tileable dirt road texture, packed light-brown earth with wheel ruts and small stones, cartoon painterly style, full-bleed texture with NO white background, edges tile seamlessly"
+    },
+    {
+      "id": "S_wall",
+      "out": "/Users/batman_work/claude/apps/troyDefense/public/assets/V4/S_wall.png",
+      "size": "1024x1024",
+      "prompt": "single straight horizontal segment of an ancient Troy fortress stone wall with crenellated battlements and a walkway on top where soldiers can stand, massive sand-colored stone blocks, designed so multiple copies can be placed side by side seamlessly (left and right edges cut straight), isolated on white background"
+    },
+    {
+      "id": "S_gate",
+      "out": "/Users/batman_work/claude/apps/troyDefense/public/assets/V4/S_gate.png",
+      "size": "1024x1024",
+      "prompt": "massive ancient city gate of Troy: two heavy dark wooden doors with bronze horizontal bands and round bronze studs set in a sand-colored stone arch frame with battlements on top, intact pristine state, isolated on white background"
+    },
+    {
+      "id": "S_tower",
+      "out": "/Users/batman_work/claude/apps/troyDefense/public/assets/V4/S_tower.png",
+      "size": "1024x1024",
+      "prompt": "ancient stone watchtower of Troy, square sand-colored stone tower with crenellated top and a burning brazier torch on top, isolated on white background"
+    },
+    {
+      "id": "S_ship",
+      "out": "/Users/batman_work/claude/apps/troyDefense/public/assets/V4/S_ship.png",
+      "size": "1024x1024",
+      "prompt": "ancient Greek black warship beached on shore, dark wooden hull with painted white eye on the bow, single mast with furled dark-red sail, bronze ram, oars, isolated on white background"
+    },
+    {
+      "id": "S_tent",
+      "out": "/Users/batman_work/claude/apps/troyDefense/public/assets/V4/S_tent.png",
+      "size": "1024x1024",
+      "prompt": "ancient Greek army campaign tent, weathered red-brown canvas over wooden poles, rope pegs, a spear leaning on it, isolated on white background"
+    },
+    {
+      "id": "S_tree",
+      "out": "/Users/batman_work/claude/apps/troyDefense/public/assets/V4/S_tree.png",
+      "size": "1024x1024",
+      "prompt": "mediterranean olive tree with gnarled trunk and lush green-silver round canopy, cartoon chunky style, isolated on white background"
+    },
+    {
+      "id": "S_rock",
+      "out": "/Users/batman_work/claude/apps/troyDefense/public/assets/V4/S_rock.png",
+      "size": "1024x1024",
+      "prompt": "cluster of grey boulders with moss patches, chunky cartoon style, isolated on white background"
+    },
+    {
+      "id": "S_house",
+      "out": "/Users/batman_work/claude/apps/troyDefense/public/assets/V4/S_house.png",
+      "size": "1024x1024",
+      "prompt": "small ancient Trojan house with white-washed stone walls and terracotta tiled roof, seen mostly from above (roof dominant), chunky cartoon style, isolated on white background"
+    },
+    {
+      "id": "E_ram",
+      "out": "/Users/batman_work/claude/apps/troyDefense/public/assets/V4/E_ram.png",
+      "size": "1024x1024",
+      "prompt": "siege battering ram war machine: heavy wooden log with a bronze ram head shaped like a ram animal head, slung under a peaked wooden shelter roof covered with dark leather hides, four sturdy wooden wheels, facing toward the bottom of the image (advancing toward the viewer), isolated on white background"
+    },
+    {
+      "id": "E_siegetower",
+      "out": "/Users/batman_work/claude/apps/troyDefense/public/assets/V4/E_siegetower.png",
+      "size": "1024x1024",
+      "prompt": "tall wooden siege tower on four wheels, three levels with leather hide covering, top platform with drawbridge, facing toward the bottom of the image, isolated on white background"
+    },
+    {
+      "id": "E_catapult",
+      "out": "/Users/batman_work/claude/apps/troyDefense/public/assets/V4/E_catapult.png",
+      "size": "1024x1024",
+      "prompt": "wooden torsion catapult with throwing arm cocked back holding a flaming boulder, sturdy A-frame on wheels, facing toward the bottom of the image, isolated on white background"
+    },
+    {
+      "id": "A_spear",
+      "out": "/Users/batman_work/claude/apps/troyDefense/public/assets/V4/A_spear_sheet_coc.png",
+      "size": "1024x1024",
+      "prompt": "sprite sheet: THE SAME Trojan defender character in every cell, seen from BEHIND and above (back 3/4-top view, he faces away from the viewer toward the top edge). Cute chunky proportions, blue tunic with bronze armor pieces, gold helmet with tall red horsehair crest. Character identical in size, colors, proportions in all 8 cells, centered per cell. sprite sheet grid of exactly 4 columns x 2 rows (8 equal cells). He wields a long bronze-tipped spear and a tall rectangular tower shield on his back. Row 1: 4-frame idle cycle (breathing, spear held upright). Row 2: 4-frame spear thrust attack sequence (winds up, thrusts spear forward/upward away from viewer, follow-through, recover)."
+    },
+    {
+      "id": "A_stone",
+      "out": "/Users/batman_work/claude/apps/troyDefense/public/assets/V4/A_stone_sheet_coc.png",
+      "size": "1024x1024",
+      "prompt": "sprite sheet: THE SAME Trojan defender character in every cell, seen from BEHIND and above (back 3/4-top view, he faces away from the viewer toward the top edge). Cute chunky proportions, blue tunic with bronze armor pieces, gold helmet with tall red horsehair crest. Character identical in size, colors, proportions in all 8 cells, centered per cell. sprite sheet grid of exactly 4 columns x 2 rows (8 equal cells). He is a stone-thrower with a leather satchel of rocks on his hip. Row 1: 4-frame idle cycle (breathing, holding a large rock at chest). Row 2: 4-frame throwing sequence (lifts big rock overhead with both hands, leans back, hurls it forward/upward away from viewer with the rock flying toward the top edge, recover)."
+    },
+    {
+      "id": "A_oil",
+      "out": "/Users/batman_work/claude/apps/troyDefense/public/assets/V4/A_oil_sheet_coc.png",
+      "size": "1024x1024",
+      "prompt": "sprite sheet: THE SAME Trojan defender character in every cell, seen from BEHIND and above (back 3/4-top view, he faces away from the viewer toward the top edge). Cute chunky proportions, blue tunic with bronze armor pieces, gold helmet with tall red horsehair crest. Character identical in size, colors, proportions in all 8 cells, centered per cell. sprite sheet grid of exactly 4 columns x 2 rows (8 equal cells). He carries a smoking clay pot full of burning oil with orange flames, thick leather gloves. Row 1: 4-frame idle cycle (breathing, pot held at chest, small flame flickering). Row 2: 4-frame attack sequence (raises pot, tips it forward away from viewer, burning oil with flames pours out toward the top edge, recover with empty pot)."
+    },
+    {
+      "id": "A_hector",
+      "out": "/Users/batman_work/claude/apps/troyDefense/public/assets/V4/A_hector_sheet_coc.png",
+      "size": "1024x1024",
+      "prompt": "sprite sheet: sprite sheet grid of exactly 4 columns x 2 rows (8 equal cells), THE SAME heroic character in every cell, seen from BEHIND and above (back 3/4-top view, facing away toward the top edge). Character: HECTOR prince of Troy, larger and more majestic than a common soldier, ornate gold and blue armor with engraved bronze details, gold helmet with extra tall red horsehair crest, flowing dark-red cape, large round shield with Troy emblem on his back arm, gleaming bronze sword. Row 1: 4-frame idle cycle (heroic stance, cape swaying). Row 2: 4-frame powerful sword slash attack with a golden energy arc. Character identical in size, colors, proportions in all 8 cells, centered per cell."
+    },
+    {
+      "id": "E_torch",
+      "out": "/Users/batman_work/claude/apps/troyDefense/public/assets/V4/E_torch_sheet_coc.png",
+      "size": "1024x1024",
+      "prompt": "sprite sheet: THE SAME ancient Greek enemy character in every cell, front 3/4-top view facing toward the bottom edge (advancing toward the viewer), chunky cute proportions, dark red tunic, shiny bronze Corinthian helmet with dark crest, skin tones, leather sandals. Character identical in size, colors, proportions across all cells, centered per cell. sprite sheet grid of exactly 4 columns x 3 rows (12 equal cells). Row 3 is always a 4-frame death sequence (staggers, falls, lies on ground, fades). He is a torch thrower carrying burning torches with bright orange flames. Row 1: 4-frame walk cycle marching downward holding a lit torch. Row 2: 4-frame throwing sequence (raises torch, winds up, hurls the burning torch toward the bottom edge with flame trail, recover)."
+    },
+    {
+      "id": "E_shield",
+      "out": "/Users/batman_work/claude/apps/troyDefense/public/assets/V4/E_shield_sheet_coc.png",
+      "size": "1024x1024",
+      "prompt": "sprite sheet: THE SAME ancient Greek enemy character in every cell, front 3/4-top view facing toward the bottom edge (advancing toward the viewer), chunky cute proportions, dark red tunic, shiny bronze Corinthian helmet with dark crest, skin tones, leather sandals. Character identical in size, colors, proportions across all cells, centered per cell. sprite sheet grid of exactly 4 columns x 3 rows (12 equal cells). Row 3 is always a 4-frame death sequence (staggers, falls, lies on ground, fades). He is a heavy shieldbearer hiding behind a huge full-body bronze tower shield with arrows stuck in it, only helmet crest visible above the shield. Row 1: 4-frame slow advancing walk behind the shield. Row 2: 4-frame shield bash attack (lunges the huge shield forward with impact)."
+    },
+    {
+      "id": "E_ladder",
+      "out": "/Users/batman_work/claude/apps/troyDefense/public/assets/V4/E_ladder_sheet_coc.png",
+      "size": "1024x1024",
+      "prompt": "sprite sheet: THE SAME ancient Greek enemy character in every cell, front 3/4-top view facing toward the bottom edge (advancing toward the viewer), chunky cute proportions, dark red tunic, shiny bronze Corinthian helmet with dark crest, skin tones, leather sandals. Character identical in size, colors, proportions across all cells, centered per cell. sprite sheet grid of exactly 4 columns x 3 rows (12 equal cells). Row 3 is always a 4-frame death sequence (staggers, falls, lies on ground, fades). He is a ladder carrier holding a long wooden assault ladder over his head with both arms. Row 1: 4-frame walk cycle marching downward carrying the ladder overhead. Row 2: 4-frame ladder planting sequence (lowers ladder, plants it forward toward the bottom edge, starts climbing)."
+    },
+    {
+      "id": "E_achilles",
+      "out": "/Users/batman_work/claude/apps/troyDefense/public/assets/V4/E_achilles_sheet_coc.png",
+      "size": "1024x1024",
+      "prompt": "sprite sheet: sprite sheet grid of exactly 4 columns x 3 rows (12 equal cells), THE SAME boss character in every cell, front 3/4-top view facing toward the bottom edge, centered per cell, identical size and colors across cells. Character: ACHILLES the legendary Greek hero as an imposing BOSS, noticeably bulkier than a common soldier, magnificent gleaming gold armor with intricate engravings, gold Corinthian helmet with tall crimson crest, large ornate round shield, long bronze spear, dark red cape. Row 1: 4-frame powerful walk cycle marching downward. Row 2: 4-frame devastating spear attack with golden energy effect. Row 3: 4-frame dramatic death sequence (clutches heel, kneels, falls, fades with golden particles)."
+    },
+    {
+      "id": "G_title",
+      "out": "/Users/batman_work/claude/apps/troyDefense/public/assets/V4/G_title.png",
+      "size": "1024x1536",
+      "gen": "1024x1536 直式",
+      "prompt": "complete mobile game TITLE SCREEN key art, portrait orientation: epic giant wooden Trojan Horse on a wheeled platform at night in front of the burning walls of Troy, dramatic torchlight and embers, starry sky, cinematic composition with empty space at the bottom third for buttons, NO text, NO logo, NO UI buttons (art only)"
+    },
+    {
+      "id": "G_levelmap",
+      "out": "/Users/batman_work/claude/apps/troyDefense/public/assets/V4/G_levelmap.png",
+      "size": "1024x1536",
+      "gen": "1024x1536 直式",
+      "prompt": "mobile game LEVEL SELECT MAP background, portrait orientation, vertical journey seen from 3/4 top-down: dark Aegean sea with Greek warships at the top, then a sandy beach with army camps, then green plains with olive trees and a winding dirt path with 10 round empty stone medallion slots along it, ending at the fortified city of Troy with its great gate at the bottom, painterly polished, NO text, NO numbers"
+    },
+    {
+      "id": "G_victory",
+      "out": "/Users/batman_work/claude/apps/troyDefense/public/assets/V4/G_victory.png",
+      "size": "1024x1024",
+      "prompt": "mobile game VICTORY popup panel UI: ornate parchment and carved wood panel with gold trim and laurel wreath decoration, three large empty star sockets at the top arranged in an arc (center one bigger), space below for score text and two blank gold wooden buttons at the bottom, Greek meander pattern details, isolated on white background, NO text"
+    },
+    {
+      "id": "G_uikit",
+      "out": "/Users/batman_work/claude/apps/troyDefense/public/assets/V4/G_uikit.png",
+      "size": "1024x1024",
+      "prompt": "mobile game UI KIT sprite sheet on white background, clearly separated elements arranged in a grid: (1) large gold wooden rounded button, (2) same button pressed state, (3) green wooden rounded button, (4) square parchment unit card frame with bronze border, (5) same card frame highlighted with green glow, (6) round dark wooden skill button with bronze rim, (7) gold star, (8) grey empty star, (9) gold coin with Greek letter, (10) red gem, (11) wooden HUD bar segment, (12) small round close button with X, Greek bronze ornament style, NO text"
+    },
+    {
+      "id": "A_spear_v2",
+      "out": "/Users/batman_work/claude/apps/troyDefense/public/assets/V4/A_spear_sheet_coc_v2.png",
+      "size": "1024x1024",
+      "prompt": "sprite sheet: THE SAME Trojan defender character in every cell, seen from BEHIND and above (back 3/4-top view, he faces away from the viewer toward the top edge). Cute chunky proportions, bright GREEN tunic (emerald green cloth) with bronze armor pieces, gold helmet with tall red horsehair crest. Character identical in size, colors, proportions in all 8 cells, centered per cell. sprite sheet grid of exactly 4 columns x 2 rows (8 equal cells). He wields a long bronze-tipped spear and a tall rectangular tower shield on his back. Row 1: 4-frame idle cycle (breathing, spear held upright). Row 2: 4-frame spear thrust attack sequence (winds up, thrusts spear forward/upward away from viewer, follow-through, recover)."
+    },
+    {
+      "id": "A_stone_v2",
+      "out": "/Users/batman_work/claude/apps/troyDefense/public/assets/V4/A_stone_sheet_coc_v2.png",
+      "size": "1024x1024",
+      "prompt": "sprite sheet: THE SAME Trojan defender character in every cell, seen from BEHIND and above (back 3/4-top view, he faces away from the viewer toward the top edge). Cute chunky proportions, earthy BROWN-TAN tunic (khaki leather cloth) with bronze armor pieces, gold helmet with tall red horsehair crest. Character identical in size, colors, proportions in all 8 cells, centered per cell. sprite sheet grid of exactly 4 columns x 2 rows (8 equal cells). He is a stone-thrower with a leather satchel of rocks on his hip. Row 1: 4-frame idle cycle (breathing, holding a large rock at chest). Row 2: 4-frame throwing sequence (lifts big rock overhead with both hands, leans back, hurls it forward/upward away from viewer with the rock flying toward the top edge, recover)."
+    },
+    {
+      "id": "A_oil_v2",
+      "out": "/Users/batman_work/claude/apps/troyDefense/public/assets/V4/A_oil_sheet_coc_v2.png",
+      "size": "1024x1024",
+      "prompt": "sprite sheet: THE SAME Trojan defender character in every cell, seen from BEHIND and above (back 3/4-top view, he faces away from the viewer toward the top edge). Cute chunky proportions, bright ORANGE-RED tunic (warm vermilion cloth) with bronze armor pieces, gold helmet with tall red horsehair crest. Character identical in size, colors, proportions in all 8 cells, centered per cell. sprite sheet grid of exactly 4 columns x 2 rows (8 equal cells). He carries a smoking clay pot full of burning oil with orange flames, thick leather gloves. Row 1: 4-frame idle cycle (breathing, pot held at chest, small flame flickering). Row 2: 4-frame attack sequence (raises pot, tips it forward away from viewer, burning oil with flames pours out toward the top edge, recover with empty pot)."
+    },
+    {
+      "id": "A_zeus",
+      "out": "/Users/batman_work/claude/apps/troyDefense/public/assets/V4/A_zeus_sheet_coc.png",
+      "size": "1024x1024",
+      "prompt": "sprite sheet: THE SAME character in every cell, seen from BEHIND and above (back 3/4-top view, facing away from the viewer toward the top edge), cute chunky proportions. Character identical in size, colors, proportions in all 8 cells, centered per cell. sprite sheet grid of exactly 4 columns x 2 rows (8 equal cells). Row 1: 4-frame idle cycle (breathing, subtle magical aura). Row 2: 4-frame spell-casting sequence (raises weapon, channels power, releases the spell forward/upward away from viewer with visible magical effect, recover). Character: Trojan PRIEST OF ZEUS, white and gold robe with deep blue trim, tall bronze staff crackling with blue-white LIGHTNING, small lightning arcs around the staff head, grey beard visible from behind."
+    },
+    {
+      "id": "A_apollo",
+      "out": "/Users/batman_work/claude/apps/troyDefense/public/assets/V4/A_apollo_sheet_coc.png",
+      "size": "1024x1024",
+      "prompt": "sprite sheet: THE SAME character in every cell, seen from BEHIND and above (back 3/4-top view, facing away from the viewer toward the top edge), cute chunky proportions. Character identical in size, colors, proportions in all 8 cells, centered per cell. sprite sheet grid of exactly 4 columns x 2 rows (8 equal cells). Row 1: 4-frame idle cycle (breathing, subtle magical aura). Row 2: 4-frame spell-casting sequence (raises weapon, channels power, releases the spell forward/upward away from viewer with visible magical effect, recover). Character: Trojan PRIEST OF APOLLO, white robe with orange-gold sun motifs, staff topped with a blazing golden SUN DISC, small flame orb glowing, laurel wreath."
+    },
+    {
+      "id": "A_poseidon",
+      "out": "/Users/batman_work/claude/apps/troyDefense/public/assets/V4/A_poseidon_sheet_coc.png",
+      "size": "1024x1024",
+      "prompt": "sprite sheet: THE SAME character in every cell, seen from BEHIND and above (back 3/4-top view, facing away from the viewer toward the top edge), cute chunky proportions. Character identical in size, colors, proportions in all 8 cells, centered per cell. sprite sheet grid of exactly 4 columns x 2 rows (8 equal cells). Row 1: 4-frame idle cycle (breathing, subtle magical aura). Row 2: 4-frame spell-casting sequence (raises weapon, channels power, releases the spell forward/upward away from viewer with visible magical effect, recover). Character: Trojan PRIEST OF POSEIDON, teal and sea-green robes with wave patterns, bronze TRIDENT with swirling water magic around its prongs, seashell ornaments."
+    },
+    {
+      "id": "A_athena",
+      "out": "/Users/batman_work/claude/apps/troyDefense/public/assets/V4/A_athena_sheet_coc.png",
+      "size": "1024x1024",
+      "prompt": "sprite sheet: THE SAME character in every cell, seen from BEHIND and above (back 3/4-top view, facing away from the viewer toward the top edge), cute chunky proportions. Character identical in size, colors, proportions in all 8 cells, centered per cell. sprite sheet grid of exactly 4 columns x 2 rows (8 equal cells). Row 1: 4-frame idle cycle (breathing, subtle magical aura). Row 2: 4-frame spell-casting sequence (raises weapon, channels power, releases the spell forward/upward away from viewer with visible magical effect, recover). Character: Trojan PRIESTESS OF ATHENA, white and silver robe with blue trim, glowing golden SPEAR OF LIGHT and small round aegis shield on her back, tiny owl perched on her shoulder."
+    },
+    {
+      "id": "A_paris",
+      "out": "/Users/batman_work/claude/apps/troyDefense/public/assets/V4/A_paris_sheet_coc.png",
+      "size": "1024x1024",
+      "prompt": "sprite sheet: THE SAME character in every cell, seen from BEHIND and above (back 3/4-top view, facing away toward the top edge), cute chunky proportions, identical size and colors in all 8 cells, centered per cell, grid of exactly 4 columns x 2 rows. Character: PARIS prince of Troy as a poison archer, elegant dark-purple and gold tunic, hood half down, ornate recurve bow, arrows with glowing TOXIC GREEN venom tips, small vial of green poison at his belt, subtle green mist around the quiver. Row 1: 4-frame idle cycle. Row 2: 4-frame shooting sequence (nock venom arrow, draw, release with green-glowing arrow flying upward away, recover)."
+    },
+    {
+      "id": "E_giant",
+      "out": "/Users/batman_work/claude/apps/troyDefense/public/assets/V4/E_giant_sheet_coc.png",
+      "size": "1024x1024",
+      "prompt": "sprite sheet: THE SAME character in every cell, front 3/4-top view facing toward the bottom edge (advancing toward the viewer), identical size and colors across cells, centered per cell, grid of exactly 4 columns x 3 rows. Character: mythological Greek CYCLOPS GIANT, massive hulking one-eyed brute, weathered tan skin, single huge eye, crude fur-and-leather loincloth, gigantic wooden club with bronze studs, angry snarl. Row 1: 4-frame heavy stomping walk cycle. Row 2: 4-frame overhead CLUB SMASH attack (raises club high with both hands, slams down with impact). Row 3: 4-frame death sequence (staggers, drops club, topples backward, lies fading)."
+    }
+  ]
+}

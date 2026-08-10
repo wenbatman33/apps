@@ -5,20 +5,16 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#12100E">
-<title>防守特洛伊 — Troy Defense</title>
+<title>防守特洛伊 v4 — Troy Defense</title>
 <style>
   * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
   html,body { width:100%; height:100%; overflow:hidden; background:#12100E; touch-action:none;
     font-family:"PingFang TC","Hiragino Sans TC","Microsoft JhengHei",serif; }
-  /* 不要用 flex 置中 — 會和 Phaser 的 Scale.CENTER_BOTH 打架造成偏移 */
   #app { position:fixed; inset:0; }
   canvas { display:block; margin:0 auto; }
-  /* 橫向提示 */
   #rotate { position:fixed; inset:0; z-index:99; display:none; flex-direction:column;
     align-items:center; justify-content:center; gap:20px; background:#12100E; color:#EDE0C8; }
-  @media (orientation:landscape) and (max-height:500px) {
-    #rotate { display:flex; }
-  }
+  @media (orientation:landscape) and (max-height:500px) { #rotate { display:flex; } }
 </style>
 </head>
 <body>
@@ -30,27 +26,18 @@
 
 <script src="vendor/phaser.min.js"></script>
 
-<script src="src/config/layout.js"></script>
-<script src="src/config/units.js"></script>
-<script src="src/config/enemies.js"></script>
-<script src="src/config/levels.js"></script>
-<script src="src/config/heroes.js"></script>
-<script src="src/config/boons.js"></script>
-
-<script src="src/game/Save.js"></script>
-<script src="src/game/Audio.js"></script>
-<script src="src/game/Fx.js"></script>
-<script src="src/game/Grid.js"></script>
-<script src="src/game/Unit.js"></script>
-<script src="src/game/Enemy.js"></script>
-
-<script src="src/dev/DevTools.js"></script>
-
-<script src="src/scenes/BootScene.js"></script>
-<script src="src/scenes/TitleScene.js"></script>
-<script src="src/scenes/CodexScene.js"></script>
-<script src="src/scenes/GameScene.js"></script>
-
-<script src="src/main.js"></script>
+<script src="src/v4/Audio.js?v=35"></script>
+<script src="src/v4/layout.js?v=35"></script>
+<script src="src/v4/data.js?v=35"></script>
+<script src="src/v4/Fx.js?v=35"></script>
+<script src="src/v4/Gate.js?v=35"></script>
+<script src="src/v4/Enemy.js?v=35"></script>
+<script src="src/v4/Unit.js?v=35"></script>
+<script src="src/v4/Skills.js?v=35"></script>
+<script src="src/v4/DevTools.js?v=35"></script>
+<script src="src/v4/BootScene.js?v=35"></script>
+<script src="src/v4/TitleScene.js?v=35"></script>
+<script src="src/v4/GameScene.js?v=35"></script>
+<script src="src/v4/main.js?v=35"></script>
 </body>
 </html>

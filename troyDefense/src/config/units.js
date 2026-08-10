@@ -1,175 +1,58 @@
-/* 兵種、階級成長、戰術融合配方 */
+/* v2 守軍：4 系 × 5 階（同種同級點擊合成升階）*/
 window.TD = window.TD || {};
 
-TD.MAX_LV = 6;
+TD.GROWTH = 1.8;            // 每階屬性倍率
+TD.RECRUIT_BASE = 60;       // 徵兵基價
+TD.RECRUIT_STEP = 12;       // 每次徵兵漲價
+TD.MAX_LV = 5;
 
-// ── 五大兵系 ──
-TD.KINDS = {
+// 攻擊模式（全部是往上掃的持續彈幕，參考合成防線手感）：
+//  arrow  = 高頻直射箭流（單體，曳光）
+//  spear  = 貫穿標槍（一矛穿一整列，稍慢）
+//  stone  = 拋射巨石（AoE 濺射，慢而重）
+//  oil    = 火油噴流（短射程持續燒，點燃敵人）
+TD.UNITS = {
   archer: {
-    name: '弓兵', icon: '🏹', tint: 0x6EC6FF, target: 'single',
-    tex: { 1: 'T_archer_1', 3: 'T_archer_3', 6: 'T_archer_6' },
-    lvNames: ['民兵弓手', '城衛弓兵', '精銳射手', '王家弓衛', '阿波羅祭弓', '神眷射手'],
-    base: { dmg: 15, cd: 850, range: 430 },
-    desc: '射程最遠的單體高頻輸出',
+    name: '弓兵', icon: 'G_def_archer', color: 0xFF8A3C, mode: 'arrow',
+    dmg: 10, rate: 340, range: 1050, projSpeed: 1500,
+    burnLv: 3,                       // 3 階起火箭（附燃燒）
+    names: ['民兵弓手', '城衛弓兵', '精銳射手', '王家弓衛', '神眷射手'],
   },
   spear: {
-    name: '長矛', icon: '🗡', tint: 0xFFB74D, target: 'pierce',
-    tex: { 1: 'T_spear_1', 3: 'T_spear_3', 6: 'T_spear_6' },
-    lvNames: ['民兵矛手', '城衛矛兵', '王家矛衛', '青銅矛陣', '聖矛衛隊', '聖矛守護者'],
-    base: { dmg: 34, cd: 1450, range: 280 },
-    desc: '直線貫穿，一擊命中路徑上所有敵人',
+    name: '長矛', icon: 'G_def_spear', color: 0x6EC6FF, mode: 'spear',
+    dmg: 26, rate: 900, range: 1050, projSpeed: 1250,
+    pierce: 99,                       // 貫穿整列
+    climberMul: 3.0,                  // 對雲梯/爬牆敵人傷害倍率
+    names: ['持矛民兵', '城衛矛兵', '精銳矛士', '王家矛衛', '赫克托親衛'],
   },
   stone: {
-    name: '投石', icon: '🪨', tint: 0xA1887F, target: 'aoe',
-    tex: { 1: 'T_stone_1', 3: 'T_stone_3', 6: 'T_stone_6' },
-    lvNames: ['投石兵', '投石小隊', '城防投石機', '重型投石機', '烈焰投石機', '希臘火投石機'],
-    base: { dmg: 52, cd: 2300, range: 580, aoe: 120 },
-    desc: '緩慢但範圍濺射，落地震屏',
+    name: '投石', icon: 'G_def_stone', color: 0xC9A227, mode: 'stone',
+    dmg: 30, rate: 1900, range: 900, aoe: 135,
+    names: ['擲石民兵', '投石手', '精銳投石', '破城投手', '巨石泰坦'],
   },
   oil: {
-    name: '熱油', icon: '🔥', tint: 0xFF7043, target: 'cone',
-    tex: { 1: 'T_oil_1', 3: 'T_oil_3', 6: 'T_oil_6' },
-    lvNames: ['熱油兵', '油罐陣地', '油鍋陣地', '沸油壁壘', '烈焰油瀑', '煉獄油瀑'],
-    base: { dmg: 11, cd: 500, range: 250, burn: 6 },
-    desc: '城牆前扇形灼燒，附帶持續燃燒',
-  },
-  priest: {
-    name: '祭司', icon: '🕊', tint: 0xCE93D8, target: 'aura',
-    tex: { 1: 'T_priest_1', 3: 'T_priest_3', 6: 'T_priest_6' },
-    lvNames: ['祭司', '神殿侍祭', '神殿祭司', '祭司長', '神諭祭司', '神諭大祭司'],
-    base: { dmg: 0, cd: 0, range: 340, buff: 0.22, slow: 0.18 },
-    desc: '光環增傷友軍、詛咒減速敵人',
+    name: '火油', icon: 'G_def_oil', color: 0xFF5C3C, mode: 'oil',
+    dmg: 6, rate: 200, range: 560, projSpeed: 820,   // 高頻火舌噴流
+    burnSec: 2.2,
+    names: ['澆油僕役', '火油兵', '沸油匠', '烈焰油衛', '煉獄司爐'],
   },
 };
 
-// ── 融合產物（異種合成）──
-TD.FUSED = {
-  fireArrow: {
-    name: '火矢台', icon: '🔥🏹', tint: 0xFF8A65, target: 'single',
-    tex: { 1: 'T_archer_6' }, lvNames: ['火矢台'],
-    base: { dmg: 42, cd: 780, range: 460, burn: 8 }, fused: true,
-    desc: '箭矢附帶燃燒，可引爆地面油池',
-  },
-  ballista: {
-    name: '攻城弩', icon: '⚔', tint: 0xFFE066, target: 'single', footprint: 2,
-    tex: { 1: 'F_ballista' }, lvNames: ['攻城弩'],
-    base: { dmg: 150, cd: 2000, range: 700, knock: 90 }, fused: true,
-    desc: '超遠程單體巨傷並擊退',
-  },
-  oracleBow: {
-    name: '神諭弓陣', icon: '✨🏹', tint: 0xB39DDB, target: 'aura',
-    tex: { 1: 'T_priest_6' }, lvNames: ['神諭弓陣'],
-    base: { dmg: 0, cd: 0, range: 999, buff: 0.30, rateBuff: 0.30 }, fused: true,
-    desc: '全場弓兵射速 +30%、傷害 +30%',
-  },
-  greekFire: {
-    name: '希臘火投石機', icon: '💥', tint: 0x69F0AE, target: 'aoe', footprint: 2,
-    tex: { 1: 'F_greekfire' }, lvNames: ['希臘火投石機'],
-    base: { dmg: 90, cd: 2600, range: 620, aoe: 150, pool: 8000 }, fused: true,
-    desc: '落點形成持續 8 秒的火海',
-  },
-  holySpear: {
-    name: '聖矛陣', icon: '⚡', tint: 0xFFF176, target: 'pierce',
-    tex: { 1: 'T_spear_6' }, lvNames: ['聖矛陣'],
-    base: { dmg: 80, cd: 1200, range: 320, bossMul: 3 }, fused: true,
-    desc: '對英雄級敵人傷害 ×3',
-  },
-};
-
-// 統一查表
-TD.getKind = (k) => TD.KINDS[k] || TD.FUSED[k];
-TD.isFused = (k) => !!TD.FUSED[k];
-
-// ── 融合配方：key 為「兩種類排序後 + 等級」──
-TD.FUSIONS = [
-  { a: 'archer', b: 'oil',    lv: 3, out: 'fireArrow' },
-  { a: 'spear',  b: 'stone',  lv: 3, out: 'ballista' },
-  { a: 'archer', b: 'priest', lv: 3, out: 'oracleBow' },
-  { a: 'stone',  b: 'oil',    lv: 4, out: 'greekFire' },
-  { a: 'spear',  b: 'priest', lv: 4, out: 'holySpear' },
-];
-
-TD.findFusion = (k1, lv1, k2, lv2) => {
-  if (lv1 !== lv2) return null;
-  return TD.FUSIONS.find(f =>
-    (f.a === k1 && f.b === k2 || f.a === k2 && f.b === k1) && f.lv === lv1) || null;
-};
-
-// ── 等級成長 ──
-TD.GROWTH = 1.78;
-TD.statsOf = (kind, lv) => {
-  const K = TD.getKind(kind);
-  if (!K) return null;
-  const m = Math.pow(TD.GROWTH, lv - 1);
-  const b = K.base;
+TD.unitStat = (type, lv) => {
+  const u = TD.UNITS[type];
+  const k = Math.pow(TD.GROWTH, lv - 1);
   return {
-    dmg: Math.round((b.dmg || 0) * m),
-    cd: Math.max(120, Math.round((b.cd || 1000) / (1 + (lv - 1) * 0.09))),
-    range: Math.round((b.range || 300) * (1 + (lv - 1) * 0.05)),
-    aoe: b.aoe ? Math.round(b.aoe * (1 + (lv - 1) * 0.08)) : 0,
-    burn: b.burn ? +(b.burn * m).toFixed(1) : 0,
-    buff: b.buff ? +(b.buff * (1 + (lv - 1) * 0.25)).toFixed(2) : 0,
-    rateBuff: b.rateBuff || 0,
-    slow: b.slow ? +(b.slow * (1 + (lv - 1) * 0.2)).toFixed(2) : 0,
-    knock: b.knock || 0,
-    bossMul: b.bossMul || 1,
-    pool: b.pool || 0,
+    dmg: Math.round(u.dmg * k),
+    rate: Math.max(240, Math.round(u.rate * Math.pow(0.96, lv - 1))),
+    range: u.range * (1 + (lv - 1) * 0.06),
   };
 };
 
-// 取該階要用的貼圖 key（沒有專屬圖就往下找最近的）
-TD.texOf = (kind, lv) => {
-  const K = TD.getKind(kind);
-  if (!K) return null;
-  for (let l = lv; l >= 1; l--) if (K.tex[l]) return K.tex[l];
-  return K.tex[Object.keys(K.tex)[0]];
+// ── 主動技能 ──
+TD.SKILLS = {
+  oilPour:   { name: '沸油傾瀉', icon: '🔥', cd: 12000, dmg: 14, radius: 190, burnSec: 6 },
+  arrowRain: { name: '萬箭齊發', icon: '🏹', cd: 18000, dmg: 22, radius: 240, count: 90 },
+  meteor:    { name: '神火隕石', icon: '☄️', cd: 0,     dmg: 120, radius: 230, count: 3 }, // 神恩滿才可放
 };
-
-TD.nameOf = (kind, lv) => {
-  const K = TD.getKind(kind);
-  return (K.lvNames && K.lvNames[Math.min(lv, K.lvNames.length) - 1]) || K.name;
-};
-
-// ── 單塔升級／賣出 ──
-TD.upgradeCost = (lv) => Math.round(70 * Math.pow(1.78, lv - 1));
-TD.sellValue = (lv) => Math.round(46 * (Math.pow(1.78, lv) - 1) / 0.78 * 0.65);
-
-// ── 目標優先權 ──
-TD.PRIORITIES = [
-  { key: 'first',  name: '最前方', desc: '離城門最近的敵人' },
-  { key: 'strong', name: '血最多', desc: '優先集火硬目標' },
-  { key: 'weak',   name: '血最少', desc: '快速清場、串連擊' },
-  { key: 'near',   name: '最靠近', desc: '離這座塔最近的敵人' },
-];
-
-// ── 佔位大小：1 = 一格，2 = 2×2 四格 ──
-TD.footprintOf = (kind, lv, giant) => {
-  if (giant) return 2;
-  const K = TD.getKind(kind);
-  if (K && K.footprint) return K.footprint;
-  return 1;
-};
-
-// ── 巨人化：Lv6 專屬的終極升級，變強但吃掉 4 格 ──
-TD.GIANT = {
-  cost: 520,
-  dmgMul: 2.2,
-  rangeMul: 1.25,
-  rateMul: 1.15,
-  desc: '傷害 ×2.2、射程 +25%、攻速 +15%，但佔用 2×2 四格',
-};
-
-// ── 路障：純擋路、不攻擊，用來把敵人導向你要的路線 ──
-TD.BARRICADE = {
-  name: '路障', tex: 'U_barricade',
-  baseCost: 35,      // 首個價格
-  step: 14,          // 每放一個漲價
-  sellRate: 0.7,     // 賣出返還比例
-  max: 14,           // 每關上限，避免整場鋪滿
-};
-TD.barricadeCost = (n) => TD.BARRICADE.baseCost + n * TD.BARRICADE.step;
-
-// ── 徵兵 ──
-TD.RECRUIT_BASE = 50;
-TD.RECRUIT_STEP = 6;        // 每次徵兵漲價
-TD.RECRUIT_POOL = ['archer', 'archer', 'spear', 'spear', 'stone', 'oil', 'priest'];
+TD.FURY_MAX = 100;          // 神恩上限（擊殺累積）
+TD.FURY_PER_KILL = 2.2;

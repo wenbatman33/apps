@@ -1,0 +1,1369 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>防守特洛伊 v4 — 俯視角重新規劃</title>
+<style>
+  :root{
+    --bg:#F5EFDF; --ink:#3A2E1E; --ink2:#7A6A4E; --card:#FFFDF6;
+    --line:#E2D6B8; --accent:#C9691E; --gold:#C9A227; --blue:#3E7FA8; --red:#B54A38;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{background:var(--bg); color:var(--ink); font-family:"PingFang TC","Noto Sans TC","Microsoft JhengHei",sans-serif; line-height:1.7;}
+  .wrap{max-width:1180px; margin:0 auto; padding:32px 20px 120px;}
+  header.hero{padding:46px 0 26px; border-bottom:3px solid var(--gold);}
+  header.hero h1{font-size:34px; letter-spacing:2px;}
+  header.hero h1 span{color:var(--accent);}
+  header.hero p.sub{color:var(--ink2); margin-top:8px; font-size:15px;}
+  .toc{display:flex; gap:10px; flex-wrap:wrap; margin-top:18px;}
+  .toc a{background:var(--card); border:1px solid var(--line); border-radius:20px; padding:6px 16px; text-decoration:none; color:var(--ink); font-size:14px;}
+  .toc a b{color:var(--accent);}
+  section{margin-top:56px;}
+  h2{font-size:26px; border-left:8px solid var(--gold); padding-left:14px; margin-bottom:6px;}
+  h2 small{font-size:14px; color:var(--ink2); font-weight:normal; margin-left:10px;}
+  h3{font-size:18px; margin:26px 0 10px; color:#8A5A20;}
+  p.lead{color:var(--ink2); font-size:15px; margin-bottom:14px;}
+  .card{background:var(--card); border:1px solid var(--line); border-radius:14px; padding:20px; margin-top:14px;}
+  table{border-collapse:collapse; width:100%; font-size:13.5px; background:var(--card);}
+  th,td{border:1px solid var(--line); padding:7px 10px; text-align:left; vertical-align:top;}
+  th{background:#EFE5C8; white-space:nowrap;}
+  tr:nth-child(even) td{background:#FBF7EA;}
+  .cols{display:flex; gap:22px; flex-wrap:wrap; align-items:flex-start;}
+  .cols > div{flex:1; min-width:300px;}
+  .tag{display:inline-block; font-size:11px; padding:1px 8px; border-radius:10px; color:#fff; vertical-align:middle;}
+  .tag.b{background:var(--blue);} .tag.r{background:var(--red);} .tag.g{background:#58A050;} .tag.o{background:var(--accent);} .tag.k{background:#555;}
+  .note{background:#FFF6E0; border:1px solid #EAD9A8; border-radius:10px; padding:12px 16px; font-size:13.5px; color:#6A5A38; margin-top:12px;}
+  .note b{color:#B4741A;}
+  .warn{background:#FDECEC; border-color:#EFC5C5; color:#7A3A3A;}
+  .warn b{color:#B54A38;}
+  /* sprite sheet blocks */
+  .sheet{display:flex; gap:18px; align-items:flex-start; margin-top:20px; flex-wrap:wrap;}
+  .sheet .info{width:220px; min-width:200px;}
+  .sheet .info h4{font-size:16px;}
+  .sheet .info .role{font-size:12.5px; color:var(--ink2); margin:4px 0 8px;}
+  .sheet .info dl{font-size:12px; color:var(--ink2);}
+  .sheet .info dl b{color:var(--ink);}
+  .sheet canvas.sheetc{border:1px solid var(--line); border-radius:10px; background:#fff;}
+  .pv{display:flex; flex-direction:column; align-items:center; gap:4px;}
+  .pv canvas{border:1px dashed #C9B98C; border-radius:10px; background:#EFE9D6;}
+  .pv span{font-size:11px; color:var(--ink2);}
+  .legendrow{display:flex; gap:14px; flex-wrap:wrap; font-size:12.5px; color:var(--ink2); margin-top:8px;}
+  .sw{display:inline-block; width:13px; height:13px; border-radius:3px; vertical-align:-2px; margin-right:4px; border:1px solid rgba(0,0,0,.12);}
+  .zonelabel{font-size:12.5px;}
+  .zonelabel li{margin-bottom:9px; list-style:none; border-left:4px solid var(--line); padding-left:10px;}
+  .zonelabel li b{font-size:13.5px;}
+  .zonelabel li i{color:var(--ink2); font-style:normal; display:block;}
+  .mockrow{display:flex; gap:26px; flex-wrap:wrap; justify-content:flex-start; align-items:flex-start;}
+  .mock{text-align:center;}
+  .mock p{font-size:13px; color:var(--ink2); margin-top:6px;}
+  svg{display:block;}
+  .check li{margin-bottom:8px; font-size:14px;}
+  .check li::marker{content:"✅ ";}
+  .check li.x::marker{content:"⚠️ ";}
+  footer{margin-top:70px; padding-top:20px; border-top:2px solid var(--gold); color:var(--ink2); font-size:13px;}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="hero">
+  <h1>防守特洛伊 <span>v4</span> — 俯視角全面重新規劃</h1>
+  <p class="sub">手機直向 1080×1920 ・ 3/4 微傾俯視・CoC 級渲染 ・ <b>2026-08-08 玩法定案：</b>參照《爆炸城堡TD》改為「城堡生存塔防」——炮台主角手動瞄準＋戰鬥點數抽卡配置隨機英雄＋蜂群敵潮</p>
+  <div class="toc">
+    <a href="#s1"><b>1</b> 場景規劃</a>
+    <a href="#s2"><b>2</b> 角色 Sprite Sheet（敵我全動作）</a>
+    <a href="#s3"><b>3</b> 首頁與 GUI 規劃</a>
+    <a href="#s4"><b>4</b> 十關難易度規劃</a>
+    <a href="#s5dev"><b>5</b> 開發細節</a>
+    <a href="#s5"><b>6</b> 自我審查與風險</a>
+  </div>
+</header>
+
+<!-- ============ 0 方向 ============ -->
+<div class="note" style="margin-top:26px">
+  <b>這版跟舊版差在哪：</b>舊版失敗根因是「AI 生圖各自為政 → 視角/明度/密度全打架」＋「守城只是嘴上說說」。
+  v4 三原則：<b>① 全畫面同一個 3/4 俯視鏡頭</b>（Clash of Clans 同款：約 60° 微傾鳥瞰，所有物件同一鏡頭同一光向，杜絕貼紙感）；
+  <b>② AI 生圖但單一規範</b>（全部素材共用同一段 CoC 風格母 prompt＋逐張驗收；角色動畫「整張 sheet 一次生成」保證幀一致——已於 §2.5 實測成功）；
+  <b>③ 城牆城門是真實體</b>（有血量、有戰損、敵人走到牆下會攻城，不會憑空消失）。
+</div>
+
+<!-- ============ 0.5 玩法核心 ============ -->
+<div class="card" style="margin-top:26px;background:#EFE7D0">
+  <h3 style="margin-top:0">🎮 玩法核心循環（2026-08-08 定案・仿《爆炸城堡TD》）</h3>
+  <table>
+    <tr><th>機制</th><th>我們的版本</th></tr>
+    <tr><td>主角</td><td>赫克托爾常駐中央門樓（「你」）：自動開火；<b>按住戰場拖曳＝虛線瞄準連射＋範圍濺射</b></td></tr>
+    <tr><td>英雄配置</td><td><b>無徵兵/合成/金幣</b>。殺敵集「⚔ 戰鬥點數」→ 集滿跳「選擇技能」<b>三選一</b>（隨機英雄加入戰鬥／守軍升銜／技能強化），🎲 每場 3 次全部刷新；抽到的英雄自動站上隨機空塔台</td></tr>
+    <tr><td>上場名冊</td><td>物理×4（弓/矛/石/油）＋<b>神系祭司×4</b>（宙斯⚡連鎖閃電・阿波羅☀太陽火球灼燒・波塞頓🌊怒濤擊退・雅典娜🦉聖光矛＋城門回血）＋主角赫克托爾</td></tr>
+    <tr><td>能力成長</td><td>等級（升銜卡）×2.3 傷害；<b>神系專屬強化卡</b>只在該祭司在場時入池（多跳/延燒/怒濤/神佑）；沸油/箭雨吃強化卡疊流派</td></tr>
+    <tr><td>敵人</td><td><b>全場漫野蜂群</b>（單波最多 44+，間隔低至 0.28s），量大體弱；到牆前佔位排兩列戰線攻門</td></tr>
+    <tr><td>城堡</td><td>六座圓塔台＋中央大門樓（S_castle_strip 素材）；英雄站塔台（兵種色光圈＋塔下等級盾徽）；<b>城門/城牆四段戰損</b>（裂紋帶→冒煙→燃燒＋紅光危急）</td></tr>
+    <tr><td>特效</td><td>全彈道軌跡光尾、魔法命中爆閃/衝擊環/水花、<b>每擊跳傷害數字</b>（暴擊金色大字、灼燒橘字）</td></tr>
+    <tr><td>模式</td><td>戰役 3 關＋通關解鎖<b>無盡・十年圍城</b>（程序生成、最佳波數紀錄）</td></tr>
+    <tr><td>元素</td><td>🔥火（阿波羅/沸油）・⚡雷（宙斯連鎖+麻痺）・☠毒（帕里斯疊毒減速）＋🗿獨眼巨人壓場</td></tr>
+    <tr><td>城堡</td><td>六塔英雄站位＋<b>三階段城牆戰損</b>（完好→輕損裂紋→重損破口，硬切換＋煙塵飛石演出）＋置底數值血條</td></tr>
+  </table>
+</div>
+
+<div class="card" style="margin-top:14px">
+  <h3 style="margin-top:0">🗺 整體 Roadmap（里程碑驗收制，2026-08-10 起）</h3>
+  <table>
+    <tr><th>階段</th><th>內容</th><th>狀態</th></tr>
+    <tr><td><b>A 品質底盤</b></td><td>全機制殘留清掃、素材完整性斷言、戰損三階段、卡圖生成、數值血條、路徑/佔位修正</td><td>✅ 完成（本版）</td></tr>
+    <tr><td><b>B 戰役擴充</b></td><td>關 4–7：夜襲雲梯（E_ladder 已有素材）、攻城槌/攻城塔實戰化、阿基里斯 BOSS 戰、卡池加深</td><td>待開工</td></tr>
+    <tr><td><b>C 完成度</b></td><td>關 8–10 木馬終章、音效層（WebAudio）、局外成長（星數換永久加成）、平衡曲線調校</td><td>—</td></tr>
+    <tr><td><b>D 上架打磨</b></td><td>教學引導、手機實機效能三檔、上架首頁、完整通關錄影驗收</td><td>—</td></tr>
+  </table>
+</div>
+
+<!-- ============ 1 場景 ============ -->
+<section id="s1">
+  <h2>1. 場景規劃 <small>俯視戰場・區塊配置・元素清單・關卡場景變化</small></h2>
+  <p class="lead">鏡頭固定在特洛伊城正上方。敵軍由畫面上方（海灘）沿三條路往下推進；我方守軍站在下方城牆垛位向上攻擊；最底部是拇指操作區。</p>
+
+  <div class="card" style="background:#EFE7D0">
+    <h3 style="margin-top:0">⭐ 完整戰場合成圖（全部用已生成的 CoC 真素材拼裝，即遊戲畫面目標）</h3>
+    <div class="mockrow">
+      <img src="public/assets/V4/scene_mock_v5.png" width="380" style="border-radius:18px; box-shadow:0 6px 22px rgba(0,0,0,.25)">
+      <div style="flex:1;min-width:280px;font-size:13.5px;color:#5A4A30">
+        <p style="margin-bottom:10px">戰場背景（海→沙灘→三路草原→水平城牆＋城門→城內民居）為<b>整張一次生成</b>，全圖同一透視；其上疊獨立 sprite：敵軍沿路行軍、攻城槌/攻城塔推進、守軍（弓/矛/赫克托爾）站牆頂走道，最下方為徵兵格＋技能鈕。</p>
+        <p style="margin-bottom:10px">角色與器械為獨立 sprite 程式擺放（座標進 LAYOUT、DEV 工具可拖曳）；背景每關可整張換生（日/夜/黃昏/殘城），角色沿用不重生。</p>
+        <p style="color:#8A6A3A">v5 已修正：城牆改為背景內建（水平、無拼接透視打架）、黑船沙底座與土路接縫問題隨整張背景生成一併消失。城門戰損四態將以「門板區域局部重生＋疊圖」實作。</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="cols">
+      <div style="flex:0 0 340px">
+        <svg id="sceneSvg" viewBox="0 0 1080 1920" width="330" height="587" style="border-radius:16px; box-shadow:0 4px 18px rgba(0,0,0,.15)"></svg>
+      </div>
+      <div>
+        <h3 style="margin-top:0">畫面分區（1080×1920 基準）<span style="font-size:12px;color:var(--ink2);font-weight:normal">　左圖為佈局線框示意，非最終畫風；最終畫風見 §1.3 / §2.5 的 CoC 實生成素材</span></h3>
+        <ul class="zonelabel">
+          <li style="border-color:#1A2430"><b>HUD 帶</b> y 0–110 <i>波次／金幣／分數／暫停，半透明深色 chip，不遮戰場</i></li>
+          <li style="border-color:#4FA9E8"><b>海面（敵軍生成區）</b> y 110–380 <i>俯視黑船靠岸，敵人從船側落水上岸；至少一艘常駐著火</i></li>
+          <li style="border-color:#F2DCA0"><b>沙灘</b> y 380–520 <i>敵營帳篷、火盆（常駐火源），敵軍在此集結成波</i></li>
+          <li style="border-color:#A8D858"><b>戰場（草地三路）</b> y 520–1310 <i>三條土路，各寬 220px；敵人沿路往下行軍。路側散佈岩石／橄欖樹／舊戰場殘骸</i></li>
+          <li style="border-color:#C9BA94"><b>城牆帶（真實體）</b> y 1310–1500 <i>俯視牆頂走道＋6 個垛位（城門左右各 3，後期關卡 8）；城門居中寬 240，血條刻在門上，四段戰損</i></li>
+          <li style="border-color:#8A5A32"><b>城內屋頂</b> y 1500–1620 <i>俯視民居屋頂；城門血量越低，起火屋頂越多（戰況可視化）</i></li>
+          <li style="border-color:#D9C79C"><b>合成台＋操作列</b> y 1620–1920 <i>徵兵格 5×2、徵兵鈕、三主動技能鈕；全部落在拇指熱區</i></li>
+        </ul>
+        <div class="note" style="font-size:12.5px">
+          <b>鏡頭鐵律（CoC 同款）：</b>所有物件（船、樹、建築、角色、器械）一律用「約 60° 微傾的 3/4 鳥瞰」生成——看得到頂面也看得到正面，
+          跟 Clash of Clans 的兵與建築完全同一顆鏡頭。光源統一左上、影子統一右下。任何「正側面立繪」「正俯視平面圖」都禁止混入，這是舊版貼紙感的根源。
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <h3>1.1 場景元素清單（全部獨立小圖組裝，任一件不滿意可單獨重生；「俯視畫法」欄＝給 image_gen 的構圖規格）</h3>
+  <table>
+    <tr><th>類別</th><th>元件</th><th>俯視畫法</th></tr>
+    <tr><td>地表</td><td>海／沙灘／草地 三帶</td><td>平塗色帶＋浪紋短棒／沙點／草斑；土路＝淺褐帶＋碎石點</td></tr>
+    <tr><td>海上</td><td>黑船（普通／著火）</td><td>細長船身（圓角梭形）＋甲板橫紋＋桅杆圓點＋收帆橫桁；著火版掛火焰元件</td></tr>
+    <tr><td>沙灘</td><td>帳篷、火盆、軍旗</td><td>帳篷＝方形頂＋對角稜線；火盆＝圓環＋火焰；旗＝桿點＋飄帶</td></tr>
+    <tr><td>戰場</td><td>橄欖樹、岩石、殘骸（斷矛/盾）</td><td>樹＝雙層圓樹冠；岩石＝灰色圓塊；殘骸增加戰場敘事</td></tr>
+    <tr><td>城牆</td><td>牆段（可橫向拼接）、垛口、垛位、側塔</td><td>石色厚帶＋上緣鋸齒垛口＋磚縫線；垛位＝發光圓框（空位提示）</td></tr>
+    <tr><td>城門</td><td>四段戰損（完好→裂→破洞冒煙→半塌燃燒）</td><td>木板直紋＋兩道青銅橫箍；裂縫線逐段增加，末段掛常駐火＋煙粒子</td></tr>
+    <tr><td>城內</td><td>民居屋頂×6、神殿屋頂</td><td>矩形屋頂＋屋脊線；戰損時逐棟換成起火版</td></tr>
+    <tr><td>特效</td><td>火焰／火花／煙／餘燼／彈幕</td><td>全程式粒子（規格沿用 GDD_v2 §6，粒子池上限 600）</td></tr>
+  </table>
+
+  <h3>1.2 場景素材（codex image_gen・CoC 風格・批量生成中，生好一張就會出現在下面）</h3>
+  <div class="card">
+    <p style="font-size:12.5px;color:var(--ink2);margin-bottom:12px">
+      全部存於 <code>public/assets/V4/</code>。地表三張為無縫貼圖（遊戲內平鋪）；其餘為獨立物件（白底去背後入場景組裝），任一張不滿意都可單獨重生。
+    </p>
+    <div class="mockrow" id="sceneGallery"></div>
+    <script>
+      [['T_sea','海面貼圖'],['T_sand','沙灘貼圖'],['T_road','土路貼圖'],['T_grass_coc','草地貼圖'],
+       ['S_wall','城牆段'],['S_gate','城門'],['S_tower','側塔'],['S_ship','黑船'],
+       ['S_tent','敵營帳篷'],['S_tree','橄欖樹'],['S_rock','岩石'],['S_house','城內民居'],
+       ['E_ram','攻城槌'],['E_siegetower','攻城塔'],['E_catapult','投石機']
+      ].forEach(([id,name])=>{
+        const d=document.createElement('div');d.className='mock';
+        d.innerHTML='<img src="public/assets/V4/'+id+'.png" width="150" style="border:1px solid var(--line);border-radius:12px;background:#fff" onerror="this.parentElement.style.display=\'none\'"><p>'+name+'</p>';
+        document.getElementById('sceneGallery').appendChild(d);
+      });
+    </script>
+  </div>
+
+  <h3>1.3 關卡場景變化（同一佈局，換色票＋擺設）</h3>
+  <div class="card" style="padding:14px 20px">
+    <div id="palettes" class="legendrow" style="gap:26px"></div>
+    <p style="font-size:12.5px; color:var(--ink2); margin-top:10px">
+      實作上只是把「草地／海／環境光」三組色票換掉＋增減擺設（夜戰加火把光暈、殘城把樹換成焦木、第 6 關反攻把鏡頭區塊上下對調），
+      工程成本極低但十關看起來關關不同。
+    </p>
+  </div>
+</section>
+
+<!-- ============ 2 SPRITE SHEET ============ -->
+<section id="s2">
+  <h2>2. 角色 Sprite Sheet <small>敵我全兵種・行走／攻擊／死亡全動作・右側為動態預覽</small></h2>
+  <p class="lead">
+    每個兵種一張 sheet，由 codex image_gen 以 CoC 風格<b>整張一次生成</b>（單次生成內角色長相/比例/色調天然一致，切格後不逐幀閃爍；重生也是整張重生）。
+    規格：每格 <b>256×256</b>、每動作 4 幀、播放 8–10fps。我方單位背對鏡頭朝上（站牆上朝敵射擊）、敵方面朝鏡頭朝下（向城牆推進），同一顆 3/4 俯視鏡頭。
+  </p>
+  <div class="legendrow">
+    <span><span class="sw" style="background:#3E7FA8"></span>我軍制服藍</span>
+    <span><span class="sw" style="background:#C9A227"></span>我軍盔金</span>
+    <span><span class="sw" style="background:#D94A30"></span>我軍盔纓紅</span>
+    <span><span class="sw" style="background:#B54A38"></span>敵軍戰袍紅棕</span>
+    <span><span class="sw" style="background:#8A5A32"></span>器械木色</span>
+    <span><span class="sw" style="background:#FF8A2A"></span>火焰</span>
+    <span style="color:var(--ink2)">（此為陣營配色基準；CoC 渲染下允許光影明暗變化，但主色相不得偏離）</span>
+  </div>
+
+  <h3>2.1 我方守軍（4 兵種 ＋ 1 英雄）— 待機／攻擊</h3>
+  <div class="card" style="background:#EFE7D0">
+    <h3 style="margin-top:0">⭐ CoC 成品 sheet（image_gen 已生成的會出現在下面；空缺＝生成中）</h3>
+    <div class="mockrow" id="allyGallery"></div>
+    <script>
+      [['A_archer_sheet_coc','弓兵'],['A_spear_sheet_coc_v2','長矛兵(綠)'],['A_stone_sheet_coc_v2','投石兵(褐)'],
+       ['A_oil_sheet_coc_v2','火油兵(橘)'],['A_hector_sheet_coc','主角・赫克托爾'],
+       ['A_zeus_sheet_coc','宙斯祭司⚡'],['A_apollo_sheet_coc','阿波羅祭司☀'],
+       ['A_poseidon_sheet_coc','波塞頓祭司🌊'],['A_athena_sheet_coc','雅典娜女祭司🦉']
+      ].forEach(([id,name])=>{
+        const d=document.createElement('div');d.className='mock';
+        d.innerHTML='<img src="public/assets/V4/'+id+'.png" width="210" style="border:1px solid var(--line);border-radius:12px;background:#fff" onerror="this.parentElement.style.display=\'none\'"><p><b>'+name+'</b>（待機／攻擊）</p>';
+        document.getElementById('allyGallery').appendChild(d);
+      });
+    </script>
+    <div class="mockrow" id="allyGifs" style="margin-top:10px"></div>
+    <script>
+      [['gif_coc_archer','弓兵'],['gif_coc_spear','長矛兵'],['gif_coc_stone','投石兵'],
+       ['gif_coc_oil','火油兵'],['gif_coc_hector','赫克托爾']
+      ].forEach(([id,name])=>{
+        const d=document.createElement('div');d.className='mock';
+        d.innerHTML='<img src="public/assets/V4/'+id+'.gif" width="140" style="border:1px dashed #C9B98C;border-radius:12px" onerror="this.parentElement.style.display=\'none\'"><p>'+name+' 動態</p>';
+        document.getElementById('allyGifs').appendChild(d);
+      });
+    </script>
+  </div>
+
+  <h3>2.2 敵方希臘軍（4 步兵 ＋ 3 攻城器械 ＋ BOSS）— 行走／攻擊／死亡</h3>
+  <div class="card" style="background:#EFE7D0">
+    <h3 style="margin-top:0">⭐ CoC 成品（已生成的會出現在下面；空缺＝生成中）</h3>
+    <div class="mockrow" id="enemyGallery"></div>
+    <script>
+      [['E_sword_sheet_coc','劍盾步兵 sheet'],['E_torch_sheet_coc','火把兵 sheet'],['E_shield_sheet_coc','盾龜兵 sheet'],
+       ['E_ladder_sheet_coc','雲梯兵 sheet'],['E_achilles_sheet_coc','BOSS・阿基里斯 sheet'],
+       ['E_ram','攻城槌'],['E_siegetower','攻城塔'],['E_catapult','投石機']
+      ].forEach(([id,name])=>{
+        const d=document.createElement('div');d.className='mock';
+        d.innerHTML='<img src="public/assets/V4/'+id+'.png" width="200" style="border:1px solid var(--line);border-radius:12px;background:#fff" onerror="this.parentElement.style.display=\'none\'"><p><b>'+name+'</b></p>';
+        document.getElementById('enemyGallery').appendChild(d);
+      });
+    </script>
+    <div class="mockrow" style="margin-top:6px">
+      <div class="mock"><img src="public/assets/V4/gif_coc_sword_march.gif" width="140" style="border:1px dashed #C9B98C;border-radius:12px"><p>劍盾兵 行軍</p></div>
+      <div class="mock"><img src="public/assets/V4/gif_coc_sword_attack.gif" width="140" style="border:1px dashed #C9B98C;border-radius:12px"><p>劍盾兵 攻擊</p></div>
+      <div class="mock"><img src="public/assets/V4/gif_coc_sword_death.gif" width="140" style="border:1px dashed #C9B98C;border-radius:12px"><p>劍盾兵 死亡</p></div>
+      <div class="mock"><img src="public/assets/V4/gif_coc_torch.gif" width="140" style="border:1px dashed #C9B98C;border-radius:12px"><p>火把兵</p></div>
+      <div class="mock"><img src="public/assets/V4/gif_coc_shield.gif" width="140" style="border:1px dashed #C9B98C;border-radius:12px"><p>盾龜兵</p></div>
+      <div class="mock"><img src="public/assets/V4/gif_coc_ladder.gif" width="140" style="border:1px dashed #C9B98C;border-radius:12px"><p>雲梯兵</p></div>
+      <div class="mock"><img src="public/assets/V4/gif_coc_achilles.gif" width="140" style="border:1px dashed #C9B98C;border-radius:12px"><p>BOSS 阿基里斯</p></div>
+    </div>
+    <p style="font-size:12.5px;color:var(--ink2)">攻城器械的行走／攻擊／損毀動態在遊戲內以程式動畫（晃動、撞擊位移、火焰粒子）呈現，不另生分幀。</p>
+  </div>
+
+  <h3>2.3 投射物與通用特效</h3>
+  <div class="card">
+    <p style="font-size:13.5px;color:#5A4A30">
+      投射物（箭／三連箭／投石／火油罐／敵方火球／金幣）以 image_gen 生成單張小圖；
+      火焰、火花、煙、餘燼、命中閃光全部走 <b>程式粒子</b>（規格沿用 GDD_v2 §6：粒子池上限 600、三檔自動降階、ADD 混合光暈），不依賴生圖。
+    </p>
+  </div>
+
+  <div class="note">
+    <b>合成階級表現：</b>同兵種 Lv1–Lv5 共用同一套動作幀，以「肩甲顏色（銅→銀→金）＋腳下光圈（Lv4+）＋盔纓長度」區分（色替換用程式做，不重新生圖）。
+    Lv5＋Lv5 合成覺醒為英雄（如赫克托爾），才使用獨立 sheet。
+  </div>
+
+  <h3>2.4 素材產製管線（codex image_gen・對舊版失敗的完整防堵）</h3>
+  <div class="card">
+    <table>
+      <tr><th>步驟</th><th>做法</th><th>防堵的舊版問題</th></tr>
+      <tr><td>① 風格母 prompt</td><td>一段固定前綴，所有素材共用（存於 <code>scripts/asset_manifest_v4.json</code> 的 <code>style</code> 欄）：「premium mobile strategy game art in the style of Clash of Clans / Clash Royale: chunky stylized cartoon 3D look, polished painterly rendering, soft shading + AO + specular highlights, vibrant saturated colors, 3/4 top-down bird's-eye camera (~60°), white background」。任何一張圖不得自訂風格詞。</td><td>渲染語言混雜（每張圖自帶風格打架）</td></tr>
+      <tr><td>② 分鏡稿隨圖附上</td><td>把本頁對應的分鏡格當姿勢／構圖描述寫進 prompt（動作分解、朝向、持物），要求 image_gen 照分鏡生成。</td><td>視角不一（俯視地板配正面立繪）</td></tr>
+      <tr><td>③ 整張 sheet 一次生成</td><td>角色類一律「1 張圖＝1 角色全部動作幀（4 欄 × 動作列網格）」，切格由 <code>scripts/slice_v4.py</code> 處理；重生也是整張重生。</td><td>動畫幀之間長相漂移、閃爍</td></tr>
+      <tr><td>④ 先測後批</td><td>每個類別（角色／器械／地表／擺設／UI）先生 1 張測試圖 → 我逐項對照驗收表 → 你過目 → 才批量。manifest：<code>scripts/asset_manifest_v4.json</code>，<code>gen_v4.mjs</code> 以 existsSync 跳過已完成、可中斷續跑。</td><td>批量生完才發現整批不能用</td></tr>
+      <tr><td>⑤ 後處理統一</td><td>sips 縮到目標尺寸 → 去背（沿用 chroma 流程）→ <b>全圖色票量化</b>：把每張圖的顏色吸附到 §色票最近色，程式強制全專案同一調色盤。</td><td>明度/飽和失控、顏色打架</td></tr>
+      <tr><td>⑥ 逐張驗收表</td><td>每張圖過五關：俯視角✓／色票內✓／細節≤3 層色✓／影子=右下橢圓✓／尺寸正確✓。任一不過＝單張重生，不將就。</td><td>細節密度過高、比例不統一</td></tr>
+    </table>
+    <p style="font-size:12.5px;color:var(--ink2);margin-top:10px">
+      估算：角色 sheet 13 張＋地表/擺設/城牆件約 25 張＋UI 約 12 張 ≈ <b>50 張生成</b>（每張 60–120 秒，批量背景跑約 1.5–2 小時，失敗重生另計）。
+      現有 <code>public/assets</code> 舊素材整批封存到 <code>_v3_archive/</code>（不刪檔，由你決定去留）。
+    </p>
+  </div>
+</section>
+
+  <h3>2.5 ✅ M0 實測成果（CoC 風格・codex image_gen 已生成的真素材）</h3>
+  <div class="card">
+    <p style="font-size:13.5px;color:var(--ink2);margin-bottom:14px">
+      以下不是設計稿，是 image_gen 實際生成的素材（存於 <code>public/assets/V4/</code>）。
+      GIF 是「切格 → 連通白底去背（保留角色高光）→ 置中 → 疊草地」管線跑完的動態效果——同張圖內生成的幀長相完全一致，動起來不閃爍。
+      <b>2026-08-07 定案：第一版扁平向量風格已否決（檔案已歸檔至 <code>public/assets/V4/_flat_rejected/</code>），全面採用本節 CoC 質感。</b>
+    </p>
+    <div class="mockrow">
+      <div class="mock">
+        <img src="public/assets/V4/E_sword_sheet_coc.png" width="330" style="border:1px solid var(--line);border-radius:12px;background:#fff">
+        <p><b>劍盾步兵</b> 4×3（行走／攻擊／死亡）</p>
+      </div>
+      <div class="mock">
+        <img src="public/assets/V4/A_archer_sheet_coc.png" width="330" style="border:1px solid var(--line);border-radius:12px;background:#fff">
+        <p><b>弓兵</b> 4×2（待機／射擊・背面朝上＝站牆視角）</p>
+      </div>
+    </div>
+    <div class="mockrow" style="margin-top:16px">
+      <div class="mock"><img src="public/assets/V4/gif_coc_sword_march.gif" width="170" style="border:1px dashed #C9B98C;border-radius:12px"><p>行軍（邊走邊推進）</p></div>
+      <div class="mock"><img src="public/assets/V4/gif_coc_sword_attack.gif" width="170" style="border:1px dashed #C9B98C;border-radius:12px"><p>攻擊循環</p></div>
+      <div class="mock"><img src="public/assets/V4/gif_coc_sword_death.gif" width="170" style="border:1px dashed #C9B98C;border-radius:12px"><p>死亡（播一次）</p></div>
+      <div class="mock"><img src="public/assets/V4/gif_coc_archer.gif" width="170" style="border:1px dashed #C9B98C;border-radius:12px"><p>弓兵 待機→射擊</p></div>
+      <div class="mock"><img src="public/assets/V4/T_grass_coc.png" width="170" style="border:1px solid var(--line);border-radius:12px"><p>草地無縫貼圖</p></div>
+    </div>
+  </div>
+
+<!-- ============ 3 GUI ============ -->
+<section id="s3">
+  <h2>3. 首頁場景與 GUI 規劃 <small>標題頁・關卡選擇・戰鬥 HUD・結算</small></h2>
+  <p class="lead">操作原則沿用你的偏好：<b>點擊優於拖曳</b>（合成＝點兩下、上牆＝點兵再點垛位）、一鍵合成鈕、所有可點目標 ≥ 96px。</p>
+
+  <h3 style="margin-top:0">3.1 戰鬥畫面各狀態（真素材合成＋標註）</h3>
+  <div class="mockrow card">
+    <div class="mock"><img src="public/assets/V4/scr_battle_annotated.png" width="300" style="border-radius:14px;box-shadow:0 4px 16px rgba(0,0,0,.2)"><p><b>戰鬥標準畫面</b>：六大區域職責標註＋右下拇指熱區（綠圈）</p></div>
+    <div class="mock"><img src="public/assets/V4/scr_skill_oil.png" width="300" style="border-radius:14px;box-shadow:0 4px 16px rgba(0,0,0,.2)"><p><b>技能施放</b>：點擊落點（白圈）→ 扇形火海 6 秒＋濺射火粒</p></div>
+    <div class="mock"><img src="public/assets/V4/scr_gate_crisis.png" width="300" style="border-radius:14px;box-shadow:0 4px 16px rgba(0,0,0,.2)"><p><b>城門危急</b>：紅色 vignette 常駐＋城內起火＋持續微震</p></div>
+  </div>
+
+  <h3>3.2 標題頁／選關頁／結算（image_gen 生成中，生好自動出現；按鈕文字由程式疊加）</h3>
+  <div class="mockrow card" id="guiGallery"></div>
+  <script>
+    [['G_title','標題頁主視覺（夜色木馬＋焚城，下 1/3 留白放按鈕）'],
+     ['G_levelmap','選關頁地圖（海→灘→平原→特洛伊城，10 個節點槽）'],
+     ['G_victory','勝利結算面板（三星槽＋月桂＋雙按鈕位）'],
+     ['G_uikit','UI 元件套件（金鈕/卡框/技能鈕/星星/金幣…）']
+    ].forEach(([id,name])=>{
+      const d=document.createElement('div');d.className='mock';
+      d.innerHTML='<img src="public/assets/V4/'+id+'.png" width="240" style="border:1px solid var(--line);border-radius:14px;background:#fff" onerror="this.parentElement.style.display=\'none\'"><p>'+name+'</p>';
+      document.getElementById('guiGallery').appendChild(d);
+    });
+  </script>
+  </div>
+
+  <div class="cols">
+    <div class="card">
+      <h3 style="margin-top:0">GUI 規範</h3>
+      <table>
+        <tr><th>項目</th><th>規格</th></tr>
+        <tr><td>主按鈕</td><td>高 ≥120px，金色雙色調（上亮下暗）＋深框；按下縮 0.94 回彈</td></tr>
+        <tr><td>技能鈕</td><td>直徑 150px 圓鈕，CD 以藍色扇形遮罩倒數；可放時金光呼吸</td></tr>
+        <tr><td>徵兵格</td><td>5×2 格，每格 96px；可合成對象亮綠框；選取中橘框</td></tr>
+        <tr><td>合成操作</td><td>點 A → 同級同種 B 全部亮綠 → 點 B 完成；另設「⚡一鍵合成」；拖曳仍可用</td></tr>
+        <tr><td>上牆操作</td><td>點守軍 → 空垛位發光 → 點垛位；再點守軍可召回</td></tr>
+        <tr><td>字級</td><td>HUD 34px／按鈕 44px／傷害飄字 40px（暴擊 56px 金色）</td></tr>
+        <tr><td>安全區</td><td>HUD 避開瀏海 60px；底部操作列避開 home bar 40px</td></tr>
+      </table>
+    </div>
+    <div class="card">
+      <h3 style="margin-top:0">流程與退場</h3>
+      <table>
+        <tr><th>流程</th><th>說明</th></tr>
+        <tr><td>標題 → 選關</td><td>「開戰」進選關；預設聚焦最新解鎖關</td></tr>
+        <tr><td>選關 → 戰鬥</td><td>顯示本關敵種預告＋建議兵種 → 出征</td></tr>
+        <tr><td>戰鬥 → 勝利</td><td>星數＝城門剩餘血量（≥70% 三星／≥30% 兩星／勝即一星）</td></tr>
+        <tr><td>戰鬥 → 敗北</td><td>城門爆破演出 → 敗得壯烈 → 一鍵重打</td></tr>
+        <tr><td>暫停</td><td>續戰／重打／回選關／音量；<b>DEV 工具入口也藏在這（按 D 或連點版本號）</b></td></tr>
+        <tr><td>存檔</td><td>localStorage：關卡星數、金幣、設定</td></tr>
+      </table>
+      <div class="note" style="margin-top:12px"><b>DEV 微調工具（開場即建）：</b>全 LAYOUT 變數可拖曳、粒子調參、震屏倍率、狀態強制觸發（撞門／戰損段／BOSS／敗北）、💾 匯出 JSON 後由我 bake 回 source。</div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 4 十關 ============ -->
+<section id="s4">
+  <h2>4. 十關故事架構與難易度 <small>三幕劇・每關一個故事節拍・鋸齒難度曲線</small></h2>
+  <p class="lead">十關不是「第幾年」的流水帳，而是一部三幕劇：<b>兵臨城下 → 十面楚歌 → 命運逆轉</b>。每關開場一句過場文案、通關一句結語，玩家隨劇情感受牆內外的壓力變化；新機制與 BOSS 全部服務故事節拍。</p>
+
+  <div class="card" style="background:#EFE7D0">
+    <div class="cols">
+      <div>
+        <h3 style="margin-top:0">第一幕・兵臨城下（關 1–3）</h3>
+        <p style="font-size:13px;color:#5A4A30">千帆自海平線而來。特洛伊人自恃牆高，直到第一支火把落在垛樓上。</p>
+        <table>
+          <tr><td><b>1 搶灘之日</b></td><td>黑船搶灘、首波接戰（教學）。結語：「牆會保護我們——目前是。」</td></tr>
+          <tr><td><b>2 第一把火</b></td><td>火把兵燒了垛樓，玩家第一次親手滅火。守城不再是旁觀。</td></tr>
+          <tr><td><b>3 狄俄墨得斯的挑釁</b></td><td>首位 BOSS 單騎叫陣。擊退他，他丟下一句：「我去搬更大的傢伙。」（伏筆攻城槌）</td></tr>
+        </table>
+      </div>
+      <div>
+        <h3 style="margin-top:0">第二幕・十面楚歌（關 4–7）</h3>
+        <p style="font-size:13px;color:#5A4A30">器械一件件登場，牆在呻吟。全劇最低谷在阿基里斯踏地那一刻。</p>
+        <table>
+          <tr><td><b>4 無月之夜</b></td><td>夜襲＋雲梯首現：全暗畫面只剩火光，敵人爬上牆頭肉搏。</td></tr>
+          <tr><td><b>5 撞城之日</b></td><td>攻城槌＋大埃阿斯。城門第一次被撞出裂縫（戰損狀態解鎖）。</td></tr>
+          <tr><td><b>6 火燒船塢</b></td><td>唯一反攻關：守軍出城燒船，士氣轉折點、純爽關。</td></tr>
+          <tr><td><b>7 阿基里斯之怒</b></td><td>最強 BOSS、全幕最低谷；腳踝金圈弱點——神話的解法藏在神話裡。</td></tr>
+        </table>
+      </div>
+      <div>
+        <h3 style="margin-top:0">第三幕・命運逆轉（關 8–10）</h3>
+        <p style="font-size:13px;color:#5A4A30">歷史說特洛伊會亡。這一次，由你改寫。</p>
+        <table>
+          <tr><td><b>8 亞馬遜的黎明</b></td><td>彭忒西勒亞率亞馬遜馳援守城（史詩考據：她是特洛伊盟軍）；海上投石艦隊對轟，敵我火球齊飛。</td></tr>
+          <tr><td><b>9 最長的圍困</b></td><td>資源枯竭消耗戰。夜裡，斥候回報：希臘人在造一匹「巨大的木馬」。</td></tr>
+          <tr><td><b>10 木馬屠城</b></td><td>三階段終局：獻禮 60s（識破＝拆馬真結局）→ 城內翻轉 90s → 最後一戰 90s。奧德修斯現身。</td></tr>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div class="card" style="overflow-x:auto">
+    <canvas id="curveChart" style="max-width:100%"></canvas>
+  </div>
+
+  <div class="card" style="overflow-x:auto; padding:12px">
+  <table id="lvTable">
+    <tr><th>關</th><th>關卡</th><th>場景</th><th>波數</th><th>新增敵種／機制</th><th>BOSS</th><th>敵HP×</th><th>出怪間隔</th><th>起始金幣</th><th>預估時長</th><th>目標通關率</th></tr>
+    <tr><td>1</td><td>搶灘之日</td><td>白日海灘</td><td>5</td><td>教學：徵兵→合成→上牆；劍盾步兵</td><td>—</td><td>1.0</td><td>2.4s</td><td>300</td><td>3 分</td><td>95%</td></tr>
+    <tr><td>2</td><td>第一把火</td><td>白日</td><td>6</td><td><span class="tag r">火把兵</span> 會點燃垛位（3連點滅火教學）</td><td>—</td><td>1.25</td><td>2.2s</td><td>300</td><td>3.5 分</td><td>90%</td></tr>
+    <tr><td>3</td><td>狄俄墨得斯的挑釁</td><td>黃昏</td><td>7</td><td><span class="tag r">盾龜兵</span> 頂箭推進（火油剋制教學）</td><td>狄俄墨得斯</td><td>1.6</td><td>2.0s</td><td>320</td><td>4 分</td><td>80%</td></tr>
+    <tr><td>4</td><td>無月之夜</td><td><b>夜戰</b></td><td>7</td><td><span class="tag r">雲梯兵</span> 爬牆肉搏＋推梯操作；全暗僅火光照明</td><td>—</td><td>1.5</td><td>1.9s</td><td>340</td><td>4 分</td><td>85%</td></tr>
+    <tr><td>5</td><td>撞城之日</td><td>白日</td><td>8</td><td><span class="tag k">攻城槌</span> 撞門大震屏</td><td>大埃阿斯</td><td>2.0</td><td>1.8s</td><td>360</td><td>5 分</td><td>72%</td></tr>
+    <tr><td>6</td><td>火燒船塢</td><td>黃昏<span class="tag g">反攻爽關</span></td><td>6</td><td>出城突擊：守軍下場、放火燒船隊；無城門壓力</td><td>—</td><td>1.8</td><td>—</td><td>500</td><td>4 分</td><td>90%</td></tr>
+    <tr><td>7</td><td>阿基里斯之怒</td><td>陰天</td><td>9</td><td><span class="tag k">攻城塔</span> 抵牆放兵；塔可火攻燒塌</td><td>阿基里斯（腳踝弱點）</td><td>2.6</td><td>1.6s</td><td>380</td><td>5.5 分</td><td>60%</td></tr>
+    <tr><td>8</td><td>亞馬遜的黎明</td><td>黎明</td><td>9</td><td><span class="tag k">投石機</span> 遠程火球砸城牆（敵我對轟）</td><td>阿伽門農旗艦（海上壓制）</td><td>2.9</td><td>1.5s</td><td>400</td><td>5.5 分</td><td>65%</td></tr>
+    <tr><td>9</td><td>最長的圍困</td><td>殘城餘燼</td><td>10</td><td>全敵種混編；資源枯竭（擊殺金 −30%）消耗戰</td><td>—</td><td>3.3</td><td>1.35s</td><td>320</td><td>6 分</td><td>55%</td></tr>
+    <tr><td>10</td><td><b>木馬屠城（終章）</b></td><td>夜→焚城</td><td>三階段</td><td>①獻禮60s（拆木馬＝真結局）②城內翻轉90s ③最後一戰90s</td><td>奧德修斯＋殘存BOSS</td><td>3.8</td><td>1.2s</td><td>420</td><td>8 分</td><td>40%</td></tr>
+  </table>
+  </div>
+
+  <div class="cols">
+    <div class="card">
+      <h3 style="margin-top:0">數值骨架（開發時的平衡基準）</h3>
+      <table>
+        <tr><th>項目</th><th>公式／基準</th></tr>
+        <tr><td>敵人 HP</td><td>基礎值 × 關卡係數 ×（1 ＋ 波內遞增 6%/波）</td></tr>
+        <tr><td>擊殺金幣</td><td>敵 HP 成本的 55%；BOSS 額外 ×5</td></tr>
+        <tr><td>徵兵價格</td><td>60 起，每次 +15（上限 240），波間回落 20%</td></tr>
+        <tr><td>合成產出</td><td>Lv n＋Lv n → Lv n+1（攻擊 ×2.3、攻速 ×1.1）</td></tr>
+        <tr><td>城門 HP</td><td>1000 × (1＋0.15×關卡)；赫克托爾被動 +25%</td></tr>
+        <tr><td>波間喘息</td><td>8s（卡珊德拉 +5s）；最後一波前 12s</td></tr>
+        <tr><td>DPS 檢核</td><td>每關「滿建成守軍 DPS ÷ 波總 HP」控制在 1.15–1.35（BOSS 關取下限）</td></tr>
+      </table>
+    </div>
+    <div class="card">
+      <h3 style="margin-top:0">兵種 × 敵種剋制（教學即關卡）</h3>
+      <table>
+        <tr><th>敵種</th><th>剋制解法</th><th>教學關</th></tr>
+        <tr><td>盾龜兵</td><td>🔥 火油從盾縫燒進去（正面箭傷 −70%）</td><td>第 3 關</td></tr>
+        <tr><td>雲梯兵</td><td>🗡 長矛牆頭肉搏最強；點垛位「推梯」全滅</td><td>第 4 關</td></tr>
+        <tr><td>攻城槌</td><td>🪨 投石對器械傷害 ×2</td><td>第 5 關</td></tr>
+        <tr><td>攻城塔</td><td>火屬性傷害逐層燒塌（最大單體演出）</td><td>第 7 關</td></tr>
+        <tr><td>投石機</td><td>🏹 萬箭齊發可打斷其蓄力</td><td>第 8 關</td></tr>
+      </table>
+      <p style="font-size:12.5px;color:var(--ink2);margin-top:8px">每種新敵人登場的那一關，就是它的剋制教學關——不用文字教學，用波次設計逼玩家發現解法。</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 5 開發細節 ============ -->
+<section id="s5dev">
+  <h2>5. 開發細節（實作藍圖）<small>你會看到的每一秒，對應到的程式怎麼寫</small></h2>
+
+  <h3>5.1 技術架構與檔案結構</h3>
+  <div class="cols">
+    <div class="card">
+      <table>
+        <tr><th>模組</th><th>職責</th></tr>
+        <tr><td><code>scenes/BootScene</code></td><td>載入 V4 圖集（slice_v4.py 產出的 atlas json）＋進度條</td></tr>
+        <tr><td><code>scenes/TitleScene</code></td><td>G_title 主視覺＋開戰/圖鑑/設定；連點版本號 5 下開 DEV</td></tr>
+        <tr><td><code>scenes/LevelSelect</code></td><td>G_levelmap＋10 節點（星數/鎖定），出征前敵種預告</td></tr>
+        <tr><td><code>scenes/GameScene</code></td><td>戰鬥主場景：地表平鋪→擺設→實體層→特效層→UI 層</td></tr>
+        <tr><td><code>game/Wall.js / Gate.js</code></td><td>城牆/城門實體：HP、四段戰損貼圖切換、受擊震動與形變</td></tr>
+        <tr><td><code>game/Enemy.js</code></td><td>敵人狀態機（下表）＋sheet 動畫（walk/attack/death）</td></tr>
+        <tr><td><code>v4/Unit.js</code></td><td>英雄塔台站位（光圈/盾徽）、索敵射擊；赫克托爾＝手動瞄準炮台</td></tr>
+        <tr><td><code>v4/GameScene.heroCast</code></td><td>四神系神蹟：連鎖閃電/太陽火球/怒濤擊退/聖光矛＋雅典娜城門回血被動</td></tr>
+        <tr><td><code>v4/GameScene.showDraft</code></td><td>戰鬥點數集滿 → 三選一抽卡（🎲刷新×3）；英雄自動上塔台</td></tr>
+        <tr><td><code>v4/Skills.js</code></td><td>三主動技（沸油瀑/箭雨/隕石鎖定），數值全吃局內強化卡</td></tr>
+        <tr><td><code>game/Fx.js</code></td><td>粒子池（上限600）：火/火花/煙/餘燼/飄字/震屏</td></tr>
+        <tr><td><code>config/levels.js …</code></td><td>十關波次表、敵人/單位數值、LAYOUT 座標（DEV 可匯出）</td></tr>
+        <tr><td><code>dev/DevTools.js</code></td><td>按 D：拖曳 LAYOUT、粒子調參、震屏倍率、狀態強制觸發、💾 匯出</td></tr>
+      </table>
+    </div>
+    <div class="card">
+      <h3 style="margin-top:0">敵人 AI 狀態機（每種敵人到城下「做什麼」）</h3>
+      <table>
+        <tr><th>敵種</th><th>march 後的攻城行為</th></tr>
+        <tr><td>劍盾步兵</td><td>走到城門前 → <code>attack</code> 循環砍門（每砍一下門噴火花＋門HP−）</td></tr>
+        <tr><td>火把兵</td><td>進入射程 → 停下投火把（拋物線＋焰尾）→ 點燃垛位/門（持續燒，3 連點滅火）</td></tr>
+        <tr><td>盾龜兵</td><td>頂盾慢速推進（正面箭傷 −70%）→ 到門後同劍盾兵；被火油命中解除減傷</td></tr>
+        <tr><td>雲梯兵</td><td>走到牆下 → 架梯（attack 列動畫）→ 爬上垛位與守軍肉搏；玩家點垛位「推梯」整梯摔落</td></tr>
+        <tr><td>攻城槌</td><td>直奔城門 → 撞門循環：槌頭前衝＋全螢幕震 6px＋門板 squash 形變＋木屑火花</td></tr>
+        <tr><td>攻城塔</td><td>抵牆 → 放橋 → 每 4s 放 1 敵兵上牆頭；火屬性傷害累積 → 逐層燃燒 → 整座垮塌（塵土牆）</td></tr>
+        <tr><td>投石機</td><td>停在沙灘射程外 → 蓄力 3s（可被萬箭打斷）→ 火球拋物線砸城牆（我方也會挨打）</td></tr>
+        <tr><td>BOSS 阿基里斯</td><td>大搖大擺踏步（踏地揚塵）→ 金光矛擊範圍傷害；腳踝受擊傷害 ×3（弱點提示金圈）</td></tr>
+      </table>
+    </div>
+  </div>
+
+  <h3>5.2 一關的實際流程（以第 3 關為例，逐段拆解）</h3>
+  <div class="card" style="overflow-x:auto">
+    <table>
+      <tr><th>時間</th><th>畫面上發生什麼</th><th>程式在做什麼</th></tr>
+      <tr><td>0–3s</td><td>鏡頭從城內拉到全景，海面船隊駛入，波次預告「WAVE 1/7：劍盾×8＋火把×2」</td><td>LevelSelect 傳入 levels[2]；Waves 排程器載入波表</td></tr>
+      <tr><td>3–11s</td><td>準備期：玩家徵兵 2–3 隻、合成、上牆（空垛位呼吸發光）</td><td>Bench 點擊流程；金幣=起始 320</td></tr>
+      <tr><td>11s起</td><td>敵兵從船側落下上岸集結，沿三路行軍；守軍自動索敵放箭（拋物線）</td><td>每 2.0s spawn 1 隻（波內 HP 遞增 6%）；Unit 索敵=最靠近城門者</td></tr>
+      <tr><td>波中</td><td>玩家點戰場放🔥沸油（CD12s）；著火敵人加速亂竄點燃隊友</td><td>Skills 落點→扇形燃燒區 6s；Enemy 掛 burning debuff</td></tr>
+      <tr><td>波間 8s</td><td>「WAVE 2/7」旗語＋金幣結算飄字；可繼續合成</td><td>Waves 間隔計時；徵兵價回落 20%</td></tr>
+      <tr><td>第 5 波</td><td>BOSS 狄俄墨得斯登場：戰旗＋鼓聲＋全場敵人加速 10%</td><td>Boss 實體＋登場運鏡（鏡頭推近 0.8s）</td></tr>
+      <tr><td>通關</td><td>最後一敵死亡 → 慢動作 0.5s → 勝利面板（星數=城門剩餘HP）</td><td>結算寫入 localStorage：stars/gold</td></tr>
+      <tr><td>敗北</td><td>城門 HP=0 → 門板炸碎飛向鏡頭 → 敵軍剪影湧入 → 火光吞沒 → 一鍵重打</td><td>GateBreak 演出時間軸 2.5s</td></tr>
+    </table>
+  </div>
+
+  <h3>5.3 手感與演出參數（開發時直接照抄的表）</h3>
+  <div class="cols">
+    <div class="card">
+      <table>
+        <tr><th>事件</th><th>回饋</th></tr>
+        <tr><td>一般命中</td><td>敵白閃 1 幀＋受擊抖 2px＋火花 4–6 粒</td></tr>
+        <tr><td>暴擊</td><td>慢動作 0.08s＋金色爆字 56px＋震屏 2px</td></tr>
+        <tr><td>攻城槌撞門</td><td>震屏 6px/0.3s＋門 squash 0.9→1.05＋木屑 12 片＋手機震動</td></tr>
+        <tr><td>火球命中城牆</td><td>震屏 8px/0.35s＋紅 vignette 脈動一次＋碎石 8 塊</td></tr>
+        <tr><td>神火隕石</td><td>白閃 1 幀＋震屏 12px/0.5s＋蕈狀火柱×3</td></tr>
+        <tr><td>攻城塔倒塌</td><td>震屏 10px/0.6s＋塵土牆遮半屏 1.5s</td></tr>
+        <tr><td>敵死亡</td><td>death 動畫 4 幀＋金幣弧線飛向金幣欄＋兵種色粒子 15</td></tr>
+        <tr><td>全場常態</td><td>5–15 粒漂浮餘燼（風向左上）＝戰火底味</td></tr>
+      </table>
+    </div>
+    <div class="card">
+      <h3 style="margin-top:0">數據與素材管線</h3>
+      <table>
+        <tr><th>項目</th><th>做法</th></tr>
+        <tr><td>圖集打包</td><td><code>scripts/slice_v4.py</code>：sheet 切格→去背→置中→打包 atlas.png＋json（Phaser 直讀）</td></tr>
+        <tr><td>體型基準</td><td>小兵 120px／英雄 150px／BOSS 190px／器械 260px（切格時強制縮放對齊）</td></tr>
+        <tr><td>存檔</td><td><code>localStorage.troyV4 = {stars:[3,2,0…], gold, settings:{sfx,bgm,quality}}</code></td></tr>
+        <tr><td>效能</td><td>粒子池 600；FPS&lt;45 自動降階（高/中/低三檔）；全部素材單一圖集減 draw call</td></tr>
+        <tr><td>LAYOUT</td><td>全部座標進 <code>config/layout.js</code>；DEV 工具拖曳→💾 匯出 JSON→我 bake 回 source</td></tr>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 5 自我審查 ============ -->
+<section id="s5">
+  <h2>6. 自我審查 <small>交付前檢查結果與已知風險</small></h2>
+  <div class="cols">
+    <div class="card">
+      <h3 style="margin-top:0">已通過（2026-08-08 玩法改版後全項重測，console 零錯誤）</h3>
+      <ul class="check" style="padding-left:20px">
+        <li>視角一致：場景、角色、器械、GUI mockup 全部同一俯視鏡頭；影子統一右下偏移</li>
+        <li>Sprite 動作齊全：我方 5 單位（待機＋攻擊）、敵方 8 單位（行走＋攻擊＋死亡），本頁動態預覽可直接檢視動作可讀性</li>
+        <li>2026-08-08 玩法改版實測：三選一抽卡（含神系專屬卡）、炮台瞄準連射、蜂群 44 隻同屏、塔台站位、傷害數字全數通過</li>
+        <li>素材走 codex image_gen（依你指示），並以「母 prompt＋整張 sheet 一次生成＋色票量化＋逐張驗收」六道工序防堵舊版拼貼感（§2.4）</li>
+        <li>操作偏好落實：點擊合成／點擊上牆／一鍵合成／技能點擊落點，無手勢操作</li>
+        <li>難度曲線鋸齒成形：BOSS 尖峰後放鬆、第 6 關爽關、通關率目標逐關遞減</li>
+        <li>手機可讀性：單位佔畫面寬 ≥ 1/9（120px），三路寬 220px 足夠 2×2 器械通行</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3 style="margin-top:0">已知風險（開發時要盯）</h3>
+      <ul class="check" style="padding-left:20px">
+        <li>（已解決）純俯視表演力弱 → 2026-08-07 依你反饋改為 CoC 同款 3/4 微傾鏡頭＋精緻渲染，實測見 §2.5</li>
+        <li class="x">CoC 風格下各單位「體型比例」要一致（弓兵不能比巨人大）→ 批量生成後統一量測角色像素高、以 slice 管線縮放對齊基準表</li>
+        <li class="x">牆頭肉搏（雲梯兵）在俯視下兩人重疊 → 規劃為「並排推擠＋火花」表現，開發第 4 關時優先驗證</li>
+        <li class="x">第 6 關反攻是獨立玩法，工程量最大的單關 → 排在 M3，若進度緊可降級為「火船漂流防守變體」</li>
+        <li class="x">粒子爆量 vs 中階機效能 → 沿用 GDD_v2 粒子池 600 上限＋三檔自動降階，M2 起每里程碑實測</li>
+        <li class="x">AI 生圖幀一致性仍是最大變數 → 已規劃整張 sheet 單次生成＋整張重生策略；M1 先只生「劍盾步兵＋弓兵」兩張 sheet 進遊戲實測動起來的效果，確認可行才批量其餘 48 張</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3 style="margin-top:0">確認後的開發里程碑</h3>
+    <table>
+      <tr><th>階段</th><th>產出</th><th>驗收</th></tr>
+      <tr><td>M0</td><td>素材可行性驗證：生「劍盾步兵＋弓兵」兩張 sheet＋一組地表，切格進引擎實測動畫（§2.4 流程走一遍）</td><td>你看實機動畫點頭，才批量其餘素材</td></tr>
+      <tr><td>M1</td><td>全素材批量生成＋場景組裝＋城牆/城門實體＋徵兵合成上牆＋第 1 關＋DEV 工具</td><td>我自己完整玩一遍＋截圖再交付</td></tr>
+      <tr><td>M2</td><td>我方全兵種＋三主動技＋火焰/火花全系統＋關 1–3</td><td>同上＋效能三檔實測</td></tr>
+      <tr><td>M3</td><td>全敵種（含器械）＋BOSS＋關 4–9（含反攻關）</td><td>同上</td></tr>
+      <tr><td>M4</td><td>第 10 關三階段＋雙結局＋音效＋平衡調校＋上架首頁</td><td>完整通關錄影給你</td></tr>
+    </table>
+  </div>
+</section>
+
+<footer>
+  防守特洛伊 v4 規劃書 ・ 2026-08-07 ・ 檔案：apps/troyDefense/PLAN_v4.html ・ 定稿前不動工、不生任何素材
+</footer>
+</div>
+
+<script>
+/* ================= 共用調色盤 ================= */
+const P={
+  sea:'#4FA9E8', seaL:'#7FC4F2', foam:'#EAF4FF',
+  sand:'#F2DCA0', sandD:'#E3C983',
+  grassA:'#A8D858', grassB:'#A0D14E', grassL:'#B8E468',
+  road:'#D9C08A', roadD:'#C7AD74',
+  stone:'#F2E9D2', stoneLine:'#DFD2AE', stoneSh:'#C9BA94', merlon:'#E8DCBC',
+  wood:'#8A5A32', woodL:'#A8743E', woodD:'#6E4626',
+  bronze:'#C9A227', bronzeL:'#D9B44A', bronzeD:'#B08A18',
+  tCloth:'#3E7FA8', tClothL:'#5B98BE', crest:'#D94A30', skin:'#D9A878',
+  gCloth:'#B54A38', gClothL:'#C96A55', gClothD:'#9C3A2A',
+  flameO:'#FF8A2A', flameY:'#FFD23C', spark:'#FFE08A',
+  hud:'rgba(26,36,48,0.85)', panel:'#D9C79C', card:'#F7EED6', cardE:'#CBB88C', panelLine:'#B99C64',
+  gold:'#FFB020', goldL:'#FFD060', goldD:'#B97A10',
+  green:'#58C060', greenL:'#7AD880',
+  shadow:'rgba(0,0,0,0.15)', metal:'#CDD3DA'
+};
+const TAU=Math.PI*2;
+
+/* ================= canvas 基礎繪圖 ================= */
+function ell(c,x,y,rx,ry,f){c.beginPath();c.ellipse(x,y,rx,ry,0,0,TAU);c.fillStyle=f;c.fill();}
+function circle(c,x,y,r,f){ell(c,x,y,r,r,f);}
+function rrect(c,x,y,w,h,r,f){c.beginPath();c.roundRect(x,y,w,h,r);c.fillStyle=f;c.fill();}
+function line(c,x1,y1,x2,y2,w,col){c.beginPath();c.moveTo(x1,y1);c.lineTo(x2,y2);c.lineWidth=w;c.strokeStyle=col;c.lineCap='round';c.stroke();}
+function star(c,x,y,r,f){c.save();c.translate(x,y);c.beginPath();
+  for(let k=0;k<8;k++){const rr=k%2?r*0.38:r,a=k*Math.PI/4;k?c.lineTo(Math.cos(a)*rr,Math.sin(a)*rr):c.moveTo(rr,0);}
+  c.closePath();c.fillStyle=f;c.fill();c.restore();}
+function flame(c,x,y,s,ph){ // 兩層火舌，ph 相位讓火會動
+  ph=ph||0;const wob=Math.sin(ph*TAU)*0.15;
+  c.save();c.translate(x,y);c.scale(s*(1+wob*0.3),s);
+  c.fillStyle=P.flameO;c.beginPath();
+  c.moveTo(0,-14);c.quadraticCurveTo(9+wob*8,-4,6,4);c.quadraticCurveTo(0,9,-6,4);c.quadraticCurveTo(-9-wob*8,-4,0,-14);c.fill();
+  c.fillStyle=P.flameY;c.beginPath();
+  c.moveTo(0,-7);c.quadraticCurveTo(5,-1,3.5,3);c.quadraticCurveTo(0,6,-3.5,3);c.quadraticCurveTo(-5,-1,0,-7);c.fill();
+  c.restore();}
+
+/* ================= 武器繪製（面朝上 = -y） ================= */
+const WEAPONS={
+  bow(c,cfg,action,t,i){
+    const atk=action==='attack';
+    const phase=atk?i:-1;
+    // 持弓手
+    circle(c,-3,-15,4,cfg.skin);
+    circle(c,7,-8,4,cfg.skin);
+    // 弓臂
+    c.beginPath();c.arc(0,-10,14,Math.PI*1.12,Math.PI*1.88);
+    c.lineWidth=3.5;c.strokeStyle=P.woodD;c.lineCap='round';c.stroke();
+    const ax=Math.cos(Math.PI*1.12)*14, ay=-10+Math.sin(Math.PI*1.12)*14;
+    const bx=Math.cos(Math.PI*1.88)*14, by=-10+Math.sin(Math.PI*1.88)*14;
+    let pull=0;
+    if(phase===0)pull=4; else if(phase===1)pull=9;
+    // 弓弦
+    c.beginPath();c.moveTo(ax,ay);c.lineTo(0,-10+pull);c.lineTo(bx,by);
+    c.lineWidth=1.6;c.strokeStyle='#EFE6D0';c.stroke();
+    if(phase===0||phase===1){ // 搭箭
+      line(c,0,-10+pull,0,-26,2.4,'#FFF4D8');
+      star(c,0,-27,3.2,P.metal);
+    }else if(phase===2){ // 放箭
+      line(c,0,-30,0,-42,2.4,'#FFF4D8');
+      line(c,-4,-24,-4,-32,1.4,'rgba(255,255,255,0.6)');
+      line(c,4,-24,4,-32,1.4,'rgba(255,255,255,0.6)');
+    }
+  },
+  spear(c,cfg,action,t,i){
+    const e=action==='attack'?Math.sin(t*Math.PI)*15:0;
+    line(c,8,14-e,8,-26-e,3.6,P.woodD);
+    c.beginPath();c.moveTo(8,-34-e);c.lineTo(4.5,-25-e);c.lineTo(11.5,-25-e);c.closePath();
+    c.fillStyle=P.bronze;c.fill();
+    circle(c,8,-4-e,4,cfg.skin);circle(c,8,7-e*0.5,4,cfg.skin);
+    if(action==='attack'&&t>0.3&&t<0.8){
+      line(c,3,-30-e,3,-38-e,1.4,'rgba(255,255,255,0.6)');
+      line(c,13,-30-e,13,-38-e,1.4,'rgba(255,255,255,0.6)');
+    }
+  },
+  sword(c,cfg,action,t,i){
+    let ang=-0.45;
+    if(action==='attack')ang=-1.25+2.5*t;
+    c.save();c.translate(10,-4);c.rotate(ang);
+    line(c,0,0,0,-19,4,P.metal);
+    line(c,-4.5,-3.5,4.5,-3.5,3,P.bronzeD);
+    c.restore();
+    circle(c,10,-4,4,cfg.skin);
+    if(action==='attack'&&i===1||action==='attack'&&i===2){
+      c.beginPath();c.arc(10,-6,20,-Math.PI*0.9,-Math.PI*0.15);
+      c.lineWidth=4;c.strokeStyle='rgba(255,255,255,0.55)';c.stroke();
+    }
+  },
+  stone(c,cfg,action,t,i){
+    if(action!=='attack'||i<2){
+      const lift=action==='attack'?(i===1?6:2):Math.sin(t*TAU)*1.5;
+      circle(c,-7,-14-lift,4,cfg.skin);circle(c,7,-14-lift,4,cfg.skin);
+      circle(c,0,-20-lift,8.5,'#9A917E');circle(c,-2.5,-22.5-lift,3,'#B3AA96');
+    }else if(i===2){
+      circle(c,-7,-12,4,cfg.skin);circle(c,7,-12,4,cfg.skin);
+      circle(c,0,-36,6.5,'#9A917E');
+      line(c,-4,-24,-4,-31,1.4,'rgba(255,255,255,0.6)');
+      line(c,4,-24,4,-31,1.4,'rgba(255,255,255,0.6)');
+    }else{
+      circle(c,-8,-6,4,cfg.skin);circle(c,8,-6,4,cfg.skin);
+    }
+  },
+  oil(c,cfg,action,t,i){
+    const tip=action==='attack'?Math.sin(t*Math.PI)*0.9:0;
+    c.save();c.translate(0,-16);c.rotate(-tip);
+    rrect(c,-7,-8,14,12,4,'#7A5A3A');
+    rrect(c,-8,-10,16,4,2,'#5E4327');
+    flame(c,0,-13,0.55,t);
+    c.restore();
+    circle(c,-8,-9,4,cfg.skin);circle(c,8,-9,4,cfg.skin);
+    if(action==='attack'&&i>=1){
+      circle(c,-3,-30,2.6,P.flameO);circle(c,3,-35,2.2,P.flameY);
+      if(i>=2){circle(c,-1,-40,2,P.flameO);flame(c,2,-38,0.4,t);}
+    }
+  },
+  torch(c,cfg,action,t,i){
+    if(action!=='attack'||i<2){
+      const lift=action==='attack'?6:0;
+      line(c,9,4-lift,9,-18-lift,3.4,P.woodD);
+      flame(c,9,-22-lift,0.7,t);
+      circle(c,9,-2-lift,4,cfg.skin);circle(c,-8,-4,4,cfg.skin);
+    }else if(i===2){
+      c.save();c.translate(0,-34);c.rotate(0.7);
+      line(c,0,6,0,-8,3,P.woodD);flame(c,0,-12,0.6,t);c.restore();
+      line(c,-5,-22,-5,-29,1.4,'rgba(255,255,255,0.6)');
+      circle(c,9,-4,4,cfg.skin);circle(c,-8,-4,4,cfg.skin);
+    }else{
+      circle(c,9,-6,4,cfg.skin);circle(c,-8,-6,4,cfg.skin);
+    }
+  },
+  bigshield(c,cfg,action,t,i){
+    const push=action==='attack'?Math.sin(t*Math.PI)*7:0;
+    circle(c,-9,-6,4,cfg.skin);circle(c,9,-6,4,cfg.skin);
+    ell(c,0,-14-push,17,10.5,P.bronzeD);
+    ell(c,0,-14-push,13.5,8,P.bronze);
+    circle(c,0,-14-push,4,P.bronzeL);
+    if(action==='attack'&&(i===1||i===2))star(c,0,-30,6,'rgba(255,255,255,0.75)');
+  },
+  ladder(c,cfg,action,t,i){
+    const fwd=action==='attack'?Math.sin(Math.min(t*1.4,1)*Math.PI*0.5)*10:0;
+    c.save();c.translate(0,-fwd);
+    line(c,-6,8,-6,-30,3,P.woodL);line(c,6,8,6,-30,3,P.woodL);
+    for(let r=0;r<4;r++)line(c,-6,-24+r*9,6,-24+r*9,2.4,P.wood);
+    c.restore();
+    circle(c,-9,-2,4,cfg.skin);circle(c,9,-2,4,cfg.skin);
+    if(action==='attack'&&i===3)star(c,0,-36,5,'rgba(255,255,255,0.6)');
+  }
+};
+
+/* ================= 俯視人形繪製 =================
+   一律以「面朝上」姿勢作畫；敵軍整格旋轉 180° 使其面朝下（朝城牆）。 */
+function drawHumanoid(c,cfg,action,i,n){
+  const t=n>1?i/(n-1):0;
+  c.save();
+  if(cfg.scale)c.scale(cfg.scale,cfg.scale);
+  if(cfg.enemy)c.rotate(Math.PI);
+  if(action==='death'){
+    const rot=t*1.35, al=1-0.5*t*t;
+    c.globalAlpha=al;
+    ell(c,0,4,20,10,P.shadow);
+    c.rotate(rot);
+    ell(c,0,0,17,13,cfg.cloth);
+    circle(c,0,-6,10,cfg.helm);
+    circle(c,0,-8.5,6.5,cfg.helmL);
+    if(cfg.crest)rrect(c,-2.5,-15.5,5,15,2.5,cfg.crest);
+    c.rotate(-rot);
+    if(t>0.4){line(c,-20,6,-8,-2,3,P.woodD);}       // 掉落的武器
+    if(i===n-1){circle(c,16,-8,4,'rgba(140,130,110,0.5)');circle(c,-18,10,3,'rgba(140,130,110,0.4)');}
+    c.restore();return;
+  }
+  const stride=action==='walk'?Math.sin(i/n*TAU):0;
+  const bob=action==='idle'?Math.sin(i/n*TAU)*1.2:0;
+  c.translate(0,bob);
+  ell(c,0,5,19,9,P.shadow);
+  // 腳（行走時前後交替）
+  circle(c,-7,7-stride*8,4.2,cfg.boot||'#6E4626');
+  circle(c,7,7+stride*8,4.2,cfg.boot||'#6E4626');
+  // 披風（背後 = +y）
+  if(cfg.cape)rrect(c,-9,2,18,15,6,cfg.cape);
+  // 身體（肩膀橢圓）
+  ell(c,0,0,16.5,12.5,cfg.cloth);
+  ell(c,0,-3,13,8.5,cfg.clothL);
+  // 肩甲
+  circle(c,-13,-1,4.5,cfg.pauldron||cfg.clothL);
+  circle(c,13,-1,4.5,cfg.pauldron||cfg.clothL);
+  // 小圓盾（左手）
+  if(cfg.shieldSmall){ell(c,-12,-6,7.5,6,P.bronzeD);ell(c,-12,-6,5.5,4.4,P.bronze);}
+  // 武器與手
+  WEAPONS[cfg.weapon](c,cfg,action,t,i);
+  // 頭盔
+  circle(c,0,-6,10,cfg.helm);
+  circle(c,0,-8.5,6.5,cfg.helmL);
+  if(cfg.crest)rrect(c,-2.5,-15.5,5,15,2.5,cfg.crest);
+  c.restore();
+}
+
+/* ================= 攻城器械（面朝上作畫，整格轉 180°） ================= */
+function machineDeath(c,t,drawBody){
+  c.globalAlpha=1-0.55*t;
+  const rot=(t*0.35);
+  c.rotate(rot);drawBody(0);c.rotate(-rot);
+  c.globalAlpha=1;
+  // 煙
+  for(let k=0;k<=Math.floor(t*3);k++)
+    circle(c,-14+k*14,-20-k*6,5+k*2,'rgba(120,112,100,'+(0.5-t*0.25)+')');
+  if(t>0.6){rrect(c,-26,14,16,5,2,P.woodD);rrect(c,12,18,14,5,2,P.wood);}
+}
+const MACHINES={
+  ram(c,action,i,n){
+    const t=n>1?i/(n-1):0;
+    c.rotate(Math.PI);
+    const body=(ext)=>{
+      ell(c,0,6,26,14,P.shadow);
+      // 輪
+      circle(c,-20,-16,5.5,'#4A3A28');circle(c,20,-16,5.5,'#4A3A28');
+      circle(c,-20,16,5.5,'#4A3A28');circle(c,20,16,5.5,'#4A3A28');
+      // 撞木（伸向前方 -y）
+      line(c,0,12,0,-32-ext,7,P.woodD);
+      circle(c,0,-34-ext,7,P.bronze);circle(c,0,-36-ext,3,P.bronzeL);
+      // 皮棚
+      rrect(c,-19,-22,38,44,7,P.wood);
+      rrect(c,-19,-22,38,10,7,P.woodL);
+      line(c,0,-20,0,20,2,P.woodD);
+      line(c,-19,-6,19,-6,2,P.woodD);line(c,-19,8,19,8,2,P.woodD);
+    };
+    if(action==='death'){machineDeath(c,t,body);c.rotate(-Math.PI);return;}
+    const sway=action==='walk'?Math.sin(i/n*TAU)*0.05:0;
+    const ext=action==='attack'?Math.sin(t*Math.PI)*11:0;
+    c.rotate(sway);body(ext);c.rotate(-sway);
+    if(action==='attack'&&(i===1||i===2))star(c,0,-42,7,P.spark);
+    c.rotate(-Math.PI);
+  },
+  tower(c,action,i,n){
+    const t=n>1?i/(n-1):0;
+    c.rotate(Math.PI);
+    const body=(open)=>{
+      ell(c,0,6,28,16,P.shadow);
+      circle(c,-22,-18,5,'#4A3A28');circle(c,22,-18,5,'#4A3A28');
+      circle(c,-22,18,5,'#4A3A28');circle(c,22,18,5,'#4A3A28');
+      // 登城橋（攻擊時向前放下）
+      if(open>0)rrect(c,-9,-24-open*20,18,open*20+4,3,P.woodD);
+      // 塔頂平台
+      rrect(c,-23,-23,46,46,5,P.woodL);
+      c.lineWidth=4;c.strokeStyle=P.wood;c.strokeRect(-21,-21,42,42);
+      line(c,-23,0,23,0,2,P.wood);line(c,0,-23,0,23,2,P.wood);
+      // 平台上士兵
+      circle(c,-9,-8,5.5,P.gCloth);circle(c,-9,-10,3,P.bronze);
+      circle(c,10,6,5.5,P.gCloth);circle(c,10,4,3,P.bronze);
+      if(open>0.7){circle(c,0,-32,5.5,P.gCloth);circle(c,0,-34,3,P.bronze);}
+    };
+    if(action==='death'){machineDeath(c,t,()=>body(0));flame(c,10,-10,0.8,t);flame(c,-12,4,0.6,t);c.rotate(-Math.PI);return;}
+    const sway=action==='walk'?Math.sin(i/n*TAU)*0.04:0;
+    const open=action==='attack'?t:0;
+    c.rotate(sway);body(open);c.rotate(-sway);
+    c.rotate(-Math.PI);
+  },
+  catapult(c,action,i,n){
+    const t=n>1?i/(n-1):0;
+    c.rotate(Math.PI);
+    const body=(arm)=>{ // arm: 0=後拉 1=擲出
+      ell(c,0,8,24,13,P.shadow);
+      rrect(c,-18,-18,9,40,3,P.wood);rrect(c,9,-18,9,40,3,P.wood);
+      line(c,-14,-14,14,-14,4,P.woodD);line(c,-14,16,14,16,4,P.woodD);
+      const a=Math.PI*0.82-arm*Math.PI*0.64; // 甩臂角
+      const ex=Math.sin(a)*0, ey=0;
+      c.save();c.translate(0,0);c.rotate((1-arm)*0.0);
+      const tipx=Math.sin((1-arm)*0)*0;
+      // 以旋轉畫臂：0=指向+y(後) 1=指向-y(前)
+      const ang=(1-arm)*Math.PI;
+      c.rotate(ang);
+      line(c,0,0,0,-26,4.5,P.woodL);
+      ell(c,0,-27,6,4.5,P.woodD);
+      if(arm<0.6)circle(c,0,-27,4,'#9A917E');
+      c.restore();
+      circle(c,0,0,4,P.bronzeD);
+    };
+    if(action==='death'){machineDeath(c,t,()=>body(0));c.rotate(-Math.PI);return;}
+    if(action==='walk'){const sway=Math.sin(i/n*TAU)*0.04;c.rotate(sway);body(0);c.rotate(-sway);}
+    else{ // attack
+      const arm=t<0.5?t*0.3:(t-0.5)*2;
+      body(Math.min(arm,1));
+      if(i===2){circle(c,0,-38,5.5,'#9A917E');
+        line(c,-4,-28,-4,-34,1.4,'rgba(255,255,255,0.6)');line(c,4,-28,4,-34,1.4,'rgba(255,255,255,0.6)');}
+      if(i===3)circle(c,0,-44,4,'rgba(154,145,126,0.5)');
+    }
+    c.rotate(-Math.PI);
+  }
+};
+
+/* ================= 角色定義 ================= */
+const ALLY_DEFS=[
+  {id:'archer',name:'弓兵',icon:'🏹',role:'高頻單體・拋物線箭；Lv3+ 火箭帶焰尾',weapon:'bow',
+   cloth:P.tCloth,clothL:P.tClothL,helm:P.bronze,helmL:P.bronzeL,crest:P.crest,skin:P.skin},
+  {id:'spear',name:'長矛兵',icon:'🗡',role:'牆頭防禦・剋雲梯兵/攻城塔放兵',weapon:'spear',shieldSmall:true,
+   cloth:P.tCloth,clothL:P.tClothL,helm:P.bronze,helmL:P.bronzeL,crest:P.crest,skin:P.skin},
+  {id:'stone',name:'投石兵',icon:'🪨',role:'慢速 AoE・對攻城器械傷害 ×2',weapon:'stone',
+   cloth:P.tCloth,clothL:P.tClothL,helm:P.bronze,helmL:P.bronzeL,crest:P.crest,skin:P.skin},
+  {id:'oil',name:'火油兵',icon:'🔥',role:'持續傷害・扇形澆油自燃，與沸油技能疊加',weapon:'oil',
+   cloth:P.tCloth,clothL:P.tClothL,helm:P.bronze,helmL:P.bronzeL,crest:P.crest,skin:P.skin},
+  {id:'hector',name:'英雄・赫克托爾',icon:'⭐',role:'Lv5×2 覺醒・金光壁壘：城門免傷 5s',weapon:'sword',shieldSmall:true,cape:'#8C2F1E',scale:1.28,
+   cloth:P.bronze,clothL:P.bronzeL,helm:'#D9B44A',helmL:'#EACB6E',crest:P.crest,skin:P.skin,pauldron:P.bronzeL}
+];
+const ENEMY_DEFS=[
+  {id:'esword',name:'劍盾步兵',icon:'⚔️',role:'基礎兵・衝到城門砍門，砍一下迸一次火花',weapon:'sword',shieldSmall:true,enemy:true,
+   cloth:P.gCloth,clothL:P.gClothL,helm:'#A8862A',helmL:'#C0A040',crest:'#3A2E24',skin:P.skin},
+  {id:'etorch',name:'火把兵',icon:'🔦',role:'投擲火把點燃垛位/城門（3 連點滅火）',weapon:'torch',enemy:true,
+   cloth:P.gCloth,clothL:P.gClothL,helm:'#A8862A',helmL:'#C0A040',skin:P.skin},
+  {id:'eshield',name:'盾龜兵',icon:'🛡',role:'巨盾頂箭推進・正面箭傷 −70%，怕火油',weapon:'bigshield',enemy:true,
+   cloth:P.gClothD,clothL:P.gCloth,helm:'#A8862A',helmL:'#C0A040',skin:P.skin},
+  {id:'eladder',name:'雲梯兵',icon:'🪜',role:'扛梯爬牆與守軍肉搏・可整梯推倒',weapon:'ladder',enemy:true,
+   cloth:P.gCloth,clothL:P.gClothL,helm:'#A8862A',helmL:'#C0A040',skin:P.skin},
+  {id:'ram',name:'攻城槌',icon:'🐏',role:'2×2 器械・撞門主力，每撞震屏＋門板形變',machine:'ram',size:'2×2 格（512×512）'},
+  {id:'tower',name:'攻城塔',icon:'🗼',role:'2×2 器械・抵牆放兵；火攻可逐層燒塌',machine:'tower',size:'2×2 格（512×512）'},
+  {id:'cata',name:'投石機',icon:'☄️',role:'2×2 器械・遠程火球砸城牆（敵我對轟）',machine:'catapult',size:'2×2 格（512×512）'},
+  {id:'achilles',name:'BOSS・阿基里斯',icon:'👑',role:'第 7 關 BOSS・金甲長矛，腳踝弱點',weapon:'spear',shieldSmall:true,cape:'#6E1E12',scale:1.5,enemy:true,
+   cloth:'#C9A227',clothL:'#D9B44A',helm:'#D9B44A',helmL:'#EACB6E',crest:'#8C2F1E',skin:P.skin,size:'1.5×（384×384）'}
+];
+
+/* ================= sheet 渲染 ================= */
+const CELL=96, LABELW=64, DPR=2;
+function drawFrame(c,def,action,i,n){
+  if(def.machine)MACHINES[def.machine](c,action,i,n);
+  else drawHumanoid(c,def,action,i,n);
+}
+function checker(c,x,y,w,h){
+  c.fillStyle='#F2EDDF';c.fillRect(x,y,w,h);
+  c.fillStyle='#E9E2CE';
+  for(let yy=0;yy<h;yy+=12)for(let xx=(yy/12%2)*12;xx<w;xx+=24)c.fillRect(x+xx,y+yy,12,12);
+}
+function buildSheet(def,rows){
+  const W=LABELW+4*CELL, H=rows.length*CELL;
+  const cv=document.createElement('canvas');
+  cv.className='sheetc';cv.width=W*DPR;cv.height=H*DPR;
+  cv.style.width=W+'px';cv.style.height=H+'px';
+  const c=cv.getContext('2d');c.scale(DPR,DPR);
+  rows.forEach((row,r)=>{
+    // 標籤欄
+    c.fillStyle='#EFE5C8';c.fillRect(0,r*CELL,LABELW,CELL);
+    c.fillStyle='#7A6A4E';c.font='13px sans-serif';c.textAlign='center';
+    c.fillText(row.label,LABELW/2,r*CELL+CELL/2+4);
+    for(let i=0;i<4;i++){
+      const x=LABELW+i*CELL,y=r*CELL;
+      checker(c,x,y,CELL,CELL);
+      c.strokeStyle='rgba(0,0,0,0.08)';c.lineWidth=1;c.strokeRect(x+0.5,y+0.5,CELL,CELL);
+      c.save();c.translate(x+CELL/2,y+CELL/2);
+      drawFrame(c,def,row.action,i,4);
+      c.restore();
+    }
+  });
+  return cv;
+}
+const previews=[];
+function buildPreview(def,seq){
+  const cv=document.createElement('canvas');
+  cv.width=CELL*DPR;cv.height=CELL*DPR;
+  cv.style.width=CELL+'px';cv.style.height=CELL+'px';
+  previews.push({cv,def,seq,f:0});
+  return cv;
+}
+function makeBlock(def,rows,seq){
+  const div=document.createElement('div');div.className='sheet card';
+  const info=document.createElement('div');info.className='info';
+  info.innerHTML='<h4>'+def.icon+' '+def.name+'</h4><p class="role">'+def.role+'</p>'
+    +'<dl><b>格尺寸</b>：'+(def.size||'1 格（256×256）')+'<br><b>動作</b>：'
+    +rows.map(r=>r.label+' 4 幀').join('｜')+'<br><b>播放</b>：8–10fps</dl>';
+  div.appendChild(info);
+  div.appendChild(buildSheet(def,rows));
+  const pv=document.createElement('div');pv.className='pv';
+  pv.appendChild(buildPreview(def,seq));
+  const cap=document.createElement('span');cap.textContent='▶ 動態預覽';
+  pv.appendChild(cap);
+  div.appendChild(pv);
+  return div;
+}
+const allyRows=[{label:'待機',action:'idle'},{label:'攻擊',action:'attack'}];
+const enemyRows=[{label:'行走',action:'walk'},{label:'攻擊',action:'attack'},{label:'死亡',action:'death'}];
+const allyWrap=document.getElementById('allySheets');
+if(allyWrap)ALLY_DEFS.forEach(d=>allyWrap.appendChild(makeBlock(d,allyRows,
+  [{action:'idle',n:4},{action:'attack',n:4}])));
+const enemyWrap=document.getElementById('enemySheets');
+if(enemyWrap)ENEMY_DEFS.forEach(d=>enemyWrap.appendChild(makeBlock(d,enemyRows,
+  [{action:'walk',n:4},{action:'walk',n:4},{action:'attack',n:4}])));
+
+/* 預覽動畫 */
+let lastT=0;
+function tick(ts){
+  if(ts-lastT>140){
+    lastT=ts;
+    previews.forEach(p=>{
+      p.f=(p.f+1)%p.seq.reduce((s,q)=>s+q.n,0);
+      let f=p.f,cur=null;
+      for(const q of p.seq){if(f<q.n){cur={action:q.action,i:f};break;}f-=q.n;}
+      const c=p.cv.getContext('2d');
+      c.setTransform(DPR,0,0,DPR,0,0);
+      c.clearRect(0,0,CELL,CELL);
+      c.save();c.translate(CELL/2,CELL/2);
+      drawFrame(c,p.def,cur.action,cur.i,4);
+      c.restore();
+    });
+  }
+  requestAnimationFrame(tick);
+}
+requestAnimationFrame(tick);
+
+/* ================= 特效條 ================= */
+(function(){
+  const items=8, W=items*CELL, H=CELL;
+  const cv=document.getElementById('fxSheet');
+  if(!cv)return;
+  cv.width=W*DPR;cv.height=H*DPR;cv.style.width=W+'px';cv.style.height=H+'px';
+  const c=cv.getContext('2d');c.scale(DPR,DPR);
+  const labels=['箭','三連箭','投石','火油罐','敵方火球','火焰循環','命中火花','金幣'];
+  for(let i=0;i<items;i++){
+    checker(c,i*CELL,0,CELL,CELL);
+    c.strokeStyle='rgba(0,0,0,0.08)';c.strokeRect(i*CELL+0.5,0.5,CELL,CELL);
+    c.save();c.translate(i*CELL+CELL/2,CELL/2);
+    switch(i){
+      case 0: line(c,0,16,0,-16,3,'#FFF4D8');star(c,0,-18,4,P.metal);break;
+      case 1: [-14,0,14].forEach(x=>{line(c,x,14,x,-14,2.6,'#FFF4D8');star(c,x,-16,3.4,P.metal);});break;
+      case 2: circle(c,0,0,11,'#9A917E');circle(c,-3,-3,4,'#B3AA96');line(c,-10,14,-16,20,2,'rgba(255,255,255,0.5)');break;
+      case 3: c.rotate(0.5);rrect(c,-8,-9,16,14,4,'#7A5A3A');rrect(c,-9,-12,18,5,2,'#5E4327');flame(c,0,-16,0.7,0.3);c.rotate(-0.5);break;
+      case 4: circle(c,0,-2,12,P.flameO);circle(c,-2,-4,7,P.flameY);
+              circle(c,10,10,4,'rgba(255,138,42,0.7)');circle(c,16,17,3,'rgba(255,138,42,0.45)');break;
+      case 5: flame(c,-18,8,0.8,0);flame(c,-6,8,1.0,0.25);flame(c,6,8,0.9,0.5);flame(c,18,8,0.75,0.75);break;
+      case 6: star(c,0,0,14,P.spark);star(c,0,0,7,'#FFFFFF');break;
+      case 7: circle(c,0,0,11,P.gold);circle(c,0,0,8,P.goldL);c.fillStyle=P.goldD;c.font='bold 12px sans-serif';c.textAlign='center';c.fillText('T',0,4);break;
+    }
+    c.restore();
+    c.fillStyle='#7A6A4E';c.font='11px sans-serif';c.textAlign='center';
+    c.fillText(labels[i],i*CELL+CELL/2,H-6);
+  }
+})();
+
+/* ================= SVG 輔助 ================= */
+function S(tag,attrs,parent){
+  const el=document.createElementNS('http://www.w3.org/2000/svg',tag);
+  for(const k in attrs)el.setAttribute(k,attrs[k]);
+  if(parent)parent.appendChild(el);
+  return el;
+}
+function sRect(p,x,y,w,h,f,rx){S('rect',{x,y,width:w,height:h,fill:f,rx:rx||0},p);}
+function sCircle(p,x,y,r,f){S('circle',{cx:x,cy:y,r,fill:f},p);}
+function sEll(p,x,y,rx,ry,f){S('ellipse',{cx:x,cy:y,rx,ry,fill:f},p);}
+function sLine(p,x1,y1,x2,y2,w,c,dash){const l=S('line',{x1,y1,x2,y2,stroke:c,'stroke-width':w,'stroke-linecap':'round'},p);if(dash)l.setAttribute('stroke-dasharray',dash);}
+function sText(p,x,y,txt,size,fill,anchor,bold){const t=S('text',{x,y,'font-size':size,fill,'text-anchor':anchor||'middle','font-family':'sans-serif','font-weight':bold?'bold':'normal'},p);t.textContent=txt;}
+function sFlame(p,x,y,s){
+  S('path',{d:'M0,-14 Q9,-4 6,4 Q0,9 -6,4 Q-9,-4 0,-14',fill:P.flameO,transform:'translate('+x+','+y+') scale('+s+')'},p);
+  S('path',{d:'M0,-7 Q5,-1 3.5,3 Q0,6 -3.5,3 Q-5,-1 0,-7',fill:P.flameY,transform:'translate('+x+','+y+') scale('+s+')'},p);
+}
+/* 俯視小人（SVG 版，場景用） */
+function sSoldier(p,x,y,cloth,helm,down){
+  const g=S('g',{transform:'translate('+x+','+y+')'+(down?' rotate(180)':'')},p);
+  sEll(g,0,2,9,4.5,'rgba(0,0,0,0.15)');
+  sEll(g,0,0,8,6,cloth);
+  sCircle(g,0,-3,5,helm);
+  sCircle(g,0,-4.2,3,'#D9B44A');
+}
+function sShip(p,x,y,burn){
+  const g=S('g',{transform:'translate('+x+','+y+')'},p);
+  sEll(g,0,0,26,60,'#3A3128');
+  sEll(g,0,0,20,52,'#4E4234');
+  for(let i=-3;i<=3;i++)sLine(g,-17,i*14,17,i*14,3,'#3A3128');
+  sCircle(g,0,-8,6,'#2C251E');
+  sLine(g,-24,-8,24,-8,5,'#6E4626');
+  sRect(g,-24,-12,48,8,'#C94A32',4);
+  if(burn){sFlame(g,10,-26,1.6);sFlame(g,-8,20,1.2);}
+}
+function sTree(p,x,y,s,dead){
+  const g=S('g',{transform:'translate('+x+','+y+') scale('+(s||1)+')'},p);
+  sEll(g,4,4,16,10,'rgba(0,0,0,0.12)');
+  sCircle(g,0,0,15,dead?'#8A7A5A':'#6FA83E');
+  sCircle(g,-4,-4,9,dead?'#9C8C6A':'#85BC50');
+}
+function sTent(p,x,y){
+  const g=S('g',{transform:'translate('+x+','+y+')'},p);
+  sRect(g,-18,-18,36,36,'#B54A38',6);
+  sLine(g,-18,-18,18,18,3,'#9C3A2A');sLine(g,18,-18,-18,18,3,'#9C3A2A');
+  sCircle(g,0,0,4,'#D9C79C');
+}
+
+/* ================= 主場景 mockup ================= */
+(function(){
+  const sv=document.getElementById('sceneSvg');
+  // 海
+  sRect(sv,0,0,1080,380,P.sea);
+  for(let i=0;i<8;i++)sLine(sv,80+((i*137)%880),40+i*40,80+((i*137)%880)+70,40+i*40,7,P.seaL);
+  sShip(sv,180,190,false);sShip(sv,540,150,true);sShip(sv,880,210,false);
+  // 沙灘
+  sRect(sv,0,380,1080,140,P.sand);
+  S('path',{d:'M0,380 Q135,360 270,380 T540,380 T810,380 T1080,380 L1080,392 Q945,372 810,392 T540,392 T270,392 T0,392 Z',fill:P.foam},sv);
+  for(let i=0;i<6;i++)sCircle(sv,90+i*180,430+(i%2)*40,5,P.sandD);
+  sTent(sv,120,455);sTent(sv,960,450);
+  // 火盆
+  sCircle(sv,300,460,12,'#5E4327');sFlame(sv,300,450,1.3);
+  sCircle(sv,780,470,12,'#5E4327');sFlame(sv,780,460,1.3);
+  // 草地
+  sRect(sv,0,520,1080,790,P.grassA);
+  for(let i=0;i<5;i++)sRect(sv,0,520+i*158,1080,79,P.grassB);
+  // 三路
+  [210,540,870].forEach(cx=>{
+    sRect(sv,cx-110,520,220,790,P.road,0);
+    sLine(sv,cx-110,520,cx-110,1310,4,P.roadD);
+    sLine(sv,cx+110,520,cx+110,1310,4,P.roadD);
+    for(let i=0;i<6;i++)sCircle(sv,cx-60+((i*83)%120),580+i*120,4,P.roadD);
+    // 行軍方向箭頭
+    S('path',{d:'M'+cx+',560 l-16,-26 h32 Z',fill:'rgba(156,58,42,0.5)',transform:'rotate(180 '+cx+' 547)'},sv);
+  });
+  // 擺設
+  sTree(sv,80,700,1.2);sTree(sv,1000,860,1.4);sTree(sv,80,1150,1.1);sTree(sv,1000,1180,1.2);
+  sEll(sv,380,760,22,14,'#9A917E');sEll(sv,700,1080,26,16,'#8A8170');
+  // 敵軍行軍中
+  sSoldier(sv,540,640,P.gCloth,'#A8862A',true);
+  sSoldier(sv,505,700,P.gCloth,'#A8862A',true);
+  sSoldier(sv,575,710,P.gCloth,'#A8862A',true);
+  sSoldier(sv,210,820,P.gClothD,'#A8862A',true);
+  sSoldier(sv,870,900,P.gCloth,'#A8862A',true);
+  sFlame(sv,890,884,0.9);
+  // 城牆帶
+  sRect(sv,0,1310,1080,190,P.stoneSh);
+  sRect(sv,0,1322,1080,166,P.stone);
+  for(let i=0;i<14;i++)sRect(sv,i*80+(i%2)*40-20,1360,60,6,P.stoneLine,3);
+  // 垛口（上緣鋸齒）
+  for(let i=0;i<16;i++)sRect(sv,10+i*68,1300,44,26,P.merlon,5);
+  // 垛位 7 個（城門左3右3＋門樓1省略→左右各3＋中間上方1）
+  const slots=[95,240,385,695,840,985];
+  slots.forEach(x=>{
+    S('circle',{cx:x,cy:1400,r:36,fill:'none',stroke:'#FFD060','stroke-width':5,'stroke-dasharray':'10 8'},sv);
+  });
+  sSoldier(sv,240,1400,P.tCloth,P.bronze,false);
+  sSoldier(sv,695,1400,P.tCloth,P.bronze,false);
+  // 城門（中央）
+  sRect(sv,420,1316,240,178,'#6E5A3A',8);
+  sRect(sv,432,1326,216,158,P.wood,6);
+  for(let i=1;i<6;i++)sLine(sv,432+i*36,1326,432+i*36,1484,3,P.woodD);
+  sRect(sv,432,1366,216,14,P.bronze,4);
+  sRect(sv,432,1430,216,14,P.bronze,4);
+  // 門血條
+  sRect(sv,440,1460,200,16,'rgba(26,20,14,0.6)',8);
+  sRect(sv,443,1463,150,10,'#6FE08A',5);
+  // 城內屋頂
+  sRect(sv,0,1500,1080,120,'#B89A6E');
+  [[40,1512,150,90],[240,1520,140,84],[430,1508,170,96],[650,1518,150,88],[850,1510,160,94]].forEach((r,i)=>{
+    sRect(sv,r[0],r[1],r[2],r[3],i%2?'#A8743E':'#B5804A',8);
+    sLine(sv,r[0]+8,r[1]+r[3]/2,r[0]+r[2]-8,r[1]+r[3]/2,4,'#8A5A32');
+  });
+  sFlame(sv,520,1520,1.4); // 戰損起火示意
+  // UI 面板
+  sRect(sv,0,1620,1080,300,P.panel);
+  sLine(sv,0,1622,1080,1622,4,P.panelLine);
+  // 徵兵格 5x2
+  for(let r=0;r<2;r++)for(let i=0;i<5;i++){
+    const x=30+i*128,y=1646+r*118;
+    sRect(sv,x,y,112,102,r===0&&i<3?P.card:P.cardE,12);
+    S('rect',{x,y,width:112,height:102,rx:12,fill:'none',stroke:i===1&&r===0?'#4CAF50':P.panelLine,'stroke-width':i===1&&r===0?5:2},sv);
+  }
+  sSoldier(sv,86,1694,P.tCloth,P.bronze,false);
+  sSoldier(sv,214,1694,P.tCloth,P.bronze,false);
+  sSoldier(sv,342,1694,P.tCloth,P.bronze,false);
+  // 右側鈕
+  sRect(sv,700,1646,170,220,P.gold,20);
+  sRect(sv,700,1646,170,100,P.goldL,20);
+  sText(sv,785,1740,'＋徵兵',44,'#5E3A08',null,true);
+  sText(sv,785,1790,'💰60',30,'#7A5210');
+  [['🔥',930],['🏹',1020]].forEach((b,i)=>{
+    sCircle(sv,b[1],1700,44,'#4E3A22');
+    sCircle(sv,b[1],1700,38,'#6E5432');
+    sText(sv,b[1],1714,b[0],36);
+  });
+  sCircle(sv,975,1820,44,'#4E3A22');sCircle(sv,975,1820,38,'#8C2F1E');sText(sv,975,1834,'☄️',36);
+  sRect(sv,30,1880,300,0,P.panel);
+  // HUD
+  sRect(sv,0,0,1080,110,P.hud);
+  sText(sv,30,70,'WAVE 4/9',34,'#F2E9D2','start',true);
+  sText(sv,1050,70,'⭐ 12,480　💰 340',34,'#FFC83D','end',true);
+})();
+
+/* ================= 關卡場景色票 ================= */
+(function(){
+  const list=[
+    {name:'白日（關1,2,5）',cols:['#A8D858','#4FA9E8','#FFF6DC']},
+    {name:'黃昏（關3,6）',cols:['#C8B050','#E88A4F','#FFD9A0']},
+    {name:'夜戰（關4,10）',cols:['#3A4A38','#1E2E48','#FF8A2A']},
+    {name:'黎明（關8）',cols:['#9CC070','#7FA8D8','#FFC8D8']},
+    {name:'殘城餘燼（關9）',cols:['#8A8060','#5A6A78','#B0AGA0'.replace('G','A')]},
+  ];
+  const wrap=document.getElementById('palettes');
+  list.forEach(it=>{
+    const d=document.createElement('span');
+    d.innerHTML=it.cols.map(cc=>'<span class="sw" style="background:'+cc+'"></span>').join('')+it.name;
+    wrap.appendChild(d);
+  });
+})();
+
+/* ================= GUI mockups ================= */
+function phoneBase(sv,bgTop,bgBot){
+  sRect(sv,0,0,1080,1920,bgTop);
+  sRect(sv,0,960,1080,960,bgBot);
+}
+(function(){ // 標題頁
+  const sv=document.getElementById('guiTitle');
+  if(!sv)return;
+  sRect(sv,0,0,1080,1920,'#2A3A50');
+  sRect(sv,0,0,1080,700,'#1E2E48');
+  for(let i=0;i<12;i++)sCircle(sv,60+((i*97)%960),60+((i*61)%500),3,'#EAF4FF');
+  sRect(sv,0,700,1080,300,'#3A4A68');
+  // 城牆剪影（比天空深，垛口鋸齒可辨）
+  sRect(sv,0,960,1080,300,'#0F1826');
+  for(let i=0;i<11;i++)sRect(sv,i*100+10,928,62,44,'#0F1826',4);
+  sFlame(sv,150,942,2);sFlame(sv,930,942,2.4);
+  sFlame(sv,300,1030,1.4);sFlame(sv,760,1050,1.6);
+  // 木馬（幾何玩具風・側面剪影）
+  const h=S('g',{transform:'translate(520,700) scale(2.2)'},sv);
+  sEll(h,10,92,86,13,'rgba(0,0,0,0.35)');
+  // 推車平台＋輪
+  sRect(h,-72,72,164,13,'#6E4626',6);
+  sCircle(h,-48,90,13,'#4A3A28');sCircle(h,-48,90,5,'#2A1E12');
+  sCircle(h,64,90,13,'#4A3A28');sCircle(h,64,90,5,'#2A1E12');
+  // 四腿
+  sRect(h,-54,18,14,56,'#8A5A32',5);sRect(h,-26,22,13,52,'#7A4E2A',5);
+  sRect(h,26,22,13,52,'#7A4E2A',5);sRect(h,52,18,14,56,'#8A5A32',5);
+  // 尾巴
+  S('path',{d:'M-58,-14 Q-84,-4 -76,30',fill:'none',stroke:'#6E4626','stroke-width':9,'stroke-linecap':'round'},h);
+  // 身體
+  sRect(h,-62,-28,128,54,'#8A5A32',20);
+  sRect(h,-62,-28,128,18,'#A8743E',12);
+  // 脖子（斜向）＋鬃毛
+  S('path',{d:'M30,-12 L58,-8 L74,-64 L48,-70 Z',fill:'#8A5A32'},h);
+  S('path',{d:'M48,-70 L74,-64 L70,-48 L46,-54 Z',fill:'#A8743E'},h);
+  S('path',{d:'M44,-70 Q36,-46 40,-16 L52,-14 Q50,-44 56,-68 Z',fill:'#5E4327'},h);
+  // 頭＋耳＋眼＋嘴
+  sRect(h,58,-92,52,26,'#8A5A32',10);
+  sRect(h,96,-88,18,18,'#6E4626',6);
+  S('path',{d:'M62,-92 L70,-108 L80,-92 Z',fill:'#6E4626'},h);
+  sCircle(h,84,-80,3.5,'#F2E9D2');
+  // 腹門（藏兵暗門）
+  sRect(h,-18,-6,38,30,'#6E4626',6);
+  sCircle(h,14,10,3,'#C9A227');
+  // 標題
+  sText(sv,540,1300,'防守特洛伊',120,'#F2E9D2',null,true);
+  sText(sv,540,1390,'— 烈焰圍城 —',48,'#FFB020');
+  // 按鈕
+  sRect(sv,290,1520,500,150,P.gold,75);
+  sRect(sv,290,1520,500,72,P.goldL,36);
+  sText(sv,540,1618,'⚔ 開戰',64,'#5E3A08',null,true);
+  sRect(sv,330,1720,190,90,'#4E3A22',45);sText(sv,425,1778,'📖 圖鑑',38,'#F2E9D2');
+  sRect(sv,560,1720,190,90,'#4E3A22',45);sText(sv,655,1778,'⚙ 設定',38,'#F2E9D2');
+  sText(sv,540,1880,'v4.0 ·（連點 5 下開 DEV 工具）',26,'#7A8AA0');
+})();
+(function(){ // 選關
+  const sv=document.getElementById('guiSelect');
+  if(!sv)return;
+  sRect(sv,0,0,1080,500,P.sea);
+  sRect(sv,0,500,1080,200,P.sand);
+  sRect(sv,0,700,1080,900,P.grassA);
+  sRect(sv,0,1600,1080,320,'#B89A6E');
+  sShip(sv,160,200,false);sShip(sv,860,260,true);
+  sTree(sv,120,900,1.3);sTree(sv,950,1150,1.4);
+  sText(sv,540,120,'戰役 · 特洛伊三幕劇',56,'#FFFFFF',null,true);
+  // 蛇形路線 10 節點
+  const pts=[[240,420],[600,470],[880,620],[620,780],[260,860],[420,1060],[800,1120],[860,1360],[520,1450],[540,1700]];
+  for(let i=0;i<pts.length-1;i++)sLine(sv,pts[i][0],pts[i][1],pts[i+1][0],pts[i+1][1],14,'rgba(255,255,255,0.55)','2 26');
+  pts.forEach((pt,i)=>{
+    const done=i<3, cur=i===3;
+    sCircle(sv,pt[0],pt[1],cur?66:54,done?P.gold:cur?'#FF8A1A':'#8A8170');
+    sCircle(sv,pt[0],pt[1],cur?56:46,done?P.goldL:cur?'#FFB020':'#A8A090');
+    sText(sv,pt[0],pt[1]+16,String(i+1),46,'#FFFFFF',null,true);
+    if(done)sText(sv,pt[0],pt[1]-64,'★★★'.slice(0,(3-i)>0?3:1),30,'#FFD23C');
+  });
+  sText(sv,540,1760,'第 10 關 · 木馬屠城',40,'#F2E9D2',null,true);
+  sRect(sv,290,1790,500,110,P.green,55);
+  sText(sv,540,1862,'出 征',52,'#0E3A18',null,true);
+})();
+(function(){ // 戰鬥 HUD 標註
+  const sv=document.getElementById('guiHud');
+  if(!sv)return;
+  sRect(sv,0,0,1080,1920,'#EAE2C8');
+  // 縮小版戰場示意
+  sRect(sv,0,0,1080,110,P.hud);
+  sRect(sv,0,110,1080,410,P.sea);
+  sRect(sv,0,410,1080,110,P.sand);
+  sRect(sv,0,520,1080,790,P.grassA);
+  [210,540,870].forEach(cx=>sRect(sv,cx-110,520,220,790,P.road));
+  sRect(sv,0,1310,1080,190,P.stone);
+  sRect(sv,420,1316,240,178,P.wood,8);
+  sRect(sv,0,1500,1080,120,'#B89A6E');
+  sRect(sv,0,1620,1080,300,P.panel);
+  // 熱區（右手拇指）
+  S('circle',{cx:900,cy:1920,r:720,fill:'rgba(88,192,96,0.18)',stroke:'#58C060','stroke-width':6,'stroke-dasharray':'16 12'},sv);
+  S('circle',{cx:900,cy:1920,r:1100,fill:'rgba(255,176,32,0.10)'},sv);
+  // 標註
+  const notes=[
+    [540,60,'HUD：波次/金幣/暫停（唯讀，不可點）'],
+    [540,330,'戰場：點擊任意處＝技能落點'],
+    [540,1400,'城牆：點垛位上兵/推梯/滅火'],
+    [540,1770,'合成台＋按鈕：全在綠色拇指熱區內'],
+  ];
+  notes.forEach(n=>{
+    sRect(sv,140,n[1]-44,800,72,'rgba(26,36,48,0.82)',36);
+    sText(sv,540,n[1]+4,n[2],34,'#FFE08A');
+  });
+})();
+(function(){ // 勝利
+  const sv=document.getElementById('guiWin');
+  if(!sv)return;
+  sRect(sv,0,0,1080,1920,'rgba(26,20,14,0.92)');
+  sRect(sv,90,380,900,1100,P.card,40);
+  sRect(sv,90,380,900,160,P.gold,40);
+  sText(sv,540,490,'勝 利！',72,'#5E3A08',null,true);
+  // 三星
+  [[320,700,1],[540,660,1.4],[760,700,1]].forEach(s=>{
+    const g=S('g',{transform:'translate('+s[0]+','+s[1]+') scale('+s[2]+')'},sv);
+    S('path',{d:'M0,-70 L20,-20 L74,-20 L30,12 L46,64 L0,32 L-46,64 L-30,12 L-74,-20 L-20,-20 Z',fill:'#FFD23C',stroke:'#B97A10','stroke-width':6},g);
+  });
+  sText(sv,540,880,'城門剩餘 78% → ★★★',40,'#7A6A4E');
+  sText(sv,540,1010,'💰 獲得 1,240　⭐ 分數 12,480',44,'#3A2E1E',null,true);
+  sText(sv,540,1120,'擊殺 142 ｜ 火燒擊殺 67 ｜ 最大連擊 x18',32,'#7A6A4E');
+  sRect(sv,190,1220,700,130,P.gold,65);
+  sText(sv,540,1305,'下一關 ▶',52,'#5E3A08',null,true);
+  sRect(sv,190,1380,330,90,'#CBB88C',45);sText(sv,355,1440,'↻ 重打',36,'#5E4A2E');
+  sRect(sv,560,1380,330,90,'#CBB88C',45);sText(sv,725,1440,'🏠 回城',36,'#5E4A2E');
+})();
+
+/* ================= 難度曲線圖 ================= */
+(function(){
+  const cv=document.getElementById('curveChart');
+  const W=1040,H=300;cv.width=W*2;cv.height=H*2;cv.style.width='100%';
+  const c=cv.getContext('2d');c.scale(2,2);
+  const data=[1.0,1.3,2.0,1.8,2.6,2.1,3.2,3.0,3.6,4.5];
+  const bosses={2:'狄俄墨得斯',4:'大埃阿斯',6:'阿基里斯',7:'阿伽門農旗艦',9:'木馬屠城'};
+  const fun={5:'爽關'};
+  const L=70,R=20,T=34,B=44;
+  const px=i=>L+(W-L-R)*i/9, py=v=>T+(H-T-B)*(1-(v-0.5)/4.5);
+  // 格線
+  c.font='12px sans-serif';c.fillStyle='#9A8A6A';c.textAlign='right';
+  for(let v=1;v<=4.5;v+=0.5){
+    c.strokeStyle='rgba(0,0,0,0.06)';c.beginPath();c.moveTo(L,py(v));c.lineTo(W-R,py(v));c.stroke();
+    if(v%1===0)c.fillText(v.toFixed(0),L-8,py(v)+4);
+  }
+  c.textAlign='center';
+  for(let i=0;i<10;i++)c.fillText('關'+(i+1),px(i),H-20);
+  // 面積
+  c.beginPath();c.moveTo(px(0),py(0.5));
+  data.forEach((v,i)=>c.lineTo(px(i),py(v)));
+  c.lineTo(px(9),py(0.5));c.closePath();
+  c.fillStyle='rgba(201,105,30,0.12)';c.fill();
+  // 折線
+  c.beginPath();data.forEach((v,i)=>i?c.lineTo(px(i),py(v)):c.moveTo(px(i),py(v)));
+  c.lineWidth=4;c.strokeStyle='#C9691E';c.lineJoin='round';c.stroke();
+  // 點
+  data.forEach((v,i)=>{
+    const isB=bosses[i]!==undefined, isF=fun[i]!==undefined;
+    circle(c,px(i),py(v),isB?8:6,isB?'#B54A38':isF?'#58C060':'#C9A227');
+    circle(c,px(i),py(v),isB?4:3,'#FFFDF6');
+    if(isB){c.fillStyle='#B54A38';c.font='bold 12px sans-serif';
+      c.textAlign=px(i)>W-90?'right':'center';
+      c.fillText(bosses[i],px(i)>W-90?px(i)+6:px(i),py(v)-16);
+      c.textAlign='center';}
+    if(isF){c.fillStyle='#2E8038';c.font='bold 12px sans-serif';c.fillText('反攻爽關',px(i),py(v)-14);}
+  });
+  c.fillStyle='#7A6A4E';c.font='bold 14px sans-serif';c.textAlign='left';
+  c.fillText('難度強度指數（BOSS 尖峰 → 次關放鬆的鋸齒節奏）',L,18);
+})();
+</script>
+</body>
+</html>

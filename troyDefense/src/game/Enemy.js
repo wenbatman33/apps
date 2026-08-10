@@ -1,449 +1,426 @@
-/* 敵方單位：在網格上以最短路推進，玩家建塔會使其重新繞路 */
+/* v2 敵人 — 每種敵人是一種「攻城行為」
+ * 鐵律：敵人絕不憑空消失。走到城下就攻城，死了有屍體與粒子交代。
+ */
 window.TD = window.TD || {};
 
-TD.Enemy = class Enemy extends Phaser.GameObjects.Container {
-  constructor(scene, typeKey, entryIdx) {
-    super(scene, 0, 0);
-    this.gs = scene;
-    this.typeKey = typeKey;
-    const D = TD.ENEMIES[typeKey];
-    this.def = D;
+let ENEMY_SEQ = 0;
 
-    this.maxHp = Math.round(D.hp * (scene.hpScale || 1));
-    this.hp = this.maxHp;
-    this.spd = D.spd;
-    this.armor = D.armor || 0;
-    this.isBoss = !!D.boss;
-    this.structure = !!D.structure;
+TD.Enemy = class Enemy {
+  constructor(scene, type, lane) {
+    this.s = scene;
+    this.cfg = TD.ENEMIES[type];
+    this.type = type;
+    this.id = ++ENEMY_SEQ;
+    this.hp = this.cfg.hp * (scene.hpScale || 1);
+    this.maxHp = this.hp;
+    this.dead = false;
+    this.lane = this.cfg.laneLock != null ? this.cfg.laneLock : lane;
+    this.state = 'march';
+    this.atkAt = 0;
+    this.slowUntil = 0;
+    this.burn = null;
+    this.flameFx = null;
+    this.spawned = 0;                  // 攻城塔已放兵數
 
-    // 起點
-    const G = scene.grid;
-    const ents = G.entries;
-    const e = ents[(entryIdx < 0 ? Phaser.Math.Between(0, ents.length - 1) : entryIdx) % ents.length];
-    this.cell = G.at(e.c, e.r);
-    const p = G.cellXY(e.c, e.r);
-    this.x = p.x; this.y = p.y;
-    this.entryIdx = ents.indexOf(e);
+    const L = TD.LAYOUT;
+    const x = L.lanes.xs[this.lane] + Phaser.Math.Between(-L.lanes.jitter, L.lanes.jitter);
+    const y = L.lanes.spawnY - Phaser.Math.Between(0, 40);
 
-    // 隨機微偏移與速度差：避免同路敵人完全重疊成一坨
-    const gw = G.cellW, gh = G.cellH;
-    this.offX = Phaser.Math.FloatBetween(-gw * 0.24, gw * 0.24);
-    this.offY = Phaser.Math.FloatBetween(-gh * 0.20, gh * 0.20);
-    this.spdVar = Phaser.Math.FloatBetween(0.90, 1.12);
-    this.x += this.offX; this.y += this.offY;
-
-    this.path = null; this.pathIdx = 0; this.target = null;
-    if (D.flying) {
-      const g = G.cellXY(G.exit.c, G.exit.r);
-      this.flyTo = { x: g.x, y: g.y };
+    if (this.cfg.art) {
+      // 玩具兵：貼紙圖＋左右搖擺走路（玩具兵團感）
+      this.spr = scene.add.image(x, y, this.cfg.art);
+      this.baseScale = (TD.BASE_ENEMY_H * L.unit.enemyScale * this.cfg.scale) / this.spr.height;
+      this.spr.setScale(this.baseScale);
+      this.waddle = scene.tweens.add({
+        targets: this.spr, angle: { from: -3.5, to: 3.5 },
+        duration: 200 + (this.id % 5) * 22, yoyo: true, repeat: -1, ease: 'Sine.InOut',
+      });
     } else {
-      this.repath();
+      // 攻城器械：靜態圖＋搖晃；dispH＝目標顯示高
+      this.spr = scene.add.image(x, y, this.cfg.sprite);
+      this.baseScale = ((this.cfg.dispH || 180) * this.cfg.scale) / this.spr.height;
+      this.spr.setScale(this.baseScale);
+      this.rockTween = scene.tweens.add({
+        targets: this.spr, angle: { from: -1.2, to: 1.2 }, duration: 520,
+        yoyo: true, repeat: -1, ease: 'Sine.InOut',
+      });
     }
+    this.spr.setOrigin(0.5, 0.88);
+    this.updateDepth();
+    if (this.cfg.boss) this.bossEntrance();
 
-    // 狀態
-    this.slowUntil = 0; this.slowAmt = 0;
-    this.burnUntil = 0; this.burnDps = 0; this.burnFx = null;
-    this.stealthUntil = 0;
-    this.dashUntil = 0; this.nextDash = D.dash ? D.dash.every : 0;
-    this.nextSummon = D.summon ? D.summon.every : 0;
-    this.heelOpenUntil = 0; this.nextHeel = D.heelWindow ? D.heelWindow.every : 0;
-    this.nextStealth = D.stealth ? D.stealth.every : 0;
-    this.nextHeal = D.heal ? D.heal.every : 0;
-
-    this.build(scene.enemyScale || 1);
-    scene.add.existing(this);
-    this.setDepth(TD.DEPTH.ENEMY + (this.isBoss ? 3 : 0));
+    this.hpBar = scene.add.graphics().setDepth(TD.DEPTH.ENEMY + 500);
+    this.nextDash = scene.time.now + (this.cfg.dashEvery || 0);
   }
 
-  build(scaleUp) {
-    const D = this.def;
-    const cell = this.gs.grid.cellW;
-    const base = cell * D.scale * scaleUp;
-
-    this.shadow = this.scene.add.ellipse(0, base * 0.34, base * 0.50, base * 0.16, 0x000000, 0.28);
-
-    // 有行走動畫就用 sprite，否則退回單張圖
-    const animKey = D.tex + '_walk';
-    this.hasWalkAnim = this.scene.anims.exists(animKey);
-    if (this.hasWalkAnim) {
-      this.img = this.scene.add.sprite(0, 0, D.tex);
-      const fw = TD.SHEET_W / TD.WALK_FRAMES, fh = TD.SHEET_H;
-      // 每幀是 384×1024 的直立畫布，角色只佔中間一部分
-      // → 以「顯示高度」為準、寬度依原比例，才不會把角色壓胖
-      // 幀是 384×1024 的直立畫布、角色約佔其中 65% 高度
-      // → 顯示高度要放大補償，角色的視覺高度才會接近一個格子
-      const dh = base * 2.6;
-      this.img.setDisplaySize(dh * (fw / fh), dh).setOrigin(0.5, 0.80);
-      this.img.play({ key: animKey, startFrame: Phaser.Math.Between(0, TD.WALK_FRAMES - 1) });
-      this.img.anims.msPerFrame = 1000 / (6 + (D.spd || 50) / 22);   // 步頻隨速度
-    } else {
-      this.img = this.scene.add.image(0, 0, D.tex);
-      this.img.setDisplaySize(base, base).setOrigin(0.5, 0.66);
-    }
-    if (D.tint) this.img.setTint(D.tint);
-    this.bodyW = base * 0.42;
-
-    const bw = Math.max(52, base * 0.62);
-    this.hpBg = this.scene.add.rectangle(0, -base * 0.46, bw, 10, 0x3A2416, 0.75);
-    this.hpBar = this.scene.add.rectangle(-bw / 2, -base * 0.46, bw, 10, 0x4CD97B).setOrigin(0, 0.5);
-    this.hpW = bw;
-
-    this.add([this.shadow, this.img, this.hpBg, this.hpBar]);
-
-    if (this.isBoss) {
-      this.crown = this.scene.add.text(0, -base * 0.62, this.def.name, {
-        fontFamily: TD.FONT, fontSize: '26px', color: '#FFE066',
-        stroke: '#5E3A18', strokeThickness: 5,
-      }).setOrigin(0.5);
-      this.add(this.crown);
-    }
-
-    // 行走動畫用的基準值（程序化動畫，不用 tween）
-    this.baseSX = this.img.scaleX;
-    this.baseSY = this.img.scaleY;
-    this.shadowSX = this.shadow.scaleX;
-    this.bodyH = base;
-    this.walkPhase = Math.random() * Math.PI * 2;   // 錯開步伐，整群不會同步
-    this.stepSide = 1;
-  }
-
-  // ── 尋路 ──
-  repath() {
-    if (this.structure) return;
-    const G = this.gs.grid;
-    // 若正走向的下一格已被建塔，就退回目前這格重算
-    const from = (this.target && !this.target.unit) ? this.target : this.cell;
-    const p = G.pathFrom(from);
-    if (!p || p.length === 0) return;
-    this.path = p;
-    this.pathIdx = 0;
-    this.target = p[0];
-  }
-
-  get remainSteps() { return this.path ? this.path.length - this.pathIdx : 999; }
-
-  /** 給「優先打最接近城門的敵人」用，0~1，越大越近 */
-  get progress() {
-    if (!this.path || !this.path.length) return 0;
-    return 1 - this.remainSteps / (this.path.length + 1);
-  }
-
-  get speed() {
-    let s = this.spd;
-    // 附近有戰鼓手就加速
-    if (!this.def.haste) {
-      for (const o of this.gs.enemies) {
-        if (!o.def.haste || o === this || o.hp <= 0) continue;
-        if (Phaser.Math.Distance.Between(this.x, this.y, o.x, o.y) < o.def.haste.range) {
-          s *= o.def.haste.mul; break;
-        }
-      }
-    }
-    if (this.gs.now < this.slowUntil && !this.def.immuneSlow) s *= (1 - this.slowAmt);
-    if (this.gs.now < this.dashUntil) s *= this.def.dash.mul;
-    if (this.gs.foreseeUntil > this.gs.now && !this.def.immuneSlow) s *= 0.6;
-    return s * this.spdVar * (this.gs.grid.cellW / 88);   // 隨格子大小等比
-  }
-
-  get targetable() {
-    if (this.gs.now < this.stealthUntil) return false;
-    return this.active && this.hp > 0;
-  }
-
-  get damageable() {
-    if (!this.def.invulnerable) return true;
-    return this.gs.now < this.heelOpenUntil;
-  }
-
-  update(dt) {
-    if (this.hp <= 0) return;
-    const now = this.gs.now;
-
-    if (now < this.burnUntil) {
-      this.takeDamage(this.burnDps * dt / 1000, { silent: true, ignoreArmor: true });
-      if (this.hp <= 0) return;
-    } else if (this.burnFx) { this.burnFx.destroy(); this.burnFx = null; }
-
-    if (this.def.dash && !this.structure) {
-      this.nextDash -= dt;
-      if (this.nextDash <= 0) {
-        this.nextDash = this.def.dash.every;
-        this.dashUntil = now + this.def.dash.dur;
-        this.gs.fx.ring(this.x, this.y, 80, 0xFFE066, 220);
-      }
-    }
-    if (this.def.stealth) {
-      this.nextStealth -= dt;
-      if (this.nextStealth <= 0) {
-        this.nextStealth = this.def.stealth.every;
-        if (!this.gs.inAnyAura(this)) {
-          this.stealthUntil = now + this.def.stealth.dur;
-          this.gs.fx.ring(this.x, this.y, 100, 0x64B5F6, 260);
-        }
-      }
-      this.img.setAlpha(now < this.stealthUntil ? 0.28 : 1);
-    }
-    // 隨軍祭司：治療周圍同伴
-    if (this.def.heal) {
-      this.nextHeal -= dt;
-      if (this.nextHeal <= 0) {
-        this.nextHeal = this.def.heal.every;
-        let healed = 0;
-        this.gs.enemies.forEach(o => {
-          if (o === this || o.hp <= 0 || o.hp >= o.maxHp) return;
-          if (Phaser.Math.Distance.Between(this.x, this.y, o.x, o.y) > this.def.heal.range) return;
-          o.hp = Math.min(o.maxHp, o.hp + this.def.heal.amount);
-          o.hpBar.scaleX = o.hp / o.maxHp;
-          o.hpBar.fillColor = 0x4CD97B;
-          this.gs.fx.ring(o.x, o.y - 20, 60, 0x4CD97B, 260);
-          healed++;
-        });
-        if (healed) this.gs.fx.ring(this.x, this.y, this.def.heal.range, 0x4CD97B, 420);
-      }
-    }
-    if (this.def.summon) {
-      this.nextSummon -= dt;
-      if (this.nextSummon <= 0) {
-        this.nextSummon = this.def.summon.every;
-        for (let i = 0; i < this.def.summon.n; i++) {
-          const e = this.gs.spawnEnemy(this.def.summon.type, this.entryIdx);
-          if (e) { e.cell = this.cell; e.x = this.x; e.y = this.y; e.repath(); }
-        }
-        this.gs.fx.ring(this.x, this.y, 120, 0xE57373, 300);
-      }
-    }
-    if (this.def.heelWindow) {
-      this.nextHeel -= dt;
-      if (this.nextHeel <= 0) {
-        this.nextHeel = this.def.heelWindow.every;
-        this.heelOpenUntil = now + this.def.heelWindow.dur;
-        this.gs.fx.ring(this.x, this.y + this.bodyW * 0.5, 120, 0xFF4D4D, 380);
-        this.gs.audio.bell();
-        this.gs.fx.flash(0xFF4D4D, 120, 0.16);
-        this.gs.floatLabel(this.x, this.y - this.bodyW, '腳踝！點他', '#FF6B6B', 34, 1200);
-      }
-      const open = now < this.heelOpenUntil;
-      this.img.setTint(open ? 0xFFFFFF : 0x9FA8B5);
-      if (open && !this._heelMark) {
-        this._heelMark = this.scene.add.image(0, this.bodyW * 0.4, 'px_ring')
-          .setTint(0xFF4D4D).setScale(0.7).setBlendMode(Phaser.BlendModes.ADD);
-        this.add(this._heelMark);
-        this.scene.tweens.add({ targets: this._heelMark, scale: 1.1, alpha: 0.4,
-          duration: 400, yoyo: true, repeat: -1 });
-      }
-      if (!open && this._heelMark) { this._heelMark.destroy(); this._heelMark = null; }
-    }
-
-    if (this.structure) return;
-    if (this.def.flying) this.fly(dt); else this.walk(dt);
-  }
-
-  /** 飛行單位：無視網格與塔，直線飛向城門 */
-  fly(dt) {
-    const dx = this.flyTo.x - this.x, dy = this.flyTo.y - this.y;
-    const d = Math.hypot(dx, dy);
-    const step = this.speed * dt / 1000;
-    if (this.img && Math.abs(dx) > 2) this.img.setFlipX(dx < 0);
-    if (d <= step) { this.reachWall(); return; }
-    this.x += dx / d * step;
-    this.y += dy / d * step;
-    // 拍翅：上下起伏 + 翅膀節奏的縱向縮放
-    const t = this.gs.now / 150 + this.offX;
-    this.img.y = Math.sin(t) * this.bodyH * 0.10 - this.bodyH * 0.10;
-    this.img.scaleY = this.baseSY * (1 + Math.sin(t + 0.6) * 0.06);
-    this.img.scaleX = this.baseSX * (1 - Math.sin(t + 0.6) * 0.04);
-    this.img.rotation = Math.sin(t * 0.5) * 0.05;
-    this.shadow.setAlpha(0.14).setScale(this.shadowSX * 0.72);
-    this.setDepth(TD.DEPTH.PROJ + 2);
-  }
-
-  /** 程序化行走動畫：彈跳 + 擠壓拉伸 + 傾斜 + 陰影同步 + 踏步塵土 */
-  animateWalk(dt, moving) {
-    if (!this.img || !this.baseSY) return;
-    const D = this.def;
-
-    if (!moving) {
-      if (this.hasWalkAnim && this.img.anims.isPlaying) this.img.anims.pause();
-      this.img.y += (0 - this.img.y) * 0.2;
-      this.img.rotation += (0 - this.img.rotation) * 0.2;
-      return;
-    }
-    if (this.hasWalkAnim && this.img.anims.isPaused) this.img.anims.resume();
-
-    // 有 sprite 分鏡時，程序化幅度收斂，避免和分鏡打架
-    const sheet = this.hasWalkAnim;
-    const heavy = (D.scale || 1) > 1.15;
-    const rate = (this.speed / 60) * (heavy ? 5.0 : 8.0);
-    const prev = this.walkPhase;
-    this.walkPhase += dt / 1000 * rate;
-
-    const amp = this.bodyH * (sheet ? 0.014 : (heavy ? 0.030 : 0.055));
-    const lift = Math.abs(Math.sin(this.walkPhase));       // 0 著地 → 1 最高
-    this.img.y = -lift * amp;
-
-    // 著地瞬間壓扁、騰空時拉長
-    const sq = (1 - lift) * (sheet ? 0.018 : (heavy ? 0.05 : 0.08));
-    this.img.scaleY = this.baseSY * (1 - sq);
-    this.img.scaleX = this.baseSX * (1 + sq * 0.6) * (this.img.flipX ? 1 : 1);
-
-    // 左右輕微搖擺
-    this.img.rotation = Math.sin(this.walkPhase * 0.5) * (sheet ? 0.012 : (heavy ? 0.030 : 0.055));
-
-    // 陰影：騰空時變小變淡
-    this.shadow.scaleX = this.shadowSX * (1 - lift * 0.28);
-    this.shadow.scaleY = this.shadowSX * (1 - lift * 0.28);
-    this.shadow.alpha = 0.30 - lift * 0.14;
-
-    // 每一步著地時揚起塵土
-    if (Math.floor(prev / Math.PI) !== Math.floor(this.walkPhase / Math.PI)) {
-      this.stepSide *= -1;
-      this.footDust();
-    }
-  }
-
-  footDust() {
-    if (!this.gs.fxDustOn) return;
-    const p = this.scene.add.image(
-      this.x + this.stepSide * this.bodyH * 0.10,
-      this.y + this.bodyH * 0.06, 'px_smoke');
-    p.setDepth(TD.DEPTH.ENEMY - 1).setScale(this.bodyH / 340).setAlpha(0.34).setTint(0xD9C08A);
-    this.scene.tweens.add({
-      targets: p, alpha: 0, scale: p.scale * 2.1,
-      x: p.x - this.stepSide * 8, y: p.y - 6,
-      duration: 420, ease: 'Cubic.easeOut', onComplete: () => p.destroy(),
+  bossEntrance() {
+    const fx = this.s.fx;
+    fx.shake(8, 500); fx.flashWhite(0.3, 150);
+    TD.audio.horn();
+    const t = this.s.add.text(TD.GAME_W / 2, 560, this.cfg.name, {
+      fontFamily: TD.FONT, fontSize: '84px', color: TD.CSS.fireHot,
+      stroke: TD.STROKE, strokeThickness: 12, fontStyle: 'bold',
+    }).setOrigin(0.5).setDepth(TD.DEPTH.BANNER).setAlpha(0);
+    this.s.tweens.add({
+      targets: t, alpha: 1, scale: { from: 1.6, to: 1 }, duration: 400, ease: 'Cubic.Out',
+      onComplete: () => this.s.tweens.add({ targets: t, alpha: 0, delay: 900, duration: 400, onComplete: () => t.destroy() }),
     });
   }
 
-  walk(dt) {
-    if (!this.target) { this.repath(); if (!this.target) return; }
+  get x() { return this.spr.x; }
+  get y() { return this.spr.y; }
 
-    const tx = this.target.x + this.offX, ty = this.target.y + this.offY;
-    const dx = tx - this.x, dy = ty - this.y;
-    const d = Math.hypot(dx, dy);
-    const step = this.speed * dt / 1000;
-
-    if (this.img && Math.abs(dx) > 2) this.img.setFlipX(dx < 0);
-
-    if (d <= step) {
-      // 抵達這一格
-      this.x = tx; this.y = ty;
-      this.cell = this.target;
-      this.pathIdx++;
-      if (this.gs.grid.isExit(this.cell)) { this.reachWall(); return; }
-      if (this.pathIdx >= this.path.length) { this.repath(); return; }
-      this.target = this.path[this.pathIdx];
-      // 走到新格時若前方被封，立刻重算
-      if (this.target.unit) this.repath();
-    } else {
-      this.x += dx / d * step;
-      this.y += dy / d * step;
-    }
-    this.animateWalk(dt, step > 0.01);
-    this.setDepth(TD.DEPTH.ENEMY + (this.isBoss ? 3 : 0) + this.y / 1000);
+  updateDepth() {
+    this.spr.setDepth((this.cfg.sprite ? TD.DEPTH.SIEGE : TD.DEPTH.ENEMY) + this.spr.y * 0.01);
   }
 
-  /** 弱點窗口內被玩家點擊：射腳踝 */
-  tapHeel() {
-    if (!this.alive || !this.def.heelTapPct) return false;
-    if (this.gs.now >= this.heelOpenUntil) return false;
-    if (this.gs.now < (this._tapCd || 0)) return false;
-    this._tapCd = this.gs.now + 700;
-    const dmg = this.maxHp * this.def.heelTapPct;
-    this.takeDamage(dmg, { trueDmg: true, ignoreArmor: true, silent: true, skipHeelMul: true });
-    this.gs.fx.dmgText(this.x, this.y - 70, dmg, { crit: true });
-    this.gs.fx.hit(this.x, this.y + this.bodyW * 0.4, 0xFF4D4D, 16);
-    this.gs.fx.ring(this.x, this.y + this.bodyW * 0.4, 150, 0xFFE066, 300);
-    this.gs.audio.crit();
-    this.gs.fx.shake(0.008, 140);
-    return true;
+  speedNow(now) {
+    let v = this.cfg.speed;
+    if (now < this.slowUntil && !this.dashing) v *= 0.6;
+    if (this.burn) v *= 1.22;                        // 著火亂竄
+    if (this.dashing) v *= this.cfg.dashMul || 1;
+    return v;
   }
 
-  takeDamage(amount, opt = {}) {
-    if (this.hp <= 0 || this._dead || !this.scene) return 0;
-    if (!this.damageable && !opt.trueDmg) {
-      if (!opt.silent) this.gs.fx.dmgText(this.x, this.y - 50, 0, {});
-      return 0;
-    }
-    let dmg = amount;
-    if (this.armor && !opt.ignoreArmor && !opt.trueDmg) dmg *= (1 - this.armor);
-    // 弱點窗口：塔的傷害放大（點擊處決本身已是百分比傷害，不重複加成）
-    if (this.def.heelMul && !opt.skipHeelMul && this.gs.now < this.heelOpenUntil) {
-      dmg *= this.def.heelMul;
-    }
-    if (opt.bossMul && this.isBoss) dmg *= opt.bossMul;
-    this.hp -= dmg;
+  // ══════════ 每幀 ══════════
+  update(now, dt) {
+    if (this.dead) return;
+    const L = TD.LAYOUT;
+    const stopY = L.wall.topY - L.wall.stopGap;
+    const sec = dt / 1000;
 
-    const r = Math.max(0, this.hp / this.maxHp);
-    this.hpBar.scaleX = r;
-    this.hpBar.fillColor = r > 0.5 ? 0x4CD97B : (r > 0.22 ? 0xFFC72C : 0xFF4D4D);
-
-    if (!opt.silent) {
-      this.img.setTintFill(0xFFFFFF);
-      this.scene.time.delayedCall(55, () => {
-        if (!this.active) return;
-        if (this.def.tint) this.img.setTint(this.def.tint); else this.img.clearTint();
-        if (this.def.heelWindow) this.img.setTint(this.gs.now < this.heelOpenUntil ? 0xFFFFFF : 0x9FA8B5);
-      });
-    }
-    if (this.hp <= 0) this.die();
-    return dmg;
-  }
-
-  applyBurn(dps, dur = 2200) {
-    if (!this.alive) return;
-    this.burnDps = Math.max(this.burnDps, dps);
-    this.burnUntil = Math.max(this.burnUntil, this.gs.now + dur);
-    if (!this.burnFx) this.burnFx = this.gs.fx.burnAura(this);
-  }
-
-  applySlow(amt, dur) {
-    if (!this.alive || this.def.immuneSlow) return;
-    this.slowAmt = Math.max(this.slowAmt, amt);
-    this.slowUntil = Math.max(this.slowUntil, this.gs.now + dur);
-  }
-
-  /** 還活著且還在場上（死亡銷毀後 this.scene 會變 undefined） */
-  get alive() { return this.active && !this._dead && !!this.scene && this.hp > 0; }
-
-  /** 擊退：沿路徑往回退幾格 */
-  knockback(px) {
-    if (!this.alive || this.def.flying) return;
-    const steps = Math.max(1, Math.round(px / this.gs.grid.cellW));
-    const back = Math.max(0, this.pathIdx - steps);
-    if (!this.path || !this.path.length) return;
-    this.pathIdx = back;
-    this.target = this.path[back];
-    this.cell = this.target;
-    this.scene.tweens.add({ targets: this, x: this.target.x, y: this.target.y, duration: 220 });
-  }
-
-  die() {
-    if (this._dead) return;
-    this._dead = true;
-    // 分裂：死亡時生出小兵，繼承目前進度
-    if (this.def.split) {
-      for (let i = 0; i < this.def.split.n; i++) {
-        const e = this.gs.spawnEnemy(this.def.split.type, this.entryIdx);
-        if (!e) continue;
-        e.cell = this.cell;
-        e.x = this.x + Phaser.Math.Between(-26, 26);
-        e.y = this.y + Phaser.Math.Between(-20, 20);
-        e.repath();
+    // 燃燒 DOT
+    if (this.burn) {
+      if (now - this.burn.lastTick > 500) {
+        this.burn.lastTick = now;
+        this.takeDamage(this.burn.dps * 0.5, 'burnTick');
+        if (this.dead) return;
       }
-      this.gs.fx.ring(this.x, this.y, 120, 0x9CCC65, 320);
+      if (now > this.burn.until) {
+        this.burn = null;
+        if (this.flameFx) { this.flameFx.destroy(); this.flameFx = null; }
+      }
     }
-    this.gs.onEnemyKilled(this);
-    if (this.burnFx) this.burnFx.destroy();
-    this.gs.fx.kill(this.x, this.y - 20, this.isBoss || this.def.big);
-    this.gs.audio[(this.isBoss || this.def.big) ? 'killBig' : 'kill']();
-    this.destroy();
+    if (this.flameFx) { this.flameFx.x = this.x; this.flameFx.y = this.y - 10; }
+
+    // BOSS 衝刺
+    if (this.cfg.dashEvery && now > this.nextDash && this.state === 'march') {
+      this.nextDash = now + this.cfg.dashEvery;
+      this.dashing = true;
+      this.s.fx.dust(this.x, this.y + 10, 5);
+      this.s.time.delayedCall(900, () => { this.dashing = false; });
+    }
+
+    switch (this.state) {
+      case 'march': this.doMarch(now, sec, stopY); break;
+      case 'converge': this.doConverge(now, sec); break;
+      case 'attack': this.doAttackGate(now); break;
+      case 'throw': this.doThrow(now); break;
+      case 'climb': this.doClimb(now, sec); break;
+      case 'wallfight': this.doWallFight(now); break;
+      case 'docked': this.doTowerDocked(now); break;
+      case 'siege': this.doCatapult(now); break;
+    }
+    this.updateDepth();
+    this.drawHp();
   }
 
-  reachWall() {
-    if (this._dead) return;
-    this._dead = true;
-    this.gs.onEnemyReachWall(this);
-    if (this.burnFx) this.burnFx.destroy();
-    this.destroy();
+  doMarch(now, sec, stopY) {
+    const c = this.cfg;
+    this.spr.y += this.speedNow(now) * sec;
+    if (c.behavior === 'torch' && this.spr.y >= c.throwY) {
+      this.state = 'throw'; this.stopAnim(); return;
+    }
+    if (c.behavior === 'catapult' && this.spr.y >= c.stopY) {
+      this.state = 'siege'; this.stopAnim(); return;
+    }
+    if (this.spr.y >= stopY) {
+      this.spr.y = stopY;
+      if (c.behavior === 'ladder') this.beginLadder();
+      else if (c.behavior === 'tower') this.beginDock();
+      else {  // gate / ram / boss
+        this.state = 'converge';
+        // 在城門前散開站位，不疊在同一點
+        const spread = (this.id % 7 - 3) * 46;
+        this.gatherX = TD.LAYOUT.gate.x + spread;
+      }
+    }
+  }
+
+  doConverge(now, sec) {
+    const dx = this.gatherX - this.spr.x;
+    if (Math.abs(dx) < 8) { this.state = 'attack'; this.stopAnim(); return; }
+    this.spr.x += Math.sign(dx) * Math.min(Math.abs(dx), this.speedNow(now) * sec);
+    this.spr.setFlipX(dx < 0);
+  }
+
+  doAttackGate(now) {
+    if (now < this.atkAt) return;
+    this.atkAt = now + this.cfg.atkRate;
+    const L = TD.LAYOUT;
+    const hitX = Phaser.Math.Clamp(this.spr.x, L.gate.x - L.gate.w / 2 + 30, L.gate.x + L.gate.w / 2 - 30);
+    const hitY = L.gate.topY + 30;
+    const big = this.cfg.behavior === 'ram' || this.cfg.boss;
+    // 揮擊動作：往門的方向一頂
+    this.s.tweens.add({
+      targets: this.spr, y: this.spr.y + (big ? 26 : 14), duration: big ? 150 : 90,
+      yoyo: true, ease: 'Cubic.In',
+      onYoyo: () => this.s.wall.damage(this.cfg.dmg, hitX, hitY, { big }),
+    });
+  }
+
+  doThrow(now) {
+    if (now < this.atkAt) return;
+    this.atkAt = now + this.cfg.atkRate;
+    const L = TD.LAYOUT;
+    // 火把拋物線 → 城門
+    const tx = L.gate.x + Phaser.Math.Between(-100, 100), ty = L.gate.topY + 40;
+    const torch = this.s.add.image(this.x, this.y, 'fx_torch').setDepth(TD.DEPTH.PROJ);
+    const flame = this.s.fx.flame(this.x, this.y, 0.4, 0, TD.DEPTH.PROJ);
+    this.s.tweens.add({ targets: torch, angle: 720, duration: 700 });
+    const curve = { t: 0 };
+    const sx = this.x, sy = this.y, peak = Math.min(sy, ty) - 180;
+    this.s.tweens.add({
+      targets: curve, t: 1, duration: 700, ease: 'Linear',
+      onUpdate: () => {
+        const t = curve.t;
+        torch.x = Phaser.Math.Linear(sx, tx, t);
+        torch.y = TD.qBezier(sy, peak, ty, t);
+        flame.x = torch.x; flame.y = torch.y;
+      },
+      onComplete: () => {
+        torch.destroy(); flame.destroy();
+        this.s.wall.damage(this.cfg.dmg, tx, ty, {});
+        this.s.fx.flame(tx, ty + 10, 0.55, 1800, TD.DEPTH.GATE + 1);
+        // 也可能點燃垛口
+        const slot = this.s.wall.slotAt(tx, TD.LAYOUT.wall.slotY);
+        if (slot && Math.random() < 0.35) this.s.wall.igniteSlot(slot);
+      },
+    });
+    TD.audio.shootOil();
+  }
+
+  // ── 雲梯 ──
+  beginLadder() {
+    const L = TD.LAYOUT;
+    // 找最近的垛口
+    let best = this.s.wall.slots[0];
+    this.s.wall.slots.forEach(sl => {
+      if (Math.abs(sl.x - this.x) < Math.abs(best.x - this.x)) best = sl;
+    });
+    this.slot = best;
+    if (!best.ladder) {
+      const lad = this.s.add.image(best.x, L.wall.topY - 16, 'G_ladder')
+        .setOrigin(0.5, 0).setDepth(TD.DEPTH.LADDER).setAlpha(0);
+      const targetH = (best.y - L.wall.topY) + 90;
+      lad.setDisplaySize(74, targetH);
+      this.s.tweens.add({ targets: lad, alpha: 1, duration: 250 });
+      this.s.fx.dust(best.x, L.wall.topY, 4);
+      best.ladder = { sprite: lad, climbers: new Set() };
+      TD.audio.place();
+    }
+    best.ladder.climbers.add(this);
+    this.state = 'climb';
+    this.climbFrom = this.spr.y;
+    this.climbStart = this.s.time.now;
+  }
+
+  doClimb(now, sec) {
+    const L = TD.LAYOUT;
+    const k = Phaser.Math.Clamp((now - this.climbStart) / (this.cfg.climbSec * 1000), 0, 1);
+    this.spr.x += (this.slot.x - this.spr.x) * 0.2;
+    this.spr.y = Phaser.Math.Linear(this.climbFrom, this.slot.y, k);
+    this.spr.setScale(this.baseScale * (1 - k * 0.12));
+    if (k >= 1) {
+      this.slot.ladder && this.slot.ladder.climbers.delete(this);
+      this.state = 'wallfight';
+      this.stopAnim();
+      this.s.fx.dust(this.slot.x, this.slot.y, 3);
+    }
+  }
+
+  doWallFight(now) {
+    if (now < this.atkAt) return;
+    this.atkAt = now + this.cfg.atkRate;
+    const u = this.slot.unit;
+    this.s.tweens.add({ targets: this.spr, x: this.spr.x + (u ? -8 : 8), duration: 80, yoyo: true });
+    if (u) {
+      u.hurt(this.cfg.dmg * 0.5);
+      this.s.fx.sparks((this.spr.x + u.x) / 2, this.slot.y - 26, 7, { spread: 1.6, power: 260 });
+      TD.audio.hit();
+      // 守軍反擊（近戰白刃）
+      this.takeDamage(u.stat.dmg * 0.4, 'spear');
+    } else {
+      // 沒人守：翻進城，直接鑿門內側
+      this.s.wall.damage(this.cfg.dmg * 0.6,
+        Phaser.Math.Clamp(this.spr.x, TD.LAYOUT.gate.x - 140, TD.LAYOUT.gate.x + 140),
+        TD.LAYOUT.gate.topY + 60, {});
+    }
+  }
+
+  // ── 攻城塔 ──
+  beginDock() {
+    this.state = 'docked';
+    if (this.rockTween) this.rockTween.stop();
+    this.s.fx.shake(5, 250);
+    this.s.fx.dust(this.x, this.y + 8, 8);
+    // 對準最近垛口
+    let best = this.s.wall.slots[0];
+    this.s.wall.slots.forEach(sl => {
+      if (Math.abs(sl.x - this.x) < Math.abs(best.x - this.x)) best = sl;
+    });
+    this.slot = best;
+    this.atkAt = this.s.time.now + 900;
+  }
+
+  doTowerDocked(now) {
+    if (now < this.atkAt || this.spawned >= this.cfg.spawnMax) return;
+    this.atkAt = now + this.cfg.spawnEvery;
+    this.spawned++;
+    // 從塔頂放兵到垛口
+    const e = this.s.spawnEnemy('soldier', this.lane, { atWall: true, slot: this.slot });
+    e.spr.x = this.x; e.spr.y = this.y - 40;
+    this.s.tweens.add({ targets: e.spr, x: this.slot.x, y: this.slot.y, duration: 420, ease: 'Cubic.Out' });
+  }
+
+  // ── 投石機 ──
+  doCatapult(now) {
+    if (now < this.atkAt) return;
+    this.atkAt = now + this.cfg.atkRate;
+    // 投臂後仰演出
+    this.s.tweens.add({ targets: this.spr, angle: -8, duration: 300, yoyo: true, ease: 'Cubic.In' });
+    // 火球目標：隨機守軍垛口或城門
+    const L = TD.LAYOUT;
+    const withUnit = this.s.wall.slots.filter(sl => sl.unit);
+    const target = (withUnit.length && Math.random() < 0.6)
+      ? Phaser.Utils.Array.GetRandom(withUnit)
+      : { x: L.gate.x + Phaser.Math.Between(-80, 80), y: L.gate.topY + 50, gate: true };
+    const ball = this.s.add.image(this.x, this.y - 60, 'fx_fireball')
+      .setDepth(TD.DEPTH.PROJ).setBlendMode(Phaser.BlendModes.ADD).setScale(1.3);
+    const trail = this.s.time.addEvent({ delay: 40, loop: true, callback: () => {
+      const e = this.s.add.image(ball.x, ball.y, 'fx_ember').setDepth(TD.DEPTH.PROJ)
+        .setBlendMode(Phaser.BlendModes.ADD).setScale(0.9);
+      this.s.tweens.add({ targets: e, alpha: 0, scale: 0.2, duration: 350, onComplete: () => e.destroy() });
+    }});
+    const sx = this.x, sy = this.y - 60, peak = 260;
+    const curve = { t: 0 };
+    TD.audio.shootStone();
+    this.s.tweens.add({
+      targets: curve, t: 1, duration: 1150, ease: 'Linear',
+      onUpdate: () => {
+        ball.x = Phaser.Math.Linear(sx, target.x, curve.t);
+        ball.y = TD.qBezier(sy, peak, target.y, curve.t);
+      },
+      onComplete: () => {
+        ball.destroy(); trail.remove();
+        this.s.fx.explosion(target.x, target.y, 110);
+        this.s.fx.shake(8, 350);
+        TD.audio.explode();
+        if (target.gate) this.s.wall.damage(this.cfg.dmg, target.x, target.y, { big: true });
+        else if (target.unit) target.unit.hurt(this.cfg.dmg);
+      },
+    });
+  }
+
+  stopAnim() {
+    if (this.waddle) { this.waddle.stop(); this.spr.setAngle(0); }
+    if (this.rockTween) this.rockTween.pause();
+  }
+
+  // ══════════ 受擊 ══════════
+  takeDamage(v, kind = 'arrow', opt = {}) {
+    if (this.dead) return;
+    if (kind === 'arrow' && this.cfg.blockFront) {
+      v *= (1 - this.cfg.blockFront);
+      this.s.fx.sparks(this.x, this.y - 30, 4, { power: 220 });   // 箭中盾
+    }
+    if ((kind === 'fire' || kind === 'burnTick') && this.cfg.burnMul) v *= this.cfg.burnMul;
+    if (kind === 'spear' && (this.state === 'climb' || this.state === 'wallfight')) {
+      v *= (this.s.spearClimberMul || 3);
+    }
+    const crit = opt.crit || Math.random() < 0.08;
+    if (crit) v *= 1.8;
+    this.hp -= v;
+
+    if (kind !== 'burnTick') {
+      this.spr.setTintFill(0xFFFFFF);
+      this.s.time.delayedCall(40, () => { if (!this.dead) this.spr.clearTint(); });
+      this.s.fx.dmgNum(this.x, this.y - this.spr.displayHeight * 0.8, v, crit);
+      if (crit) { this.s.fx.slowmo(0.3, 80); TD.audio.crit(); }
+    }
+    if (this.hp <= 0) this.die(kind);
+  }
+
+  /** 點燃（火箭/火油/火海）*/
+  setBurn(dps, sec) {
+    this.burn = { dps, until: this.s.time.now + sec * 1000, lastTick: 0 };
+    if (!this.flameFx) this.flameFx = this.s.fx.ignite(this.spr, 0.55 * this.cfg.scale);
+  }
+
+  die(kind) {
+    if (this.dead) return;
+    this.dead = true;
+    const fx = this.s.fx;
+
+    if (this.slot && this.slot.ladder) this.slot.ladder.climbers.delete(this);
+    if (this.flameFx) { this.flameFx.destroy(); this.flameFx = null; }
+    if (this.rockTween) this.rockTween.stop();
+    if (this.waddle) this.waddle.stop();
+    this.hpBar.destroy();
+
+    if (this.cfg.behavior === 'tower' || this.cfg.behavior === 'ram' || this.cfg.behavior === 'catapult') {
+      // 器械：燃燒倒塌
+      fx.shake(this.cfg.behavior === 'tower' ? 10 : 6, 500);
+      fx.explosion(this.x, this.y - 40, 140);
+      fx.rubble(this.x, this.y, 12);
+      fx.dust(this.x, this.y, 10);
+      const fl = fx.flame(this.x, this.y - 30, 1.4, 2600);
+      TD.audio.killBig();
+      this.s.tweens.add({
+        targets: this.spr, angle: this.spr.angle + (Math.random() < 0.5 ? -78 : 78),
+        y: this.spr.y + 40, alpha: 0.0, duration: 900, ease: 'Cubic.In',
+        onComplete: () => this.spr.destroy(),
+      });
+    } else {
+      // 士兵：粒子爆裂 + 倒地屍體淡出
+      const n = this.cfg.boss ? 30 : 14;
+      for (let i = 0; i < this.s.fx.budget(n); i++) {
+        const p = this.s.add.image(this.x, this.y - 30, 'fx_ember')
+          .setDepth(TD.DEPTH.FX).setBlendMode(Phaser.BlendModes.ADD)
+          .setTint(0xFF6040).setScale(Phaser.Math.FloatBetween(0.4, 1));
+        this.s.fx.alive++;
+        const ang = Phaser.Math.FloatBetween(0, 6.28);
+        this.s.tweens.add({
+          targets: p, x: this.x + Math.cos(ang) * 90, y: this.y - 30 + Math.sin(ang) * 70,
+          alpha: 0, duration: 420, ease: 'Cubic.Out',
+          onComplete: () => { p.destroy(); this.s.fx.alive--; },
+        });
+      }
+      this.spr.setTint(0x6A5A4A);
+      this.s.tweens.add({
+        targets: this.spr, angle: 84, alpha: 0, duration: this.cfg.boss ? 1500 : 2400,
+        ease: 'Cubic.In', onComplete: () => this.spr.destroy(),
+      });
+      if (this.cfg.boss) { fx.shake(9, 600); fx.flashWhite(0.4, 160); TD.audio.killBig(); }
+      else TD.audio.kill();
+    }
+    fx.coinPop(this.x, this.y - 40, 2);
+    this.s.onEnemyKilled(this, kind);
+  }
+
+  drawHp() {
+    const g = this.hpBar; g.clear();
+    if (this.hp >= this.maxHp || this.dead) return;
+    const w = this.cfg.boss ? 120 : 64, h = this.cfg.boss ? 12 : 7;
+    const x = this.x - w / 2, y = this.y - this.spr.displayHeight * 0.98 - 12;
+    const k = Phaser.Math.Clamp(this.hp / this.maxHp, 0, 1);
+    g.fillStyle(0x1A0E06, 0.8).fillRect(x - 1, y - 1, w + 2, h + 2);
+    g.fillStyle(k > 0.4 ? 0x6FE08A : 0xFF5C5C, 1).fillRect(x, y, w * k, h);
+  }
+
+  destroy() {
+    this.hpBar && this.hpBar.destroy();
+    this.flameFx && this.flameFx.destroy();
+    this.spr && this.spr.destroy();
   }
 };

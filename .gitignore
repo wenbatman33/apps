@@ -26,3 +26,22 @@ mergeShooter/assets/Json Atlas/
 mergeShooter/assets/mp3/
 mergeShooter/assets/License.txt
 mergeShooter/audio/bgm.mp3
+
+# troyDefense v4：封存的舊版素材與實驗檔不入版控
+troyDefense/public/assets/G/
+troyDefense/public/assets/S/
+troyDefense/public/assets/W/
+troyDefense/public/assets/B/
+troyDefense/public/assets/E/
+troyDefense/public/assets/F/
+troyDefense/public/assets/H/
+troyDefense/public/assets/T/
+troyDefense/public/assets/U/
+troyDefense/public/assets/CRTEST/
+troyDefense/public/assets/_greek_style/
+troyDefense/public/assets/_portrait/
+troyDefense/public/assets/_qcute_backup/
+troyDefense/public/assets/_raw/
+troyDefense/public/assets/V4/_flat_rejected/
+troyDefense/index_v3_backup.html
+troyDefense/index_v1_backup.html

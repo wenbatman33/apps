@@ -1,271 +1,210 @@
-/* 我方守軍：在合成台可拖曳合成，放上戰場塔位後自動攻擊 */
+/* v2 守軍 — 站在城牆垛口上（背面視角），自動攻擊城下敵軍
+ * 四種模式：arrow 拋物線箭 / stone AoE 砸地 / spear 牆頭突刺 / oil 扇形火油
+ */
 window.TD = window.TD || {};
 
-TD.Unit = class Unit extends Phaser.GameObjects.Container {
-  constructor(scene, kind, lv) {
-    super(scene, 0, 0);
-    this.gs = scene;
-    this.kind = kind;
-    this.lv = lv;
-    this.slot = null;
-    this.cdLeft = 0;
-    this.disabledUntil = 0;      // 被縱火兵癱瘓
-    this.priority = 'first';     // 目標優先權
-    this.giant = false;          // 巨人化（佔 2×2）
-    this.baseSize = TD.LAYOUT.bench.cell;
-    this.baseScale = 1;
-    this.build();
-    scene.add.existing(this);
-    this.setDepth(TD.DEPTH.UNIT);
-  }
-
-  build() {
-    const K = TD.getKind(this.kind);
-    const size = this.baseSize;
-
-    // 地面陰影（放到戰場上才顯示）
-    this.shadow = this.scene.add.ellipse(0, size * 0.34, size * 0.62, size * 0.20, 0x000000, 0.32);
-    this.shadow.setVisible(false);
-
-    // 階級光暈
-    this.glow = this.scene.add.graphics();
-    this.drawGlow();
-
-    // 單位圖（素材本身就是 45° 斜俯視、自帶石砌基座）
-    this.img = this.scene.add.image(0, TD.LAYOUT.unit.yOffset, TD.texOf(this.kind, this.lv));
-    const fit = size * TD.LAYOUT.unit.imgScale;
-    this.img.setDisplaySize(fit, fit);
-    if (TD.isFused(this.kind)) this.img.setTint(K.tint);
-
-    // 等級徽章
-    const bs = TD.LAYOUT.unit.badgeSize;
-    this.badge = this.scene.add.graphics();
-    this.badge.fillStyle(0x3A2416, 1).fillCircle(size * 0.33, size * 0.34, bs + 2);
-    this.badge.fillStyle(K.tint, 1).fillCircle(size * 0.33, size * 0.33, bs);
-    this.badge.fillStyle(0xFFFFFF, 0.35).fillEllipse(size * 0.33, size * 0.33 - bs * 0.4, bs * 1.2, bs * 0.7);
-    this.badgeTxt = this.scene.add.text(size * 0.33, size * 0.33,
-      TD.isFused(this.kind) ? '★' : String(this.lv), {
-        fontFamily: TD.FONT, fontSize: `${bs * 1.2}px`, color: '#3A2416',
-        stroke: '#FFFFFF', strokeThickness: 2,
-      }).setOrigin(0.5);
-
-    this.add([this.shadow, this.glow, this.img, this.badge, this.badgeTxt]);
-    this.setSize(size, size);
-
-    // 攻擊分鏡用的基準值
-    this.imgBaseX = 0;
-    this.imgBaseY = TD.LAYOUT.unit.yOffset;
-    this.imgBaseSX = this.img.scaleX;
-    this.imgBaseSY = this.img.scaleY;
-    this.idlePhase = Math.random() * Math.PI * 2;
-  }
-
-  drawGlow() {
-    const K = TD.getKind(this.kind), s = this.baseSize;
-    this.glow.clear();
-    if (TD.isFused(this.kind)) {
-      this.glow.fillStyle(0xFFE066, 0.30).fillCircle(0, s * 0.18, s * 0.46);
-      this.glow.lineStyle(5, 0xFFC72C, 0.9).strokeCircle(0, s * 0.30, s * 0.40);
-    } else if (this.lv >= 4) {
-      this.glow.fillStyle(K.tint, 0.16 + (this.lv - 4) * 0.07).fillCircle(0, s * 0.18, s * 0.44);
-    }
-  }
-
-  refresh() {
-    const slot = this.slot;
-    this.removeAll(true);
-    this.build();
-    if (slot) { this.slot = slot; this.applySlotScale(); }
-  }
-
-  upgradeTo(kind, lv) {
-    this.kind = kind; this.lv = lv;
-    this.refresh();
-    this.scene.tweens.add({
-      targets: this, scaleX: this.baseScale * 1.35, scaleY: this.baseScale * 1.35,
-      duration: 170, yoyo: true, ease: 'Back.Out',
-    });
-  }
-
-  get stats() {
-    const st = TD.statsOf(this.kind, this.lv);
-    const gs = this.gs;
-    let dmgMul = 1, rateMul = 1;
-    if (gs && gs.auraBuff) { dmgMul += gs.auraBuff.dmg; rateMul += gs.auraBuff.rate; }
-    if (gs && gs.rallyUntil > gs.now) rateMul += 0.8;
-
-    // 波次增益
-    const b = gs && gs.boon;
-    if (b) {
-      dmgMul *= (b.dmgMul[this.kind] || 1) * (b.dmgMul.all || 1);
-      rateMul *= b.rateMul || 1;
-      st.range = Math.round(st.range * (b.rangeMul || 1));
-      if (st.aoe) st.aoe = Math.round(st.aoe * (b.aoeMul || 1));
-      if (st.burn) st.burn = +(st.burn * (b.burnMul || 1)).toFixed(1);
-      if (st.buff) st.buff = +(st.buff * (b.auraMul || 1)).toFixed(2);
-      if (st.slow) st.slow = +(st.slow * (b.auraMul || 1)).toFixed(2);
-    }
-    // 巨人化加成
-    if (this.giant) {
-      dmgMul *= TD.GIANT.dmgMul;
-      rateMul *= TD.GIANT.rateMul;
-      st.range = Math.round(st.range * TD.GIANT.rangeMul);
-      st.isGiant = true;
-    }
-
-    // 城牆守備位：居高臨下，射程與傷害加成
-    if (this.slot && this.slot.isWall) {
-      const G = TD.LAYOUT.grid;
-      st.range = Math.round(st.range * (G.wallRangeMul || 1));
-      dmgMul *= (G.wallDmgMul || 1);
-      st.onWallBonus = true;
-    }
-    st.dmg = Math.round(st.dmg * dmgMul);
-    st.cd = Math.max(90, Math.round(st.cd / rateMul));
-    return st;
-  }
-
-  /** 佔幾格（1 或 2） */
-  get footprint() { return TD.footprintOf(this.kind, this.lv, this.giant); }
-
-  /** 是否已佈署在戰場塔位上（＝會自動攻擊） */
-  get onField() { return !!this.slot && this.slot.type === 'field'; }
-  get isDisabled() { return this.gs.now < this.disabledUntil; }
-
-  applySlotScale() {
-    if (!this.slot) return;
-    const onField = this.slot.type === 'field';
-    const fp = this.footprint;
-    const target = onField
-      ? this.gs.grid.cellW * TD.LAYOUT.unit.fieldScale * fp
-      : TD.LAYOUT.bench.cell;
-    this.baseScale = target / this.baseSize;
-    this.setScale(this.baseScale);
-    this.shadow.setVisible(onField);
-    this.setDepth(onField ? TD.DEPTH.TOWER + this.slot.y / 100 : TD.DEPTH.UNIT);
-  }
-
-  /** 2×2 時要站在四格的中心，而不是主格中心 */
-  anchorXY(slot) {
-    const fp = this.footprint;
-    if (!slot || slot.type !== 'field' || fp <= 1) return { x: slot.x, y: slot.y };
-    const g = this.gs.grid;
-    return { x: slot.x + g.cellW * (fp - 1) / 2, y: slot.y + g.cellH * (fp - 1) / 2 };
-  }
-
-  moveToSlot(slot, anim = true) {
-    const g = this.gs.grid;
-    // 先釋放舊佔位（2×2 要一次清掉四格）
-    if (this.slot) {
-      if (this.slot.type === 'field' && g) g.release(this.slot, this.footprint);
-      else this.slot.unit = null;
-    }
+TD.Unit = class Unit {
+  constructor(scene, slot, type, lv) {
+    this.s = scene;
     this.slot = slot;
-    if (slot.type === 'field' && g) g.occupy(slot, this.footprint, this);
-    else slot.unit = this;
+    this.type = type;
+    this.lv = lv;
+    this.cfg = TD.UNITS[type];
+    this.stat = TD.unitStat(type, lv);
+    this.hp = 60 + lv * 45;
+    this.maxHp = this.hp;
+    this.atkAt = 0;
+    this.dead = false;
 
-    this.applySlotScale();
-    const p = this.anchorXY(slot);
-    if (anim) {
-      this.scene.tweens.add({ targets: this, x: p.x, y: p.y, duration: 190, ease: 'Back.easeOut' });
-    } else { this.x = p.x; this.y = p.y; }
-    this.gs.drawSlot(slot);
+    const L = TD.LAYOUT;
+    this.spr = scene.add.image(slot.x, slot.y, this.cfg.icon)
+      .setOrigin(0.5, 0.9).setDepth(TD.DEPTH.DEFENDER);
+    this.spr.setScale((TD.BASE_DEF_H * L.wall.unitScale * (1 + (lv - 1) * 0.055)) / this.spr.height);
+
+    // 階級徽章
+    this.badge = scene.add.container(slot.x + 34, slot.y - 66).setDepth(TD.DEPTH.DEFENDER + 1);
+    const bg = scene.add.graphics();
+    bg.fillStyle(0x1A0E06, 0.9).fillCircle(0, 0, L.unit.badgeSize * 0.62);
+    bg.lineStyle(3, this.cfg.color, 1).strokeCircle(0, 0, L.unit.badgeSize * 0.62);
+    const txt = scene.add.text(0, 0, String(lv), {
+      fontFamily: TD.FONT, fontSize: '26px', color: TD.CSS.gold, fontStyle: 'bold',
+    }).setOrigin(0.5);
+    this.badge.add([bg, txt]);
+
+    // 高階發光
+    if (lv >= 4) {
+      this.glow = scene.add.image(slot.x, slot.y - 30, 'fx_glow')
+        .setDepth(TD.DEPTH.DEFENDER - 1).setBlendMode(Phaser.BlendModes.ADD).setScale(1.1).setAlpha(0.7);
+    }
+
+    this.hpBar = scene.add.graphics().setDepth(TD.DEPTH.DEFENDER + 2);
+
+    // 就位動畫
+    scene.fx.dust(slot.x, slot.y, 4);
+    this.spr.setScale(this.spr.scale * 0.4);
+    scene.tweens.add({ targets: this.spr, scale: this.spr.scale / 0.4, duration: 220, ease: 'Back.Out' });
+    TD.audio.place();
   }
 
-  /** 巨人化：Lv6 專屬終極升級，佔 2×2 */
-  becomeGiant() {
-    this.giant = true;
-    this.refresh();
-    const p = this.anchorXY(this.slot);
-    this.x = p.x; this.y = p.y;
-    this.scene.tweens.add({
-      targets: this, scaleX: this.baseScale * 1.25, scaleY: this.baseScale * 1.25,
-      duration: 220, yoyo: true, ease: 'Back.easeOut',
+  get x() { return this.slot.x; }
+  get y() { return this.slot.y; }
+
+  update(now) {
+    if (this.dead) return;
+    if (now < this.atkAt) return;
+
+    switch (this.cfg.mode) {
+      case 'arrow': this.tryStream(now, 'arrow'); break;
+      case 'spear': this.tryStream(now, 'spear'); break;
+      case 'stone': this.tryStone(now); break;
+      case 'oil':   this.tryOilJet(now); break;
+    }
+    this.drawHp();
+  }
+
+  /** 找目標：優先自己正上方的縱列，其次全場最近 */
+  findTarget(range, filter) {
+    let col = null, colY = -1, any = null, anyD = 1e9;
+    for (const e of this.s.enemies) {
+      if (e.dead || e.state === 'climb' || e.state === 'wallfight') continue;
+      if (filter && !filter(e)) continue;
+      const d = Phaser.Math.Distance.Between(this.x, this.y, e.x, e.y);
+      if (d > range) continue;
+      if (Math.abs(e.x - this.x) < 165 && e.y > colY) { colY = e.y; col = e; }
+      if (d < anyD) { anyD = d; any = e; }
+    }
+    return col || any;
+  }
+
+  recoil() {
+    this.s.tweens.add({ targets: this.spr, scaleY: this.spr.scaleY * 0.92, duration: 60, yoyo: true });
+  }
+
+  muzzle(tint) {
+    const m = this.s.add.image(this.x, this.y - 70, 'fx_glow')
+      .setDepth(TD.DEPTH.PROJ).setBlendMode(Phaser.BlendModes.ADD)
+      .setScale(0.5).setTint(tint).setAlpha(0.9);
+    this.s.tweens.add({ targets: m, scale: 0.2, alpha: 0, duration: 110, onComplete: () => m.destroy() });
+  }
+
+  // ── 高頻直射彈幕（弓＝單體箭流；矛＝貫穿標槍）──
+  tryStream(now, kind) {
+    const t = this.findTarget(this.stat.range);
+    if (!t) return;
+    this.atkAt = now + this.stat.rate;
+    this.recoil();
+    const fire = kind === 'arrow' && this.lv >= (this.cfg.burnLv || 99);
+    kind === 'arrow' ? TD.audio.shootArrow() : TD.audio.shootSpear();
+    this.muzzle(fire ? 0xFFB050 : 0xFFF0C0);
+
+    // 朝目標方向直射（多半是正上方）
+    const ang = Math.atan2(t.y - (this.y - 60), t.x - this.x);
+    const sp = this.cfg.projSpeed;
+    this.s.spawnProj({
+      x: this.x, y: this.y - 60,
+      vx: Math.cos(ang) * sp, vy: Math.sin(ang) * sp,
+      tex: 'fx_arrow', scale: kind === 'spear' ? 1.7 : 1.15,
+      tint: fire ? 0xFFB050 : (kind === 'spear' ? 0xBFE4FF : 0xFFFFFF),
+      rot: ang - Math.PI / 2,
+      dmg: this.stat.dmg, kind,
+      pierce: this.cfg.pierce || 0,
+      trail: fire ? 'fire' : (kind === 'spear' ? 'blue' : 'faint'),
+      onHit: (e) => { if (fire && !e.dead) e.setBurn(this.stat.dmg * 0.3, 2.2); },
     });
   }
 
-  update(dt) {
-    if (!this.onField) return;
-    if (this.isDisabled) { this.img.setTint(0x666666); return; }
-    if (!TD.isFused(this.kind)) this.img.clearTint();
-    this.idle(this.gs.now);
-
-    const st = this.stats;
-    const K = TD.getKind(this.kind);
-    if (K.target === 'aura') { this.gs.registerAura(this, st); return; }
-
-    this.cdLeft -= dt;
-    if (this.cdLeft > 0) return;
-
-    const target = this.gs.findTarget(this, st.range, K.target);
-    if (!target) return;
-    this.cdLeft = st.cd;
-    this.fire(target, st, K);
+  // ── 投石：AoE 砸地 ──
+  tryStone(now) {
+    const t = this.findTarget(this.stat.range);
+    if (!t) return;
+    this.atkAt = now + this.stat.rate;
+    this.recoil();
+    TD.audio.shootStone();
+    const rock = this.s.add.image(this.x, this.y - 70, 'fx_stone')
+      .setDepth(TD.DEPTH.PROJ).setScale(2.6);
+    const sx = this.x, sy = this.y - 70;
+    const tx = t.x, ty = t.y;         // 預判落點＝目前位置
+    const curve = { t: 0 };
+    this.s.tweens.add({
+      targets: rock, angle: 520, duration: 640,
+    });
+    this.s.tweens.add({
+      targets: curve, t: 1, duration: 640, ease: 'Linear',
+      onUpdate: () => {
+        rock.x = Phaser.Math.Linear(sx, tx, curve.t);
+        rock.y = TD.qBezier(sy, Math.min(sy, ty) - 260, ty, curve.t);
+      },
+      onComplete: () => {
+        rock.destroy();
+        const aoe = this.cfg.aoe * (1 + (this.lv - 1) * 0.08);
+        this.s.fx.dust(tx, ty, 6);
+        this.s.fx.rubble(tx, ty, 8);
+        this.s.fx.sparks(tx, ty, 6, { spread: 3.14, power: 260 });
+        this.s.fx.shake(3, 140);
+        this.s.enemies.forEach(e => {
+          if (e.dead) return;
+          if (Phaser.Math.Distance.Between(tx, ty, e.x, e.y) < aoe) {
+            e.takeDamage(this.stat.dmg, 'stone');
+          }
+        });
+      },
+    });
   }
 
-  fire(target, st, K) {
-    const ox = this.x, oy = this.y - this.baseSize * 0.22 * this.baseScale;
-    this.img.setFlipX(target.x < this.x);
-    this.playAttackAnim(K.target, target.x < this.x ? -1 : 1);
-    this.gs.spawnProjectile(this, target, st, K, ox, oy);
+  // ── 火油：持續火舌噴流（短射程、點燃）──
+  tryOilJet(now) {
+    const t = this.findTarget(this.stat.range);
+    if (!t) return;
+    this.atkAt = now + this.stat.rate;
+    if (Math.random() < 0.2) TD.audio.shootOil();
+    const ang = Math.atan2(t.y - (this.y - 55), t.x - this.x)
+      + Phaser.Math.FloatBetween(-0.12, 0.12);          // 噴流散布
+    const sp = this.cfg.projSpeed;
+    this.s.spawnProj({
+      x: this.x + Phaser.Math.Between(-8, 8), y: this.y - 55,
+      vx: Math.cos(ang) * sp, vy: Math.sin(ang) * sp,
+      tex: 'fx_ember', scale: Phaser.Math.FloatBetween(0.9, 1.5),
+      tint: 0xFFB050, add: true,
+      dmg: this.stat.dmg, kind: 'fire',
+      trail: 'fire', maxDist: this.stat.range,
+      onHit: (e) => { if (!e.dead) e.setBurn(this.stat.dmg * 1.2, this.cfg.burnSec); },
+    });
   }
 
-  /** 各兵種的攻擊分鏡：蓄力 → 出手 → 回位 */
-  playAttackAnim(mode, dir) {
-    const img = this.img, tw = this.scene.tweens;
-    if (!img || !this.imgBaseSY) return;
-    tw.killTweensOf(img);
-    const X = this.imgBaseX, Y = this.imgBaseY;
-    const SX = this.imgBaseSX, SY = this.imgBaseSY;
-    const back = (v) => X - dir * v;
-    const fwd = (v) => X + dir * v;
-
-    const chain = (steps) => tw.chain({ targets: img, tweens: steps });
-
-    if (mode === 'single') {
-      // 弓：後仰拉弦 → 前傾放箭 → 回正
-      chain([
-        { x: back(7), scaleY: SY * 1.05, scaleX: SX * 0.97, rotation: -dir * 0.05,
-          duration: 80, ease: 'Sine.easeOut' },
-        { x: fwd(5), scaleY: SY * 0.96, scaleX: SX * 1.04, rotation: dir * 0.04,
-          duration: 55, ease: 'Back.easeOut' },
-        { x: X, y: Y, scaleX: SX, scaleY: SY, rotation: 0, duration: 130, ease: 'Sine.easeInOut' },
-      ]);
-    } else if (mode === 'pierce') {
-      // 矛：收矛 → 猛力前刺 → 收回
-      chain([
-        { x: back(12), duration: 90, ease: 'Sine.easeOut' },
-        { x: fwd(20), scaleX: SX * 1.08, scaleY: SY * 0.94, duration: 60, ease: 'Back.easeOut' },
-        { x: X, scaleX: SX, scaleY: SY, duration: 150, ease: 'Sine.easeInOut' },
-      ]);
-    } else if (mode === 'aoe') {
-      // 投石：後仰蓄力 → 甩臂拋出
-      chain([
-        { rotation: -dir * 0.16, y: Y + 4, duration: 150, ease: 'Sine.easeOut' },
-        { rotation: dir * 0.13, y: Y - 6, scaleY: SY * 1.05, duration: 90, ease: 'Back.easeOut' },
-        { rotation: 0, y: Y, scaleY: SY, duration: 200, ease: 'Sine.easeInOut' },
-      ]);
-    } else if (mode === 'cone') {
-      // 熱油：整鍋往前傾倒
-      chain([
-        { rotation: dir * 0.18, x: fwd(6), duration: 130, ease: 'Sine.easeOut' },
-        { rotation: 0, x: X, duration: 220, ease: 'Sine.easeInOut' },
-      ]);
-    } else {
-      // 祭司：舉杖上浮
-      chain([
-        { y: Y - 8, scaleY: SY * 1.06, duration: 200, ease: 'Sine.easeOut' },
-        { y: Y, scaleY: SY, duration: 260, ease: 'Sine.easeInOut' },
-      ]);
-    }
+  hurt(v) {
+    if (this.dead) return;
+    this.hp -= v;
+    this.spr.setTintFill(0xFF9090);
+    this.s.time.delayedCall(50, () => { if (!this.dead) this.spr.clearTint(); });
+    this.drawHp();
+    if (this.hp <= 0) this.die();
   }
 
-  /** 待機時的呼吸起伏，讓塔不是死的 */
-  idle(now) {
-    if (!this.img || !this.imgBaseSY || this.scene.tweens.isTweening(this.img)) return;
-    const b = Math.sin(now / 620 + this.idlePhase);
-    this.img.scaleY = this.imgBaseSY * (1 + b * 0.014);
-    this.img.scaleX = this.imgBaseSX * (1 - b * 0.010);
-    this.img.y = this.imgBaseY + b * 1.6;
+  die() {
+    this.dead = true;
+    this.slot.unit = null;
+    this.s.fx.dust(this.x, this.y, 5);
+    this.s.fx.sparks(this.x, this.y - 30, 8, { spread: 3.14 });
+    TD.audio.deny();
+    this.s.tweens.add({
+      targets: [this.spr, this.badge], alpha: 0, y: '+=20', duration: 400,
+      onComplete: () => this.destroy(),
+    });
+    this.hpBar.clear();
+  }
+
+  drawHp() {
+    const g = this.hpBar; g.clear();
+    if (this.hp >= this.maxHp || this.dead) return;
+    const w = 60, h = 6;
+    const x = this.x - w / 2, y = this.y - this.spr.displayHeight - 6;
+    const k = Phaser.Math.Clamp(this.hp / this.maxHp, 0, 1);
+    g.fillStyle(0x1A0E06, 0.8).fillRect(x - 1, y - 1, w + 2, h + 2);
+    g.fillStyle(k > 0.4 ? 0x6FE08A : 0xFF5C5C, 1).fillRect(x, y, w * k, h);
+  }
+
+  destroy() {
+    this.spr.destroy(); this.badge.destroy(); this.hpBar.destroy();
+    this.glow && this.glow.destroy();
   }
 };
