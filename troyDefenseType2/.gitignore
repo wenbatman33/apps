@@ -1,0 +1,12 @@
+node_modules/
+.claude/
+.DS_Store
+*.log
+
+# 版本備份壓縮檔（本機保留，不進 repo）
+backups/
+
+# 生圖暫存與中間產物（本機保留，程式未引用）
+tmp/
+concepts/
+assets/generated_sources/

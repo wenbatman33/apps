@@ -4,14 +4,22 @@
     {
       "name": "pongFootball",
       "runtimeExecutable": "python3",
-      "runtimeArgs": ["-m", "http.server", "8765"],
+      "runtimeArgs": [
+        "-m",
+        "http.server",
+        "8765"
+      ],
       "port": 8765,
       "cwd": "pongFootball"
     },
     {
       "name": "nineBallGame",
       "runtimeExecutable": "python3",
-      "runtimeArgs": ["-m", "http.server", "8766"],
+      "runtimeArgs": [
+        "-m",
+        "http.server",
+        "8766"
+      ],
       "port": 8766,
       "autoPort": false,
       "cwd": "nineBallGame"
@@ -19,7 +27,11 @@
     {
       "name": "jetPackGame",
       "runtimeExecutable": "python3",
-      "runtimeArgs": ["-m", "http.server", "8767"],
+      "runtimeArgs": [
+        "-m",
+        "http.server",
+        "8767"
+      ],
       "port": 8767,
       "autoPort": false,
       "cwd": "jetPackGame"
@@ -27,7 +39,11 @@
     {
       "name": "robberRun",
       "runtimeExecutable": "python3",
-      "runtimeArgs": ["-m", "http.server", "8768"],
+      "runtimeArgs": [
+        "-m",
+        "http.server",
+        "8768"
+      ],
       "port": 8768,
       "autoPort": false,
       "cwd": "robberRun"
@@ -35,7 +51,11 @@
     {
       "name": "jumpVerticalGame",
       "runtimeExecutable": "python3",
-      "runtimeArgs": ["-m", "http.server", "8769"],
+      "runtimeArgs": [
+        "-m",
+        "http.server",
+        "8769"
+      ],
       "port": 8769,
       "autoPort": false,
       "cwd": "jumpVerticalGame"
@@ -43,7 +63,11 @@
     {
       "name": "survivorGame",
       "runtimeExecutable": "python3",
-      "runtimeArgs": ["-m", "http.server", "8770"],
+      "runtimeArgs": [
+        "-m",
+        "http.server",
+        "8770"
+      ],
       "port": 8770,
       "autoPort": false,
       "cwd": "survivorGame"
@@ -51,7 +75,11 @@
     {
       "name": "mergeShooter",
       "runtimeExecutable": "python3",
-      "runtimeArgs": ["-m", "http.server", "8771"],
+      "runtimeArgs": [
+        "-m",
+        "http.server",
+        "8771"
+      ],
       "port": 8771,
       "autoPort": false,
       "cwd": "mergeShooter"
@@ -59,7 +87,11 @@
     {
       "name": "skyRaider",
       "runtimeExecutable": "python3",
-      "runtimeArgs": ["-m", "http.server", "8772"],
+      "runtimeArgs": [
+        "-m",
+        "http.server",
+        "8772"
+      ],
       "port": 8772,
       "autoPort": false,
       "cwd": "skyRaider"
@@ -67,7 +99,11 @@
     {
       "name": "pachinko",
       "runtimeExecutable": "python3",
-      "runtimeArgs": ["-m", "http.server", "8773"],
+      "runtimeArgs": [
+        "-m",
+        "http.server",
+        "8773"
+      ],
       "port": 8773,
       "autoPort": false,
       "cwd": "pachinko"
@@ -75,7 +111,11 @@
     {
       "name": "aespaBlackJack",
       "runtimeExecutable": "python3",
-      "runtimeArgs": ["-m", "http.server", "8774"],
+      "runtimeArgs": [
+        "-m",
+        "http.server",
+        "8774"
+      ],
       "port": 8774,
       "autoPort": false,
       "cwd": "aespaBlackJack"
@@ -83,7 +123,11 @@
     {
       "name": "japanSengoku",
       "runtimeExecutable": "python3",
-      "runtimeArgs": ["-m", "http.server", "8775"],
+      "runtimeArgs": [
+        "-m",
+        "http.server",
+        "8775"
+      ],
       "port": 8775,
       "autoPort": false,
       "cwd": "japanSengoku/dist"
@@ -91,10 +135,26 @@
     {
       "name": "stack",
       "runtimeExecutable": "python3",
-      "runtimeArgs": ["-m", "http.server", "8776"],
+      "runtimeArgs": [
+        "-m",
+        "http.server",
+        "8776"
+      ],
       "port": 8776,
       "autoPort": false,
       "cwd": "stack"
+    },
+    {
+      "name": "troyDefenseType2",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": [
+        "-m",
+        "http.server",
+        "8777"
+      ],
+      "port": 8777,
+      "autoPort": false,
+      "cwd": "troyDefenseType2/dist"
     }
   ]
 }

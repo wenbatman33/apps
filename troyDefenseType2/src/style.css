@@ -1,0 +1,37 @@
+:root {
+  color-scheme: dark;
+  font-family: "PingFang TC", "Noto Sans TC", system-ui, sans-serif;
+  background: #100d1d url("/assets/backgrounds/rush-cover-v1.png") center / cover fixed;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+}
+
+* {
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+}
+
+html,
+body,
+#game {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+  overscroll-behavior: none;
+  touch-action: none;
+}
+
+body {
+  display: grid;
+  place-items: center;
+  background: rgb(16 13 29 / 82%);
+  backdrop-filter: blur(16px) brightness(0.42);
+}
+
+canvas {
+  display: block;
+  max-width: 100%;
+  max-height: 100%;
+  box-shadow: 0 0 48px rgb(0 0 0 / 42%);
+}
