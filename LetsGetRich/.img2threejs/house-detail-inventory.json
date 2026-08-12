@@ -1,0 +1,71 @@
+{
+  "sourceImage": "/Users/batman_work/codex/LetsGetRich/.img2threejs/house-reference.png",
+  "zonesDir": "/Users/batman_work/codex/LetsGetRich/.img2threejs/house-detail-zones",
+  "detailInventory": {
+    "scanMethod": "component-zones",
+    "targetMinDetails": 10,
+    "details": [
+      {
+        "id": "roof",
+        "kind": "",
+        "description": "",
+        "region": {
+          "x": 0.12,
+          "y": 0.16,
+          "width": 0.7,
+          "height": 0.38,
+          "units": "normalized"
+        },
+        "scale": "",
+        "affects": "",
+        "mapsTo": {
+          "type": "",
+          "ref": ""
+        },
+        "evidenceRef": "/Users/batman_work/codex/LetsGetRich/.img2threejs/house-detail-zones/roof.png",
+        "confidence": 0.0
+      },
+      {
+        "id": "facade",
+        "kind": "",
+        "description": "",
+        "region": {
+          "x": 0.18,
+          "y": 0.42,
+          "width": 0.62,
+          "height": 0.4,
+          "units": "normalized"
+        },
+        "scale": "",
+        "affects": "",
+        "mapsTo": {
+          "type": "",
+          "ref": ""
+        },
+        "evidenceRef": "/Users/batman_work/codex/LetsGetRich/.img2threejs/house-detail-zones/facade.png",
+        "confidence": 0.0
+      },
+      {
+        "id": "base",
+        "kind": "",
+        "description": "",
+        "region": {
+          "x": 0.18,
+          "y": 0.72,
+          "width": 0.65,
+          "height": 0.18,
+          "units": "normalized"
+        },
+        "scale": "",
+        "affects": "",
+        "mapsTo": {
+          "type": "",
+          "ref": ""
+        },
+        "evidenceRef": "/Users/batman_work/codex/LetsGetRich/.img2threejs/house-detail-zones/base.png",
+        "confidence": 0.0
+      }
+    ]
+  },
+  "authoringInstruction": "Open each zone crop under zonesDir and replace every detail stub's kind, description, scale, affects, mapsTo, and confidence with what is actually observed. Add more detail entries per zone if a single zone contains multiple distinct marks; do not leave stubs unfilled or unlinked (mapsTo must reference a real component.localFeatures or material.localOverrides entry)."
+}

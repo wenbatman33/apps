@@ -1,0 +1,11 @@
+node_modules/
+.claude/
+.DS_Store
+*.log
+
+# vite 暫存輸出目錄（build 後即刪）
+.root-build/
+dist/
+
+# AI 生圖原始檔與中間產物（本機保留，程式未引用）
+art-source/
