@@ -324,7 +324,7 @@ export class EngineUI {
     this.clear(this.fxLayer);
     this.fxLayer.setVisible(true);
     this.makeButton(this.fxLayer, 413, 752, 48, 43, 'Ⅱ', () => this.handlers.onPause?.(), { tint: 0x1b3867, fontSize: 17 });
-    this.makeButton(this.fxLayer, 360, 752, 48, 43, this.handlers.isMusicEnabled?.() ? '♪' : '×', () => {
+    this.makeButton(this.fxLayer, 360, 752, 48, 43, this.handlers.isSoundEnabled?.() ? '🔊' : '🔇', () => {
       this.handlers.onAudio?.();
       this.makeGameControls();
     }, { tint: 0x1b3867, fontSize: 17 });
