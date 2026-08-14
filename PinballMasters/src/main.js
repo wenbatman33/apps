@@ -110,55 +110,22 @@ const GHOST = { fill: 'rgba(255,255,255,.1)', stroke: 'rgba(255,255,255,.3)', gl
 const GOLD = { fill: ['#ffcf5e', '#e08b1d'], textColor: '#3a2400', glow: { color: 'rgba(255,180,60,.5)', blur: 16 } };
 
 const BUILDERS = {
+  // 首頁＝機檯選擇：標題下方直接列出三台，不再多一層「開始」按鈕
   title() {
     const g = new THREE.Group();
     const w = ui.w, h = ui.h;
-    const en = makeText({ text: 'PINBALL MASTERS', size: 14, letter: 6, color: '#8fa7ff', order: 5 });
+    const s = loadSave();
+    const scores = s.scores ?? {};
+    const en = makeText({ text: 'PINBALL MASTERS', size: 13, letter: 6, color: '#8fa7ff', order: 5 });
     const title = makeText({
-      text: '彈珠達人', size: Math.min(56, w * 0.14), weight: 900, letter: 6,
+      text: '彈珠達人', size: Math.min(46, w * 0.12), weight: 900, letter: 6,
       gradient: ['#9fd8ff', '#4f7bff', '#c77dff'], shadow: { color: 'rgba(90,140,255,.55)', blur: 18 }, order: 5,
     });
-    const sub = makeText({
-      text: '三台機檯，每局三顆彈珠。\n拉彈簧發球、點左右控制彈射板。',
-      size: 14, weight: 400, color: 'rgba(255,255,255,.8)', order: 5, lineHeight: 1.7,
-    });
-    const btnStart = makeButton(ui, { ...GOLD, label: '選擇機檯', onTap: () => {
-      AudioSys.init(); AudioSys.sfx('ui'); showScreen('stages');
-    } });
-    const btnSelect = makeButton(ui, { ...GHOST, label: '快速開始', onTap: () => {
-      AudioSys.init(); AudioSys.sfx('ui'); startStage(0);
-    } });
-    const btnSound = makeButton(ui, { ...GHOST, label: AudioSys.enabled ? '🔊 音效：開' : '🔇 音效：關', onTap: () => {
-      AudioSys.init();
-      AudioSys.setEnabled(!AudioSys.enabled);
-      btnSound.userData.label.userData.setText(AudioSys.enabled ? '🔊 音效：開' : '🔇 音效：關');
-      if (AudioSys.enabled) AudioSys.sfx('ui');
-    } });
-    const hint = makeText({
-      text: '發球：按住畫面往下拉再放開（PC 可長按 Space）\n彈射板：點住畫面左／右側（PC：← → 鍵）\nD 鍵：開發者微調工具',
-      size: 11, weight: 400, color: 'rgba(255,255,255,.45)', lineHeight: 1.9, order: 5,
-    });
-    en.position.y = h * 0.30;
-    title.position.y = h * 0.17;
-    sub.position.y = h * 0.02;
-    btnStart.position.y = -h * 0.12;
-    btnSelect.position.y = -h * 0.12 - 66;
-    btnSound.position.y = -h * 0.12 - 132;
-    hint.position.y = -h / 2 + 74;
-    g.add(en, title, sub, btnStart, btnSelect, btnSound, hint);
-    return g;
-  },
+    en.position.y = h * 0.40;
+    title.position.y = h * 0.33;
+    g.add(en, title);
 
-  // 機檯選擇：三台全部開放，各自顯示主題色與最高分
-  stages() {
-    const g = new THREE.Group();
-    const h = ui.h;
-    const s = loadSave();
-    const best = s.best ?? {};
-    const t = makeText({ text: '選擇機檯', size: 24, letter: 4, order: 5 });
-    t.position.y = h * 0.32;
-    g.add(t);
-    const cw = Math.min(ui.w * 0.92, 380);
+    const cw = Math.min(w * 0.92, 380);
     const hex = (n) => '#' + n.toString(16).padStart(6, '0');
     STAGES.forEach((st, i) => {
       const col = hex(st.theme.main);
@@ -171,59 +138,138 @@ const BUILDERS = {
       const emo = makeText({ text: st.bossEmoji, size: 30, order: 5 });
       emo.position.set(-cw / 2 + 34, 0, 0);
       const name = makeText({ text: st.name, size: 19, weight: 900, letter: 2, color: col, order: 5 });
-      name.position.set(-cw / 2 + 70 + name.geometry.parameters.width / 2, 16, 0);
+      name.position.set(-cw / 2 + 70 + name.geometry.parameters.width / 2, 17, 0);
       const sub = makeText({ text: st.sub, size: 13, weight: 400, color: 'rgba(255,255,255,.75)', order: 5 });
-      sub.position.set(-cw / 2 + 70 + sub.geometry.parameters.width / 2, -6, 0);
+      sub.position.set(-cw / 2 + 70 + sub.geometry.parameters.width / 2, -4, 0);
       const info = makeText({
         text: `軌道 ×${STAGE_RAMPS[i].length}　彈射器 ×${st.bumpers.length}　靶 ×${st.targets.length}`,
         size: 10, weight: 400, color: 'rgba(255,255,255,.5)', order: 5,
       });
-      info.position.set(-cw / 2 + 70 + info.geometry.parameters.width / 2, -26, 0);
+      info.position.set(-cw / 2 + 70 + info.geometry.parameters.width / 2, -24, 0);
       card.add(emo, name, sub, info);
-      if (best[i]) {
-        const b = makeText({ text: `BEST\n${best[i].toLocaleString()}`, size: 11, color: '#ffd75e', lineHeight: 1.5, order: 5 });
+      const top = (scores[i] ?? [])[0];
+      if (top) {
+        const b = makeText({ text: `BEST\n${top.toLocaleString()}`, size: 11, color: '#ffd75e', lineHeight: 1.5, order: 5 });
         b.position.set(cw / 2 - b.geometry.parameters.width / 2 - 14, 0, 0);
         card.add(b);
       }
-      card.position.y = h * 0.32 - 78 - i * 100;
+      card.position.y = h * 0.24 - i * 100;
       g.add(card);
     });
+
+    const rowY = h * 0.24 - STAGES.length * 100 + 4;
+    const btnRank = makeButton(ui, {
+      ...GHOST, label: '🏆 排行榜', w: cw * 0.48,
+      onTap: () => { AudioSys.init(); AudioSys.sfx('ui'); showScreen('ranking'); },
+    });
+    btnRank.position.set(-cw * 0.26, rowY, 0);
+    const btnSound = makeButton(ui, {
+      ...GHOST, label: AudioSys.enabled ? '🔊 音效' : '🔇 靜音', w: cw * 0.48,
+      onTap: () => {
+        AudioSys.init();
+        AudioSys.setEnabled(!AudioSys.enabled);
+        btnSound.userData.label.userData.setText(AudioSys.enabled ? '🔊 音效' : '🔇 靜音');
+        if (AudioSys.enabled) AudioSys.sfx('ui');
+      },
+    });
+    btnSound.position.set(cw * 0.26, rowY, 0);
+    const hint = makeText({
+      text: '每局三顆彈珠，打倒主目標不會結束——目標會強化重生，持續刷分\n發球：按住畫面往下拉再放開　彈射板：點畫面左／右側',
+      size: 10.5, weight: 400, color: 'rgba(255,255,255,.45)', lineHeight: 1.9, order: 5,
+    });
+    hint.position.y = -h / 2 + 42;
+    g.add(btnRank, btnSound, hint);
+    return g;
+  },
+
+  // 排行榜：每台機檯各記前五名
+  ranking() {
+    const g = new THREE.Group();
+    const w = ui.w, h = ui.h;
+    const s = loadSave();
+    const scores = s.scores ?? {};
+    const hex = (n) => '#' + n.toString(16).padStart(6, '0');
+    const t = makeText({ text: '🏆 排行榜', size: 24, letter: 3, order: 5 });
+    t.position.y = h * 0.38;
+    g.add(t);
+    const cw = Math.min(w * 0.92, 380);
+    STAGES.forEach((st, i) => {
+      const col = hex(st.theme.main);
+      const blockY = h * 0.28 - i * 152;
+      const head = makeText({ text: `${st.bossEmoji} ${st.name}`, size: 15, weight: 900, letter: 1, color: col, order: 5 });
+      head.position.set(-cw / 2 + head.geometry.parameters.width / 2, blockY, 0);
+      g.add(head);
+      const list = (scores[i] ?? []).slice(0, 5);
+      if (!list.length) {
+        const none = makeText({ text: '— 尚無紀錄 —', size: 12, weight: 400, color: 'rgba(255,255,255,.35)', order: 5 });
+        none.position.set(0, blockY - 30, 0);
+        g.add(none);
+      } else {
+        list.forEach((sc, k) => {
+          const medal = ['🥇', '🥈', '🥉', '4.', '5.'][k];
+          const row = makeText({
+            text: `${medal}　${sc.toLocaleString()}`,
+            size: 13, weight: k === 0 ? 900 : 400,
+            color: k === 0 ? '#ffd75e' : 'rgba(255,255,255,.8)', order: 5,
+          });
+          row.position.set(-cw / 2 + row.geometry.parameters.width / 2 + 16, blockY - 26 - k * 20, 0);
+          g.add(row);
+        });
+      }
+    });
     const back = makeButton(ui, { ...GHOST, label: '返回', w: 160, onTap: () => { AudioSys.sfx('ui'); showScreen('title'); } });
-    back.position.y = h * 0.32 - 78 - STAGES.length * 100 - 10;
+    back.position.y = -h / 2 + 52;
     g.add(back);
     return g;
   },
 
   result() {
-    const { win, score } = lastResult;
+    const { score, rank, stats } = lastResult;
+    const st = STAGES[currentStage];
     const g = new THREE.Group();
     const w = ui.w, h = ui.h;
-    const dim = makeRect({ w: w + 4, h: h + 4, fill: 'rgba(5,7,20,.82)', radius: 0, order: 4 });
+    const dim = makeRect({ w: w + 4, h: h + 4, fill: 'rgba(5,7,20,.85)', radius: 0, order: 4 });
+    const isNew = rank === 1;
     const title = makeText({
-      text: win ? 'VICTORY' : 'DEFEAT', size: 46, weight: 900, letter: 6,
-      color: win ? '#ffd75e' : '#8fa7ff',
-      shadow: { color: win ? 'rgba(255,190,60,.8)' : 'rgba(90,120,255,.6)', blur: 22 }, order: 5,
+      text: 'GAME OVER', size: 40, weight: 900, letter: 6,
+      color: '#8fa7ff', shadow: { color: 'rgba(90,120,255,.6)', blur: 22 }, order: 5,
     });
-    title.position.y = h * 0.22;
-    const bestNow = (loadSave().best ?? {})[currentStage] ?? 0;
-    const starText = makeText({
-      text: score >= bestNow ? '★ NEW BEST ★' : `BEST ${bestNow.toLocaleString()}`,
-      size: 18, color: '#ffd75e', letter: 3, order: 5,
-      shadow: { color: 'rgba(255,190,60,.6)', blur: 12 },
+    title.position.y = h * 0.30;
+    // 本局分數（大字）
+    const scoreText = makeText({
+      text: score.toLocaleString(), size: 52, weight: 900, color: '#ffd75e',
+      shadow: { color: 'rgba(255,190,60,.75)', blur: 20 }, order: 5,
     });
-    starText.position.y = h * 0.12;
-    const scoreText = makeText({ text: `總分 ${score.toLocaleString()}`, size: 18, color: 'rgba(255,255,255,.9)', order: 5 });
-    scoreText.position.y = h * 0.04;
-    g.add(dim, title, starText, scoreText);
-    let y = -h * 0.08;
-    if (win && currentStage < STAGES.length - 1) {
-      const next = makeButton(ui, { ...GOLD, label: '下一章 ➤', onTap: () => { AudioSys.sfx('ui'); startStage(currentStage + 1); } });
-      next.position.y = y; y -= 66;
-      g.add(next);
-    }
-    const retry = makeButton(ui, { label: win ? '再次挑戰' : '再挑戰一次', onTap: () => { AudioSys.sfx('ui'); startStage(currentStage, true); } });
-    retry.position.y = y; y -= 66;
-    const menu = makeButton(ui, { ...GHOST, label: '回主選單', onTap: () => { AudioSys.sfx('ui'); backToMenu(); } });
+    scoreText.position.y = h * 0.20;
+    const rankText = makeText({
+      text: isNew ? '★ 新紀錄 ★' : (rank > 0 ? `本機檯第 ${rank} 名` : '未進榜'),
+      size: 16, letter: 2, color: isNew ? '#ffd75e' : 'rgba(255,255,255,.75)', order: 5,
+    });
+    rankText.position.y = h * 0.13;
+    const statText = makeText({
+      text: `${st.bossEmoji} ${st.bossName} 擊倒 ${stats?.rounds ?? 0} 次　最高倍率 ×${stats?.multiplier ?? 1}`,
+      size: 12, weight: 400, color: 'rgba(255,255,255,.6)', order: 5,
+    });
+    statText.position.y = h * 0.08;
+    g.add(dim, title, scoreText, rankText, statText);
+
+    // 該機檯排行榜前五
+    const list = ((loadSave().scores ?? {})[currentStage] ?? []).slice(0, 5);
+    list.forEach((sc, k) => {
+      const isMe = sc === score && k + 1 === rank;
+      const row = makeText({
+        text: `${['🥇', '🥈', '🥉', '4.', '5.'][k]}　${sc.toLocaleString()}`,
+        size: 13, weight: isMe ? 900 : 400,
+        color: isMe ? '#ffd75e' : 'rgba(255,255,255,.6)', order: 5,
+      });
+      row.position.set(0, h * 0.01 - k * 21, 0);
+      g.add(row);
+    });
+
+    let y = -h * 0.20;
+    const retry = makeButton(ui, { ...GOLD, label: '再玩一次', onTap: () => { AudioSys.sfx('ui'); startStage(currentStage); } });
+    retry.position.y = y; y -= 64;
+    const menu = makeButton(ui, { ...GHOST, label: '換機檯', onTap: () => { AudioSys.sfx('ui'); backToMenu(); } });
     menu.position.y = y;
     g.add(retry, menu);
     return g;
@@ -236,8 +282,8 @@ const BUILDERS = {
     const t = makeText({ text: '暫停中', size: 26, letter: 4, order: 5 });
     t.position.y = h * 0.14;
     const resume = makeButton(ui, { label: '繼續遊戲', onTap: () => { AudioSys.sfx('ui'); resumeGame(); } });
-    const retry = makeButton(ui, { ...GHOST, label: '重新開始本章', onTap: () => { AudioSys.sfx('ui'); pausedOverlay = false; startStage(currentStage, true); } });
-    const menu = makeButton(ui, { ...GHOST, label: '回主選單', onTap: () => { AudioSys.sfx('ui'); pausedOverlay = false; backToMenu(); } });
+    const retry = makeButton(ui, { ...GHOST, label: '重新開始', onTap: () => { AudioSys.sfx('ui'); pausedOverlay = false; startStage(currentStage); } });
+    const menu = makeButton(ui, { ...GHOST, label: '回機檯選單', onTap: () => { AudioSys.sfx('ui'); pausedOverlay = false; backToMenu(); } });
     resume.position.y = 10; retry.position.y = -56; menu.position.y = -122;
     g.add(dim, t, resume, retry, menu);
     return g;
@@ -273,15 +319,17 @@ function startStage(idx) {
   })();
 }
 
-function onGameEnd(win, score, stars) {
+function onGameEnd(score, stats) {
   devTool.showButton(false);
-  lastResult = { win, score, stars };
   if (game?.hud) game.hud.visible = false;
-  // 記錄每台機檯的最高分
+  // 寫入該機檯的排行榜（保留前 10，畫面顯示前 5）
   const s = loadSave();
-  const best = { ...(s.best ?? {}) };
-  best[currentStage] = Math.max(best[currentStage] ?? 0, score);
-  save({ best });
+  const scores = { ...(s.scores ?? {}) };
+  const list = [...(scores[currentStage] ?? []), score].sort((a, b) => b - a).slice(0, 10);
+  scores[currentStage] = list;
+  save({ scores });
+  const rank = list.indexOf(score) + 1;
+  lastResult = { score, rank: rank <= 5 ? rank : 0, stats };
   showScreen('result');
 }
 

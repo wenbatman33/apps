@@ -50,6 +50,8 @@ export const TUNE = {
     vulnDmgImpact: 46,     //   +每單位撞速
     comboWindow: 2.2,      // Combo 維持秒數
     comboBonus: 0.05,      // 每 Combo 得分加成
+    defeatBonus: 12000,    // 擊倒主目標的獎勵（乘上輪數）
+    roundHpScale: 1.6,     // 每輪主目標生命倍率
   },
   score: {
     bumper: 150, sling: 100, target: 500, sideTarget: 350,

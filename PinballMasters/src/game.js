@@ -90,6 +90,7 @@ export class Game {
     this.combo = 0;
     this.comboT = 0;
     this.multiplier = 1;
+    this.rounds = 0;                              // 已擊倒主目標的次數（街機模式持續刷分）
     this.ringZ = this.stage.ringZ ?? RING.z;      // 各台燈環位置（避開該台的軌道）
     this.bossColor = this.stage.bossColor ?? BOSS.color; // 主目標配色依機檯主題
     this.bossHp = this.stage.bossHp;
@@ -750,11 +751,13 @@ export class Game {
     // 記分板（機檯上方的實體看板）
     this.scoreboard?.userData.update(
       this.score, Math.min(this.ballIdx + 1, HEROES.length), HEROES.length,
-      this.multiplier > 1 ? `X${this.multiplier}` : (this.vulnT > 0 ? 'JACKPOT' : '')
+      this.vulnT > 0 ? 'JACKPOT' : (this.multiplier > 1 ? `X${this.multiplier}` : (this.rounds ? `R${this.rounds + 1}` : ''))
     );
     this.hudScore.userData.setText(this.score.toLocaleString());
     const remain = HEROES.slice(this.ballIdx).map(x => x.emoji).join(' ');
-    this.hudBalls.userData.setText(`彈珠 ${remain}${this.multiplier > 1 ? `　倍率 ×${this.multiplier}` : ''}`);
+    this.hudBalls.userData.setText(
+      `彈珠 ${remain}${this.multiplier > 1 ? `　倍率 ×${this.multiplier}` : ''}${this.rounds ? `　ROUND ${this.rounds + 1}` : ''}`
+    );
     const k = Math.max(0, this.bossHp) / this.bossHpMax;
     this.bossBarFill.userData.setRatio(k);
     this.bossHpText.userData.setText(`${Math.max(0, Math.round(this.bossHp)).toLocaleString()} / ${this.bossHpMax.toLocaleString()}`);
@@ -841,28 +844,43 @@ export class Game {
     this._toast(`${this.stage.targetName ?? '目標靶'}重新升起`, 1300);
   }
 
+  // 擊倒主目標不結束遊戲：給大獎、主目標強化重生，讓玩家繼續刷分
   _victory() {
     if (this.state === 'over') return;
-    this.state = 'over';
-    AudioSys.stopBgm();
+    this.rounds++;
     AudioSys.sfx('bossDie');
-    setTimeout(() => AudioSys.sfx('win'), 500);
+    setTimeout(() => AudioSys.sfx('win'), 400);
     this.particles.burst(BOSS.x, 0.6, BOSS.z, this.bossColor, 70, 12, 1);
     this.particles.burst(BOSS.x, 0.6, BOSS.z, 0xffd75e, 40, 8, 0.8);
     this.shockwaves.spawn(BOSS.x, BOSS.z, this.bossColor, 5, 0.7);
     this.shake.hit(2);
-    this.boss.dying = 0.9;
-    const remain = HEROES.length - this.ballIdx;
-    const stars = remain >= 3 ? 3 : remain === 2 ? 2 : 1;
-    setTimeout(() => { if (!this.dead) this.onEnd(true, this.score, stars); }, 1500);
+
+    // 擊倒獎勵隨輪數遞增
+    const bonus = TUNE.battle.defeatBonus * this.rounds;
+    this.score += bonus;
+    this.dmgTexts.spawn(BOSS.x, BOSS.z, `+${bonus.toLocaleString()}`, { color: '#ffd75e', crit: true });
+    this._banner2(`${this.stage.bossName} 擊倒 ×${this.rounds}`, '#ffd75e', 1800);
+    this._toast(`🏆 ROUND ${this.rounds + 1} 開始！目標強化`, 2000);
+
+    // 主目標強化重生
+    this.bossHpMax = Math.round(this.stage.bossHp * Math.pow(TUNE.battle.roundHpScale, this.rounds));
+    this.bossHp = this.bossHpMax;
+    this.vulnT = 0;
+    this.boss.reviveT = 0.9;
+    for (const t of this.targets) { t.cir.alive = true; t.dropT = 0; t.respawnFx = 0.4; }
+    this.multiplier = Math.min(9, this.multiplier + 1); // 每輪送一級倍率
+    this._updateHUD();
   }
 
+  // 三顆球用完＝一局結束（唯一的結束條件）
   _defeat() {
     if (this.state === 'over') return;
     this.state = 'over';
     AudioSys.stopBgm();
     AudioSys.sfx('lose');
-    setTimeout(() => { if (!this.dead) this.onEnd(false, this.score, 0); }, 1100);
+    setTimeout(() => {
+      if (!this.dead) this.onEnd(this.score, { rounds: this.rounds, multiplier: this.multiplier });
+    }, 1100);
   }
 
   _drainBall() {
@@ -1192,10 +1210,14 @@ export class Game {
     const vulnGlow = this.vulnT > 0 ? 0.8 + Math.sin(now / 120) * 0.4 : 0;
     bo.body.material.emissiveIntensity = 0.8 + flash * 2.4 + vulnGlow;
     bo.shell.material.opacity = 0.18 + vulnGlow * 0.25 + flash * 0.3;
-    if (bo.dying !== undefined) {
-      bo.dying -= dt;
-      bo.grp.scale.setScalar(Math.max(0.01, bo.dying / 0.9));
-      bo.grp.rotation.y += dt * 8;
+    // 被擊倒後縮小再放大重生
+    if (bo.reviveT > 0) {
+      bo.reviveT -= dt;
+      const k = 1 - Math.max(0, bo.reviveT) / 0.9;  // 0→1
+      const s = k < 0.4 ? 1 - k / 0.4 : (k - 0.4) / 0.6;
+      bo.grp.scale.setScalar(Math.max(0.02, s));
+      bo.grp.rotation.y += dt * 6;
+      if (bo.reviveT <= 0) { bo.grp.scale.setScalar(1); bo.grp.rotation.y = 0; }
     }
 
     // 彈簧視覺
