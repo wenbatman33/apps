@@ -1,189 +1,149 @@
-// ===== 後製管線：亮度擷取 → 多級高斯模糊 → ACES 色調映射合成（自製 bloom，不依賴 examples） =====
+// ===== 後製管線：改用 three.js 官方的 EffectComposer =====
+// SSAO（接觸陰影）→ UnrealBloom（輝光）→ 自製色調映射/暗角/色差 → SMAA（抗鋸齒）
+// 官方模組放在 vendor/jsm/，與 three r160 對應。
 import * as THREE from 'three';
+import { EffectComposer } from '../vendor/jsm/postprocessing/EffectComposer.js';
+import { RenderPass } from '../vendor/jsm/postprocessing/RenderPass.js';
+import { ShaderPass } from '../vendor/jsm/postprocessing/ShaderPass.js';
+import { SSAOPass } from '../vendor/jsm/postprocessing/SSAOPass.js';
+import { UnrealBloomPass } from '../vendor/jsm/postprocessing/UnrealBloomPass.js';
+import { SMAAPass } from '../vendor/jsm/postprocessing/SMAAPass.js';
 
-const QUAD = new THREE.PlaneGeometry(2, 2);
-const VERT = `
-varying vec2 vUv;
-void main(){ vUv = uv; gl_Position = vec4(position.xy, 0.0, 1.0); }
-`;
+// 最終調色：ACES 色調映射 + 暗角 + 色差 + 輕微雜訊（讓漸層不帶色帶）
+const GradeShader = {
+  uniforms: {
+    tDiffuse: { value: null },
+    exposure: { value: 1.0 },
+    vignette: { value: 0.34 },
+    chroma: { value: 0.0016 },
+    grain: { value: 0.02 },
+    time: { value: 0 },
+  },
+  vertexShader: `
+    varying vec2 vUv;
+    void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }
+  `,
+  fragmentShader: `
+    uniform sampler2D tDiffuse;
+    uniform float exposure, vignette, chroma, grain, time;
+    varying vec2 vUv;
 
-const BRIGHT_FRAG = `
-uniform sampler2D tDiffuse;
-uniform float threshold;
-uniform float softness;
-varying vec2 vUv;
-void main(){
-  vec3 c = texture2D(tDiffuse, vUv).rgb;
-  float l = dot(c, vec3(0.2126, 0.7152, 0.0722));
-  float k = smoothstep(threshold, threshold + softness, l);
-  gl_FragColor = vec4(c * k, 1.0);
-}
-`;
+    vec3 aces(vec3 x){
+      const float a = 2.51, b = 0.03, c = 2.43, d = 0.59, e = 0.14;
+      return clamp((x * (a * x + b)) / (x * (c * x + d) + e), 0.0, 1.0);
+    }
+    float hash(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
 
-// 9-tap 線性取樣高斯
-const BLUR_FRAG = `
-uniform sampler2D tDiffuse;
-uniform vec2 dir;       // 像素單位方向
-varying vec2 vUv;
-void main(){
-  vec4 sum = texture2D(tDiffuse, vUv) * 0.227027;
-  vec2 o1 = dir * 1.3846153846;
-  vec2 o2 = dir * 3.2307692308;
-  sum += texture2D(tDiffuse, vUv + o1) * 0.3162162162;
-  sum += texture2D(tDiffuse, vUv - o1) * 0.3162162162;
-  sum += texture2D(tDiffuse, vUv + o2) * 0.0702702703;
-  sum += texture2D(tDiffuse, vUv - o2) * 0.0702702703;
-  gl_FragColor = sum;
-}
-`;
+    void main(){
+      vec2 d = vUv - 0.5;
+      // 色差：越靠邊分離越明顯
+      float amt = chroma * dot(d, d) * 4.0;
+      vec3 col;
+      col.r = texture2D(tDiffuse, vUv + d * amt).r;
+      col.g = texture2D(tDiffuse, vUv).g;
+      col.b = texture2D(tDiffuse, vUv - d * amt).b;
 
-const COMPOSITE_FRAG = `
-uniform sampler2D tScene;
-uniform sampler2D tBloom0;
-uniform sampler2D tBloom1;
-uniform sampler2D tBloom2;
-uniform float bloomStrength;
-uniform float exposure;
-uniform float vignette;
-uniform float chroma;
-varying vec2 vUv;
-
-// ACES filmic tone mapping（Narkowicz 近似）
-vec3 aces(vec3 x){
-  const float a = 2.51, b = 0.03, c = 2.43, d = 0.59, e = 0.14;
-  return clamp((x * (a * x + b)) / (x * (c * x + d) + e), 0.0, 1.0);
-}
-
-void main(){
-  vec2 uv = vUv;
-  vec2 fromC = uv - 0.5;
-  // 輕微色差（邊緣）
-  float ca = chroma * dot(fromC, fromC);
-  vec3 col;
-  col.r = texture2D(tScene, uv + fromC * ca).r;
-  col.g = texture2D(tScene, uv).g;
-  col.b = texture2D(tScene, uv - fromC * ca).b;
-
-  vec3 bloom = texture2D(tBloom0, uv).rgb * 1.0
-             + texture2D(tBloom1, uv).rgb * 0.75
-             + texture2D(tBloom2, uv).rgb * 0.5;
-  col += bloom * bloomStrength;
-
-  col *= exposure;
-  col = aces(col);
-  // 暗角
-  float v = 1.0 - vignette * dot(fromC, fromC) * 1.9;
-  col *= clamp(v, 0.0, 1.0);
-  // sRGB 編碼
-  col = pow(col, vec3(1.0 / 2.2));
-  gl_FragColor = vec4(col, 1.0);
-}
-`;
+      col = aces(col * exposure);
+      col *= 1.0 - vignette * dot(d, d) * 2.2;              // 暗角
+      col += (hash(vUv * 1024.0 + time) - 0.5) * grain;      // 去色帶雜訊
+      gl_FragColor = vec4(max(col, 0.0), 1.0);
+    }
+  `,
+};
 
 export class PostFX {
   constructor(renderer) {
     this.renderer = renderer;
     this.enabled = true;
-    this.scene = new THREE.Scene();
-    this.camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
+    this.composer = null;
+    this.w = 1; this.h = 1;
+    this.params = {
+      threshold: 0.62, strength: 0.85, radius: 0.5,
+      exposure: 1.0, vignette: 0.34, chroma: 0.0016,
+      ssao: 1, ssaoRadius: 0.22, ssaoIntensity: 0.9,
+    };
+    this._sceneRef = null;
+    this._cameraRef = null;
+  }
 
-    const rtOpts = { type: THREE.HalfFloatType, colorSpace: THREE.LinearSRGBColorSpace, depthBuffer: true };
-    this.rtScene = new THREE.WebGLRenderTarget(1, 1, rtOpts);
-    this.levels = [];
-    for (let i = 0; i < 3; i++) {
-      this.levels.push({
-        a: new THREE.WebGLRenderTarget(1, 1, { ...rtOpts, depthBuffer: false }),
-        b: new THREE.WebGLRenderTarget(1, 1, { ...rtOpts, depthBuffer: false }),
-        scale: 2 << i, // 1/2, 1/4, 1/8
-      });
-    }
+  // 場景/相機會隨開檯改變，因此 composer 在第一次 render 時才建立
+  _build(scene, camera) {
+    const pr = Math.min(this.renderer.getPixelRatio(), 2);
+    this.composer = new EffectComposer(this.renderer);
+    this.composer.setPixelRatio(pr);
+    this.composer.setSize(this.w, this.h);
 
-    this.brightMat = new THREE.ShaderMaterial({
-      vertexShader: VERT, fragmentShader: BRIGHT_FRAG,
-      uniforms: { tDiffuse: { value: null }, threshold: { value: 0.72 }, softness: { value: 0.35 } },
-      depthTest: false, depthWrite: false,
-    });
-    this.blurMat = new THREE.ShaderMaterial({
-      vertexShader: VERT, fragmentShader: BLUR_FRAG,
-      uniforms: { tDiffuse: { value: null }, dir: { value: new THREE.Vector2() } },
-      depthTest: false, depthWrite: false,
-    });
-    this.compMat = new THREE.ShaderMaterial({
-      vertexShader: VERT, fragmentShader: COMPOSITE_FRAG,
-      uniforms: {
-        tScene: { value: null }, tBloom0: { value: null }, tBloom1: { value: null }, tBloom2: { value: null },
-        bloomStrength: { value: 0.85 }, exposure: { value: 1.0 }, vignette: { value: 0.5 }, chroma: { value: 0.006 },
-      },
-      depthTest: false, depthWrite: false,
-    });
-    this.quad = new THREE.Mesh(QUAD, this.brightMat);
-    this.quad.frustumCulled = false;
-    this.scene.add(this.quad);
+    this.renderPass = new RenderPass(scene, camera);
+    this.composer.addPass(this.renderPass);
+
+    // SSAO：接觸陰影，讓零件真的「坐」在檯面上
+    this.ssaoPass = new SSAOPass(scene, camera, this.w, this.h);
+    this.ssaoPass.kernelRadius = this.params.ssaoRadius;
+    this.ssaoPass.minDistance = 0.0018;
+    this.ssaoPass.maxDistance = 0.09;
+    this.ssaoPass.output = SSAOPass.OUTPUT.Default;
+    this.ssaoPass.enabled = this.params.ssao > 0;
+    this.composer.addPass(this.ssaoPass);
+
+    this.bloomPass = new UnrealBloomPass(
+      new THREE.Vector2(this.w, this.h),
+      this.params.strength, this.params.radius, this.params.threshold
+    );
+    this.composer.addPass(this.bloomPass);
+
+    this.gradePass = new ShaderPass(GradeShader);
+    this.gradePass.uniforms.exposure.value = this.params.exposure;
+    this.gradePass.uniforms.vignette.value = this.params.vignette;
+    this.gradePass.uniforms.chroma.value = this.params.chroma;
+    this.composer.addPass(this.gradePass);
+
+    this.smaaPass = new SMAAPass(this.w * pr, this.h * pr);
+    this.composer.addPass(this.smaaPass);
+
+    this._sceneRef = scene;
+    this._cameraRef = camera;
   }
 
   setSize(w, h) {
-    const pr = this.renderer.getPixelRatio();
-    this.w = Math.max(1, Math.floor(w * pr));
-    this.h = Math.max(1, Math.floor(h * pr));
-    this.rtScene.setSize(this.w, this.h);
-    for (const lv of this.levels) {
-      const lw = Math.max(1, Math.floor(this.w / lv.scale));
-      const lh = Math.max(1, Math.floor(this.h / lv.scale));
-      lv.a.setSize(lw, lh); lv.b.setSize(lw, lh);
-      lv.w = lw; lv.h = lh;
-    }
+    this.w = Math.max(1, w | 0);
+    this.h = Math.max(1, h | 0);
+    if (!this.composer) return;
+    const pr = Math.min(this.renderer.getPixelRatio(), 2);
+    this.composer.setSize(this.w, this.h);
+    this.ssaoPass?.setSize(this.w, this.h);
+    this.bloomPass?.setSize(this.w, this.h);
+    this.smaaPass?.setSize(this.w * pr, this.h * pr);
   }
 
-  _draw(mat, target) {
-    this.quad.material = mat;
-    this.renderer.setRenderTarget(target);
-    this.renderer.clear();
-    this.renderer.render(this.scene, this.camera);
-  }
-
-  // 由呼叫端提供 renderSceneFn(target) 把 3D 場景畫進 rtScene
-  render(renderSceneFn) {
-    const r = this.renderer;
-    if (!this.enabled) { renderSceneFn(null); return; }
-
-    renderSceneFn(this.rtScene);
-
-    // 亮度擷取 → level0
-    this.brightMat.uniforms.tDiffuse.value = this.rtScene.texture;
-    this._draw(this.brightMat, this.levels[0].a);
-
-    // 逐級模糊 + 降採樣
-    let src = this.levels[0].a;
-    for (let i = 0; i < this.levels.length; i++) {
-      const lv = this.levels[i];
-      if (i > 0) {
-        // 直接把上一級結果模糊到本級（尺寸較小 = 降採樣）
-        this.blurMat.uniforms.tDiffuse.value = src.texture;
-        this.blurMat.uniforms.dir.value.set(1 / lv.w, 0);
-        this._draw(this.blurMat, lv.a);
-      }
-      this.blurMat.uniforms.tDiffuse.value = lv.a.texture;
-      this.blurMat.uniforms.dir.value.set(1 / lv.w, 0);
-      this._draw(this.blurMat, lv.b);
-      this.blurMat.uniforms.tDiffuse.value = lv.b.texture;
-      this.blurMat.uniforms.dir.value.set(0, 1 / lv.h);
-      this._draw(this.blurMat, lv.a);
-      src = lv.a;
+  // drawScene(target)：沿用舊介面。target 為 null 表示直接畫到畫面。
+  // 這裡改成由 composer 主導，呼叫端只要提供 scene / camera。
+  renderScene(scene, camera, dt = 0) {
+    if (!this.enabled) {
+      this.renderer.setRenderTarget(null);
+      this.renderer.render(scene, camera);
+      return;
     }
-
-    // 合成到螢幕
-    const u = this.compMat.uniforms;
-    u.tScene.value = this.rtScene.texture;
-    u.tBloom0.value = this.levels[0].a.texture;
-    u.tBloom1.value = this.levels[1].a.texture;
-    u.tBloom2.value = this.levels[2].a.texture;
-    this.quad.material = this.compMat;
-    r.setRenderTarget(null);
-    r.render(this.scene, this.camera);
+    if (!this.composer || this._sceneRef !== scene || this._cameraRef !== camera) {
+      this.composer?.dispose?.();
+      this._build(scene, camera);
+    }
+    this.gradePass.uniforms.time.value += dt;
+    this.composer.render(dt);
   }
 
   set(name, v) {
-    if (name in this.compMat.uniforms) this.compMat.uniforms[name].value = v;
-    else if (name in this.brightMat.uniforms) this.brightMat.uniforms[name].value = v;
+    this.params[name] = v;
+    if (!this.composer) return;
+    switch (name) {
+      case 'threshold': this.bloomPass.threshold = v; break;
+      case 'strength': this.bloomPass.strength = v; break;
+      case 'radius': this.bloomPass.radius = v; break;
+      case 'exposure': this.gradePass.uniforms.exposure.value = v; break;
+      case 'vignette': this.gradePass.uniforms.vignette.value = v; break;
+      case 'chroma': this.gradePass.uniforms.chroma.value = v; break;
+      case 'ssao': this.ssaoPass.enabled = v > 0; break;
+      case 'ssaoRadius': this.ssaoPass.kernelRadius = v; break;
+      case 'ssaoIntensity': this.ssaoPass.maxDistance = 0.02 + v * 0.1; break;
+    }
   }
 }

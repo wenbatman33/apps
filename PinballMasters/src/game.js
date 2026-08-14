@@ -69,9 +69,11 @@ export class Game {
     const rimWarm = new THREE.DirectionalLight(0xff7a4d, 0.35);
     rimWarm.position.set(7, 4, 7);
     this.scene.add(rimWarm);
-    // 跟隨光源刻意做小、衰減快，只用來讓球體本身有立體感，不在檯面留大光斑
-    this.ballLight = new THREE.PointLight(0xffffff, TUNE.fx.lightIntensity, 4.2, 2.2);
-    this.scene.add(this.ballLight);
+
+    // 不額外補光：檯面的金屬件（發射軌、導軌）反射率高，
+    // 多加光源只會讓整條軌道過曝成燈管。球的辨識度改用陰影對比解決。
+    // 不給彈珠跟隨光源：真實鋼珠不發光也不會照亮檯面，
+    // 立體感交給環境反射（envMap）與場景既有燈光
     // 定點氛圍燈：彈射器區（金）與 Boss 王座區（紅）
     const bossGlow = new THREE.PointLight(0xff3d6e, 1.1, 6, 1.8);
     bossGlow.position.set(0, 2.2, -4.9);
@@ -160,8 +162,9 @@ export class Game {
     // 側牆
     seg(HW, arcC.z, HW, 6.45);                    // 右外牆（含發射軌外側）
     seg(-HW, arcC.z, -HW, 2.6);                   // 左牆
-    seg(TABLE.LANE_X, -2.9, TABLE.LANE_X, 6.45);  // 發射軌內牆（整條）
-    seg(TABLE.LANE_X, 6.45, HW, 6.45);            // 發射軌底
+    // 發射軌用矮牆：一般牆高 0.52，從俯視角度會把整顆球埋在槽底看不見
+    seg(TABLE.LANE_X, -2.9, TABLE.LANE_X, 6.45, { low: true });  // 發射軌內牆（整條）
+    seg(TABLE.LANE_X, 6.45, HW, 6.45, { low: true });            // 發射軌底
     // 單向閘門（發射後關閉，防止球回到發射軌）
     this.gate = seg(TABLE.LANE_X, -3.1, HW + 0.05, -3.95, { active: false, draw: false });
 
@@ -488,17 +491,44 @@ export class Game {
       cir.ref = this.boss;
     }
 
+    // ---- 發射軌指示燈：沿軌道排一列燈，由下往上依序亮起，指出發射方向 ----
+    // 用純 emissive 的小燈罩，不放實際光源——點光源打在軌道金屬牆上會過曝成燈管。
+    this.laneLights2 = [];
+    {
+      const col = new THREE.Color(this.stage.theme?.accent ?? 0xffd75e);
+      const N = 9;
+      // 軌道兩側各一排（內牆側與外牆側），一起跑才有「通道」的方向感
+      for (const side of [TABLE.LANE_X + 0.14, TABLE.HALF_W - 0.14]) {
+        for (let i = 0; i < N; i++) {
+          const t = i / (N - 1);
+          const z = 5.75 - t * 7.6;                     // 由發射口往檯面頂端排列
+          const lens = new THREE.Mesh(
+            new THREE.SphereGeometry(0.058, 10, 8, 0, Math.PI * 2, 0, Math.PI / 2),
+            new THREE.MeshStandardMaterial({
+              color: 0x1a1408, emissive: col, emissiveIntensity: 0.25,
+              roughness: 0.3, metalness: 0.1,
+            })
+          );
+          lens.position.set(side, 0.02, z);
+          this.scene.add(lens);
+          this.laneLights2.push({ lens, idx: i });
+        }
+      }
+    }
+
     // ---- 彈簧發射桿（金屬桿 + 彈簧圈 + 握把） ----
     {
       const grp = new THREE.Group();
+      // pad 是推球的圓盤，必須貼在球「後方」（z 更大），不能與球體重疊。
+      // 球停在 z=6.1、半徑 0.195 → 球後緣 6.295；群組原點 6.28，故 pad 置於 +0.09。
       const rod = new THREE.Mesh(new THREE.CylinderGeometry(0.055, 0.055, 1.5, 10), MAT.chrome(env));
       rod.rotation.x = Math.PI / 2;
-      rod.position.set(0, 0.22, 0.55);
-      const pad = new THREE.Mesh(new THREE.CylinderGeometry(0.19, 0.19, 0.12, 16), MAT.chrome(env));
+      rod.position.set(0, 0.22, 0.72);
+      const pad = new THREE.Mesh(new THREE.CylinderGeometry(0.17, 0.17, 0.1, 16), MAT.chrome(env));
       pad.rotation.x = Math.PI / 2;
-      pad.position.set(0, 0.22, -0.1);
+      pad.position.set(0, 0.2, 0.09);
       const knob = new THREE.Mesh(new THREE.SphereGeometry(0.18, 14, 10), MAT.plasticGlow(0xff5e3d));
-      knob.position.set(0, 0.22, 1.3);
+      knob.position.set(0, 0.22, 1.42);
       // 彈簧
       const coilPts = [];
       for (let i = 0; i <= 60; i++) {
@@ -509,7 +539,7 @@ export class Game {
         new THREE.TubeGeometry(new THREE.CatmullRomCurve3(coilPts), 90, 0.028, 6, false),
         MAT.chrome(env)
       );
-      coil.position.set(0, 0.22, 0.1);
+      coil.position.set(0, 0.2, 0.26);
       grp.add(rod, pad, knob, coil);
       grp.traverse(o => { if (o.isMesh) o.castShadow = true; });
       grp.position.set(TABLE.LANE_CENTER, 0, 6.28);
@@ -629,19 +659,38 @@ export class Game {
     this.ballBody = this.world.addBall({ x: TABLE.LANE_CENTER, z: 6.1, vx: 0, vz: 0, r });
     this.ballMesh = new THREE.Mesh(
       new THREE.SphereGeometry(r, 32, 24),
+      // 亮銀色拋光鋼珠：底色調亮讓它在暗檯面上顯眼，
+      // 但保留一點粗糙度，不做成純鏡面（否則會把環境燈管反射成刺眼白斑）
       new THREE.MeshStandardMaterial({
-        color: 0xf2f6ff, emissive: 0xffffff, emissiveIntensity: 0.18,
-        roughness: 0.08, metalness: 1, envMap: this.env, envMapIntensity: 1.6,
+        color: 0xf8fbff, emissive: 0x9fb4d4, emissiveIntensity: 0.12,
+        roughness: 0.13, metalness: 0.95, envMap: this.env, envMapIntensity: 0.85,
       })
     );
     this.ballMesh.castShadow = true;
     this.scene.add(this.ballMesh);
-    const glowTex = ParticlePool.makeTexture();
-    this.ballGlow = new THREE.Sprite(new THREE.SpriteMaterial({
-      map: glowTex, color: 0xffffff, transparent: true, opacity: 0.22,
-      blending: THREE.AdditiveBlending, depthWrite: false,
-    }));
-    this.scene.add(this.ballGlow);
+
+    // 球正下方的接觸陰影：一片貼地的暗影。
+    // 檯面插畫很花，光靠陰影貼圖不足以讓小鋼珠浮現，
+    // 這片暗影提供穩定的對比，球滾到哪都看得見（是變暗，不是發光）。
+    {
+      const c = document.createElement('canvas');
+      c.width = c.height = 64;
+      const g2 = c.getContext('2d');
+      const gr = g2.createRadialGradient(32, 32, 0, 32, 32, 32);
+      gr.addColorStop(0, 'rgba(0,0,0,.75)');
+      gr.addColorStop(0.55, 'rgba(0,0,0,.35)');
+      gr.addColorStop(1, 'rgba(0,0,0,0)');
+      g2.fillStyle = gr; g2.fillRect(0, 0, 64, 64);
+      const tex = new THREE.CanvasTexture(c);
+      this.ballShadow = new THREE.Mesh(
+        new THREE.PlaneGeometry(r * 4.2, r * 4.2),
+        new THREE.MeshBasicMaterial({ map: tex, transparent: true, depthWrite: false, opacity: 0.85 })
+      );
+      this.ballShadow.rotation.x = -Math.PI / 2;
+      this.ballShadow.renderOrder = 3;
+      this.scene.add(this.ballShadow);
+    }
+
     this.trail = new Trail(this.scene, 0xffffff, TUNE);
   }
 
@@ -659,11 +708,9 @@ export class Game {
     this.spaceCharge = -1;
     this.saverT = 0; // 發射後才開始計
     this.stuckT = 0;
-    const col = new THREE.Color(h.color);
-    this.ballMesh.material.color.copy(col).lerp(new THREE.Color(0xffffff), 0.35);
-    this.ballMesh.material.emissive.copy(col);
-    this.ballGlow.material.color.copy(col);
-    this.trail.setColor(h.color);
+    // 球與軌跡都維持銀白色（鋼珠的殘影不該是彩色的）；
+    // 三顆球的區別只在 HUD 與上場提示顯示
+    this.trail.setColor(0xdfe8ff);
     this.trail.points.length = 0;
     this._toast(`${h.emoji} ${h.title}・${h.name} 上場！${first ? '' : ''}（${h.perk}）`, 2200);
     this._updateHUD();
@@ -677,6 +724,7 @@ export class Game {
     const saver = TUNE.battle.saverSec + (this.hero.perkType === 'saver' ? 6 : 0);
     this.saverT = saver;
     AudioSys.sfx('plungerLaunch');
+    this.launchFlash = 1;   // 發射瞬間跑馬燈整排閃一次
     this.particles.burst(this.ballBody.x, 0.2, this.ballBody.z, this.hero.color, 14, 5, 0.4);
     this._updateHUD();
   }
@@ -744,7 +792,8 @@ export class Game {
     this.launchHint.position.set(0, -h / 2 + 104, 0);
     this.meterBg.position.set(w / 2 - 24, -h * 0.1, 0);
     this.meterFill.position.set(w / 2 - 24, -h * 0.1 - 73, 0);
-    this.hudCombo.position.set(w / 2 - 70, h * 0.16, 0);
+    // Combo 移到右側偏下，避免和中央橫幅疊在一起
+    this.hudCombo.position.set(w / 2 - 62, h * 0.04, 0);
   }
 
   _updateHUD() {
@@ -765,9 +814,9 @@ export class Game {
     this.launchHint.visible = inLaunch;
     this.meterBg.visible = inLaunch;
     this.meterFill.visible = inLaunch;
-    if (this.combo >= 2) {
+    if (this.combo >= 3) {
       this.hudCombo.visible = true;
-      this.hudCombo.userData.setText(`${this.combo} COMBO`);
+      this.hudCombo.userData.setText(`${this.combo}\nCOMBO`);
     } else this.hudCombo.visible = false;
   }
 
@@ -788,8 +837,10 @@ export class Game {
   _addScore(base, x, z, { color = '#ffd75e', silentPopup = false } = {}) {
     const B = TUNE.battle;
     this.comboT = B.comboWindow;
-    this.combo++;
-    const pts = Math.round(base * (1 + this.combo * B.comboBonus) * this.multiplier);
+    this.combo = Math.min(99, this.combo + 1);   // 上限，避免異常時數字失控
+    // combo 加成設上限（最多 +100%），避免長 combo 讓分數失去比較意義
+    const comboMul = 1 + Math.min(1, this.combo * B.comboBonus);
+    const pts = Math.round(base * comboMul * this.multiplier);
     this.score += pts;
     if (!silentPopup) this.dmgTexts.spawn(x, z, `+${pts}`, { color, size: 26 });
     this._updateHUD();
@@ -1000,7 +1051,10 @@ export class Game {
       const events = this.world.step(dt);
       this._handleEvents(events);
       if (this.state === 'play') {
-        this.trail.push(this.ballBody.x, this.ballBody.z);
+        // 只有球夠快才留軌跡；慢速時節點會擠成一團亮斑，看起來像球黏著光點
+        const tsp = Math.hypot(this.ballBody.vx, this.ballBody.vz);
+        if (tsp > TUNE.fx.trailMinSpeed) this.trail.push(this.ballBody.x, this.ballBody.z);
+        else this.trail.fade();
         // 閘門：球進入主檯面後關閉發射軌
         if (!this.gate.active && this.ballBody.x < 2.0) this.gate.active = true;
         // 球保護倒數
@@ -1019,23 +1073,25 @@ export class Game {
           this.stuckT = 0;
           this._updateHUD();
         }
-        // 卡球偵測 → 微推（被吸球洞固定、或停在彈射板上等待瞄準時不算）
-        else if (!b.held && sp < 0.25 && b.z < 4.6) {
-          this.stuckT += dt;
-          if (this.stuckT > 2.5) {
-            b.vz += 2;
-            b.vx += (Math.random() - 0.5) * 1.5;
-            this.stuckT = 0;
+        // 滯留偵測：不看速度，看「這段時間實際移動了多少」。
+        // 球貼著彈射器或燈環邊緣打轉時速度不低，但位置幾乎不動，
+        // 只看速度會抓不到，就會一直卡在那裡刷分。
+        else if (!b.held) {
+          this.anchorT = (this.anchorT ?? 0) + dt;
+          if (this.anchorT >= 1.2) {
+            const moved = Math.hypot(b.x - (this.anchorX ?? b.x), b.z - (this.anchorZ ?? b.z));
+            if (moved < 0.85 && b.z < 5.2) {
+              // 朝檯面下方踢出去，避免又落回同一個機關
+              const away = Math.atan2(b.z - this.ringZ, b.x) + (Math.random() - 0.5) * 0.8;
+              const push = 7.5;
+              b.vx += Math.cos(away) * push;
+              b.vz += Math.abs(Math.sin(away)) * push * 0.6 + 2;
+              b.vy = 1.5;
+              this.particles.burst(b.x, 0.3, b.z, 0xffffff, 8, 4, 0.3);
+            }
+            this.anchorX = b.x; this.anchorZ = b.z; this.anchorT = 0;
           }
-        } else if (!b.held && sp < 0.25) {
-          // 其餘位置（含彈射板下方死角）長時間靜止的保險，避免任何形式的卡死
-          this.deadT = (this.deadT ?? 0) + dt;
-          if (this.deadT > 4) {
-            b.vz += 2.5;
-            b.vx += (Math.random() - 0.5) * 2;
-            this.deadT = 0;
-          }
-        } else { this.stuckT = 0; this.deadT = 0; }
+        } else { this.anchorT = 0; }
       }
     } else {
       this.trail.fade();
@@ -1055,13 +1111,16 @@ export class Game {
     // ---- 視覺同步 ----
     const b = this.ballBody;
     this.ballMesh.position.set(b.x, b.r + b.y, b.z);
+    // 接觸陰影貼地跟隨；球彈起時陰影變淡變大
+    if (this.ballShadow) {
+      const lift = Math.min(1, b.y / 0.6);
+      this.ballShadow.position.set(b.x, 0.012, b.z);
+      this.ballShadow.material.opacity = 0.85 * (1 - lift * 0.6);
+      this.ballShadow.scale.setScalar(1 + lift * 0.5);
+      this.ballShadow.visible = !b.onRamp;   // 球在高架軌道上時不投在檯面
+    }
     const sp = Math.hypot(b.vx, b.vz);
     this.ballMesh.rotation.x += sp * dt * 2;
-    this.ballGlow.position.set(b.x, b.r + b.y, b.z);
-    this.ballGlow.scale.setScalar(TUNE.fx.glowSize * b.r * (1 + Math.min(0.6, sp / 30)));
-    this.ballLight.position.set(b.x, 0.75, b.z);
-    this.ballLight.color.set(this.hero.color);
-    this.ballLight.intensity = TUNE.fx.lightIntensity * (this.state === 'play' ? 1.1 : 0.7);
     this.trail.update();
 
     const now = performance.now();
@@ -1222,7 +1281,26 @@ export class Game {
 
     // 彈簧視覺
     const pull = this.plunger?.k ?? (this.spaceCharge >= 0 ? this.spaceCharge : 0);
-    this.plungerPad.position.z = 6.28 + pull * 0.45;
+
+    // 發射軌跑馬燈：待發射時緩慢由下往上跑，拉彈簧時越拉越快，
+    // 發射瞬間整排閃一次，做出「準備出發」的節奏感
+    if (this.laneLights2) {
+      const N = 9;   // 每排的燈數（兩排共用同一組相位，左右同步跑）
+      const inLaunch = this.state === 'launch';
+      this.laneSeq = (this.laneSeq ?? 0) + dt * (inLaunch ? (2.2 + pull * 9) : 0.9);
+      const flash = Math.max(0, this.launchFlash ?? 0);
+      if (this.launchFlash > 0) this.launchFlash -= dt * 2.6;
+      for (const l of this.laneLights2) {
+        // 由下往上的行進波
+        const phase = (this.laneSeq - l.idx * 0.42) % N;
+        const wave = phase >= 0 && phase < 1.1 ? 1 - phase / 1.1 : 0;
+        const base = inLaunch ? 0.3 : 0.12;
+        l.lens.material.emissiveIntensity = base + wave * 2.6 + flash * 3;
+        l.lens.scale.setScalar(1 + wave * 0.45 + flash * 0.5);
+      }
+    }
+    // 拉的時候整組往後退（z 變大），放開瞬間回到貼球位置
+    this.plungerPad.position.z = 6.28 + pull * 0.5;
 
     // 橫幅 / toast 計時
     if (this.bannerT > 0) {
@@ -1426,11 +1504,7 @@ export class Game {
     if (this.baseCamPos) {
       this.camera.position.set(this.baseCamPos.x + off.x, this.baseCamPos.y + off.y, this.baseCamPos.z + off.x * 0.5);
     }
-    this.postfx.render((target) => {
-      this.renderer.setRenderTarget(target);
-      this.renderer.clear();
-      this.renderer.render(this.scene, this.camera);
-    });
+    this.postfx.renderScene(this.scene, this.camera, dt);
   }
 
   // ================= DEV 支援 =================

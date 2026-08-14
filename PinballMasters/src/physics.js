@@ -128,6 +128,7 @@ export class PinballWorld {
 
   step(dt) {
     this.events.length = 0;
+    this.time = (this.time ?? 0) + dt;   // 供碰撞事件冷卻用
     // 吸球洞冷卻：球射出後短時間內不再吸球，否則會在洞內被反覆吸住
     if (this.saucers) for (const s of this.saucers) if (s.cool > 0) s.cool -= dt;
     if (this.ramps) for (const r of this.ramps) if (r.cool > 0) r.cool -= dt;
@@ -192,10 +193,14 @@ export class PinballWorld {
       const inside = d2 < s.r * s.r;
       if (inside && !s.inside) {
         s.inside = true;
-        this.events.push({
-          type: 'sensor', kind: s.kind, ref: s, x: s.x, z: s.z,
-          speed: Math.hypot(b.vx, b.vz), dirX: b.vx, dirZ: b.vz,
-        });
+        // 冷卻：球在感應器邊緣抖動時不重複觸發
+        if (this.time - (s.lastHit ?? -99) >= 0.2) {
+          s.lastHit = this.time;
+          this.events.push({
+            type: 'sensor', kind: s.kind, ref: s, x: s.x, z: s.z,
+            speed: Math.hypot(b.vx, b.vz), dirX: b.vx, dirZ: b.vz,
+          });
+        }
       } else if (!inside && s.inside) {
         s.inside = false;
       }
@@ -246,14 +251,16 @@ export class PinballWorld {
         const e = s.e ?? P.wallRestitution;
         b.vx -= (1 + e) * vn * nx;
         b.vz -= (1 + e) * vn * nz;
+        const segGap = this.time - (s.lastHit ?? -99) >= 0.14;
         if (s.kind === 'sling' && -vn > 1.2) {
           // Slingshot 主動彈射
           const kick = this.tune.physics.slingKick;
           const cur = b.vx * nx + b.vz * nz;
           if (cur < kick) { b.vx += (kick - cur) * nx; b.vz += (kick - cur) * nz; }
           b.vy = Math.max(b.vy, 1.5);
-          this.events.push({ type: 'sling', ref: s.ref, impact: -vn, x: cx, z: cz });
-        } else if (-vn > 1.4) {
+          if (segGap) { s.lastHit = this.time; this.events.push({ type: 'sling', ref: s.ref, impact: -vn, x: cx, z: cz }); }
+        } else if (-vn > 1.4 && segGap) {
+          s.lastHit = this.time;
           this.events.push({ type: 'wall', kind: s.kind, ref: s.ref, impact: -vn, x: cx, z: cz });
         }
       }
@@ -285,7 +292,13 @@ export class PinballWorld {
           b.vx *= k; b.vz *= k;
           b.vy = Math.max(b.vy, 2.2);
         }
-        this.events.push({ type: 'circle', kind: c.kind, ref: c.ref, impact: -vn, speed, x: c.x, z: c.z });
+        // 計分事件需要冷卻與最小衝擊，否則球貼著物件低速滾動時
+        // 每個物理步都會觸發一次，造成 combo 與分數暴衝
+        const gap = c.hitGap ?? 0.14;
+        if (-vn >= (c.minImpact ?? 0.8) && this.time - (c.lastHit ?? -99) >= gap) {
+          c.lastHit = this.time;
+          this.events.push({ type: 'circle', kind: c.kind, ref: c.ref, impact: -vn, speed, x: c.x, z: c.z });
+        }
       }
     }
   }

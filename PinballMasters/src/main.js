@@ -399,11 +399,7 @@ function loop() {
     }
     menuBg.cam.position.x = Math.sin(menuBg.t * 0.12) * 0.6;
     menuBg.cam.lookAt(0, -1, -5);
-    postfx.render((target) => {
-      renderer.setRenderTarget(target);
-      renderer.clear();
-      renderer.render(menuBg.scene, menuBg.cam);
-    });
+    postfx.renderScene(menuBg.scene, menuBg.cam, dt);
   }
   renderer.setRenderTarget(null);
   ui.render();

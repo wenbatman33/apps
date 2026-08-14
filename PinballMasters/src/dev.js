@@ -43,11 +43,15 @@ const SCHEMA = [
   { key: 'battle.chipDmgBase',   label: '平時傷害底', min: 0,   max: 100,  step: 2 },
   { key: 'battle.comboBonus',    label: 'Combo加成',  min: 0,   max: 0.2,  step: 0.005 },
   { sec: '🌟 後製（輝光 / 色調）' },
-  { key: 'post.bloomStrength', label: '輝光強度', min: 0,   max: 2.5, step: 0.05, post: 'bloomStrength' },
-  { key: 'post.threshold',     label: '輝光門檻', min: 0.1, max: 1.5, step: 0.02, post: 'threshold' },
+  { key: 'post.strength',      label: '輝光強度', min: 0,   max: 2.5, step: 0.05, post: 'strength' },
+  { key: 'post.threshold',     label: '輝光門檻', min: 0,   max: 1.5, step: 0.02, post: 'threshold' },
+  { key: 'post.radius',        label: '輝光範圍', min: 0,   max: 1.5, step: 0.05, post: 'radius' },
   { key: 'post.exposure',      label: '曝光',     min: 0.4, max: 2.2, step: 0.05, post: 'exposure' },
   { key: 'post.vignette',      label: '暗角',     min: 0,   max: 1.2, step: 0.05, post: 'vignette' },
   { key: 'post.chroma',        label: '色差',     min: 0,   max: 0.03, step: 0.001, post: 'chroma' },
+  { key: 'post.ssao',          label: 'SSAO 開關', min: 0,  max: 1,   step: 1,    post: 'ssao' },
+  { key: 'post.ssaoRadius',    label: 'SSAO 範圍', min: 0.02, max: 1, step: 0.02, post: 'ssaoRadius' },
+  { key: 'post.ssaoIntensity', label: 'SSAO 強度', min: 0.1, max: 2,  step: 0.05, post: 'ssaoIntensity' },
 ];
 
 export function setupDevTool(getGame, postfx) {
