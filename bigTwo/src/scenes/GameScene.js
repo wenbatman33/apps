@@ -294,6 +294,8 @@
 
       g.on('start', () => {
         window.SFX.play('sfx_deal');
+        // 洗牌後接一聲攤牌，配合手牌展開動畫
+        this.time.delayedCall(420, () => window.SFX.play('sfx_fan'));
         this.renderHand(true);
         this.updateCounts();
       });
@@ -538,7 +540,10 @@
 
       // 胜负音效；净赚再补一个金币声
       window.SFX.play(winner === 0 ? 'sfx_win' : 'sfx_lose');
-      if (net > 0) this.time.delayedCall(260, () => window.SFX.play('sfx_coin'));
+      if (net > 0) {
+        this.time.delayedCall(260, () => window.SFX.play('sfx_coin'));
+        this.time.delayedCall(520, () => window.SFX.play('sfx_chips'));
+      }
 
       const overlay = this.add.container(0, 0).setDepth(1000);
       const bg = this.add.graphics();
