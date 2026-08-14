@@ -7,16 +7,24 @@
 
   // 各音效音量（牌/選取較輕、勝負較滿）
   const VOL = {
-    sfx_deal: 0.5,
-    sfx_play: 0.6,
-    sfx_select: 0.35,
-    sfx_button: 0.45,
-    sfx_pass: 0.5,
+    sfx_deal: 0.55,
+    sfx_play: 0.7,
+    sfx_play2: 0.7,
+    sfx_play3: 0.7,
+    sfx_select: 0.45,
+    sfx_button: 0.5,
+    sfx_pass: 0.55,
     sfx_turn: 0.4,
     sfx_win: 0.6,
     sfx_lose: 0.55,
     sfx_finish: 0.7,
-    sfx_coin: 0.5
+    sfx_coin: 0.6,
+    sfx_chips: 0.6
+  };
+
+  // 同一動作的變化池：播放時隨機挑一個，聽起來不死板
+  const POOL = {
+    sfx_play: ['sfx_play', 'sfx_play2', 'sfx_play3']
   };
 
   let muted = window.localStorage.getItem('ddz_muted') === '1';
@@ -29,6 +37,9 @@
     if (muted) return;
     const sm = manager();
     if (!sm) return;
+    // 有變化池就隨機挑一個
+    const pool = POOL[key];
+    if (pool) key = pool[Math.floor(Math.random() * pool.length)];
     // 音檔還沒載入好就略過，不報錯
     if (!window.gameInstance.cache.audio.exists(key)) return;
     const vol = ((opts && opts.volume != null) ? opts.volume : (VOL[key] != null ? VOL[key] : 0.5)) * MASTER;

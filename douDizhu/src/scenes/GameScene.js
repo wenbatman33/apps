@@ -967,6 +967,10 @@
       const L = this.L, T = window.THEME;
       if (this.timerEvent) this.timerEvent.remove();
       window.SFX.play('sfx_finish');
+      // 整場有賺就補一段收籌碼聲
+      if (this.session.netTotal() > 0) {
+        this.time.delayedCall(400, () => window.SFX.play('sfx_chips'));
+      }
 
       // 立即收起牌桌与可能还在的单局 overlay，确保结算画面干净（不依赖 tween）
       [this.handLayer, this.playLayer, this.seatLayer, this.hudLayer].forEach(layer => {

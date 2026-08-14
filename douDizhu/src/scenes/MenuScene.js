@@ -68,8 +68,8 @@
       }).setOrigin(0.5).setInteractive({ useHandCursor: true });
       rules.on('pointerdown', () => { window.SFX.play('sfx_button'); this.scene.start('Rules'); });
 
-      // 音效来源标注（小森平免费音效，使用需附来源）
-      this.add.text(L.width / 2, 1290, '音效：小森平 taira-komori.net', {
+      // 音效来源标注（小森平需附来源；Kenney casino-audio 为 CC0）
+      this.add.text(L.width / 2, 1290, '音效：Kenney.nl · 小森平 taira-komori.net', {
         fontFamily: 'system-ui, sans-serif', fontSize: '18px', color: '#4b5563'
       }).setOrigin(0.5);
 
