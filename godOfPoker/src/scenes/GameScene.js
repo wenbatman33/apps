@@ -779,7 +779,7 @@ class GameScene extends Phaser.Scene {
       });
       s.handName.setText(r.name);
     }
-    Sound.flip();
+    Sound.fan();
   }
 
   _showPayout(e) {
@@ -833,6 +833,7 @@ class GameScene extends Phaser.Scene {
         ease: 'Cubic.in',
         onStart: () => { if (i % 3 === 0) Sound.chip(); },
         onComplete: () => {
+          if (i % 3 === 1) Sound.collide(); // 籌碼落地碰撞聲
           this.tweens.add({ targets: c, alpha: 0, duration: 140, onComplete: () => c.destroy() });
         },
       });
