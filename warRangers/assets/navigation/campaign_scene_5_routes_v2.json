@@ -1,0 +1,449 @@
+{
+  "version": 2,
+  "scene": 5,
+  "size": [
+    720,
+    1280
+  ],
+  "roadWidth": 40,
+  "nodes": {
+    "enemy": {
+      "x": 360,
+      "y": 85
+    },
+    "upperLeft": {
+      "x": 130,
+      "y": 200
+    },
+    "upperRight": {
+      "x": 590,
+      "y": 200
+    },
+    "midLeft": {
+      "x": 95,
+      "y": 375
+    },
+    "centerHigh": {
+      "x": 360,
+      "y": 295
+    },
+    "midRight": {
+      "x": 625,
+      "y": 375
+    },
+    "centerLow": {
+      "x": 360,
+      "y": 760
+    },
+    "lowerLeft": {
+      "x": 130,
+      "y": 905
+    },
+    "lowerRight": {
+      "x": 590,
+      "y": 905
+    },
+    "player": {
+      "x": 360,
+      "y": 1110
+    }
+  },
+  "routes": [
+    {
+      "id": "enemy-upperLeft",
+      "points": [
+        {
+          "x": 360,
+          "y": 85
+        },
+        {
+          "x": 286,
+          "y": 156
+        },
+        {
+          "x": 201,
+          "y": 191
+        },
+        {
+          "x": 130,
+          "y": 200
+        }
+      ],
+      "from": "enemy",
+      "to": "upperLeft"
+    },
+    {
+      "id": "enemy-upperRight",
+      "points": [
+        {
+          "x": 360,
+          "y": 85
+        },
+        {
+          "x": 442,
+          "y": 159
+        },
+        {
+          "x": 513,
+          "y": 187
+        },
+        {
+          "x": 590,
+          "y": 200
+        }
+      ],
+      "from": "enemy",
+      "to": "upperRight"
+    },
+    {
+      "id": "enemy-centerHigh",
+      "points": [
+        {
+          "x": 360,
+          "y": 85
+        },
+        {
+          "x": 360,
+          "y": 190
+        },
+        {
+          "x": 360,
+          "y": 295
+        }
+      ],
+      "from": "enemy",
+      "to": "centerHigh"
+    },
+    {
+      "id": "upperLeft-midLeft",
+      "points": [
+        {
+          "x": 130,
+          "y": 200
+        },
+        {
+          "x": 119,
+          "y": 289
+        },
+        {
+          "x": 95,
+          "y": 375
+        }
+      ],
+      "from": "upperLeft",
+      "to": "midLeft"
+    },
+    {
+      "id": "upperLeft-centerHigh",
+      "points": [
+        {
+          "x": 130,
+          "y": 200
+        },
+        {
+          "x": 223,
+          "y": 242
+        },
+        {
+          "x": 297,
+          "y": 276
+        },
+        {
+          "x": 360,
+          "y": 295
+        }
+      ],
+      "from": "upperLeft",
+      "to": "centerHigh"
+    },
+    {
+      "id": "upperRight-midRight",
+      "points": [
+        {
+          "x": 590,
+          "y": 200
+        },
+        {
+          "x": 592,
+          "y": 287
+        },
+        {
+          "x": 625,
+          "y": 375
+        }
+      ],
+      "from": "upperRight",
+      "to": "midRight"
+    },
+    {
+      "id": "upperRight-centerHigh",
+      "points": [
+        {
+          "x": 590,
+          "y": 200
+        },
+        {
+          "x": 499,
+          "y": 237
+        },
+        {
+          "x": 429,
+          "y": 271
+        },
+        {
+          "x": 360,
+          "y": 295
+        }
+      ],
+      "from": "upperRight",
+      "to": "centerHigh"
+    },
+    {
+      "id": "midLeft-centerHigh",
+      "points": [
+        {
+          "x": 95,
+          "y": 375
+        },
+        {
+          "x": 175,
+          "y": 361
+        },
+        {
+          "x": 276,
+          "y": 316
+        },
+        {
+          "x": 360,
+          "y": 295
+        }
+      ],
+      "from": "midLeft",
+      "to": "centerHigh"
+    },
+    {
+      "id": "midRight-centerHigh",
+      "points": [
+        {
+          "x": 625,
+          "y": 375
+        },
+        {
+          "x": 558,
+          "y": 371
+        },
+        {
+          "x": 453,
+          "y": 319
+        },
+        {
+          "x": 360,
+          "y": 295
+        }
+      ],
+      "from": "midRight",
+      "to": "centerHigh"
+    },
+    {
+      "id": "centerHigh-centerLow",
+      "points": [
+        {
+          "x": 360,
+          "y": 295
+        },
+        {
+          "x": 360,
+          "y": 430
+        },
+        {
+          "x": 360,
+          "y": 575
+        },
+        {
+          "x": 360,
+          "y": 760
+        }
+      ],
+      "from": "centerHigh",
+      "to": "centerLow"
+    },
+    {
+      "id": "midLeft-lowerLeft",
+      "from": "midLeft",
+      "to": "lowerLeft",
+      "points": [
+        {
+          "x": 95,
+          "y": 375
+        },
+        {
+          "x": 97,
+          "y": 501
+        },
+        {
+          "x": 130,
+          "y": 582
+        },
+        {
+          "x": 122,
+          "y": 720
+        },
+        {
+          "x": 89,
+          "y": 824
+        },
+        {
+          "x": 130,
+          "y": 905
+        }
+      ]
+    },
+    {
+      "id": "midRight-lowerRight",
+      "from": "midRight",
+      "to": "lowerRight",
+      "points": [
+        {
+          "x": 625,
+          "y": 375
+        },
+        {
+          "x": 615,
+          "y": 502
+        },
+        {
+          "x": 585,
+          "y": 579
+        },
+        {
+          "x": 586,
+          "y": 706
+        },
+        {
+          "x": 624,
+          "y": 812
+        },
+        {
+          "x": 590,
+          "y": 905
+        }
+      ]
+    },
+    {
+      "id": "centerLow-lowerLeft",
+      "points": [
+        {
+          "x": 360,
+          "y": 760
+        },
+        {
+          "x": 280,
+          "y": 815
+        },
+        {
+          "x": 200,
+          "y": 870
+        },
+        {
+          "x": 130,
+          "y": 905
+        }
+      ],
+      "from": "centerLow",
+      "to": "lowerLeft"
+    },
+    {
+      "id": "centerLow-lowerRight",
+      "points": [
+        {
+          "x": 360,
+          "y": 760
+        },
+        {
+          "x": 440,
+          "y": 815
+        },
+        {
+          "x": 520,
+          "y": 870
+        },
+        {
+          "x": 590,
+          "y": 905
+        }
+      ],
+      "from": "centerLow",
+      "to": "lowerRight"
+    },
+    {
+      "id": "centerLow-player",
+      "points": [
+        {
+          "x": 360,
+          "y": 760
+        },
+        {
+          "x": 360,
+          "y": 900
+        },
+        {
+          "x": 360,
+          "y": 1010
+        },
+        {
+          "x": 360,
+          "y": 1110
+        }
+      ],
+      "from": "centerLow",
+      "to": "player"
+    },
+    {
+      "id": "lowerLeft-player",
+      "points": [
+        {
+          "x": 130,
+          "y": 905
+        },
+        {
+          "x": 200,
+          "y": 960
+        },
+        {
+          "x": 280,
+          "y": 1035
+        },
+        {
+          "x": 360,
+          "y": 1110
+        }
+      ],
+      "from": "lowerLeft",
+      "to": "player"
+    },
+    {
+      "id": "lowerRight-player",
+      "points": [
+        {
+          "x": 590,
+          "y": 905
+        },
+        {
+          "x": 520,
+          "y": 960
+        },
+        {
+          "x": 440,
+          "y": 1035
+        },
+        {
+          "x": 360,
+          "y": 1110
+        }
+      ],
+      "from": "lowerRight",
+      "to": "player"
+    }
+  ],
+  "river": "horizontal-three-bridges"
+}

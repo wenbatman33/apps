@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <script>if(location.protocol==='file:')location.replace(`http://localhost:8123/editor.html${location.search}`)</script>
+  <title>戰場路線編輯器</title>
+  <style>
+    *{box-sizing:border-box}html,body{margin:0;min-height:100%;background:#0c1114;color:#f7f3e8;font-family:-apple-system,BlinkMacSystemFont,"PingFang TC",sans-serif}
+    body{display:grid;grid-template-columns:minmax(360px,720px) minmax(320px,1fr);gap:18px;justify-content:center;padding:18px}
+    #stage{position:relative;width:100%;max-width:720px;aspect-ratio:9/16;background:#071a2d;box-shadow:0 18px 60px #000b;overflow:hidden;border-radius:10px}
+    #map{position:absolute;inset:0;width:100%;height:100%;user-select:none;-webkit-user-drag:none}
+    #overlay{position:absolute;inset:0;touch-action:none}
+    .route-segment{position:absolute;height:4px;background:#dff8ff;border:1px solid #008fd6;border-radius:99px;transform-origin:0 50%;cursor:pointer;filter:drop-shadow(0 0 1px #fff)}
+    .route-segment.selected{height:6px;background:#ffe064;border-color:#ff9f16;z-index:3}
+    .handle{position:absolute;width:16px;height:16px;margin:-8px;border:3px solid #007fc7;border-radius:50%;background:#fff;cursor:grab;z-index:5}
+    .handle.endpoint{background:#ffbd21}.handle.selected{width:20px;height:20px;margin:-10px;background:#ff5438;border-color:white}
+    .map-node{position:absolute;width:24px;height:24px;margin:-12px;border:4px solid #087fc3;border-radius:50%;background:#ffb51b;cursor:grab;z-index:8;box-shadow:0 0 0 3px #fff,0 2px 8px #000a}
+    .map-node.connect-selected{background:#ff4e3d;border-color:#fff;box-shadow:0 0 0 5px #ffb51b,0 2px 12px #000}
+    .map-node::after{content:attr(data-label);position:absolute;left:15px;top:-18px;white-space:nowrap;padding:2px 5px;border-radius:4px;background:#08131dda;color:#fff;font-size:10px;pointer-events:none}
+    aside{max-width:470px;background:#182125;border:1px solid #324147;border-radius:12px;padding:16px;height:max-content;position:sticky;top:18px}
+    h1{font-size:24px;margin:0 0 8px}p{color:#b9c5c7;line-height:1.55;margin:0 0 12px}
+    label{display:block;margin:12px 0 5px;color:#a9b6b8;font-size:13px}select,button,textarea{width:100%;font:inherit;border-radius:8px;border:1px solid #53676d;background:#0d1519;color:white;padding:10px}
+    button{cursor:pointer;background:#176f9a;font-weight:700}button.secondary{background:#39484d}button.danger{background:#983c38}button.active{background:#ff8b19;color:#1e1000;border-color:#fff1b3;box-shadow:0 0 16px #ff9911aa}#save{background:#ffd21c;color:#211500;border:3px solid #fff3a1;font-size:18px;font-weight:900;box-shadow:0 0 0 2px #bf6b00,0 0 22px #ffd21caa;min-height:52px}.row{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px}
+    #status{margin-top:12px;padding:10px;background:#0d1519;border-radius:8px;color:#e8ca67;min-height:42px}textarea{height:180px;font-family:ui-monospace,monospace;font-size:11px;resize:vertical}
+    kbd{background:#344248;padding:2px 5px;border-radius:4px;color:white}
+    @media(max-width:900px){body{grid-template-columns:1fr;padding:8px}aside{position:static;max-width:none}}
+  </style>
+</head>
+<body>
+  <section id="stage"><img id="map" alt="戰場地圖"><div id="overlay"></div></section>
+  <aside>
+    <h1>戰場路線編輯器</h1>
+    <p>「線上增加控制點」只讓同一條路更貼合道路，不會增加路線。只有「新增支線」才會建立另一條路。</p>
+    <label for="scene">場景</label><select id="scene"></select>
+    <label for="route">路線</label><select id="route"></select>
+    <div class="row"><button id="prev">上一條</button><button id="next">下一條</button></div>
+    <div class="row"><button id="addNode">線上增加控制點</button><button id="connectNodes">新增支線</button></div>
+    <div class="row"><button id="cancelMode" class="secondary">取消新增／連接</button><button id="deleteRoute" class="danger">刪除目前路線</button></div>
+    <div class="row"><button id="undo" class="secondary">復原</button><button id="reset" class="danger">重設本關</button></div>
+    <div class="row"><button id="save">儲存到專案</button><button id="download">下載 JSON 備份</button></div>
+    <button id="preview" style="margin-top:8px">用目前路線開啟士兵試走</button>
+    <div id="status"></div>
+    <label for="json">目前場景 JSON</label><textarea id="json" spellcheck="false"></textarea>
+    <button id="apply" class="secondary">套用上方 JSON</button>
+  </aside>
+  <script src="src/level1Navigation.js?v=1"></script>
+  <script src="src/campaignNavigation.js?v=4"></script>
+  <script src="src/routeEditor.js?v=7"></script>
+</body>
+</html>

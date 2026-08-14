@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+  <title>三國爭鋒</title>
+  <style>
+    html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#061421}
+    #game{position:relative;width:100%;height:100%}
+    canvas{display:block;touch-action:none}
+    #boot-error{position:fixed;inset:0;display:none;place-content:center;padding:32px;
+      font:16px/1.7 system-ui,"PingFang TC","Microsoft JhengHei",sans-serif;color:#ffd2d2;background:#061421}
+  </style>
+</head>
+<body>
+  <div id="game"></div>
+  <div id="boot-error"></div>
+  <script src="vendor/phaser.min.js?v=1786669932"></script>
+  <!-- 順序有意義：state.js 在載入當下就取用 Heroes / Tactics，必須排在它們之後。 -->
+  <script src="src/core/mapData.js?v=1786669932"></script>
+  <script src="src/core/heroes.js?v=1786669932"></script>
+  <script src="src/core/tactics.js?v=1786669932"></script>
+  <script src="src/core/state.js?v=1786669932"></script>
+  <script src="src/core/ai.js?v=1786669932"></script>
+  <script src="src/view/layout.js?v=1786669932"></script>
+  <script src="src/view/game.js?v=1786669932"></script>
+  <script>
+    /* 直接用 file:// 開會被瀏覽器的 fetch 同源政策擋住地圖 JSON，明講怎麼辦而不是給白畫面。 */
+    if(location.protocol==='file:'){
+      const box=document.getElementById('boot-error');
+      box.style.display='grid';
+      box.textContent='請用本機伺服器開啟：在專案資料夾執行 python3 -m http.server 8123，然後開 http://localhost:8123/index.html';
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+  <script>if(location.protocol==='file:')location.replace(`http://localhost:8123/index.html${location.search}`)</script>
+  <title>三國爭鋒</title>
+  <style>
+    html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#071a2d}
+    body::before{content:"";position:fixed;inset:-30px;background:url("assets/backgrounds/arena_v3.png") center/cover;filter:blur(24px) brightness(.45);opacity:.9}
+    #game{position:relative;width:100%;height:100%}
+    canvas{display:block;touch-action:none;box-shadow:0 0 48px #061d18}
+  </style>
+</head>
+<body>
+  <div id="game"></div>
+  <script src="vendor/phaser.min.js"></script>
+  <script src="src/combatRules.js?v=6"></script>
+  <script src="src/campaignRules.js?v=17"></script>
+  <script src="src/levelLayouts.js?v=3"></script>
+  <script src="src/config.js?v=7"></script>
+  <script src="src/assets.js?v=20"></script>
+  <script src="src/level1Navigation.js?v=1"></script>
+  <script src="src/campaignNavigation.js?v=4"></script>
+  <script src="src/battle.js?v=55"></script>
+  <script src="src/layoutPreview.js?v=14"></script>
+  <script src="src/main.js?v=12"></script>
+</body>
+</html>

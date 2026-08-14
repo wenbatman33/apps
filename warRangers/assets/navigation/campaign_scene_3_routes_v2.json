@@ -1,0 +1,345 @@
+{
+  "version": 2,
+  "scene": 3,
+  "size": [
+    720,
+    1280
+  ],
+  "roadWidth": 40,
+  "nodes": {
+    "enemy": {
+      "x": 360,
+      "y": 80
+    },
+    "upperLeft": {
+      "x": 130,
+      "y": 245
+    },
+    "upperMid": {
+      "x": 360,
+      "y": 300
+    },
+    "upperRight": {
+      "x": 590,
+      "y": 245
+    },
+    "midLeft": {
+      "x": 225,
+      "y": 540
+    },
+    "midRight": {
+      "x": 500,
+      "y": 540
+    },
+    "lowerLeft": {
+      "x": 220,
+      "y": 905
+    },
+    "lowerRight": {
+      "x": 500,
+      "y": 905
+    },
+    "player": {
+      "x": 360,
+      "y": 1165
+    }
+  },
+  "routes": [
+    {
+      "id": "enemy-upperLeft",
+      "points": [
+        {
+          "x": 360,
+          "y": 80
+        },
+        {
+          "x": 293,
+          "y": 143
+        },
+        {
+          "x": 223,
+          "y": 199
+        },
+        {
+          "x": 133,
+          "y": 260
+        }
+      ],
+      "from": "enemy",
+      "to": "upperLeft"
+    },
+    {
+      "id": "enemy-upperMid",
+      "points": [
+        {
+          "x": 360,
+          "y": 80
+        },
+        {
+          "x": 360,
+          "y": 180
+        },
+        {
+          "x": 360,
+          "y": 300
+        }
+      ],
+      "from": "enemy",
+      "to": "upperMid"
+    },
+    {
+      "id": "enemy-upperRight",
+      "points": [
+        {
+          "x": 360,
+          "y": 80
+        },
+        {
+          "x": 437,
+          "y": 148
+        },
+        {
+          "x": 510,
+          "y": 206
+        },
+        {
+          "x": 583,
+          "y": 260
+        }
+      ],
+      "from": "enemy",
+      "to": "upperRight"
+    },
+    {
+      "id": "upperLeft-upperMid",
+      "points": [
+        {
+          "x": 132,
+          "y": 260
+        },
+        {
+          "x": 219,
+          "y": 277
+        },
+        {
+          "x": 304,
+          "y": 293
+        },
+        {
+          "x": 360,
+          "y": 300
+        }
+      ],
+      "from": "upperLeft",
+      "to": "upperMid"
+    },
+    {
+      "id": "upperLeft-midLeft",
+      "points": [
+        {
+          "x": 131,
+          "y": 265
+        },
+        {
+          "x": 133,
+          "y": 404
+        },
+        {
+          "x": 146,
+          "y": 496
+        },
+        {
+          "x": 208,
+          "y": 550
+        }
+      ],
+      "from": "upperLeft",
+      "to": "midLeft"
+    },
+    {
+      "id": "upperMid-midLeft",
+      "points": [
+        {
+          "x": 360,
+          "y": 300
+        },
+        {
+          "x": 357,
+          "y": 438
+        },
+        {
+          "x": 292,
+          "y": 499
+        },
+        {
+          "x": 216,
+          "y": 552
+        }
+      ],
+      "from": "upperMid",
+      "to": "midLeft"
+    },
+    {
+      "id": "upperMid-midRight",
+      "points": [
+        {
+          "x": 360,
+          "y": 300
+        },
+        {
+          "x": 358,
+          "y": 442
+        },
+        {
+          "x": 435,
+          "y": 505
+        },
+        {
+          "x": 514,
+          "y": 553
+        }
+      ],
+      "from": "upperMid",
+      "to": "midRight"
+    },
+    {
+      "id": "upperRight-midRight",
+      "points": [
+        {
+          "x": 586,
+          "y": 266
+        },
+        {
+          "x": 585,
+          "y": 382
+        },
+        {
+          "x": 579,
+          "y": 486
+        },
+        {
+          "x": 514,
+          "y": 555
+        }
+      ],
+      "from": "upperRight",
+      "to": "midRight"
+    },
+    {
+      "id": "midLeft-lowerLeft",
+      "points": [
+        {
+          "x": 211,
+          "y": 554
+        },
+        {
+          "x": 208,
+          "y": 676
+        },
+        {
+          "x": 205,
+          "y": 806
+        },
+        {
+          "x": 210,
+          "y": 907
+        }
+      ],
+      "from": "midLeft",
+      "to": "lowerLeft"
+    },
+    {
+      "id": "midRight-lowerRight",
+      "points": [
+        {
+          "x": 513,
+          "y": 555
+        },
+        {
+          "x": 516,
+          "y": 672
+        },
+        {
+          "x": 516,
+          "y": 805
+        },
+        {
+          "x": 514,
+          "y": 907
+        }
+      ],
+      "from": "midRight",
+      "to": "lowerRight"
+    },
+    {
+      "id": "lowerLeft-lowerRight",
+      "points": [
+        {
+          "x": 211,
+          "y": 910
+        },
+        {
+          "x": 311,
+          "y": 916
+        },
+        {
+          "x": 422,
+          "y": 917
+        },
+        {
+          "x": 509,
+          "y": 908
+        }
+      ],
+      "from": "lowerLeft",
+      "to": "lowerRight"
+    },
+    {
+      "id": "lowerLeft-player",
+      "points": [
+        {
+          "x": 211,
+          "y": 911
+        },
+        {
+          "x": 241,
+          "y": 1010
+        },
+        {
+          "x": 287,
+          "y": 1083
+        },
+        {
+          "x": 361,
+          "y": 1153
+        }
+      ],
+      "from": "lowerLeft",
+      "to": "player"
+    },
+    {
+      "id": "lowerRight-player",
+      "points": [
+        {
+          "x": 509,
+          "y": 908
+        },
+        {
+          "x": 483,
+          "y": 1015
+        },
+        {
+          "x": 424,
+          "y": 1093
+        },
+        {
+          "x": 362,
+          "y": 1154
+        }
+      ],
+      "from": "lowerRight",
+      "to": "player"
+    }
+  ],
+  "river": "horizontal-two-bridges"
+}

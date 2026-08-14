@@ -1,0 +1,7 @@
+# 舊版程式碼的本機快照備份，不進版控（legacy/ 才是正式封存）
+_backup/
+# 生圖與伺服器的暫存輸出
+scripts/*.out
+scripts/*.log
+scripts/__pycache__/
+.DS_Store

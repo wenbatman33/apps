@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>五關道路拓撲驗證</title>
+  <style>
+    *{box-sizing:border-box}html,body{margin:0;min-height:100%;background:#101416;color:#f5f0e6;font-family:-apple-system,BlinkMacSystemFont,"PingFang TC",sans-serif}
+    main{width:min(1500px,100%);margin:auto;padding:22px}
+    h1{margin:0 0 6px;font-size:28px}p{margin:0 0 20px;color:#bdc7c5}
+    .grid{display:grid;grid-template-columns:repeat(5,minmax(210px,1fr));gap:16px;align-items:start}
+    article{background:#1c2325;border:1px solid #3b4949;border-radius:14px;overflow:hidden;box-shadow:0 12px 32px #0008}
+    h2{font-size:17px;margin:0;padding:11px 13px;background:#243033}
+    .map{position:relative;aspect-ratio:9/16;background:#071a2d}
+    .map img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+    .map img:last-child{z-index:2}
+    .links{display:flex;gap:8px;padding:10px}
+    a{flex:1;text-align:center;color:white;background:#147eb3;text-decoration:none;border-radius:8px;padding:8px;font-size:13px}
+    @media(max-width:1050px){.grid{grid-template-columns:repeat(2,1fr)}}
+    @media(max-width:560px){main{padding:10px}.grid{grid-template-columns:1fr}}
+  </style>
+</head>
+<body>
+<main>
+  <h1>五關道路拓撲驗證</h1>
+  <p>藍白線就是士兵實際移動中心線；五張地圖各自使用獨立節點與路網。</p>
+  <section class="grid">
+    <article><h2>1｜荊州三渡</h2><div class="map"><img src="assets/backgrounds/campaign/jingzhou_level1_master_v1.png"><img src="assets/navigation/jingzhou_level1_route_overlay_v1.png"></div><div class="links"><a href="index.html?scene=1&v=10">純地圖</a><a href="index.html?scene=1&routes=1&v=10">動態驗證</a></div></article>
+    <article><h2>2｜秋谷斜河</h2><div class="map"><img src="assets/backgrounds/campaign/campaign_scene_2_master_v1.png"><img src="assets/navigation/campaign_scene_2_route_overlay_v2.png"></div><div class="links"><a href="index.html?scene=2&v=10">純地圖</a><a href="index.html?scene=2&routes=1&v=10">動態驗證</a></div></article>
+    <article><h2>3｜雪山雙門</h2><div class="map"><img src="assets/backgrounds/campaign/campaign_scene_3_master_v1.png"><img src="assets/navigation/campaign_scene_3_route_overlay_v2.png"></div><div class="links"><a href="index.html?scene=3&v=10">純地圖</a><a href="index.html?scene=3&routes=1&v=10">動態驗證</a></div></article>
+    <article><h2>4｜竹澤島鏈</h2><div class="map"><img src="assets/backgrounds/campaign/campaign_scene_4_master_v1.png"><img src="assets/navigation/campaign_scene_4_route_overlay_v2.png"></div><div class="links"><a href="index.html?scene=4&v=10">純地圖</a><a href="index.html?scene=4&routes=1&v=10">動態驗證</a></div></article>
+    <article><h2>5｜赤壁包圍網</h2><div class="map"><img src="assets/backgrounds/campaign/campaign_scene_5_master_v1.png"><img src="assets/navigation/campaign_scene_5_route_overlay_v2.png"></div><div class="links"><a href="index.html?scene=5&v=10">純地圖</a><a href="index.html?scene=5&routes=1&v=10">動態驗證</a></div></article>
+  </section>
+</main>
+</body>
+</html>

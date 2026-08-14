@@ -1,0 +1,323 @@
+{
+  "version": 2,
+  "scene": 2,
+  "size": [
+    720,
+    1280
+  ],
+  "roadWidth": 40,
+  "nodes": {
+    "enemy": {
+      "x": 540,
+      "y": 95
+    },
+    "upperLeft": {
+      "x": 120,
+      "y": 230
+    },
+    "upperMid": {
+      "x": 340,
+      "y": 260
+    },
+    "upperRight": {
+      "x": 650,
+      "y": 345
+    },
+    "midLeft": {
+      "x": 165,
+      "y": 455
+    },
+    "center": {
+      "x": 500,
+      "y": 545
+    },
+    "lowerLeft": {
+      "x": 175,
+      "y": 745
+    },
+    "lowerRight": {
+      "x": 525,
+      "y": 1015
+    },
+    "player": {
+      "x": 205,
+      "y": 1160
+    }
+  },
+  "routes": [
+    {
+      "id": "enemy-upperMid",
+      "points": [
+        {
+          "x": 498,
+          "y": 100
+        },
+        {
+          "x": 481,
+          "y": 151
+        },
+        {
+          "x": 417,
+          "y": 210
+        },
+        {
+          "x": 340,
+          "y": 260
+        }
+      ],
+      "from": "enemy",
+      "to": "upperMid"
+    },
+    {
+      "id": "enemy-upperRight",
+      "points": [
+        {
+          "x": 499,
+          "y": 100
+        },
+        {
+          "x": 532,
+          "y": 192
+        },
+        {
+          "x": 589,
+          "y": 283
+        },
+        {
+          "x": 653,
+          "y": 331
+        }
+      ],
+      "from": "enemy",
+      "to": "upperRight"
+    },
+    {
+      "id": "upperMid-upperLeft",
+      "points": [
+        {
+          "x": 340,
+          "y": 260
+        },
+        {
+          "x": 260,
+          "y": 235
+        },
+        {
+          "x": 200,
+          "y": 228
+        },
+        {
+          "x": 127,
+          "y": 219
+        }
+      ],
+      "from": "upperMid",
+      "to": "upperLeft"
+    },
+    {
+      "id": "upperLeft-midLeft",
+      "points": [
+        {
+          "x": 126,
+          "y": 223
+        },
+        {
+          "x": 123,
+          "y": 319
+        },
+        {
+          "x": 141,
+          "y": 392
+        },
+        {
+          "x": 165,
+          "y": 450
+        }
+      ],
+      "from": "upperLeft",
+      "to": "midLeft"
+    },
+    {
+      "id": "upperMid-center",
+      "points": [
+        {
+          "x": 340,
+          "y": 260
+        },
+        {
+          "x": 386,
+          "y": 340
+        },
+        {
+          "x": 472,
+          "y": 444
+        },
+        {
+          "x": 505,
+          "y": 534
+        }
+      ],
+      "from": "upperMid",
+      "to": "center"
+    },
+    {
+      "id": "upperRight-center",
+      "points": [
+        {
+          "x": 652,
+          "y": 334
+        },
+        {
+          "x": 640,
+          "y": 420
+        },
+        {
+          "x": 583,
+          "y": 493
+        },
+        {
+          "x": 500,
+          "y": 545
+        }
+      ],
+      "from": "upperRight",
+      "to": "center"
+    },
+    {
+      "id": "midLeft-center",
+      "points": [
+        {
+          "x": 165,
+          "y": 455
+        },
+        {
+          "x": 246,
+          "y": 509
+        },
+        {
+          "x": 326,
+          "y": 541
+        },
+        {
+          "x": 421,
+          "y": 553
+        },
+        {
+          "x": 503,
+          "y": 538
+        }
+      ],
+      "from": "midLeft",
+      "to": "center"
+    },
+    {
+      "id": "midLeft-lowerLeft",
+      "points": [
+        {
+          "x": 165,
+          "y": 455
+        },
+        {
+          "x": 203,
+          "y": 532
+        },
+        {
+          "x": 163,
+          "y": 662
+        },
+        {
+          "x": 164,
+          "y": 744
+        }
+      ],
+      "from": "midLeft",
+      "to": "lowerLeft"
+    },
+    {
+      "id": "center-lowerRight",
+      "points": [
+        {
+          "x": 500,
+          "y": 545
+        },
+        {
+          "x": 503,
+          "y": 678
+        },
+        {
+          "x": 517,
+          "y": 770
+        },
+        {
+          "x": 476,
+          "y": 898
+        },
+        {
+          "x": 523,
+          "y": 1010
+        }
+      ],
+      "from": "center",
+      "to": "lowerRight"
+    },
+    {
+      "id": "lowerLeft-player",
+      "points": [
+        {
+          "x": 164,
+          "y": 745
+        },
+        {
+          "x": 142,
+          "y": 880
+        },
+        {
+          "x": 201,
+          "y": 995
+        },
+        {
+          "x": 209,
+          "y": 1077
+        },
+        {
+          "x": 205,
+          "y": 1160
+        }
+      ],
+      "from": "lowerLeft",
+      "to": "player"
+    },
+    {
+      "id": "lowerRight-player",
+      "points": [
+        {
+          "x": 525,
+          "y": 1015
+        },
+        {
+          "x": 458,
+          "y": 1048
+        },
+        {
+          "x": 376,
+          "y": 1063
+        },
+        {
+          "x": 305,
+          "y": 1092
+        },
+        {
+          "x": 239,
+          "y": 1133
+        },
+        {
+          "x": 205,
+          "y": 1160
+        }
+      ],
+      "from": "lowerRight",
+      "to": "player"
+    }
+  ],
+  "river": "diagonal"
+}
