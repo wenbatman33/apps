@@ -1,0 +1,7 @@
+# codex 生圖的除錯輸出（非素材，可重生）
+scripts/*.out
+scripts/gen*.log
+assets/anim/*/gen.log
+
+# codex 生圖中間暫存（原始輸出仍保留在 assets/anim/*/raw.png）
+tmp/

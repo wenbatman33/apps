@@ -1,0 +1,206 @@
+{
+ "_comment": "屍潮槍手 zombieGunner 素材清單 — 卡通俯視角手遊風（Archero / Survivor.io 質感）",
+ "style_icon": "mobile game skill icon, single subject centered and filling the frame, bold clean black outline, flat vibrant saturated colors with simple cel shading, slight 3/4 tilt, glossy highlight, NO text, NO letters, NO numbers, NO border frame, NO background scenery, transparent background PNG, clean vector-like cartoon style, Archero / Survivor.io / Clash Royale UI icon quality, post-apocalyptic zombie shooter theme",
+ "style_topdown": "STRICT TOP-DOWN view — camera positioned directly overhead at 90 degrees looking straight down at the ground, we see the TOP of the head and shoulders, NOT the face from the front. Character oriented FACING RIGHT (east) on the screen. Cartoon mobile game sprite, bold black outline, flat vibrant colors, soft cel shading, no ground shadow, no background, transparent background PNG, single character centered, Archero / Survivor.io top-down shooter art style",
+ "default_size": "1024x1024",
+ "icon_out_size": "256x256",
+ "sprite_out_size": "256x256",
+ "items": [
+  {
+   "id": "sk_atk",
+   "cat": "S",
+   "prompt": "a glowing golden rifle bullet pointing up with a bright red upward power arrow behind it, energy sparks"
+  },
+  {
+   "id": "sk_rate",
+   "cat": "S",
+   "prompt": "a black submachine gun tilted diagonally with three yellow speed streak lines and hot muzzle flash"
+  },
+  {
+   "id": "sk_multi",
+   "cat": "S",
+   "prompt": "a double-barrel gun muzzle head-on firing two glowing golden bullets outward in a V shape"
+  },
+  {
+   "id": "sk_pierce",
+   "cat": "S",
+   "prompt": "a sharp silver armor-piercing bullet punching through a cracked metal steel plate, blue glow trail"
+  },
+  {
+   "id": "sk_bounce",
+   "cat": "S",
+   "prompt": "a glowing bullet ricocheting with a purple zigzag bouncing trail off two metal walls"
+  },
+  {
+   "id": "sk_rear",
+   "cat": "S",
+   "prompt": "a rifle shown from the side firing bullets from both front and back, two orange arrows pointing in opposite directions"
+  },
+  {
+   "id": "sk_side",
+   "cat": "S",
+   "prompt": "a gun in the center with two bullets flying out to the left and right sides, orange side arrows"
+  },
+  {
+   "id": "sk_diag",
+   "cat": "S",
+   "prompt": "four golden bullets flying outward in four diagonal directions in an X shape, orange energy burst in the middle"
+  },
+  {
+   "id": "sk_crit",
+   "cat": "S",
+   "prompt": "a red sniper crosshair scope reticle locked on a glowing yellow target dot, precision aiming"
+  },
+  {
+   "id": "sk_critx",
+   "cat": "S",
+   "prompt": "a cracked skull with a red crosshair over it and a bright yellow impact starburst, critical damage"
+  },
+  {
+   "id": "sk_range",
+   "cat": "S",
+   "prompt": "a long sniper rifle barrel with an extending cyan measuring arrow showing increased range"
+  },
+  {
+   "id": "sk_fire",
+   "cat": "S",
+   "prompt": "a bullet wrapped in roaring orange and red flames, fire trail behind it"
+  },
+  {
+   "id": "sk_ice",
+   "cat": "S",
+   "prompt": "a bullet encased in a pale blue ice crystal with frost shards and snowflake"
+  },
+  {
+   "id": "sk_blast",
+   "cat": "S",
+   "prompt": "a bullet at the center of a bright orange cartoon explosion burst with smoke puffs"
+  },
+  {
+   "id": "sk_homing",
+   "cat": "S",
+   "prompt": "a bullet curving along a green dotted tracking path toward a radar lock-on target ring"
+  },
+  {
+   "id": "sk_hp",
+   "cat": "S",
+   "prompt": "a bright red heart plated with steel armor and rivets, small green plus sign glowing"
+  },
+  {
+   "id": "sk_heal",
+   "cat": "S",
+   "prompt": "a white first aid medkit box with a bold red cross, lid slightly open with green healing sparkles"
+  },
+  {
+   "id": "sk_regen",
+   "cat": "S",
+   "prompt": "a green glowing heart with a spiral regeneration arrow wrapping around it, leaf-like energy wisps"
+  },
+  {
+   "id": "sk_lifesteal",
+   "cat": "S",
+   "prompt": "a dark red heart with vampire fangs biting it, blood droplets being drained into the heart"
+  },
+  {
+   "id": "sk_shield",
+   "cat": "S",
+   "prompt": "a navy blue tactical bulletproof vest with armor plates, a small cyan energy shield glow behind it"
+  },
+  {
+   "id": "sk_dodge",
+   "cat": "S",
+   "prompt": "a pair of combat boots dashing sideways with white motion blur afterimage silhouette"
+  },
+  {
+   "id": "sk_thorns",
+   "cat": "S",
+   "prompt": "a round metal barrier covered in sharp spikes deflecting two bullets back outward, orange impact sparks"
+  },
+  {
+   "id": "sk_spd",
+   "cat": "S",
+   "prompt": "a military combat boot with small white wings and three yellow speed streak lines behind it"
+  },
+  {
+   "id": "sk_magnet",
+   "cat": "S",
+   "prompt": "a red and silver horseshoe magnet pulling three gold coins toward it with blue attraction arcs"
+  },
+  {
+   "id": "sk_drone",
+   "cat": "S",
+   "prompt": "a small cute grey quadcopter combat drone with a tiny gun turret underneath and green glowing eye lens"
+  },
+  {
+   "id": "sk_aura",
+   "cat": "S",
+   "prompt": "a glowing cyan electric energy orb crackling with blue lightning arcs in a spherical force field"
+  },
+  {
+   "id": "sk_mine",
+   "cat": "S",
+   "prompt": "a round olive-green proximity landmine with a blinking red light on top and three sensor prongs"
+  },
+  {
+   "id": "perm_hp",
+   "cat": "S",
+   "prompt": "a glowing red heart with a golden laurel and upward level-up arrow, permanent upgrade icon"
+  },
+  {
+   "id": "perm_atk",
+   "cat": "S",
+   "prompt": "a crossed assault rifle and golden bullet with a red power-up flame, permanent upgrade icon"
+  },
+  {
+   "id": "perm_rate",
+   "cat": "S",
+   "prompt": "a golden stopwatch overlapping a gun trigger with yellow speed lines, permanent upgrade icon"
+  },
+  {
+   "id": "perm_spd",
+   "cat": "S",
+   "prompt": "a blue lightning bolt over a running combat boot, permanent upgrade icon"
+  },
+  {
+   "id": "perm_crit",
+   "cat": "S",
+   "prompt": "a golden crosshair with a bright starburst and small skull, permanent upgrade icon"
+  },
+  {
+   "id": "perm_ls",
+   "cat": "S",
+   "prompt": "a crimson heart with a syringe drawing blood into it, permanent upgrade icon"
+  },
+  {
+   "id": "obs_crate",
+   "cat": "O",
+   "prompt": "a wooden supply crate seen from STRICT TOP-DOWN overhead view, weathered planks with metal corner brackets and a rope handle, square shape"
+  },
+  {
+   "id": "obs_barrel",
+   "cat": "O",
+   "prompt": "a rusty red oil barrel seen from STRICT TOP-DOWN overhead view, we see the circular lid with a bung cap, rust streaks and a faded biohazard sticker"
+  },
+  {
+   "id": "obs_car",
+   "cat": "O",
+   "prompt": "an abandoned wrecked sedan car seen from STRICT TOP-DOWN overhead view, we see the roof and hood, dented body, broken windshield, rust and dried blood smears"
+  },
+  {
+   "id": "obs_sandbag",
+   "cat": "O",
+   "prompt": "a stack of military sandbags seen from STRICT TOP-DOWN overhead view, olive canvas sacks arranged in a square barricade block"
+  },
+  {
+   "id": "loot_coin",
+   "cat": "O",
+   "prompt": "a shiny gold coin with a small skull emblem stamped on it, seen from directly above, glossy metallic rim"
+  },
+  {
+   "id": "loot_medkit",
+   "cat": "O",
+   "prompt": "a white first aid medkit box with a red cross on the lid, seen from STRICT TOP-DOWN overhead view, closed lid with a latch"
+  }
+ ],
+ "style_obstacle": "game object seen from a STRICT TOP-DOWN overhead camera (bird's eye, looking straight down), cartoon mobile game art, bold black outline, flat vibrant colors with soft cel shading, no ground shadow, no background, transparent background PNG, single object centered, Archero / Survivor.io top-down shooter prop art, post-apocalyptic zombie theme"
+}

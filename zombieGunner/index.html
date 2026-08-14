@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="theme-color" content="#0d1016">
+  <title>屍潮槍手 Zombie Gunner</title>
+  <link rel="stylesheet" href="style.css?v=1786680200">
+</head>
+<body>
+  <div id="game"></div>
+  <div id="hint">按 <b>D</b> 開啟版面微調工具　·　<b>WASD</b> 移動　·　<b>ESC</b> 暫停</div>
+
+  <script src="vendor/phaser.min.js"></script>
+
+  <!-- 核心資料層 -->
+  <script src="src/core/config.js?v=1786680200"></script>
+  <script src="src/core/chapters.js?v=1786680200"></script>
+  <script src="src/core/enemies.js?v=1786680200"></script>
+  <script src="src/core/skills.js?v=1786680200"></script>
+  <script src="src/core/save.js?v=1786680200"></script>
+  <script src="src/core/sfx.js?v=1786680200"></script>
+  <script src="src/core/combat.js?v=1786680200"></script>
+  <script src="src/core/ai.js?v=1786680200"></script>
+
+  <!-- 視覺 / 輸入 -->
+  <script src="src/view/art.js?v=1786680200"></script>
+  <script src="src/view/anim.js?v=1786680200"></script>
+  <script src="src/view/ui.js?v=1786680200"></script>
+  <script src="src/view/joystick.js?v=1786680200"></script>
+
+  <!-- 場景 -->
+  <script src="src/scenes/menus.js?v=1786680200"></script>
+  <script src="src/scenes/GameScene.js?v=1786680200"></script>
+  <script src="src/scenes/overlays.js?v=1786680200"></script>
+
+  <!-- 開發者工具 -->
+  <script src="src/dev/devtools.js?v=1786680200"></script>
+
+  <script src="src/main.js?v=1786680200"></script>
+</body>
+</html>
