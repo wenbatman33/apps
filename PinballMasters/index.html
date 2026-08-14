@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#070a1a">
+<title>Pinball Masters 彈珠達人跨界對決</title>
+<style>
+  /* 遊戲本體全部在 WebGL 內渲染，DOM 只有 canvas 與隱藏的 DEV 開發面板 */
+  * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html, body { width:100%; height:100%; overflow:hidden; background:#070a1a; color:#fff;
+    font-family:"PingFang TC","Microsoft JhengHei",system-ui,sans-serif; }
+  body { user-select:none; -webkit-user-select:none; touch-action:none; }
+  #game-canvas { position:fixed; inset:0; width:100%; height:100%; display:block; touch-action:none; }
+  .hidden { display:none !important; }
+
+  /* ===== DEV 面板（開發工具，非遊戲 UI；D 鍵或 ⚙ 開關） ===== */
+  #btn-dev { position:fixed; right:10px; bottom:calc(max(8px, env(safe-area-inset-bottom)) + 118px); z-index:26; width:34px; height:34px;
+    border-radius:50%; border:none; background:rgba(10,14,34,.55); color:#8fa7ff; font-size:16px; cursor:pointer; opacity:.5; }
+  #dev-panel { position:fixed; top:0; right:0; bottom:0; width:min(86vw,340px); z-index:50; background:rgba(8,11,26,.96);
+    box-shadow:-6px 0 30px rgba(0,0,0,.6); padding:14px 14px 40px; overflow-y:auto; font-size:13px; -webkit-overflow-scrolling:touch; }
+  #dev-panel h3 { font-size:15px; color:#9fd8ff; letter-spacing:2px; margin-bottom:10px; display:flex; align-items:center; }
+  #dev-panel h3 .x { margin-left:auto; cursor:pointer; opacity:.7; font-size:18px; padding:2px 8px; }
+  #dev-panel h4 { font-size:12px; color:#ffd75e; margin:16px 0 6px; letter-spacing:2px; border-bottom:1px solid rgba(255,255,255,.12); padding-bottom:4px; }
+  .dev-row { display:flex; align-items:center; gap:8px; margin:7px 0; }
+  .dev-row label { width:108px; flex:none; opacity:.85; font-size:12px; }
+  .dev-row input[type=range] { flex:1; accent-color:#4f7bff; }
+  .dev-row input[type=color] { width:36px; height:24px; border:none; background:none; padding:0; }
+  .dev-row .val { width:52px; flex:none; text-align:right; font-variant-numeric:tabular-nums; color:#9fd8ff; font-size:11px; }
+  .dev-btns { display:flex; flex-wrap:wrap; gap:6px; margin:8px 0; }
+  .dev-btns button { border:none; border-radius:8px; padding:7px 10px; font-size:12px; cursor:pointer; color:#fff;
+    background:rgba(255,255,255,.12); box-shadow:inset 0 0 0 1px rgba(255,255,255,.15); }
+  .dev-btns button.on { background:#2a49d8; }
+  #dev-export-out { width:100%; height:110px; margin-top:6px; background:#050814; color:#8fe08a; border:1px solid rgba(255,255,255,.15);
+    border-radius:8px; font-size:11px; padding:8px; font-family:Menlo,monospace; }
+  .dev-note { font-size:11px; opacity:.55; line-height:1.6; margin-top:4px; }
+</style>
+</head>
+<body>
+<canvas id="game-canvas"></canvas>
+
+<!-- DEV 開發者工具（預設隱藏） -->
+<button id="btn-dev" class="hidden">⚙</button>
+<div id="dev-panel" class="hidden"></div>
+
+<script type="importmap">
+{ "imports": { "three": "./vendor/three.module.js" } }
+</script>
+<script type="module" src="./src/main.js"></script>
+</body>
+</html>
