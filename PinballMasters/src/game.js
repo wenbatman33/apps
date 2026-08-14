@@ -3,14 +3,14 @@ import * as THREE from 'three';
 import { PinballWorld, TABLE } from './physics.js';
 import { Trail, ParticlePool, ShockwavePool, DamageTextPool, ScreenShake } from './fx.js';
 import { AudioSys } from './audio.js';
-import { HEROES, STAGES, BOSS, LANE } from './data.js';
+import { HEROES, STAGES, BOSS, LANE, STAGE_RAMPS } from './data.js';
 import { TUNE } from './tune.js';
 import { makeText, makeRect, makeButton, makeBarFill, disposeGroup } from './ui.js';
 import {
   makePlayfieldTexture, makeRoughnessTexture, MAT,
   buildPopBumper, buildDropTarget, buildSlingshot, buildFlipper, buildWireGuide, buildWallSegment,
   buildRollover, buildLaneLight, buildSpinner, buildSaucer, buildPost,
-  buildBulb, buildRingCore, buildPlatform, BULB_LAYOUT, RING,
+  buildBulb, buildRingCore, buildPlatform, buildRamp, buildScoreboard, BULB_LAYOUT, RING,
 } from './art.js';
 
 function makeEmojiSprite(emoji, worldSize = 1) {
@@ -69,7 +69,8 @@ export class Game {
     const rimWarm = new THREE.DirectionalLight(0xff7a4d, 0.35);
     rimWarm.position.set(7, 4, 7);
     this.scene.add(rimWarm);
-    this.ballLight = new THREE.PointLight(0xffffff, TUNE.fx.lightIntensity, 8, 1.6);
+    // 跟隨光源刻意做小、衰減快，只用來讓球體本身有立體感，不在檯面留大光斑
+    this.ballLight = new THREE.PointLight(0xffffff, TUNE.fx.lightIntensity, 4.2, 2.2);
     this.scene.add(this.ballLight);
     // 定點氛圍燈：彈射器區（金）與 Boss 王座區（紅）
     const bossGlow = new THREE.PointLight(0xff3d6e, 1.1, 6, 1.8);
@@ -89,6 +90,8 @@ export class Game {
     this.combo = 0;
     this.comboT = 0;
     this.multiplier = 1;
+    this.ringZ = this.stage.ringZ ?? RING.z;      // 各台燈環位置（避開該台的軌道）
+    this.bossColor = this.stage.bossColor ?? BOSS.color; // 主目標配色依機檯主題
     this.bossHp = this.stage.bossHp;
     this.bossHpMax = this.stage.bossHp;
     this.vulnT = 0;
@@ -113,7 +116,7 @@ export class Game {
     const HW = TABLE.HALF_W;
     const env = this.env;
     // 檯面（絲印藝術圖 + 粗糙度變化 + 清漆反射）
-    this.boardTex = makePlayfieldTexture(this.stage, this.app.playfieldArt);
+    this.boardTex = makePlayfieldTexture(this.stage, this.app.playfieldArts?.tables?.[this.stageIdx] ?? null);
     this.floor = new THREE.Mesh(
       new THREE.PlaneGeometry(TABLE.W, TABLE.L),
       new THREE.MeshStandardMaterial({
@@ -138,7 +141,7 @@ export class Game {
       const s = W.addSegment(ax, az, bx, bz, opts);
       if (s.draw) {
         const col = opts?.color ?? 0x4f7bff;
-        const mesh = buildWallSegment(ax, az, bx, bz, col, env);
+        const mesh = buildWallSegment(ax, az, bx, bz, col, env, { low: opts?.low });
         mesh.traverse(o => { if (o.isMesh) o.castShadow = true; });
         this.scene.add(mesh);
         s.mesh = mesh;
@@ -166,11 +169,13 @@ export class Game {
     this.slings = [];
     // 上段＝單純導引牆（不彈射），下段＝真正的 slingshot（長度約 1 個球徑的數倍）
     const sideWall = (outerX) => {
-      const M = { x: outerX > 0 ? 2.25 : -2.25, z: 3.62 };
-      const B = { x: outerX > 0 ? 1.52 : -1.52, z: 4.62 };
-      seg(outerX, 2.6, M.x, M.z, { color: 0x3b5bff });
+      const sgn = outerX > 0 ? 1 : -1;
+      const M = { x: sgn * 2.25, z: 3.62 };            // 三角形上頂點
+      const B = { x: sgn * 1.52, z: 4.62 };            // 三角形下內側頂點（斜邊 M→B 面向中央）
+      const C = { x: sgn * 2.42, z: 4.62 };            // 靠牆的外側角
+      seg(outerX, 2.6, M.x, M.z, { color: this.stage.theme?.wall ?? 0x3b5bff });
       const s = seg(M.x, M.z, B.x, B.z, { kind: 'sling', e: 0.7, draw: false });
-      const grp = buildSlingshot(M, B, 0xff5e8a, env);
+      const grp = buildSlingshot(M, B, C, this.stage.theme?.main ?? 0xff5e8a, env);
       grp.traverse(o => { if (o.isMesh) o.castShadow = true; });
       this.scene.add(grp);
       const obj = { grp, seg: s, pulse: 0 };
@@ -179,9 +184,10 @@ export class Game {
     };
     sideWall(-HW);
     sideWall(TABLE.LANE_X);
-    // drain 兩側擋牆（球只能從兩片 flipper 中間漏下）
-    seg(-1.52, 4.62, -1.52, 6.5, { color: 0x3b5bff });
-    seg(1.52, 4.62, 1.52, 6.5, { color: 0x3b5bff });
+    // drain 兩側擋牆（球只能從兩片 flipper 中間漏下）——用矮牆樣式，不然會變成兩條刺眼的白柱
+    const wallCol = this.stage.theme?.wall ?? 0x3b5bff;
+    seg(-1.52, 4.62, -1.52, 6.25, { color: wallCol, low: true });
+    seg(1.52, 4.62, 1.52, 6.25, { color: wallCol, low: true });
 
     // ---- Flipper ----
     this.flippers = [];
@@ -340,14 +346,15 @@ export class Game {
 
     // ---- 中央大燈環核心（撞擊點亮一格，繞滿一圈給大獎） ----
     {
+      const rz = this.ringZ;
       const grp = buildRingCore(0x5ae6ff, env);
-      grp.position.set(0, 0, RING.z);
+      grp.position.set(0, 0, rz);
       grp.traverse(o => { if (o.isMesh) o.castShadow = true; });
       this.scene.add(grp);
       const light = new THREE.PointLight(0x5ae6ff, 0.7, 3.4, 2);
-      light.position.set(0, 0.6, RING.z);
+      light.position.set(0, 0.6, rz);
       this.scene.add(light);
-      const cir = this.world.addCircle({ x: 0, z: RING.z, r: 0.5, kind: 'ringCore', e: 0.86, ref: null });
+      const cir = this.world.addCircle({ x: 0, z: rz, r: 0.5, kind: 'ringCore', e: 0.86, ref: null });
       this.ringCore = { grp, ...grp.userData, light, cir, hitT: 0, progress: 0 };
       cir.ref = this.ringCore;
     }
@@ -380,34 +387,32 @@ export class Game {
       strut.position.set(p.x, 0.56, p.z);
       this.scene.add(strut);
     }
-    // 從頂弧延伸到右側的回球軌道（環繞感）
-    {
-      const retPts = [
-        { x: 2.68, z: -3.35 }, { x: 2.9, z: -2.4 }, { x: 2.95, z: -1.0 },
-        { x: 2.9, z: 0.6 }, { x: 2.86, z: 2.2 },
-      ];
-      const r1 = buildWireGuide(retPts, env, 0.62, 0.038);
-      const r2 = buildWireGuide(retPts, env, 0.82, 0.032);
-      this.scene.add(r1, r2);
-      for (const p of retPts) {
-        const strut = new THREE.Mesh(new THREE.CylinderGeometry(0.022, 0.022, 0.24, 6), MAT.chrome(env));
-        strut.position.set(p.x, 0.72, p.z);
-        this.scene.add(strut);
+    // ---- 高架軌道（球真的會爬上去跑一圈） ----
+    this.ramps = [];
+    for (const def of STAGE_RAMPS[this.stageIdx] ?? []) {
+      const grp = buildRamp(def.path, def.color, env);
+      this.scene.add(grp);
+      // 依曲線取樣，讓物理與視覺走同一條路徑
+      const curve = grp.userData.curve;
+      const N = 90;
+      const samples = [];
+      for (let i = 0; i <= N; i++) {
+        const p = curve.getPoint(i / N);
+        samples.push({ x: p.x, y: p.y - 0.16, z: p.z });
       }
-    }
-    // 左側平台上方的懸空軌道
-    {
-      const pl = [
-        { x: -3.0, z: -2.6 }, { x: -2.35, z: -1.9 }, { x: -2.1, z: -0.9 }, { x: -2.3, z: 0.2 },
-      ];
-      const l1 = buildWireGuide(pl, env, 0.58, 0.036);
-      const l2 = buildWireGuide(pl, env, 0.76, 0.03);
-      this.scene.add(l1, l2);
-      for (const p of pl) {
-        const strut = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 0.22, 6), MAT.chrome(env));
-        strut.position.set(p.x, 0.67, p.z);
-        this.scene.add(strut);
+      let length = 0;
+      for (let i = 1; i < samples.length; i++) {
+        length += Math.hypot(samples[i].x - samples[i - 1].x, samples[i].z - samples[i - 1].z);
       }
+      const r = this.world.addRamp({
+        id: def.id, entry: { x: def.path[0].x, z: def.path[0].z }, entryR: 0.42,
+        entryDir: def.entryDir, exitDir: def.exitDir,
+        minSpeed: def.minSpeed, climbDrag: def.climbDrag, exitSpeed: def.exitSpeed,
+        samples, length, ref: null,
+      });
+      const obj = { def, grp, arrow: grp.userData.arrow, floor: grp.userData.floor, r, litT: 0, runs: 0 };
+      r.ref = obj;
+      this.ramps.push(obj);
     }
     for (const sgn of [-1, 1]) {
       const pts = [
@@ -432,7 +437,7 @@ export class Game {
       const body = new THREE.Mesh(
         new THREE.IcosahedronGeometry(BOSS.r, 1),
         new THREE.MeshStandardMaterial({
-          color: 0x1a1030, emissive: BOSS.color, emissiveIntensity: 0.8,
+          color: 0x1a1030, emissive: this.bossColor, emissiveIntensity: 0.8,
           roughness: 0.18, metalness: 0.8, flatShading: true, envMap: env, envMapIntensity: 1.2,
         })
       );
@@ -442,7 +447,7 @@ export class Game {
       const shell = new THREE.Mesh(
         new THREE.IcosahedronGeometry(BOSS.r * 1.32, 1),
         new THREE.MeshBasicMaterial({
-          color: BOSS.color, transparent: true, opacity: 0.18,
+          color: this.bossColor, transparent: true, opacity: 0.18,
           blending: THREE.AdditiveBlending, wireframe: true,
         })
       );
@@ -467,7 +472,7 @@ export class Game {
       for (let i = 0; i < 6; i++) {
         const s = new THREE.Mesh(
           new THREE.TetrahedronGeometry(0.15),
-          new THREE.MeshStandardMaterial({ color: 0x2a1040, emissive: BOSS.color, emissiveIntensity: 0.9, roughness: 0.3, metalness: 0.6, flatShading: true })
+          new THREE.MeshStandardMaterial({ color: 0x2a1040, emissive: this.bossColor, emissiveIntensity: 0.9, roughness: 0.3, metalness: 0.6, flatShading: true })
         );
         const a = (i / 6) * Math.PI * 2;
         s.position.set(Math.cos(a) * 1.15, BOSS.r + 0.3 + Math.sin(a * 2) * 0.25, Math.sin(a) * 1.15);
@@ -517,6 +522,7 @@ export class Game {
   // ---- 場景裝飾：背板 / 機檯側框 / 圍裙 / 星空 / 立柱 ----
   _buildDecor() {
     const HW = TABLE.HALF_W;
+    const env = this.env;
     // 星空背景
     const starGeo = new THREE.BufferGeometry();
     const sp = new Float32Array(260 * 3);
@@ -530,43 +536,81 @@ export class Game {
       color: 0x8fa7ff, size: 0.14, transparent: true, opacity: 0.85, sizeAttenuation: true,
     })));
 
-    // 機檯側框（左右軌道護欄 + 底部圍裙）
-    const railMat = new THREE.MeshStandardMaterial({
-      color: 0x0d1436, emissive: 0x2b3ea0, emissiveIntensity: 0.35, roughness: 0.35, metalness: 0.7,
+    // ---- 機檯外殼：烤漆側板 + 不鏽鋼側軌 + 玻璃壓條 ----
+    // 深色烤漆櫃體（不要用鏡面 chrome，否則整個外框會反射成白色）
+    const cabinetMat = new THREE.MeshStandardMaterial({
+      color: 0x0a1030, roughness: 0.45, metalness: 0.35,
+      envMap: env, envMapIntensity: 0.35,
     });
-    const mkRail = (w, h, d, x, y, z) => {
-      const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), railMat);
-      m.position.set(x, y, z);
-      this.scene.add(m);
-      return m;
-    };
-    mkRail(0.34, 0.9, TABLE.L + 1.4, -HW - 0.34, 0.28, 0);   // 左側框
-    mkRail(0.34, 0.9, TABLE.L + 1.4, HW + 0.34, 0.28, 0);    // 右側框
-    // 側框頂部發光飾條
-    const stripMat = new THREE.MeshBasicMaterial({ color: 0x4f7bff, transparent: true, opacity: 0.9, blending: THREE.AdditiveBlending });
-    for (const sx of [-HW - 0.34, HW + 0.34]) {
-      const strip = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.03, TABLE.L + 1.4), stripMat);
-      strip.position.set(sx, 0.74, 0);
+    // 側軌用偏暗的拉絲金屬
+    const sideRailMat = new THREE.MeshStandardMaterial({
+      color: 0x76819c, roughness: 0.34, metalness: 0.92,
+      envMap: env, envMapIntensity: 0.6,
+    });
+    const CAB_H = 1.05, CAB_T = 0.16, CAB_L = TABLE.L + 1.1; // 邊框做薄，少佔畫面
+    for (const sx of [-1, 1]) {
+      const x = sx * (HW + CAB_T / 2 + 0.06);
+      // 側板本體（往下延伸出厚度，看起來像真的櫃體）
+      const body = new THREE.Mesh(new THREE.BoxGeometry(CAB_T, CAB_H, CAB_L), cabinetMat);
+      body.position.set(x, -CAB_H / 2 + 0.62, 0);
+      body.castShadow = true; body.receiveShadow = true;
+      this.scene.add(body);
+      // 頂部側軌（真實機檯玻璃兩側的金屬壓條，做細一點才不會搶戲）
+      const rail = new THREE.Mesh(new THREE.BoxGeometry(CAB_T + 0.04, 0.07, CAB_L), sideRailMat);
+      rail.position.set(x, 0.64, 0);
+      rail.castShadow = true;
+      this.scene.add(rail);
+      // 側板霓虹飾條
+      const strip = new THREE.Mesh(
+        new THREE.BoxGeometry(0.05, 0.05, CAB_L - 0.4),
+        new THREE.MeshBasicMaterial({ color: 0x4f7bff, transparent: true, opacity: 0.75, blending: THREE.AdditiveBlending })
+      );
+      strip.position.set(x - sx * (CAB_T / 2 + 0.01), 0.4, 0);
       this.scene.add(strip);
     }
-    // 底部圍裙（含隊徽裝飾）
-    const ap = document.createElement('canvas');
-    ap.width = 1024; ap.height = 256;
-    const ag = ap.getContext('2d');
-    const agr = ag.createLinearGradient(0, 0, 0, 256);
-    agr.addColorStop(0, '#141b4a'); agr.addColorStop(1, '#0a0e2a');
-    ag.fillStyle = agr; ag.fillRect(0, 0, 1024, 256);
-    ag.strokeStyle = '#3b5bff'; ag.lineWidth = 8; ag.strokeRect(8, 8, 1008, 240);
-    ag.textAlign = 'center';
-    ag.font = '72px "Apple Color Emoji","Segoe UI Emoji",sans-serif';
-    ag.fillText('⚔️   🤖   🔮   🤠', 512, 150);
-    const apron = new THREE.Mesh(
-      new THREE.PlaneGeometry(TABLE.W + 0.7, 1.7),
-      new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(ap) })
+    // 檯面頂端與底端的封邊（貼齊檯面邊緣，否則下方會露出一段黑色空隙）
+    for (const [z, len] of [[TABLE.TOP - 0.3, 0.34], [TABLE.BOTTOM + 0.38, 0.34]]) {
+      const cap = new THREE.Mesh(new THREE.BoxGeometry(TABLE.W + CAB_T * 2 + 0.12, CAB_H, len), cabinetMat);
+      cap.position.set(0, -CAB_H / 2 + 0.62, z);
+      cap.castShadow = true;
+      this.scene.add(cap);
+      const capRail = new THREE.Mesh(new THREE.BoxGeometry(TABLE.W + CAB_T * 2 + 0.14, 0.07, len + 0.04), sideRailMat);
+      capRail.position.set(0, 0.64, z);
+      this.scene.add(capRail);
+    }
+
+    // 底部不再放 apron 擋板（太佔畫面），只留一條細的不鏽鋼收邊
+    const apronLip = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.035, 0.035, TABLE.W + 0.3, 10),
+      sideRailMat
     );
-    apron.position.set(0, 0.02, TABLE.BOTTOM + 0.9);
-    apron.rotation.x = -Math.PI / 2 + 0.34;
-    this.scene.add(apron);
+    apronLip.rotation.z = Math.PI / 2;
+    apronLip.position.set(0, 0.16, TABLE.BOTTOM + 0.2);
+    this.scene.add(apronLip);
+
+    // ---- 記分板（backglass）：立在檯面上方，顯示分數與球數 ----
+    {
+      const glass = this.app.playfieldArts?.glasses?.[this.stageIdx] ?? null;
+      const board = buildScoreboard(glass, this.stage.theme);
+      const bw = TABLE.W + 0.55;
+      board.scale.set(bw, bw * 384 / 1024, 1);
+      board.position.set(0, 1.62, TABLE.TOP - 1.02);
+      board.rotation.x = -0.16;
+      this.scene.add(board);
+      this.scoreboard = board;
+      // 記分板外框與背光
+      const frame = new THREE.Mesh(
+        new THREE.BoxGeometry(bw + 0.14, bw * 384 / 1024 + 0.14, 0.1),
+        cabinetMat
+      );
+      frame.position.copy(board.position);
+      frame.position.z -= 0.06;
+      frame.rotation.copy(board.rotation);
+      this.scene.add(frame);
+      const glow = new THREE.PointLight(this.stage.theme.main, 1.2, 6, 2);
+      glow.position.set(0, 1.6, TABLE.TOP - 0.45);
+      this.scene.add(glow);
+    }
 
     // 導板端點的橡膠緩衝柱（真實彈珠台的 rubber post）
     const postMat = new THREE.MeshStandardMaterial({ color: 0xf24a6a, roughness: 0.8, metalness: 0 });
@@ -593,7 +637,7 @@ export class Game {
     this.scene.add(this.ballMesh);
     const glowTex = ParticlePool.makeTexture();
     this.ballGlow = new THREE.Sprite(new THREE.SpriteMaterial({
-      map: glowTex, color: 0xffffff, transparent: true, opacity: 0.5,
+      map: glowTex, color: 0xffffff, transparent: true, opacity: 0.22,
       blending: THREE.AdditiveBlending, depthWrite: false,
     }));
     this.scene.add(this.ballGlow);
@@ -607,6 +651,7 @@ export class Game {
     this.ballBody.x = TABLE.LANE_CENTER; this.ballBody.z = 6.1;
     this.ballBody.vx = 0; this.ballBody.vz = 0; this.ballBody.y = 0; this.ballBody.vy = 0;
     this.ballBody.held = null;
+    this.ballBody.onRamp = null;
     this.state = 'launch';
     this.gate.active = false;
     this.plunger = null;
@@ -656,7 +701,7 @@ export class Game {
     this.bossBarW = bw;
     this.bossBarBg = makeRect({ w: bw, h: 12, fill: 'rgba(0,0,0,.6)', stroke: 'rgba(255,255,255,.25)', radius: 7, order: 10 });
     this.bossBarFill = makeBarFill({ w: bw - 4, h: 8, color: ['#ff3d6e', '#ff8a5e'], radius: 4, order: 11 });
-    this.bossLabel = makeText({ text: `♚ 虛空棋主`, size: 12, color: '#ff8a9a', order: 11 });
+    this.bossLabel = makeText({ text: `${this.stage.bossEmoji} ${this.stage.bossName}`, size: 12, color: '#ff8a9a', order: 11 });
     this.bossHpText = makeText({ text: '', size: 11, color: '#ffffff', order: 12 });
 
     // 橫幅 / 提示
@@ -702,6 +747,11 @@ export class Game {
   }
 
   _updateHUD() {
+    // 記分板（機檯上方的實體看板）
+    this.scoreboard?.userData.update(
+      this.score, Math.min(this.ballIdx + 1, HEROES.length), HEROES.length,
+      this.multiplier > 1 ? `X${this.multiplier}` : (this.vulnT > 0 ? 'JACKPOT' : '')
+    );
     this.hudScore.userData.setText(this.score.toLocaleString());
     const remain = HEROES.slice(this.ballIdx).map(x => x.emoji).join(' ');
     this.hudBalls.userData.setText(`彈珠 ${remain}${this.multiplier > 1 ? `　倍率 ×${this.multiplier}` : ''}`);
@@ -753,7 +803,7 @@ export class Game {
     this.dmgTexts.spawn(BOSS.x + (Math.random() - 0.5) * 0.6, BOSS.z + 0.4, String(dmg), {
       color: vuln ? '#ffde5e' : '#ffffff', crit: vuln,
     });
-    this.particles.burst(BOSS.x, 0.6, BOSS.z, vuln ? 0xffd75e : BOSS.color, vuln ? 26 : 10, vuln ? 8 : 5, 0.6);
+    this.particles.burst(BOSS.x, 0.6, BOSS.z, vuln ? 0xffd75e : this.bossColor, vuln ? 26 : 10, vuln ? 8 : 5, 0.6);
     if (vuln) { this.shockwaves.spawn(BOSS.x, BOSS.z, 0xffd75e, 2.6, 0.4); this.shake.hit(1.1); }
     AudioSys.sfx('hitEnemy', vuln ? 1 : 0.4);
     this.score += dmg;
@@ -776,7 +826,7 @@ export class Game {
   _triggerVuln() {
     this.vulnT = TUNE.battle.vulnSec;
     AudioSys.sfx('vuln');
-    this._banner2('⚡ 棋主破防！全力攻擊！', '#ffd75e', 1600);
+    this._banner2(this.stage.vulnText ?? '⚡ 破防！全力攻擊！', '#ffd75e', 1600);
     this.shockwaves.spawn(BOSS.x, BOSS.z, 0xffd75e, 4, 0.6);
     this.shake.hit(1);
   }
@@ -788,7 +838,7 @@ export class Game {
       t.dropT = 0;
       t.respawnFx = 0.4;
     }
-    this._toast('目標靶重新升起', 1300);
+    this._toast(`${this.stage.targetName ?? '目標靶'}重新升起`, 1300);
   }
 
   _victory() {
@@ -797,9 +847,9 @@ export class Game {
     AudioSys.stopBgm();
     AudioSys.sfx('bossDie');
     setTimeout(() => AudioSys.sfx('win'), 500);
-    this.particles.burst(BOSS.x, 0.6, BOSS.z, BOSS.color, 70, 12, 1);
+    this.particles.burst(BOSS.x, 0.6, BOSS.z, this.bossColor, 70, 12, 1);
     this.particles.burst(BOSS.x, 0.6, BOSS.z, 0xffd75e, 40, 8, 0.8);
-    this.shockwaves.spawn(BOSS.x, BOSS.z, BOSS.color, 5, 0.7);
+    this.shockwaves.spawn(BOSS.x, BOSS.z, this.bossColor, 5, 0.7);
     this.shake.hit(2);
     this.boss.dying = 0.9;
     const remain = HEROES.length - this.ballIdx;
@@ -825,6 +875,7 @@ export class Game {
       this.ballBody.x = TABLE.LANE_CENTER; this.ballBody.z = 6.1;
       this.ballBody.vx = 0; this.ballBody.vz = 0;
       this.ballBody.held = null;
+      this.ballBody.onRamp = null;
       this.state = 'launch';
       this.gate.active = false;
       this.saverT = 0;
@@ -936,18 +987,37 @@ export class Game {
         if (!this.gate.active && this.ballBody.x < 2.0) this.gate.active = true;
         // 球保護倒數
         if (this.saverT > 0) this.saverT -= dt;
+        const b = this.ballBody;
+        const sp = Math.hypot(b.vx, b.vz);
+        // 球在高架軌道上：不做落球與卡球判定（軌道上速度為 0 是正常的）
+        if (b.onRamp) { this.stuckT = 0; this.deadT = 0; }
         // 落球
-        if (this.ballBody.z > TABLE.DRAIN_Z && this.ballBody.x < 2.3) this._drainBall();
-        // 卡球偵測 → 微推（被吸球洞固定時不算卡球）
-        const sp = Math.hypot(this.ballBody.vx, this.ballBody.vz);
-        if (!this.ballBody.held && sp < 0.25 && this.ballBody.z < 4.6) {
+        else if (b.z > TABLE.DRAIN_Z && b.x < 2.3) this._drainBall();
+        // 球滑回發射軌並停下 → 交還發射權，不算損失球
+        // （否則球會永遠停在軌道底部：不符落球條件、也不在卡球偵測範圍內）
+        else if (b.x > TABLE.LANE_X && b.z > 5.4 && sp < 0.5 && !b.held) {
+          this.state = 'launch';
+          this.gate.active = false;
+          this.stuckT = 0;
+          this._updateHUD();
+        }
+        // 卡球偵測 → 微推（被吸球洞固定、或停在彈射板上等待瞄準時不算）
+        else if (!b.held && sp < 0.25 && b.z < 4.6) {
           this.stuckT += dt;
           if (this.stuckT > 2.5) {
-            this.ballBody.vz += 2;
-            this.ballBody.vx += (Math.random() - 0.5) * 1.5;
+            b.vz += 2;
+            b.vx += (Math.random() - 0.5) * 1.5;
             this.stuckT = 0;
           }
-        } else this.stuckT = 0;
+        } else if (!b.held && sp < 0.25) {
+          // 其餘位置（含彈射板下方死角）長時間靜止的保險，避免任何形式的卡死
+          this.deadT = (this.deadT ?? 0) + dt;
+          if (this.deadT > 4) {
+            b.vz += 2.5;
+            b.vx += (Math.random() - 0.5) * 2;
+            this.deadT = 0;
+          }
+        } else { this.stuckT = 0; this.deadT = 0; }
       }
     } else {
       this.trail.fade();
@@ -971,9 +1041,9 @@ export class Game {
     this.ballMesh.rotation.x += sp * dt * 2;
     this.ballGlow.position.set(b.x, b.r + b.y, b.z);
     this.ballGlow.scale.setScalar(TUNE.fx.glowSize * b.r * (1 + Math.min(0.6, sp / 30)));
-    this.ballLight.position.set(b.x, 1.3, b.z);
+    this.ballLight.position.set(b.x, 0.75, b.z);
     this.ballLight.color.set(this.hero.color);
-    this.ballLight.intensity = TUNE.fx.lightIntensity * (this.state === 'play' ? 1.3 : 0.8);
+    this.ballLight.intensity = TUNE.fx.lightIntensity * (this.state === 'play' ? 1.1 : 0.7);
     this.trail.update();
 
     const now = performance.now();
@@ -988,20 +1058,33 @@ export class Game {
     for (const sl of this.slings) {
       if (sl.pulse > 0) sl.pulse -= dt * 4;
       const k = Math.max(0, sl.pulse);
-      sl.grp.userData.plate.material.opacity = 0.35 + k * 0.6;
-      sl.grp.userData.band.scale.set(1, 1, 1 + k * 0.5);
+      // 命中時：燈條爆亮、橡皮筋被撐開
+      sl.grp.userData.lamp.material.opacity = 0.5 + k * 0.5;
+      sl.grp.userData.plate.material.emissiveIntensity = 0.3 + k * 1.6;
+      sl.grp.userData.band.scale.set(1 + k * 0.35, 1, 1 + k * 0.35);
     }
 
     // Bumpers
     for (const bp of this.bumpers) {
       if (bp.pulse > 0) bp.pulse -= dt * 3;
       const k = Math.max(0, bp.pulse);
-      bp.grp.userData.cap.position.y = -k * 0.12;
-      bp.grp.userData.cap.scale.setScalar(1 + k * 0.15);
-      bp.body.material.emissiveIntensity = 0.55 + k * 2.4;
-      bp.ring.rotation.z += dt * 1.4;
-      bp.ring.material.opacity = 0.5 + Math.sin(now / 380 + bp.cir.x) * 0.12 + k * 0.35;
+      // 命中時帽子被壓下再彈回
+      bp.grp.userData.cap.position.y = -k * 0.1;
+      bp.grp.userData.cap.scale.set(1 + k * 0.12, 1 - k * 0.18, 1 + k * 0.12);
+      bp.body.material.emissiveIntensity = 0.22 + k * 2.2;
+      bp.ring.material.opacity = 0.45 + Math.sin(now / 380 + bp.cir.x) * 0.12 + k * 0.5;
       bp.light.intensity = 0.45 + k * 3;
+    }
+
+    // 軌道：入口箭頭脈動、球在上面跑時整條發亮
+    for (const rp of this.ramps) {
+      if (rp.litT > 0) rp.litT -= dt * 1.4;
+      const k = Math.max(0, rp.litT);
+      const onIt = this.ballBody.onRamp?.ramp === rp.r;
+      rp.arrow.material.opacity = 0.45 + Math.sin(now / 260) * 0.2 + k * 0.5;
+      rp.arrow.scale.setScalar(1 + k * 0.3);
+      rp.floor.material.emissiveIntensity = 0.2 + k * 0.9 + (onIt ? 0.8 : 0);
+      rp.floor.material.opacity = 0.45 + k * 0.3 + (onIt ? 0.2 : 0);
     }
 
     // 檯面燈泡：未鎖定的做波浪流動，鎖定的恆亮
@@ -1183,6 +1266,25 @@ export class Game {
         this._handleSensor(ev);
       } else if (ev.type === 'saucer') {
         this._enterSaucer(ev.ref.ref);
+      } else if (ev.type === 'rampEnter') {
+        const o = ev.ref.ref;
+        o.litT = 1;
+        AudioSys.sfx('plungerLaunch');
+        this._toast(`🚀 ${o.def.name}`, 1100);
+        this.particles.burst(ev.ref.entry.x, 0.3, ev.ref.entry.z, o.def.color, 16, 6, 0.5);
+      } else if (ev.type === 'rampExit') {
+        const o = ev.ref.ref;
+        o.runs++;
+        o.litT = 1;
+        AudioSys.sfx('skillReady');
+        const pts = TUNE.score.ramp * o.runs;
+        this._addScore(pts, ev.ref.samples[ev.ref.samples.length - 1].x, ev.ref.samples[ev.ref.samples.length - 1].z, { color: '#8fe8ff' });
+        this._banner2(`軌道 ×${o.runs}`, '#8fe8ff', 900);
+        this._damageBoss(10 + o.runs * 2);
+        this.shockwaves.spawn(ev.ref.entry.x, ev.ref.entry.z, o.def.color, 2.2, 0.4);
+      } else if (ev.type === 'rampFail') {
+        AudioSys.sfx('bounce', 0.5);
+        this._toast('力道不足，球滑回來了', 900);
       }
     }
   }
@@ -1229,8 +1331,8 @@ export class Game {
       rc.progress = 0;
       for (const b of this.ringBulbs) if (b) b.locked = false;
       AudioSys.sfx('vuln');
-      this._banner2('⚡ 星核充能完成！', '#5ae6ff', 1500);
-      this.shockwaves.spawn(0, RING.z, 0x5ae6ff, 5, 0.7);
+      this._banner2('⚡ 能量環充滿！', '#5ae6ff', 1500);
+      this.shockwaves.spawn(0, this.ringZ, 0x5ae6ff, 5, 0.7);
       this.score += 5000;
       this._damageBoss(20);
       this.shake.hit(1.4);
@@ -1254,7 +1356,7 @@ export class Game {
     this._addScore(TUNE.score.saucer, o.sc.x, o.sc.z, { color: '#d9a6ff' });
     // 進洞＝對棋主的直接重擊
     this._damageBoss(14);
-    this._toast('💥 虛空之井：直擊棋主！', 1400);
+    this._toast(`💥 直擊${this.stage.bossName ?? '主目標'}！`, 1400);
   }
 
   // ================= 相機 =================
@@ -1271,9 +1373,10 @@ export class Game {
     this.camera.fov = C.fov;
     const tilt = THREE.MathUtils.degToRad(C.tilt);
     const corners = [
-      // 檯面四角（含側框），讓檯面盡量填滿畫面
-      new THREE.Vector3(-3.75, 0, TABLE.TOP - 0.25), new THREE.Vector3(3.75, 0, TABLE.TOP - 0.25),
-      new THREE.Vector3(-3.75, 0, 7.3), new THREE.Vector3(3.75, 0, 7.3),
+      // 檯面四角（框做薄了，取景更貼近檯面）＋ 記分板上緣
+      new THREE.Vector3(-3.45, 0, TABLE.TOP - 0.2), new THREE.Vector3(3.45, 0, TABLE.TOP - 0.2),
+      new THREE.Vector3(-3.45, 0, 6.85), new THREE.Vector3(3.45, 0, 6.85),
+      new THREE.Vector3(0, 2.85, TABLE.TOP - 1.02),
     ];
     const fits = (dist) => {
       const cy = Math.cos(tilt) * dist, cz = Math.sin(tilt) * dist + C.lookZ;

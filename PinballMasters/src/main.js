@@ -2,12 +2,12 @@
 // 全部 UI 都在 WebGL 內渲染（canvas 紋理 + 平面），不使用 DOM 元素（唯一例外：隱藏的 DEV 面板）
 import * as THREE from 'three';
 import { Game } from './game.js';
-import { STAGES, STORY, WHO, HEROES } from './data.js';
+import { STAGES, STAGE_RAMPS, HEROES } from './data.js';
 import { AudioSys } from './audio.js';
 import { setupDevTool } from './dev.js';
 import { UILayer, makeText, makeRect, makeButton, disposeGroup } from './ui.js';
 import { PostFX } from './postfx.js';
-import { makeEnvMap, loadPlayfieldArt } from './art.js';
+import { makeEnvMap, loadEnvMap, loadAllPlayfieldArt } from './art.js';
 import { TUNE } from './tune.js';
 
 const canvas = document.getElementById('game-canvas');
@@ -21,7 +21,8 @@ renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 
-const env = makeEnvMap(renderer);
+// 先用程序生成的環境貼圖開場，載到 AI 生成的遊樂場全景後再換上（金屬反射更真實）
+let env = makeEnvMap(renderer);
 const postfx = new PostFX(renderer);
 for (const [k, v] of Object.entries(TUNE.post)) postfx.set(k, v);
 const ui = new UILayer(renderer, canvas);
@@ -79,7 +80,6 @@ let game = null;
 let currentStage = 0;
 let screenGroup = null;   // 目前的 UI 畫面群組
 let screenName = null;
-let storyState = null;
 let lastResult = null;
 let pausedOverlay = false;
 
@@ -115,20 +115,19 @@ const BUILDERS = {
     const w = ui.w, h = ui.h;
     const en = makeText({ text: 'PINBALL MASTERS', size: 14, letter: 6, color: '#8fa7ff', order: 5 });
     const title = makeText({
-      text: '彈珠達人\n跨界對決', size: Math.min(52, w * 0.12), weight: 900, letter: 4,
+      text: '彈珠達人', size: Math.min(56, w * 0.14), weight: 900, letter: 6,
       gradient: ['#9fd8ff', '#4f7bff', '#c77dff'], shadow: { color: 'rgba(90,140,255,.55)', blur: 18 }, order: 5,
     });
     const sub = makeText({
-      text: '四個世界的傳說高手，化身彈珠站上檯面。\n彈射板、彈簧桿——把虛空棋主轟出彈珠台！',
+      text: '三台機檯，每局三顆彈珠。\n拉彈簧發球、點左右控制彈射板。',
       size: 14, weight: 400, color: 'rgba(255,255,255,.8)', order: 5, lineHeight: 1.7,
     });
-    const s = loadSave();
-    const btnStart = makeButton(ui, { ...GOLD, label: '開始冒險', onTap: () => {
-      AudioSys.init(); AudioSys.sfx('ui');
-      if (!s.introSeen) playStory(STORY.intro, () => { save({ introSeen: true }); startStage(loadSave().unlocked ?? 0); });
-      else startStage(loadSave().unlocked ?? 0);
+    const btnStart = makeButton(ui, { ...GOLD, label: '選擇機檯', onTap: () => {
+      AudioSys.init(); AudioSys.sfx('ui'); showScreen('stages');
     } });
-    const btnSelect = makeButton(ui, { ...GHOST, label: '選擇章節', onTap: () => { AudioSys.init(); AudioSys.sfx('ui'); showScreen('stages'); } });
+    const btnSelect = makeButton(ui, { ...GHOST, label: '快速開始', onTap: () => {
+      AudioSys.init(); AudioSys.sfx('ui'); startStage(0);
+    } });
     const btnSound = makeButton(ui, { ...GHOST, label: AudioSys.enabled ? '🔊 音效：開' : '🔇 音效：關', onTap: () => {
       AudioSys.init();
       AudioSys.setEnabled(!AudioSys.enabled);
@@ -150,72 +149,53 @@ const BUILDERS = {
     return g;
   },
 
+  // 機檯選擇：三台全部開放，各自顯示主題色與最高分
   stages() {
     const g = new THREE.Group();
     const h = ui.h;
     const s = loadSave();
-    const unlocked = s.unlocked ?? 0;
-    const stars = s.stars ?? {};
-    const t = makeText({ text: '選擇章節', size: 24, letter: 3, order: 5 });
-    t.position.y = h * 0.3;
+    const best = s.best ?? {};
+    const t = makeText({ text: '選擇機檯', size: 24, letter: 4, order: 5 });
+    t.position.y = h * 0.32;
     g.add(t);
     const cw = Math.min(ui.w * 0.92, 380);
+    const hex = (n) => '#' + n.toString(16).padStart(6, '0');
     STAGES.forEach((st, i) => {
-      const locked = i > unlocked;
-      const sc = stars[i] ?? 0;
+      const col = hex(st.theme.main);
       const card = makeButton(ui, {
-        w: cw, h: 76, radius: 16, size: 17,
-        fill: 'rgba(255,255,255,.07)', stroke: 'rgba(255,255,255,.2)', glow: null,
+        w: cw, h: 84, radius: 16, size: 17,
+        fill: 'rgba(255,255,255,.06)', stroke: col, glow: { color: col + '66', blur: 12 },
         label: '',
-        onTap: locked ? null : () => { AudioSys.init(); AudioSys.sfx('ui'); startStage(i); },
+        onTap: () => { AudioSys.init(); AudioSys.sfx('ui'); startStage(i); },
       });
-      const name = makeText({ text: `${locked ? '🔒 ' : ''}${st.name}・${st.sub}`, size: 17, order: 5 });
-      name.position.set(-cw / 2 + name.geometry.parameters.width / 2 + 18, 12, 0);
-      const info = makeText({ text: `BOSS 生命 ${st.bossHp.toLocaleString()}｜彈射器 ×${st.bumpers.length}`, size: 11, weight: 400, color: 'rgba(255,255,255,.6)', order: 5 });
-      info.position.set(-cw / 2 + info.geometry.parameters.width / 2 + 18, -14, 0);
-      const st3 = makeText({ text: '★'.repeat(sc) + '☆'.repeat(3 - sc), size: 16, color: '#ffd75e', order: 5 });
-      st3.position.set(cw / 2 - st3.geometry.parameters.width / 2 - 16, 0, 0);
-      card.add(name, info, st3);
-      card.position.y = h * 0.3 - 70 - i * 92;
-      if (locked) card.traverse(o => { if (o.material) o.material.opacity = 0.35; });
+      const emo = makeText({ text: st.bossEmoji, size: 30, order: 5 });
+      emo.position.set(-cw / 2 + 34, 0, 0);
+      const name = makeText({ text: st.name, size: 19, weight: 900, letter: 2, color: col, order: 5 });
+      name.position.set(-cw / 2 + 70 + name.geometry.parameters.width / 2, 16, 0);
+      const sub = makeText({ text: st.sub, size: 13, weight: 400, color: 'rgba(255,255,255,.75)', order: 5 });
+      sub.position.set(-cw / 2 + 70 + sub.geometry.parameters.width / 2, -6, 0);
+      const info = makeText({
+        text: `軌道 ×${STAGE_RAMPS[i].length}　彈射器 ×${st.bumpers.length}　靶 ×${st.targets.length}`,
+        size: 10, weight: 400, color: 'rgba(255,255,255,.5)', order: 5,
+      });
+      info.position.set(-cw / 2 + 70 + info.geometry.parameters.width / 2, -26, 0);
+      card.add(emo, name, sub, info);
+      if (best[i]) {
+        const b = makeText({ text: `BEST\n${best[i].toLocaleString()}`, size: 11, color: '#ffd75e', lineHeight: 1.5, order: 5 });
+        b.position.set(cw / 2 - b.geometry.parameters.width / 2 - 14, 0, 0);
+        card.add(b);
+      }
+      card.position.y = h * 0.32 - 78 - i * 100;
       g.add(card);
     });
     const back = makeButton(ui, { ...GHOST, label: '返回', w: 160, onTap: () => { AudioSys.sfx('ui'); showScreen('title'); } });
-    back.position.y = h * 0.3 - 70 - STAGES.length * 92 - 20;
+    back.position.y = h * 0.32 - 78 - STAGES.length * 100 - 10;
     g.add(back);
     return g;
   },
 
-  story() {
-    const g = new THREE.Group();
-    const w = ui.w, h = ui.h;
-    const dim = makeRect({ w: w + 4, h: h + 4, fill: 'rgba(5,7,20,.85)', radius: 0, order: 4 });
-    const portrait = makeText({ text: '🌌', size: Math.min(84, w * 0.2), order: 5 });
-    portrait.position.y = -h / 2 + 320;
-    const bw = Math.min(w * 0.94, 540);
-    const box = makeRect({
-      w: bw, h: 170, radius: 18, order: 5,
-      fill: ['rgba(30,40,90,.95)', 'rgba(14,18,44,.97)'], stroke: 'rgba(140,170,255,.4)', strokeW: 1.5,
-    });
-    box.position.y = -h / 2 + 140;
-    const name = makeText({ text: '', size: 15, color: '#9fd8ff', letter: 2, order: 6 });
-    name.position.set(0, box.position.y + 56, 0);
-    const text = makeText({ text: ' ', size: 16, weight: 400, lineHeight: 1.7, order: 6 });
-    text.position.set(0, box.position.y, 0);
-    const next = makeText({ text: '▼ 點擊繼續', size: 11, color: 'rgba(255,255,255,.55)', order: 6 });
-    next.position.set(0, box.position.y - 62, 0);
-    const skip = makeButton(ui, {
-      ...GHOST, w: 110, h: 40, size: 14, label: '跳過 ≫', order: 6,
-      onTap: () => { AudioSys.sfx('ui'); endStory(); },
-    });
-    skip.position.set(w / 2 - 70, h / 2 - 48, 0);
-    g.add(dim, portrait, box, name, text, next, skip);
-    g.userData = { portrait, name, text, next };
-    return g;
-  },
-
   result() {
-    const { win, score, stars } = lastResult;
+    const { win, score } = lastResult;
     const g = new THREE.Group();
     const w = ui.w, h = ui.h;
     const dim = makeRect({ w: w + 4, h: h + 4, fill: 'rgba(5,7,20,.82)', radius: 0, order: 4 });
@@ -225,9 +205,10 @@ const BUILDERS = {
       shadow: { color: win ? 'rgba(255,190,60,.8)' : 'rgba(90,120,255,.6)', blur: 22 }, order: 5,
     });
     title.position.y = h * 0.22;
+    const bestNow = (loadSave().best ?? {})[currentStage] ?? 0;
     const starText = makeText({
-      text: win ? '★'.repeat(stars) + '☆'.repeat(3 - stars) : '☆☆☆',
-      size: 38, color: '#ffd75e', letter: 8, order: 5,
+      text: score >= bestNow ? '★ NEW BEST ★' : `BEST ${bestNow.toLocaleString()}`,
+      size: 18, color: '#ffd75e', letter: 3, order: 5,
       shadow: { color: 'rgba(255,190,60,.6)', blur: 12 },
     });
     starText.position.y = h * 0.12;
@@ -263,97 +244,45 @@ const BUILDERS = {
   },
 };
 
-// ================= 劇情 =================
-function playStory(lines, done) {
-  storyState = { lines, i: 0, done, pos: 0, t: 0, typing: true };
-  showScreen('story');
-  renderStoryLine();
-}
-function renderStoryLine() {
-  const st = storyState;
-  const line = st.lines[st.i];
-  const who = WHO[line.who];
-  const u = screenGroup.userData;
-  u.portrait.userData.setText(who.emoji);
-  u.name.userData.setText(who.name);
-  u.text.userData.setText(' ');
-  st.pos = 0; st.t = 0; st.typing = true;
-}
-function advanceStory() {
-  const st = storyState;
-  if (!st) return;
-  AudioSys.sfx('ui');
-  if (st.typing) {
-    st.typing = false;
-    screenGroup.userData.text.userData.setText(wrapText(st.lines[st.i].text));
-    return;
-  }
-  st.i++;
-  if (st.i >= st.lines.length) endStory();
-  else renderStoryLine();
-}
-function endStory() {
-  const done = storyState?.done;
-  storyState = null;
-  showScreen(null);
-  done?.();
-}
-// 依畫面寬度自動換行
-function wrapText(text) {
-  const maxChars = Math.max(12, Math.floor(Math.min(ui.w * 0.94, 540) / 17));
-  let out = '';
-  for (let i = 0; i < text.length; i += maxChars) out += (i ? '\n' : '') + text.slice(i, i + maxChars);
-  return out;
-}
-function updateStoryTyping(dt) {
-  const st = storyState;
-  if (!st || !st.typing || !screenGroup?.userData?.text) return;
-  st.t += dt;
-  const full = st.lines[st.i].text;
-  const target = Math.min(full.length, Math.floor(st.t / 0.03));
-  if (target !== st.pos) {
-    st.pos = target;
-    if (st.pos % 3 === 0) AudioSys.sfx('type');
-    screenGroup.userData.text.userData.setText(wrapText(full.slice(0, st.pos)));
-    if (st.pos >= full.length) st.typing = false;
-  }
-}
-
 // ================= 遊戲流程 =================
 const app = {
-  renderer, canvas, ui, env, postfx, playfieldArt: null,
+  renderer, canvas, ui, env, postfx, playfieldArts: [null, null, null],
   onPause: () => { if (!game || pausedOverlay) return; game.paused = true; pausedOverlay = true; showScreen('pause'); if (game.hud) game.hud.visible = false; },
 };
 
-// 預載檯面插畫（沒有檔案時維持 null，改用程序繪製的檯面）
-loadPlayfieldArt().then(img => { app.playfieldArt = img; });
+// 預載三張檯面插畫（缺檔時該章維持 null，改用程序繪製的檯面）
+// 開檯前會等這個 promise，避免圖還沒載完就建好檯面
+const artsReady = Promise.all([
+  loadAllPlayfieldArt(STAGES).then(imgs => { app.playfieldArts = imgs; }),
+  loadEnvMap(renderer).then(e => {
+    env = e;
+    app.env = e;
+    menuBg.scene.environment = e;
+  }),
+]);
 
-function startStage(idx, skipIntro = false) {
+function startStage(idx) {
   currentStage = idx;
   pausedOverlay = false;
-  const boot = () => {
+  (async () => {
+    await artsReady;
     game?.dispose();
     game = new Game(app, idx, onGameEnd);
     devTool.showButton(true);
     showScreen(null);
-  };
-  if (skipIntro) { boot(); return; }
-  playStory(STORY.stageIntro[idx], boot);
+  })();
 }
 
 function onGameEnd(win, score, stars) {
   devTool.showButton(false);
   lastResult = { win, score, stars };
   if (game?.hud) game.hud.visible = false;
-  if (win) {
-    const s = loadSave();
-    const newStars = { ...(s.stars ?? {}) };
-    newStars[currentStage] = Math.max(newStars[currentStage] ?? 0, stars);
-    save({ unlocked: Math.max(s.unlocked ?? 0, Math.min(currentStage + 1, STAGES.length - 1)), stars: newStars });
-    playStory(STORY.stageOutro[currentStage], () => showScreen('result'));
-  } else {
-    showScreen('result');
-  }
+  // 記錄每台機檯的最高分
+  const s = loadSave();
+  const best = { ...(s.best ?? {}) };
+  best[currentStage] = Math.max(best[currentStage] ?? 0, score);
+  save({ best });
+  showScreen('result');
 }
 
 function resumeGame() {
@@ -373,7 +302,6 @@ function backToMenu() {
 canvas.addEventListener('pointerdown', (e) => {
   AudioSys.init();
   if (ui.pointerDown(e.clientX, e.clientY)) return;
-  if (storyState) { advanceStory(); return; }
   if (screenName === null && game && !game.paused) game.pointerDown(e);
 });
 window.addEventListener('pointermove', (e) => {
@@ -386,7 +314,6 @@ window.addEventListener('pointerup', (e) => {
 window.addEventListener('keydown', (e) => {
   if (e.code === 'Escape' && game) { pausedOverlay ? resumeGame() : app.onPause(); return; }
   if (screenName === null && game && !game.paused) game.keyDown(e);
-  if (storyState && (e.code === 'Space' || e.code === 'Enter')) advanceStory();
 });
 window.addEventListener('keyup', (e) => {
   if (screenName === null && game && !game.paused) game.keyUp(e);
@@ -404,8 +331,7 @@ function resize() {
   menuBg.cam.updateProjectionMatrix();
   game?.resize();
   // 重建目前畫面以套用新尺寸
-  if (screenName && !storyState) showScreen(screenName);
-  else if (storyState) { const st = storyState; showScreen('story'); storyState = st; renderStoryLine(); st.typing = false; screenGroup.userData.text.userData.setText(wrapText(st.lines[st.i].text)); }
+  if (screenName) showScreen(screenName);
 }
 window.addEventListener('resize', resize);
 resize();
@@ -413,7 +339,6 @@ resize();
 function loop() {
   requestAnimationFrame(loop);
   const dt = Math.min(clock.getDelta(), 0.05);
-  updateStoryTyping(dt);
   if (game) {
     if (!game.paused) game.update(dt);
     game.render(dt); // 內部走 postfx
@@ -443,7 +368,6 @@ const devTool = setupDevTool(() => game, postfx);
 // 開發用除錯掛載點
 window.__PM = {
   get game() { return game; },
-  get story() { return storyState; },
   get screen() { return screenName; },
   ui, postfx, TUNE,
 };

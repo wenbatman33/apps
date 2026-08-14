@@ -37,9 +37,9 @@ export const TUNE = {
     trailLen: 20,
     trailWidth: 0.13,
     trailOpacity: 0.5,
-    glowSize: 3.2,
+    glowSize: 1.9,
     particles: 1.0,
-    lightIntensity: 2.4,
+    lightIntensity: 1.1,
   },
   battle: {
     saverSec: 12,          // 球保護時間（落球免費補回）
@@ -53,7 +53,7 @@ export const TUNE = {
   },
   score: {
     bumper: 150, sling: 100, target: 500, sideTarget: 350,
-    lane: 200, spinner: 30, rollover: 120, saucer: 2500, ringCore: 400,
+    lane: 200, spinner: 30, rollover: 120, saucer: 2500, ringCore: 400, ramp: 1500,
   },
   post: {
     bloomStrength: 0.42, threshold: 1.05, exposure: 1.05, vignette: 0.45, chroma: 0.005,

@@ -33,6 +33,73 @@ export class PinballWorld {
     (this.saucers ??= []).push(s);
     return s;
   }
+
+  // 高架軌道（ramp）：球以足夠速度撞入口就會爬上軌道，沿路徑行進到出口。
+  // 速度不足會在半途倒退滑回入口——跟真實彈珠台一樣。
+  // r: { id, entry:{x,z}, entryR, minSpeed, samples:[{x,y,z}], length, exitSpeed, climbDrag }
+  addRamp(r) {
+    r.active = r.active ?? true;
+    (this.ramps ??= []).push(r);
+    return r;
+  }
+
+  _checkRampEntry(b) {
+    if (!this.ramps || b.onRamp || b.held) return false;
+    const speed = Math.hypot(b.vx, b.vz);
+    for (const r of this.ramps) {
+      if (!r.active || r.cool > 0) continue;
+      const dx = b.x - r.entry.x, dz = b.z - r.entry.z;
+      if (dx * dx + dz * dz > r.entryR * r.entryR) continue;
+      // 必須夠快，且行進方向大致朝軌道爬升方向
+      if (speed < r.minSpeed) continue;
+      const dot = (b.vx * r.entryDir.x + b.vz * r.entryDir.z) / (speed || 1);
+      if (dot < 0.35) continue;
+      b.onRamp = { ramp: r, dist: 0, speed };
+      this.events.push({ type: 'rampEnter', ref: r, speed });
+      return true;
+    }
+    return false;
+  }
+
+  _stepRamp(b, h) {
+    const P = this.tune.physics;
+    const st = b.onRamp;
+    const r = st.ramp;
+    // 沿軌道的重力分量：爬升時減速、倒退時加速
+    st.speed -= P.gravity * r.climbDrag * h;
+    st.dist += st.speed * h;
+
+    if (st.dist <= 0) {
+      // 沒力氣爬完 → 滑回入口，回到一般物理
+      b.onRamp = null;
+      r.cool = 0.35;
+      b.x = r.entry.x; b.z = r.entry.z; b.y = 0;
+      b.vx = -r.entryDir.x * 3; b.vz = -r.entryDir.z * 3;
+      this.events.push({ type: 'rampFail', ref: r });
+      return;
+    }
+    if (st.dist >= r.length) {
+      // 到達出口，帶著出口方向的速度回到檯面
+      b.onRamp = null;
+      r.cool = 0.35;
+      const p = r.samples[r.samples.length - 1];
+      b.x = p.x; b.z = p.z; b.y = 0;
+      const sp = Math.max(r.exitSpeed, Math.abs(st.speed));
+      b.vx = r.exitDir.x * sp; b.vz = r.exitDir.z * sp;
+      this.events.push({ type: 'rampExit', ref: r, speed: sp });
+      return;
+    }
+    // 取樣路徑位置（含高度，視覺上球會爬升）
+    const t = st.dist / r.length;
+    const fi = t * (r.samples.length - 1);
+    const i = Math.min(r.samples.length - 2, Math.floor(fi));
+    const f = fi - i;
+    const a = r.samples[i], c = r.samples[i + 1];
+    b.x = a.x + (c.x - a.x) * f;
+    b.y = a.y + (c.y - a.y) * f;
+    b.z = a.z + (c.z - a.z) * f;
+    b.vx = 0; b.vz = 0; b.vy = 0;
+  }
   addSegment(ax, az, bx, bz, opts = {}) {
     const s = { ax, az, bx, bz, e: opts.e ?? null, kind: opts.kind ?? 'wall',
       ref: opts.ref ?? null, active: opts.active ?? true, draw: opts.draw ?? true };
@@ -63,6 +130,7 @@ export class PinballWorld {
     this.events.length = 0;
     // 吸球洞冷卻：球射出後短時間內不再吸球，否則會在洞內被反覆吸住
     if (this.saucers) for (const s of this.saucers) if (s.cool > 0) s.cool -= dt;
+    if (this.ramps) for (const r of this.ramps) if (r.cool > 0) r.cool -= dt;
     const n = Math.max(1, this.tune.physics.substeps | 0);
     const h = dt / n;
     for (let i = 0; i < n; i++) this._substep(h);
@@ -88,6 +156,8 @@ export class PinballWorld {
     for (const b of this.balls) {
       // 被吸球洞固定住的球不參與物理
       if (b.held) continue;
+      // 在高架軌道上：走軌道邏輯，跳過檯面碰撞
+      if (b.onRamp) { this._stepRamp(b, h); continue; }
       // 記錄移動前位置，供 flipper 掃掠碰撞（CCD）使用
       b.px = b.x; b.pz = b.z;
       // 重力（斜面）＋積分
@@ -109,6 +179,7 @@ export class PinballWorld {
       this._collideCircles(b);
       this._collideFlippers(b, h);
       this._checkSensors(b);
+      if (this._checkRampEntry(b)) continue;
       this._checkSaucers(b);
     }
   }

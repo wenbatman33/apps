@@ -336,6 +336,82 @@ export function loadPlayfieldArt(url = './assets/playfield_art.jpg') {
   });
 }
 
+// 三張檯面各自的插畫 + 三張記分板底圖
+export function loadAllPlayfieldArt(stages) {
+  const jobs = [];
+  for (const st of stages) jobs.push(loadPlayfieldArt('./assets/' + st.art));
+  for (const st of stages) jobs.push(loadPlayfieldArt('./assets/' + st.glass));
+  return Promise.all(jobs).then(all => ({
+    tables: all.slice(0, stages.length),
+    glasses: all.slice(stages.length),
+  }));
+}
+
+// ---------- 記分板（backglass）：底圖 + 可即時更新的分數顯示 ----------
+export function buildScoreboard(bgImage, theme) {
+  const W = 1024, H = 384;
+  const c = document.createElement('canvas');
+  c.width = W; c.height = H;
+  const g = c.getContext('2d');
+  const accent = '#' + (theme.accent ?? 0xffd75e).toString(16).padStart(6, '0');
+  const main = '#' + (theme.main ?? 0x35d6ff).toString(16).padStart(6, '0');
+
+  const draw = (score, ball, totalBalls, extra) => {
+    g.clearRect(0, 0, W, H);
+    if (bgImage) {
+      g.drawImage(bgImage, 0, 0, W, H);
+      // 中央壓暗，讓數字看得清楚
+      const gr = g.createLinearGradient(0, 0, 0, H);
+      gr.addColorStop(0, 'rgba(4,6,16,.62)');
+      gr.addColorStop(0.5, 'rgba(4,6,16,.78)');
+      gr.addColorStop(1, 'rgba(4,6,16,.62)');
+      g.fillStyle = gr;
+      g.fillRect(W * 0.16, 0, W * 0.68, H);
+    } else {
+      g.fillStyle = '#070b1c'; g.fillRect(0, 0, W, H);
+    }
+    // 內框
+    g.strokeStyle = accent; g.lineWidth = 5; g.globalAlpha = 0.75;
+    g.beginPath(); g.roundRect(W * 0.17, 26, W * 0.66, H - 52, 14); g.stroke();
+    g.globalAlpha = 1;
+
+    // 主分數（點矩陣風格：先畫發光底再畫字）
+    g.textAlign = 'center'; g.textBaseline = 'middle';
+    const text = score.toLocaleString();
+    g.font = '900 132px "DS-Digital","Arial Black",monospace';
+    g.shadowColor = accent; g.shadowBlur = 34;
+    g.fillStyle = accent;
+    g.fillText(text, W / 2, H * 0.46);
+    g.shadowBlur = 0;
+    g.fillStyle = 'rgba(255,255,255,.9)';
+    g.font = '900 132px "DS-Digital","Arial Black",monospace';
+    g.globalAlpha = 0.32;
+    g.fillText(text, W / 2, H * 0.46);
+    g.globalAlpha = 1;
+
+    // 下排：球數 + 額外訊息
+    g.font = '700 40px "PingFang TC",Arial,sans-serif';
+    g.fillStyle = main;
+    g.shadowColor = main; g.shadowBlur = 16;
+    g.fillText(`BALL ${ball} / ${totalBalls}`, W * 0.30, H * 0.80);
+    g.fillText(extra || '', W * 0.70, H * 0.80);
+    g.shadowBlur = 0;
+  };
+
+  draw(0, 1, 3, '');
+  const tex = new THREE.CanvasTexture(c);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  const mesh = new THREE.Mesh(
+    new THREE.PlaneGeometry(1, 1),
+    new THREE.MeshBasicMaterial({ map: tex, toneMapped: false })
+  );
+  mesh.userData.update = (score, ball, totalBalls, extra) => {
+    draw(score, ball, totalBalls, extra);
+    tex.needsUpdate = true;
+  };
+  return mesh;
+}
+
 // ---------- 檯面粗糙度貼圖（讓漆面有變化） ----------
 export function makeRoughnessTexture() {
   const c = document.createElement('canvas');
@@ -353,7 +429,27 @@ export function makeRoughnessTexture() {
   return t;
 }
 
-// ---------- 環境反射（簡易漸層 cube，讓金屬有反光） ----------
+// ---------- 環境反射：優先用 AI 生成的遊樂場全景，讓金屬反射有真實層次 ----------
+export function loadEnvMap(renderer, url = './assets/env_arcade.jpg') {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => {
+      const tex = new THREE.Texture(img);
+      tex.mapping = THREE.EquirectangularReflectionMapping;
+      tex.colorSpace = THREE.SRGBColorSpace;
+      tex.needsUpdate = true;
+      const pmrem = new THREE.PMREMGenerator(renderer);
+      const env = pmrem.fromEquirectangular(tex).texture;
+      pmrem.dispose();
+      tex.dispose();
+      resolve(env);
+    };
+    img.onerror = () => resolve(makeEnvMap(renderer)); // 沒有檔案就退回程序生成
+    img.src = url;
+  });
+}
+
+// ---------- 環境反射（程序生成的備援版本） ----------
 export function makeEnvMap(renderer) {
   const c = document.createElement('canvas');
   c.width = 256; c.height = 256;
@@ -390,35 +486,67 @@ export const MAT = {
 };
 
 // ---------- 零件：Pop Bumper（帽 + 裙 + 燈環 + 金屬柱） ----------
+// 真實的 pop bumper：一頂彩色蘑菇帽（帽面有印刷圖案）壓在透明裙板上，
+// 中央金屬桿只露出一小截。帽子要夠大，否則俯視時會變成「白眼球＋黑瞳孔」。
 export function buildPopBumper(r, color, env) {
   const grp = new THREE.Group();
-  // 底裙（透明白塑膠感）
+
+  // 底裙：薄薄一圈半透明塑膠，不要做成厚實白盤
   const skirt = new THREE.Mesh(
-    new THREE.CylinderGeometry(r * 1.06, r * 1.18, 0.1, 28),
-    new THREE.MeshStandardMaterial({ color: 0xe8f0ff, roughness: 0.35, metalness: 0.1, envMap: env, envMapIntensity: 0.6 })
+    new THREE.CylinderGeometry(r * 1.12, r * 1.2, 0.05, 30),
+    new THREE.MeshPhysicalMaterial({
+      color: 0xdfe8ff, roughness: 0.2, metalness: 0, transparent: true, opacity: 0.42,
+      transmission: 0.5, thickness: 0.05, envMap: env, envMapIntensity: 0.8,
+    })
   );
-  skirt.position.y = 0.05;
-  // 發光燈環
+  skirt.position.y = 0.028;
+
+  // 裙下的發光燈圈（真實 bumper 的燈是從裙板下方透出來的）
   const ring = new THREE.Mesh(
-    new THREE.TorusGeometry(r * 0.92, 0.055, 12, 32),
-    new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.6, blending: THREE.AdditiveBlending })
+    new THREE.CylinderGeometry(r * 1.05, r * 1.05, 0.035, 30),
+    new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.55, blending: THREE.AdditiveBlending })
   );
-  ring.rotation.x = Math.PI / 2; ring.position.y = 0.13;
-  // 帽體（蘑菇形）
+  ring.position.y = 0.012;
+
+  // 帽面印刷圖案（同心圓 + 放射線，真實 bumper 帽子上都有）
+  const c = document.createElement('canvas');
+  c.width = c.height = 256;
+  const g = c.getContext('2d');
+  const col = '#' + color.toString(16).padStart(6, '0');
+  g.fillStyle = col; g.fillRect(0, 0, 256, 256);
+  g.strokeStyle = 'rgba(255,255,255,.85)'; g.lineWidth = 10;
+  g.beginPath(); g.arc(128, 128, 92, 0, Math.PI * 2); g.stroke();
+  g.lineWidth = 6;
+  g.beginPath(); g.arc(128, 128, 58, 0, Math.PI * 2); g.stroke();
+  g.save(); g.translate(128, 128);
+  g.strokeStyle = 'rgba(0,0,0,.35)'; g.lineWidth = 12;
+  for (let i = 0; i < 12; i++) {
+    g.rotate(Math.PI * 2 / 12);
+    g.beginPath(); g.moveTo(0, -60); g.lineTo(0, -92); g.stroke();
+  }
+  g.restore();
+  g.fillStyle = 'rgba(255,255,255,.9)';
+  g.beginPath(); g.arc(128, 128, 26, 0, Math.PI * 2); g.fill();
+  const capTex = new THREE.CanvasTexture(c);
+
+  // 帽體：夠大夠飽滿的蘑菇形，蓋住大部分裙板
   const capGeo = new THREE.LatheGeometry([
-    new THREE.Vector2(0.001, 0.52), new THREE.Vector2(r * 0.30, 0.50),
-    new THREE.Vector2(r * 0.62, 0.42), new THREE.Vector2(r * 0.80, 0.28),
-    new THREE.Vector2(r * 0.86, 0.16), new THREE.Vector2(r * 0.80, 0.13),
-    new THREE.Vector2(r * 0.30, 0.13),
-  ], 30);
+    new THREE.Vector2(0.001, 0.46), new THREE.Vector2(r * 0.34, 0.445),
+    new THREE.Vector2(r * 0.66, 0.39), new THREE.Vector2(r * 0.88, 0.29),
+    new THREE.Vector2(r * 1.0, 0.17), new THREE.Vector2(r * 1.02, 0.08),
+    new THREE.Vector2(r * 0.94, 0.06),
+  ], 34);
   const cap = new THREE.Mesh(capGeo, new THREE.MeshStandardMaterial({
-    color, emissive: color, emissiveIntensity: 0.3, roughness: 0.25, metalness: 0.15,
-    envMap: env, envMapIntensity: 0.8,
+    map: capTex, color: 0xffffff, emissive: color, emissiveIntensity: 0.22,
+    roughness: 0.3, metalness: 0.1, envMap: env, envMapIntensity: 0.7,
   }));
-  // 中央金屬柱
-  const post = new THREE.Mesh(new THREE.CylinderGeometry(r * 0.13, r * 0.13, 0.58, 12), MAT.chrome(env));
-  post.position.y = 0.29;
-  grp.add(skirt, ring, cap, post);
+  cap.castShadow = true;
+
+  // 中央金屬頂：只露出一小截圓頭，不要變成一根黑柱
+  const knob = new THREE.Mesh(new THREE.SphereGeometry(r * 0.16, 14, 10), MAT.chrome(env));
+  knob.position.y = 0.47;
+
+  grp.add(ring, skirt, cap, knob);
   grp.userData = { cap, ring, skirt };
   return grp;
 }
@@ -448,41 +576,74 @@ export function buildDropTarget(color, env) {
   return grp;
 }
 
-// ---------- 零件：Slingshot（橡皮筋 + 兩根柱） ----------
-export function buildSlingshot(a, b, color, env) {
+// ---------- 零件：Slingshot 三角擋板 ----------
+// 真實彈珠台的 slingshot：一片有厚度的三角形塑膠板，斜邊掛橡皮筋，三個角有金屬柱與螺絲。
+// a→b 是面向檯面中央的彈射斜邊，c 是靠牆的外側角。
+export function buildSlingshot(a, b, c, color, env) {
   const grp = new THREE.Group();
   const dx = b.x - a.x, dz = b.z - a.z;
   const len = Math.hypot(dx, dz);
-  // 橡皮筋（用 quaternion 對齊 A→B，避免 Euler 順序造成方向錯誤）
+
+  // --- 三角形塑膠板（擠出成有厚度的實體） ---
+  const shape = new THREE.Shape();
+  shape.moveTo(a.x, a.z); shape.lineTo(b.x, b.z); shape.lineTo(c.x, c.z); shape.closePath();
+  const plateGeo = new THREE.ExtrudeGeometry(shape, {
+    depth: 0.2, bevelEnabled: true, bevelSize: 0.025, bevelThickness: 0.025, bevelSegments: 2,
+  });
+  plateGeo.rotateX(-Math.PI / 2);
+  const plate = new THREE.Mesh(plateGeo, new THREE.MeshStandardMaterial({
+    color: 0xf2f5ff, emissive: color, emissiveIntensity: 0.35,
+    roughness: 0.28, metalness: 0.15, envMap: env, envMapIntensity: 0.9,
+  }));
+  plate.position.y = 0.2;
+  plate.castShadow = true; plate.receiveShadow = true;
+  grp.add(plate);
+
+  // --- 板面上的發光燈條（沿斜邊，命中時會亮） ---
+  const lampGeo = new THREE.BoxGeometry(len * 0.82, 0.02, 0.09);
+  const lamp = new THREE.Mesh(lampGeo, new THREE.MeshBasicMaterial({
+    color, transparent: true, opacity: 0.75, blending: THREE.AdditiveBlending,
+  }));
+  const mx = (a.x + b.x) / 2, mz = (a.z + b.z) / 2;
+  // 燈條往三角形內側縮一點，才不會蓋住橡皮筋
+  const inx = (c.x - mx), inz = (c.z - mz);
+  const inLen = Math.hypot(inx, inz) || 1;
+  lamp.position.set(mx + inx / inLen * 0.16, 0.215, mz + inz / inLen * 0.16);
+  lamp.rotation.y = -Math.atan2(dz, dx);
+  grp.add(lamp);
+
+  // --- 斜邊橡皮筋（架在兩根柱之間，略高於板面） ---
   const band = new THREE.Mesh(
-    new THREE.CylinderGeometry(0.055, 0.055, len, 10),
-    MAT.rubber(color)
+    new THREE.CylinderGeometry(0.05, 0.05, len, 10),
+    MAT.rubber(0xe8394f)
   );
   band.quaternion.setFromUnitVectors(
     new THREE.Vector3(0, 1, 0),
     new THREE.Vector3(dx, 0, dz).normalize()
   );
-  band.position.set((a.x + b.x) / 2, 0.26, (a.z + b.z) / 2);
+  band.position.set(mx, 0.3, mz);
+  band.castShadow = true;
   grp.add(band);
-  // 兩端金屬柱
-  for (const p of [a, b]) {
-    const post = new THREE.Mesh(new THREE.CylinderGeometry(0.075, 0.085, 0.46, 12), MAT.chrome(env));
-    post.position.set(p.x, 0.23, p.z);
+
+  // --- 三個角的金屬柱（斜邊兩端的柱子撐住橡皮筋） ---
+  for (const [p, tall] of [[a, true], [b, true], [c, false]]) {
+    const h = tall ? 0.46 : 0.3;
+    const post = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.07, h, 12), MAT.chrome(env));
+    post.position.set(p.x, h / 2 + 0.02, p.z);
+    post.castShadow = true;
     grp.add(post);
-    const cap = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.1, 0.1, 12), MAT.rubber(0xf24a6a));
-    cap.position.set(p.x, 0.5, p.z);
-    grp.add(cap);
+    if (tall) {
+      const cap = new THREE.Mesh(new THREE.CylinderGeometry(0.085, 0.085, 0.07, 12), MAT.rubber(0xe8394f));
+      cap.position.set(p.x, h + 0.05, p.z);
+      grp.add(cap);
+    } else {
+      const screw = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 0.04, 8), MAT.chrome(env));
+      screw.position.set(p.x, h + 0.04, p.z);
+      grp.add(screw);
+    }
   }
-  // 發光內襯板
-  const plate = new THREE.Mesh(
-    new THREE.PlaneGeometry(len * 0.9, 0.3),
-    new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.4, blending: THREE.AdditiveBlending, side: THREE.DoubleSide })
-  );
-  plate.geometry.rotateX(-Math.PI / 2);
-  plate.rotation.y = -Math.atan2(dz, dx);
-  plate.position.set((a.x + b.x) / 2, 0.02, (a.z + b.z) / 2);
-  grp.add(plate);
-  grp.userData = { band, plate };
+
+  grp.userData = { band, plate, lamp };
   return grp;
 }
 
@@ -737,31 +898,177 @@ export function buildPost(color = 0xf24a6a, env) {
   return grp;
 }
 
+// ---------- 零件：高架軌道（底板 + 兩側護欄 + 支柱 + 入口指示） ----------
+export function buildRamp(path, color, env) {
+  const grp = new THREE.Group();
+  const pts = path.map(p => new THREE.Vector3(p.x, p.y + 0.16, p.z));
+  const curve = new THREE.CatmullRomCurve3(pts);
+  const DIV = 120;
+
+  // 軌道底板：沿曲線鋪一條帶狀面
+  const width = 0.34;
+  const pos = [], idx = [], uvs = [];
+  for (let i = 0; i <= DIV; i++) {
+    const t = i / DIV;
+    const p = curve.getPoint(t);
+    const tan = curve.getTangent(t);
+    const side = new THREE.Vector3(-tan.z, 0, tan.x).normalize();
+    pos.push(p.x + side.x * width, p.y, p.z + side.z * width);
+    pos.push(p.x - side.x * width, p.y, p.z - side.z * width);
+    uvs.push(0, t * 12, 1, t * 12);
+    if (i < DIV) {
+      const a = i * 2;
+      idx.push(a, a + 1, a + 2, a + 1, a + 3, a + 2);
+    }
+  }
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  geo.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
+  geo.setIndex(idx);
+  geo.computeVertexNormals();
+
+  // 半透明壓克力軌道面（真實彈珠台的 ramp 多是透明塑膠）
+  const c = document.createElement('canvas');
+  c.width = 32; c.height = 64;
+  const g = c.getContext('2d');
+  g.fillStyle = 'rgba(255,255,255,.16)'; g.fillRect(0, 0, 32, 64);
+  g.fillStyle = 'rgba(255,255,255,.5)';
+  for (let i = 0; i < 64; i += 16) g.fillRect(0, i, 32, 3);
+  const tex = new THREE.CanvasTexture(c);
+  tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+  const floor = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({
+    map: tex, color, transparent: true, opacity: 0.5,
+    roughness: 0.18, metalness: 0.35, side: THREE.DoubleSide,
+    envMap: env, envMapIntensity: 1.1, emissive: color, emissiveIntensity: 0.25,
+  }));
+  floor.renderOrder = 3;
+  grp.add(floor);
+
+  // 兩側壓克力側牆（真實 ramp 是有高牆的凹槽，球被夾在裡面跑）
+  const WALL_H = 0.19;
+  for (const s of [1, -1]) {
+    const wpos = [], widx = [], wuv = [];
+    for (let i = 0; i <= DIV; i++) {
+      const t = i / DIV;
+      const p = curve.getPoint(t);
+      const tan = curve.getTangent(t);
+      const side = new THREE.Vector3(-tan.z, 0, tan.x).normalize();
+      const bx = p.x + side.x * width * s, bz = p.z + side.z * width * s;
+      wpos.push(bx, p.y, bz);              // 牆底
+      wpos.push(bx, p.y + WALL_H, bz);     // 牆頂
+      wuv.push(t * 10, 0, t * 10, 1);
+      if (i < DIV) {
+        const a = i * 2;
+        widx.push(a, a + 1, a + 2, a + 1, a + 3, a + 2);
+      }
+    }
+    const wgeo = new THREE.BufferGeometry();
+    wgeo.setAttribute('position', new THREE.Float32BufferAttribute(wpos, 3));
+    wgeo.setAttribute('uv', new THREE.Float32BufferAttribute(wuv, 2));
+    wgeo.setIndex(widx);
+    wgeo.computeVertexNormals();
+    const wall = new THREE.Mesh(wgeo, new THREE.MeshPhysicalMaterial({
+      color, transparent: true, opacity: 0.3, roughness: 0.06, metalness: 0,
+      transmission: 0.6, thickness: 0.2, side: THREE.DoubleSide,
+      envMap: env, envMapIntensity: 1.4, emissive: color, emissiveIntensity: 0.2,
+    }));
+    wall.renderOrder = 4;
+    grp.add(wall);
+
+    // 牆頂的金屬收邊條
+    const rail = [];
+    for (let i = 0; i <= DIV; i++) {
+      const t = i / DIV;
+      const p = curve.getPoint(t);
+      const tan = curve.getTangent(t);
+      const side = new THREE.Vector3(-tan.z, 0, tan.x).normalize();
+      rail.push(new THREE.Vector3(p.x + side.x * width * s, p.y + WALL_H, p.z + side.z * width * s));
+    }
+    const rm = new THREE.Mesh(
+      new THREE.TubeGeometry(new THREE.CatmullRomCurve3(rail), DIV, 0.028, 6, false),
+      MAT.chrome(env)
+    );
+    rm.castShadow = true;
+    grp.add(rm);
+  }
+
+  // 支柱（每隔一段撐到檯面）
+  for (let i = 1; i < path.length - 1; i += 2) {
+    const p = path[i];
+    if (p.y < 0.2) continue;
+    const strut = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.035, 0.04, p.y + 0.16, 6),
+      MAT.chrome(env)
+    );
+    strut.position.set(p.x, (p.y + 0.16) / 2, p.z);
+    grp.add(strut);
+  }
+
+  // 入口的金屬導板（真實 ramp 入口都有一片墊高的鋼片，球從這裡衝上軌道）
+  const e0 = path[0], e1 = path[1];
+  const ang = Math.atan2(e1.x - e0.x, e1.z - e0.z);
+  const flap = new THREE.Mesh(
+    new THREE.BoxGeometry(width * 2.1, 0.03, 0.5),
+    MAT.chrome(env)
+  );
+  flap.position.set(e0.x, 0.07, e0.z);
+  flap.rotation.y = ang;
+  flap.rotation.x = 0.16;   // 微微翹起形成斜坡
+  flap.castShadow = true;
+  grp.add(flap);
+  // 導板兩側的護角
+  for (const s of [1, -1]) {
+    const side = new THREE.Vector3(Math.cos(ang) * s, 0, -Math.sin(ang) * s);
+    const guard = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.16, 0.5), MAT.chrome(env));
+    guard.position.set(e0.x + side.x * width * 1.05, 0.11, e0.z + side.z * width * 1.05);
+    guard.rotation.y = ang;
+    grp.add(guard);
+  }
+
+  // 入口指示燈箭頭（球要打進這裡）
+  const arrow = new THREE.Mesh(
+    new THREE.ConeGeometry(0.19, 0.42, 4),
+    new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.9, blending: THREE.AdditiveBlending })
+  );
+  arrow.rotation.set(Math.PI / 2, 0, 0);
+  arrow.rotation.y = ang;
+  arrow.position.set(e0.x, 0.14, e0.z - 0.35);
+  grp.add(arrow);
+  grp.userData = { floor, arrow, curve };
+  return grp;
+}
+
 // ---------- 零件：牆面（含金屬側條與發光內襯） ----------
-export function buildWallSegment(ax, az, bx, bz, color, env) {
+// opts.low：矮牆樣式（drain 兩側等貼近檯面的分隔牆用，避免高亮長條太搶眼）
+export function buildWallSegment(ax, az, bx, bz, color, env, opts = {}) {
   const grp = new THREE.Group();
   const dx = bx - ax, dz = bz - az;
   const len = Math.hypot(dx, dz);
-  const h = 0.52, t = 0.22;
+  const low = !!opts.low;
+  const h = low ? 0.3 : 0.52, t = low ? 0.16 : 0.22;
   const wall = new THREE.Mesh(
     new THREE.BoxGeometry(len + t, h, t),
     new THREE.MeshStandardMaterial({
-      color: 0x121a44, roughness: 0.4, metalness: 0.6,
-      envMap: env, envMapIntensity: 1.0,
+      color: low ? 0x0c1230 : 0x121a44, roughness: low ? 0.6 : 0.4, metalness: low ? 0.3 : 0.6,
+      envMap: env, envMapIntensity: low ? 0.35 : 1.0,
     })
   );
   wall.position.y = h / 2;
-  // 頂面金屬導條（真實台的 ball guide）
+  // 頂面導條：一般牆用亮金屬，矮牆用暗色收邊免得變成刺眼的白線
   const railTop = new THREE.Mesh(
     new THREE.BoxGeometry(len + t, 0.05, t * 1.05),
-    MAT.chrome(env)
+    low
+      ? new THREE.MeshStandardMaterial({ color: 0x5a6480, roughness: 0.5, metalness: 0.7, envMap: env, envMapIntensity: 0.4 })
+      : MAT.chrome(env)
   );
   railTop.position.y = h + 0.02;
   grp.add(railTop);
-  // 發光內襯
+  // 發光內襯（矮牆的燈條也調弱）
   const strip = new THREE.Mesh(
-    new THREE.BoxGeometry(len + t, 0.1, t * 0.5),
-    new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.8, blending: THREE.AdditiveBlending })
+    new THREE.BoxGeometry(len + t, low ? 0.05 : 0.1, t * 0.5),
+    new THREE.MeshBasicMaterial({
+      color, transparent: true, opacity: low ? 0.35 : 0.8, blending: THREE.AdditiveBlending,
+    })
   );
   strip.position.set(0, h * 0.6, -t * 0.5);
   grp.add(wall, strip);
