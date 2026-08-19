@@ -246,38 +246,17 @@ export class EngineUI {
     const wash = this.scene.add.image(this.width / 2, this.height / 2, 'ui-setup-panel')
       .setDisplaySize(520, 925).setAlpha(1);
     this.screenLayer.add(wash);
+    // 只有單人模式，設定畫面僅剩選角；整塊內容往上置中，不留空洞
     this.screenLayer.add([
-      this.createText(this.width / 2, 49, '准备出发', 11, { color: '#c47a08', strokeThickness: 0 }),
-      this.createText(this.width / 2, 76, '选择游戏模式', 24, { color: '#0b2854', strokeThickness: 0 }),
-    ]);
-    const soloSelected = this.handlers.getMode?.() === 'solo';
-    const localSelected = this.handlers.getMode?.() === 'local';
-    this.makeButton(this.screenLayer, 132, 132, 190, 64, '单人挑战', () => {
-      this.handlers.onMode?.('solo');
-      this.showSetup();
-    }, {
-      texture: soloSelected ? 'ui-button-primary' : 'ui-option-card',
-      color: soloSelected ? '#ffffff' : '#28436e', fontSize: 16,
-      strokeThickness: soloSelected ? 1.5 : 0,
-    });
-    this.makeButton(this.screenLayer, 318, 132, 190, 64, '四人同机', () => {
-      this.handlers.onMode?.('local');
-      this.showSetup();
-    }, {
-      texture: localSelected ? 'ui-button-primary' : 'ui-option-card',
-      color: localSelected ? '#ffffff' : '#28436e', fontSize: 16,
-      strokeThickness: localSelected ? 1.5 : 0,
-    });
-    this.screenLayer.add([
-      this.createText(this.width / 2, 184, '八选一', 11, { color: '#c47a08', strokeThickness: 0 }),
-      this.createText(this.width / 2, 214, '选择你的角色', 25, { color: '#0b2854', strokeThickness: 0 }),
+      this.createText(this.width / 2, 129, '八选一', 11, { color: '#c47a08', strokeThickness: 0 }),
+      this.createText(this.width / 2, 159, '选择你的角色', 25, { color: '#0b2854', strokeThickness: 0 }),
     ]);
 
     this.roster.forEach((character, index) => {
       const col = index % 4;
       const row = Math.floor(index / 4);
       const x = 68 + col * 105;
-      const y = 318 + row * 172;
+      const y = 263 + row * 172;
       const selected = this.handlers.getCharacter?.()?.id === character.id;
       const card = this.scene.add.container(x, y);
       const panel = this.scene.add.image(0, 0, 'ui-character-card').setDisplaySize(96, 154);
@@ -299,7 +278,7 @@ export class EngineUI {
       });
       this.screenLayer.add(card);
     });
-    this.makeButton(this.screenLayer, this.width / 2, 700, 300, 62, '开始对局', () => this.handlers.onStart?.(), { fontSize: 20 });
+    this.makeButton(this.screenLayer, this.width / 2, 645, 300, 62, '开始对局', () => this.handlers.onStart?.(), { fontSize: 20 });
     this.makeButton(this.screenLayer, 42, 38, 54, 46, '‹', () => this.showHome(), {
       texture: 'ui-card-clean', color: '#28436e', fontSize: 25,
     });

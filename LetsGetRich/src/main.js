@@ -43,7 +43,6 @@ const DICE_RANGES = [[2, 5], [5, 8], [8, 12]];
 const mapStage = document.querySelector('#map-stage');
 const diceStage = document.querySelector('#dice-stage');
 
-let selectedMode = 'solo';
 let selectedCharacter = ROSTER[0];
 let players = [];
 let tiles = createTiles();
@@ -85,8 +84,6 @@ class TycoonScene extends Phaser.Scene {
     engineUI = new EngineUI(this, { width: W, height: H, roster: ROSTER });
     engineUI.setHandlers({
       onAnyButton: () => gameAudio.play('click', .34),
-      onMode: (mode) => { selectedMode = mode; },
-      getMode: () => selectedMode,
       onCharacter: (character) => { selectedCharacter = character; },
       getCharacter: () => selectedCharacter,
       onStart: () => { gameAudio.unlock(); startGame(); },
@@ -128,7 +125,7 @@ function createPlayers() {
     position: 0,
     token: null,
     bankrupt: false,
-    isHuman: selectedMode === 'local' || index === 0,
+    isHuman: index === 0,
     rentShield: 0,
     rentBoost: 0,
     inviteCards: 0,
@@ -354,7 +351,7 @@ function presentEvent(player, {
   hideActionPanel();
   return engineUI.presentEvent({
     player, kind, cardId, kicker, title, description, actionLabel, reveal,
-    auto: !player?.isHuman && selectedMode === 'solo',
+    auto: !player?.isHuman,
   });
 }
 
@@ -549,7 +546,7 @@ async function applyRouletteEvent(event) {
 async function resolveDestinyRoulette(player) {
   hideActionPanel();
   gameAudio.play('roulette', .72);
-  const event = await engineUI.showRoulette(!player?.isHuman && selectedMode === 'solo');
+  const event = await engineUI.showRoulette(!player?.isHuman);
   await applyRouletteEvent(event);
 }
 
@@ -978,7 +975,7 @@ async function handleIfBankrupt(player) {
 function showBankruptcy(player) {
   gameAudio.play('bankrupt', .82);
   hideActionPanel();
-  return engineUI.showBankruptcy(player, !player.isHuman && selectedMode === 'solo');
+  return engineUI.showBankruptcy(player, !player.isHuman);
 }
 
 function finishTurn() {
