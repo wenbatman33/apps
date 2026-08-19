@@ -27,10 +27,6 @@ export class PreloadScene extends Phaser.Scene {
     this.load.image('enemy-gunship', 'assets/images/generated/enemies/enemy-gunship-clean.png');
     this.load.image('enemy-midboss', 'assets/images/generated/enemies/enemy-midboss-clean.png');
     this.load.image('boss-heli', 'assets/images/generated/enemies/boss-heli-clean.png');
-    for (let stageId = 1; stageId <= 8; stageId += 1) {
-      this.load.image(`boss-stage-${stageId}`, `assets/images/generated/enemies/boss-stage-${stageId}.png`);
-      this.load.image(`midboss-stage-${stageId}`, `assets/images/generated/enemies/midboss-stage-${stageId}.png`);
-    }
     this.load.svg('bullet-player', 'assets/images/bullet-player.svg', { width: 16, height: 28 });
     // 子彈用 SVG（精準尺寸、不帶大光暈）
     this.load.svg('bullet-vulcan', 'assets/images/bullet-vulcan-v2.svg', { width: 12, height: 18 });
@@ -56,22 +52,9 @@ export class PreloadScene extends Phaser.Scene {
     this.load.svg('bg-dawn', 'assets/images/bg-dawn.svg', { width: GAME_WIDTH, height: GAME_HEIGHT });
     this.load.svg('bg-orbit', 'assets/images/bg-orbit.svg', { width: GAME_WIDTH, height: GAME_HEIGHT });
 
-    // Boss 戰專屬 BGM（所有關卡的大魔王共用）
-    this.load.audio('bgm-boss', 'assets/sound/BGM/boss_titan_descent.mp3');
-    for (let stageId = 1; stageId <= 8; stageId += 1) {
-      this.load.audio(`bgm-stage-${stageId}`, `assets/sound/BGM/stage_${stageId}.mp3`);
-      this.load.image(
-        `stage-${stageId}-gpt2-long`,
-        `assets/ai/gpt2_long_v6/stage-${stageId}-gpt2-long-v6.webp`,
-      );
-    }
-
-    // Parallax 多層背景：8 關完整 far/mid/near 三層
-    for (let stageId = 1; stageId <= 8; stageId += 1) {
-      this.load.image(`parallax-${stageId}-far`, `assets/parallax/stage-${stageId}/far.webp`);
-      this.load.image(`parallax-${stageId}-mid`, `assets/parallax/stage-${stageId}/mid.webp`);
-      this.load.image(`parallax-${stageId}-near`, `assets/parallax/stage-${stageId}/near.webp`);
-    }
+    // 各關卡專屬資產（BGM、AI 背景、parallax 三層、boss / midboss 立繪）
+    // 一律改由 GameScene.preload() 依當前關卡按需載入，
+    // 首次進入遊戲不必先下載全部 8 關的素材（約 35MB）。
 
     for (let index = 0; index < 8; index += 1) {
       this.load.svg(`explosion-${index}`, `assets/images/explosion-${index}.svg`, {

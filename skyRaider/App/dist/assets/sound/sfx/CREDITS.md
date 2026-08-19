@@ -14,6 +14,7 @@ SFX 取自三個免費素材庫，皆允許個人與商用使用。
 | 雷射（Laser）射擊 | shot-laser.mp3 | Kenney laserLarge_001.ogg（裁 0.32s，尾端淡出） |
 | 電漿（Plasma）電流 | shot-plasma.mp3 | taira sf01/electric_shock1.mp3（取前 0.5s） |
 | 追蹤導彈發射 | shot-missile.mp3 | taira arms01/launcher1.mp3（取前 0.6s） |
+| 子彈打中敵機 | hit-enemy.mp3 | Kenney impactMetal_004.ogg（裁 0.14s） |
 | Boss 登場警報 | boss-warning.mp3 | taira sf01/emergency_signal.mp3 |
 | 撿到炸彈 | pickup-bomb.mp3 | taira game01/powerup04.mp3 |
 | 撿到 1UP | pickup-1up.mp3 | taira game01/powerup08.mp3 |

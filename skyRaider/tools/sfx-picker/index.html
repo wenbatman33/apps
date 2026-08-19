@@ -188,6 +188,15 @@
   <div id="pickup-list"></div>
 </section>
 
+<section>
+  <h2>BGM 压缩音质比对 ★ 已套用 48k</h2>
+  <p class="meta">
+    第 1 关 BGM 的同一段（第 30~75 秒）。原本 8 首合计 22.2MB，转成 AAC 48k 后剩 11.6MB。<br />
+    用同一副耳机/喇叭依序听，若 48k 听得出闷或高频破碎，跟我说要换哪一档，我重转全部 9 首。
+  </p>
+  <div id="bgm-list"></div>
+</section>
+
 <p class="footer">
   标 ★ 的是目前游戏里正在用的版本。<br />
   素材来源：Kenney sci-fi sounds（CC0 公众领域）、taira-komori.net、效果音实验室 soundeffect-lab.info，皆可免费商用。
@@ -525,6 +534,38 @@ renderList('#laser-list', LASER_ITEMS, playLaser);
 renderList('#plasma-list', PLASMA_ITEMS, playPlasma);
 renderList('#hit-list', HIT_ITEMS, playHit);
 renderList('#pickup-list', PICKUP_ITEMS, playPickup);
+
+// BGM 比对：用原生 audio 控制项，方便暂停与拖曳比较
+const BGM_ITEMS = [
+  ['01-original-mp3-96k.mp3', '原始 MP3 96k 立体声', '目前的原始档 · 8 首合计 22.2MB'],
+  ['02-aac-56k.m4a', 'AAC 56k 立体声', '8 首约 12.2MB'],
+  ['03-aac-48k-current.m4a', '★ AAC 48k 立体声（已套用）', '8 首 11.6MB · 省 48%'],
+  ['04-aac-40k.m4a', 'AAC 40k 立体声', '8 首约 8.8MB'],
+  ['05-aac-32k-mono.m4a', 'AAC 32k 单声道', '8 首约 7.2MB · 最小但最闷'],
+];
+const bgmBox = document.querySelector('#bgm-list');
+BGM_ITEMS.forEach(([file, label, note], index) => {
+  const row = document.createElement('div');
+  row.className = 'row' + (file.includes('current') ? ' current' : '');
+  row.style.gridTemplateColumns = '30px 1fr auto';
+  const idx = document.createElement('span');
+  idx.className = 'idx';
+  idx.textContent = String(index + 1).padStart(2, '0');
+  const name = document.createElement('div');
+  name.className = 'name';
+  name.innerHTML = label + '<small>' + note + '</small>';
+  const audio = document.createElement('audio');
+  audio.controls = true;
+  audio.preload = 'none';
+  audio.src = 'bgm/' + file;
+  audio.style.height = '34px';
+  // 一次只播一个，方便直接 A/B
+  audio.addEventListener('play', () => {
+    bgmBox.querySelectorAll('audio').forEach((other) => { if (other !== audio) other.pause(); });
+  });
+  row.append(idx, name, audio);
+  bgmBox.append(row);
+});
 
 // 机炮扫射循环试听（与游戏同样的 loop 播放方式）
 let loopSource;

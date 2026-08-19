@@ -1,3 +1,4 @@
 .claude/
 App/node_modules/
 App/src-tauri/target/
+_backup/

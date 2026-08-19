@@ -19,6 +19,12 @@ SFX 取自三個免費素材庫，皆允許個人與商用使用。
 | 撿到炸彈 | pickup-bomb.mp3 | taira game01/powerup04.mp3 |
 | 撿到 1UP | pickup-1up.mp3 | taira game01/powerup08.mp3 |
 
-BGM `boss_titan_descent.mp3` 為使用者自備素材。
+BGM `boss_titan_descent.m4a` 為使用者自備素材。
+
+## BGM 編碼
+
+9 首 BGM 全部從 96kbps MP3 轉為 **AAC 48kbps 立體聲（.m4a）**，
+合計 22.2MB → 11.6MB。原始 MP3 備份在 repo 外的 `_backup/bgm-original-mp3/`（未進版控）。
+音質比對片段見 `tools/sfx-picker/`。
 
 候選素材試聽工具在 `tools/sfx-picker/`（本機開 http://localhost:5180/）。

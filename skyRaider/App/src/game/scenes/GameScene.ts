@@ -154,6 +154,69 @@ export class GameScene extends Phaser.Scene {
     super('GameScene');
   }
 
+  init(data?: Partial<PlayerStats> & { stageId?: number }): void {
+    this.stageId = data?.stageId ?? 1;
+  }
+
+  // 只載入「這一關」需要的素材，避免首次進遊戲就下載全部 8 關的資源。
+  // 已載過的關卡會留在 cache，重玩不會重新下載。
+  preload(): void {
+    const stageId = this.stageId;
+    const pending: string[] = [];
+
+    if (!this.cache.audio.exists(`bgm-stage-${stageId}`)) {
+      this.load.audio(`bgm-stage-${stageId}`, `assets/sound/BGM/stage_${stageId}.m4a`);
+      pending.push('bgm');
+    }
+    if (!this.cache.audio.exists('bgm-boss')) {
+      this.load.audio('bgm-boss', 'assets/sound/BGM/boss_titan_descent.m4a');
+      pending.push('boss-bgm');
+    }
+    if (!this.textures.exists(`stage-${stageId}-gpt2-long`)) {
+      this.load.image(
+        `stage-${stageId}-gpt2-long`,
+        `assets/ai/gpt2_long_v6/stage-${stageId}-gpt2-long-v6.webp`,
+      );
+      pending.push('bg');
+    }
+    (['far', 'mid', 'near'] as const).forEach((layer) => {
+      const key = `parallax-${stageId}-${layer}`;
+      if (this.textures.exists(key)) return;
+      this.load.image(key, `assets/parallax/stage-${stageId}/${layer}.webp`);
+      pending.push(key);
+    });
+    if (!this.textures.exists(`boss-stage-${stageId}`)) {
+      this.load.image(`boss-stage-${stageId}`, `assets/images/generated/enemies/boss-stage-${stageId}.png`);
+      pending.push('boss');
+    }
+    if (!this.textures.exists(`midboss-stage-${stageId}`)) {
+      this.load.image(
+        `midboss-stage-${stageId}`,
+        `assets/images/generated/enemies/midboss-stage-${stageId}.png`,
+      );
+      pending.push('midboss');
+    }
+
+    if (pending.length === 0) return;
+    this.showStageLoader();
+  }
+
+  // 關卡素材下載中顯示 HTML loader（沿用開場那張，避免黑畫面）。
+  // 進度條本身是跑馬燈動畫，百分比改寫在副標文字上。
+  private showStageLoader(): void {
+    const loader = document.querySelector('#html-loader');
+    const subtitle = loader?.querySelector('.loader-subtitle');
+    loader?.classList.remove('is-hidden');
+    if (subtitle) subtitle.textContent = `Loading stage ${this.stageId}`;
+    this.load.on('progress', (value: number) => {
+      if (subtitle) subtitle.textContent = `Loading stage ${this.stageId} — ${Math.round(value * 100)}%`;
+    });
+    this.load.once('complete', () => {
+      loader?.classList.add('is-hidden');
+      if (subtitle) subtitle.textContent = 'Initializing combat systems';
+    });
+  }
+
   create(data?: Partial<PlayerStats> & { stageId?: number }): void {
     this.stageId = data?.stageId ?? 1;
     this.stage = this.loaderSystem.loadStage(this.stageId);
