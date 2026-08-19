@@ -63,7 +63,9 @@ const config: Phaser.Types.Core.GameConfig = {
   scene: [BootScene, PreloadScene, MenuScene, GameScene, ResultScene],
 };
 
-new Phaser.Game(config);
+const game = new Phaser.Game(config);
 if (devModeEnabled) {
   setupDevPanel();
+  // dev 模式下把 game 實例掛到 window，方便從 console 檢查場景 / 音樂狀態
+  (window as unknown as { __SR_GAME__: Phaser.Game }).__SR_GAME__ = game;
 }

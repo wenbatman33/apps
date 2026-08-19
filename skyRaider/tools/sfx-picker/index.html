@@ -1,0 +1,581 @@
+<!doctype html>
+<html lang="zh-Hans">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Sky Raider 音效试听</title>
+<style>
+  :root {
+    --bg: #070b18;
+    --panel: #0e1730;
+    --line: #23406b;
+    --cyan: #66f7ff;
+    --gold: #ffd166;
+    --red: #ff6b6b;
+    --green: #6bffa8;
+    --text: #e8f0ff;
+    --muted: #8fa6c8;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 22px 18px 60px;
+    background: radial-gradient(1200px 600px at 50% -10%, #16264a 0%, var(--bg) 60%);
+    color: var(--text);
+    font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
+  }
+  h1 { font-size: 22px; margin: 0 0 6px; letter-spacing: 1px; }
+  .hint { color: var(--muted); font-size: 13px; margin: 0 0 16px; line-height: 1.7; }
+  section { margin-bottom: 32px; }
+  h2 {
+    font-size: 16px; margin: 0 0 4px; color: var(--cyan);
+    border-left: 3px solid var(--cyan); padding-left: 9px;
+  }
+  .meta { color: var(--muted); font-size: 12px; margin: 0 0 14px; padding-left: 12px; }
+  .bar {
+    display: flex; gap: 16px; align-items: center; flex-wrap: wrap;
+    padding: 12px 14px; margin-bottom: 16px;
+    background: var(--panel); border: 1px solid var(--line); border-radius: 8px;
+    font-size: 13px;
+  }
+  .bar label { display: flex; gap: 7px; align-items: center; color: var(--muted); }
+  .bar input[type=range] { width: 160px; accent-color: var(--cyan); }
+  #status {
+    padding: 10px 14px; margin-bottom: 16px; border-radius: 8px; font-size: 13px;
+    background: #12203f; border: 1px solid var(--line); color: var(--muted);
+    line-height: 1.6;
+  }
+  #status.ok { border-color: var(--green); color: var(--green); }
+  #status.warn { border-color: var(--red); color: var(--red); }
+  .row {
+    display: grid; grid-template-columns: 30px 1fr auto auto; gap: 10px;
+    align-items: center; padding: 9px 12px; margin-bottom: 6px;
+    background: var(--panel); border: 1px solid var(--line); border-radius: 8px;
+  }
+  .row.current { border-color: var(--gold); }
+  .row.playing { border-color: var(--cyan); background: #16294d; }
+  .idx { color: var(--gold); font-weight: 700; font-variant-numeric: tabular-nums; }
+  .name { font-size: 14px; }
+  .name small { display: block; color: var(--muted); font-size: 11px; margin-top: 2px; }
+  button {
+    background: #16294d; color: var(--text); border: 1px solid var(--line);
+    border-radius: 6px; padding: 8px 14px; font-size: 13px; cursor: pointer;
+    font-family: inherit; white-space: nowrap;
+  }
+  button:hover { background: #1e3766; border-color: var(--cyan); }
+  button:active { transform: translateY(1px); }
+  button.burst { background: #2a1c46; }
+  button.test { background: #3a2a12; border-color: var(--gold); color: var(--gold); }
+  .footer { color: var(--muted); font-size: 13px; line-height: 1.8; }
+</style>
+</head>
+<body>
+
+<h1>Sky Raider 音效试听</h1>
+<p class="hint">
+  <strong>重点听「连发」那颗按钮</strong>——单发好听但连发糊成一团的素材很常见。<br />
+  选好后告诉我编号，例如「机炮 03、镭射 07」，我就 bake 进游戏。
+</p>
+
+<div class="bar">
+  <button class="test" id="test-tone">🔊 先测喇叭（哔一声）</button>
+  <label>音量
+    <input type="range" id="volume" min="0" max="100" value="100" />
+    <span id="volume-label">100%</span>
+  </label>
+  <label>
+    <input type="checkbox" id="game-mix" />
+    用游戏实际混音音量（会明显变小）
+  </label>
+</div>
+
+<div id="status">点上面「先测喇叭」确认有声音，再试下面的素材。</div>
+
+<section>
+  <h2>机炮 Vulcan</h2>
+  <p class="meta">游戏射速：每 178ms 一轮。P3 以上补第 2 发（+62ms）、P5 以上补第 3 发（+122ms）。</p>
+  <div class="bar">
+    <label>火力等级
+      <select id="gun-power">
+        <option value="1">P1（单发）</option>
+        <option value="3">P3（双连）</option>
+        <option value="5" selected>P5（三连）</option>
+      </select>
+    </label>
+    <label>连发次数
+      <select id="gun-count">
+        <option value="6">6 轮</option>
+        <option value="12" selected>12 轮</option>
+        <option value="20">20 轮</option>
+      </select>
+    </label>
+  </div>
+  <div id="gun-list"></div>
+</section>
+
+<section>
+  <h2>镭射 Laser</h2>
+  <p class="meta">游戏射速：每 150ms 一发（单发，无补发）。</p>
+  <div class="bar">
+    <label>连发次数
+      <select id="laser-count">
+        <option value="6">6 发</option>
+        <option value="12" selected>12 发</option>
+        <option value="20">20 发</option>
+      </select>
+    </label>
+  </div>
+  <div id="laser-list"></div>
+</section>
+
+<section>
+  <h2>机炮：持续扫射循环 ★ 已套用</h2>
+  <p class="meta">
+    你给的「重機関銃を乱射2」是连续扫射（跟试听页机炮 04 号同一个档），切成单发会失去连射轰鸣感，<br />
+    所以改成「开火期间循环播放、停火 260ms 后淡出」。火力越高播放速率越快（P1 = 1.02×，P5 = 1.10×）。
+  </p>
+  <div class="bar">
+    <label>火力等级
+      <select id="loop-power">
+        <option value="1">P1（1.02×）</option>
+        <option value="3">P3（1.06×）</option>
+        <option value="5" selected>P5（1.10×）</option>
+      </select>
+    </label>
+    <button id="loop-play">▶ 播放 3 秒扫射</button>
+    <button id="loop-stop">■ 停止</button>
+  </div>
+</section>
+
+<section>
+  <h2>电浆 Plasma（持续闪电光束）</h2>
+  <p class="meta">游戏节奏：光束持续锁定时每 300ms 补一次电流声。</p>
+  <div class="bar">
+    <label>连发次数
+      <select id="plasma-count">
+        <option value="4">4 次</option>
+        <option value="8" selected>8 次</option>
+        <option value="16">16 次</option>
+      </select>
+    </label>
+  </div>
+  <div id="plasma-list"></div>
+</section>
+
+<section>
+  <h2>子弹击中敌机</h2>
+  <p class="meta">
+    已从程序合成的电子 click 换成素材。全部裁成 0.14s——连射时每秒可触发十几次，太长会糊成一团。<br />
+    游戏内间隔 55ms、音量 0.26（压在开火音之下）。这里连打间隔同样用 55ms。
+  </p>
+  <div class="bar">
+    <label>连发次数
+      <select id="hit-count">
+        <option value="4">4 次</option>
+        <option value="10" selected>10 次</option>
+        <option value="20">20 次</option>
+      </select>
+    </label>
+  </div>
+  <div id="hit-list"></div>
+</section>
+
+<section>
+  <h2>捡道具（炸弹 / 1UP）</h2>
+  <p class="meta">
+    原本炸弹与 1UP 用的是极小声的合成音（音量 0.06），实战中被爆炸和 BGM 完全盖掉，等于没声音。<br />
+    已换成素材：炸弹 = powerup04、1UP = powerup08。捡道具是单次事件，只需听单发。
+  </p>
+  <div id="pickup-list"></div>
+</section>
+
+<p class="footer">
+  标 ★ 的是目前游戏里正在用的版本。<br />
+  素材来源：Kenney sci-fi sounds（CC0 公众领域）、taira-komori.net、效果音实验室 soundeffect-lab.info，皆可免费商用。
+</p>
+
+<script>
+// 游戏内的实际混音值（勾选「用游戏实际混音音量」时才套用）
+const GAME_MASTER = 0.6;
+const GAME_GUN_VOLUME = 0.45;
+const GAME_LASER_VOLUME = 0.5;
+const GUN_INTERVAL = 0.178;   // 秒
+const LASER_INTERVAL = 0.150;
+
+const GUN_ITEMS = [
+  ['20-kenney-small-000', 'Kenney laserSmall_000（科幻机炮）', 'Kenney sci-fi（CC0）'],
+  ['21-kenney-small-001', 'Kenney laserSmall_001', 'Kenney sci-fi（CC0）'],
+  ['22-kenney-small-002', 'Kenney laserSmall_002', 'Kenney sci-fi（CC0）'],
+  ['23-kenney-small-003', 'Kenney laserSmall_003', 'Kenney sci-fi（CC0）'],
+  ['24-kenney-small-004', 'Kenney laserSmall_004', 'Kenney sci-fi（CC0）'],
+  ['30-kenney-retro-000', 'Kenney laserRetro_000（复古连射）', 'Kenney sci-fi（CC0）'],
+  ['31-kenney-retro-001', 'Kenney laserRetro_001', 'Kenney sci-fi（CC0）'],
+  ['32-kenney-retro-002', 'Kenney laserRetro_002', 'Kenney sci-fi（CC0）'],
+  ['33-kenney-retro-003', 'Kenney laserRetro_003', 'Kenney sci-fi（CC0）'],
+  ['34-kenney-retro-004', 'Kenney laserRetro_004', 'Kenney sci-fi（CC0）'],
+  ['01-current-mg-firing1', '目前使用：机枪连发切单发', '效果音实验室 machinegun-firing1'],
+  ['02-mg-firing2', '机枪 2（较散的连发）', '效果音实验室 machinegun-firing2'],
+  ['03-heavy-mg1', '重机枪 1（低沉）', '效果音实验室 heavy-machine-gun1'],
+  ['04-heavy-mg2', '重机枪 2', '效果音实验室 heavy-machine-gun2'],
+  ['05-handgun', '手枪（干净短促）', '效果音实验室 handgun-firing1'],
+  ['06-largerifle', '大口径步枪（厚重）', '效果音实验室 largerifle-firing1'],
+  ['07-sniperrifle', '狙击枪（爆裂感）', '效果音实验室 sniperrifle-firing1'],
+  ['08-shotgun', '霰弹枪（粗）', '效果音实验室 shotgun-firing1'],
+  ['09-sel-shot1', '通用枪声', '效果音实验室 shot1'],
+  ['10-tk-machinegun', '格林机枪（极短 60ms）', 'taira arms01/machinegun'],
+  ['11-tk-shoot3', '科幻机炮（更早用的）', 'taira arms01/shoot3'],
+  ['12-tk-shoot5', '科幻机炮 5', 'taira arms01/shoot5'],
+  ['13-tk-cannon1', '加农炮（重）', 'taira arms01/cannon1'],
+];
+
+const LASER_ITEMS = [
+  ['21-kenney-large-001', '★ 目前已套用：Kenney laserLarge_001', 'Kenney sci-fi（CC0）你指定的这颗'],
+  ['20-kenney-large-000', 'Kenney laserLarge_000', 'Kenney sci-fi（CC0）'],
+  ['22-kenney-large-002', 'Kenney laserLarge_002', 'Kenney sci-fi（CC0）'],
+  ['23-kenney-large-003', 'Kenney laserLarge_003', 'Kenney sci-fi（CC0）'],
+  ['24-kenney-large-004', 'Kenney laserLarge_004', 'Kenney sci-fi（CC0）'],
+  ['30-kenney-small-000', 'Kenney laserSmall_000（较细）', 'Kenney sci-fi（CC0）'],
+  ['31-kenney-small-001', 'Kenney laserSmall_001', 'Kenney sci-fi（CC0）'],
+  ['32-kenney-small-002', 'Kenney laserSmall_002', 'Kenney sci-fi（CC0）'],
+  ['33-kenney-small-003', 'Kenney laserSmall_003', 'Kenney sci-fi（CC0）'],
+  ['34-kenney-small-004', 'Kenney laserSmall_004', 'Kenney sci-fi（CC0）'],
+  ['40-kenney-retro-000', 'Kenney laserRetro_000（复古电玩）', 'Kenney sci-fi（CC0）'],
+  ['41-kenney-retro-001', 'Kenney laserRetro_001', 'Kenney sci-fi（CC0）'],
+  ['42-kenney-retro-002', 'Kenney laserRetro_002', 'Kenney sci-fi（CC0）'],
+  ['43-kenney-retro-003', 'Kenney laserRetro_003', 'Kenney sci-fi（CC0）'],
+  ['44-kenney-retro-004', 'Kenney laserRetro_004', 'Kenney sci-fi（CC0）'],
+  ['01-current-laser2', '（旧）taira laser2 — 你说奇怪的那个', 'taira arms01/laser2'],
+  ['02-laser6-thick', 'taira 镭射 6（低频厚实）', 'taira arms01/laser6'],
+  ['03-minimum-laser', 'taira 迷你镭射（清脆）', 'taira arms01/minimum_laser'],
+  ['04-laser1', 'taira 镭射 1', 'taira arms01/laser1'],
+  ['05-laser3', 'taira 镭射 3', 'taira arms01/laser3'],
+  ['06-laser5-deep', 'taira 镭射 5（低沉）', 'taira arms01/laser5'],
+  ['07-handy-lasergun', 'taira 手持镭射枪（明亮）', 'taira arms01/handy_lasergun'],
+  ['08-beamgun-shot', '光束枪单发（科幻）', '效果音实验室 beamgun-shot1'],
+  ['09-sel-laser1', '镭射', '效果音实验室 laser1'],
+  ['10-beamgun1', '光束枪 1', '效果音实验室 beamgun1'],
+  ['11-pyo1-retro', '复古电玩 pew', 'taira arms01/pyo1'],
+];
+
+const PLASMA_ITEMS = [
+  ['10-kenney-forcefield-000', 'Kenney forceField_000（力场嗡鸣）', 'Kenney sci-fi（CC0）'],
+  ['11-kenney-forcefield-001', 'Kenney forceField_001', 'Kenney sci-fi（CC0）'],
+  ['12-kenney-forcefield-002', 'Kenney forceField_002', 'Kenney sci-fi（CC0）'],
+  ['13-kenney-forcefield-003', 'Kenney forceField_003', 'Kenney sci-fi（CC0）'],
+  ['14-kenney-forcefield-004', 'Kenney forceField_004', 'Kenney sci-fi（CC0）'],
+];
+
+const PICKUP_ITEMS = [
+  ['17-powerup04', '★ 已套用为「捡到炸弹」', 'taira game01/powerup04'],
+  ['21-powerup08', '★ 已套用为「1UP」（最华丽）', 'taira game01/powerup08'],
+  ['10-pickup01', 'pickup01', 'taira game01/pickup01'],
+  ['11-pickup02', 'pickup02', 'taira game01/pickup02'],
+  ['12-pickup03', 'pickup03', 'taira game01/pickup03'],
+  ['13-pickup04', 'pickup04', 'taira game01/pickup04'],
+  ['14-powerup01', 'powerup01', 'taira game01/powerup01'],
+  ['15-powerup02', 'powerup02（长）', 'taira game01/powerup02'],
+  ['16-powerup03', 'powerup03（最短）', 'taira game01/powerup03'],
+  ['18-powerup05', 'powerup05', 'taira game01/powerup05'],
+  ['19-powerup06', 'powerup06', 'taira game01/powerup06'],
+  ['20-powerup07', 'powerup07', 'taira game01/powerup07'],
+  ['22-powerup09', 'powerup09', 'taira game01/powerup09'],
+  ['23-powerup10', 'powerup10', 'taira game01/powerup10'],
+  ['24-sh_pickup01', 'sh_pickup01（短促）', 'taira game01/sh_pickup01'],
+  ['25-sh_pickup02', 'sh_pickup02', 'taira game01/sh_pickup02'],
+  ['26-sh_pickup03', 'sh_pickup03', 'taira game01/sh_pickup03'],
+];
+
+const HIT_ITEMS = [
+  ['14-kenney-impact-004', '★ 已套用：Kenney impactMetal_004（最乾脆）', 'Kenney sci-fi（CC0）'],
+  ['10-kenney-impact-000', 'Kenney impactMetal_000', 'Kenney sci-fi（CC0）'],
+  ['11-kenney-impact-001', 'Kenney impactMetal_001', 'Kenney sci-fi（CC0）'],
+  ['12-kenney-impact-002', 'Kenney impactMetal_002（最短脆响）', 'Kenney sci-fi（CC0）'],
+  ['13-kenney-impact-003', 'Kenney impactMetal_003（余韵最长）', 'Kenney sci-fi（CC0）'],
+  ['20-sel-shot-struck', '中弹（shot-struck）', '效果音实验室 battle/shot-struck1'],
+  ['21-sel-machine-hit1', '机械撞击 1', '效果音实验室 battle/machine-hit1'],
+  ['22-sel-machine-hit2', '机械撞击 2', '效果音实验室 battle/machine-hit2'],
+  ['23-sel-machine-hit3', '机械撞击 3', '效果音实验室 battle/machine-hit3'],
+  ['24-sel-hard-hit1', '机械重击 1', '效果音实验室 battle/machine-hard-hit1'],
+  ['25-sel-hard-hit2', '机械重击 2', '效果音实验室 battle/machine-hard-hit2'],
+  ['30-tk-damage1', '受击 1', 'taira attack01/damage1'],
+  ['31-tk-damage2', '受击 2', 'taira attack01/damage2'],
+  ['32-tk-damage3', '受击 3', 'taira attack01/damage3'],
+  ['33-tk-damage5', '受击 5', 'taira attack01/damage5'],
+  ['34-tk-hitting1', '打击感', 'taira attack01/hitting1'],
+];
+
+const statusBox = document.querySelector('#status');
+const volumeSlider = document.querySelector('#volume');
+const volumeLabel = document.querySelector('#volume-label');
+const gameMixToggle = document.querySelector('#game-mix');
+
+function setStatus(text, kind) {
+  statusBox.textContent = text;
+  statusBox.className = kind || '';
+}
+
+let ctx;
+let master;
+const buffers = new Map();
+// 直接双击开启（file://）时 fetch 会被 CORS 挡住，退回 HTMLAudioElement 排程
+const FILE_MODE = location.protocol === 'file:';
+
+function getContext() {
+  if (!ctx) {
+    ctx = new (window.AudioContext || window.webkitAudioContext)();
+    master = ctx.createGain();
+    master.gain.value = 1;
+    master.connect(ctx.destination);
+  }
+  if (ctx.state === 'suspended') void ctx.resume();
+  return ctx;
+}
+
+volumeSlider.addEventListener('input', () => {
+  volumeLabel.textContent = volumeSlider.value + '%';
+});
+
+// 试听音量：滑杆值 ×（是否套用游戏混音）
+function levelFor(kind) {
+  const slider = Number(volumeSlider.value) / 100;
+  if (!gameMixToggle.checked) return slider;
+  const weapon = kind === 'gun' ? GAME_GUN_VOLUME : GAME_LASER_VOLUME;
+  return slider * weapon * GAME_MASTER;
+}
+
+document.querySelector('#test-tone').addEventListener('click', () => {
+  const context = getContext();
+  const osc = context.createOscillator();
+  const gain = context.createGain();
+  osc.type = 'sine';
+  osc.frequency.value = 880;
+  gain.gain.setValueAtTime(0.0001, context.currentTime);
+  gain.gain.exponentialRampToValueAtTime(0.35, context.currentTime + 0.02);
+  gain.gain.exponentialRampToValueAtTime(0.0001, context.currentTime + 0.45);
+  osc.connect(gain);
+  gain.connect(master);
+  osc.start();
+  osc.stop(context.currentTime + 0.5);
+  setStatus(
+    '已发出 880Hz 测试音（AudioContext 状态：' + context.state + '）。' +
+    '如果这个都没声音，请检查系统音量／浏览器分页是否被静音。',
+    context.state === 'running' ? 'ok' : 'warn',
+  );
+});
+
+async function loadBuffer(url) {
+  if (FILE_MODE) return url;
+  if (buffers.has(url)) return buffers.get(url);
+  try {
+    const res = await fetch(url);
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const raw = await res.arrayBuffer();
+    const buf = await getContext().decodeAudioData(raw);
+    buffers.set(url, buf);
+    return buf;
+  } catch (err) {
+    setStatus('载入 ' + url + ' 失败：' + err.message + '（改用 audio 元素播放）', 'warn');
+    return url;
+  }
+}
+
+// when 为 AudioContext 时间轴的绝对秒数；file:// 模式下改用相对延迟
+function playAt(buf, when, volume, rate) {
+  if (typeof buf === 'string') {
+    const delayMs = Math.max(0, (when - (ctx ? ctx.currentTime : 0)) * 1000);
+    setTimeout(() => {
+      const audio = new Audio(buf);
+      audio.volume = Math.max(0, Math.min(1, volume));
+      audio.playbackRate = rate;
+      void audio.play().catch((err) => setStatus('播放被浏览器挡下：' + err.message, 'warn'));
+    }, delayMs);
+    return;
+  }
+  const src = ctx.createBufferSource();
+  const gain = ctx.createGain();
+  src.buffer = buf;
+  src.playbackRate.value = rate;
+  gain.gain.value = Math.max(0, volume);
+  src.connect(gain);
+  gain.connect(master);
+  src.start(when);
+}
+
+// 与游戏一致的随机音高抖动
+function jitter(base, amount) {
+  return base * (1 + (Math.random() * 2 - 1) * amount);
+}
+
+function flash(row, ms) {
+  row.classList.add('playing');
+  setTimeout(() => row.classList.remove('playing'), ms);
+}
+
+async function playGun(file, burst, row) {
+  const buf = await loadBuffer('gun/' + file + '.mp3');
+  const context = getContext();
+  const t0 = context.currentTime + 0.05;
+  const power = Number(document.querySelector('#gun-power').value);
+  const rounds = burst ? Number(document.querySelector('#gun-count').value) : 1;
+  const level = levelFor('gun');
+  for (let i = 0; i < rounds; i += 1) {
+    const t = t0 + i * GUN_INTERVAL;
+    const rate = jitter(1.12, 0.07);
+    playAt(buf, t, level, rate);
+    if (power >= 3) playAt(buf, t + 0.062, level * 0.82, rate * 1.03);
+    if (power >= 5) playAt(buf, t + 0.122, level * 0.7, rate * 0.98);
+  }
+  flash(row, rounds * GUN_INTERVAL * 1000 + 200);
+  setStatus(
+    '播放中：机炮 ' + file + '　音量 ' + Math.round(level * 100) + '%　' +
+    rounds + ' 轮（AudioContext：' + context.state + '）',
+    context.state === 'running' ? 'ok' : 'warn',
+  );
+}
+
+async function playLaser(file, burst, row) {
+  const buf = await loadBuffer('laser/' + file + '.mp3');
+  const context = getContext();
+  const t0 = context.currentTime + 0.05;
+  const rounds = burst ? Number(document.querySelector('#laser-count').value) : 1;
+  const level = levelFor('laser');
+  for (let i = 0; i < rounds; i += 1) {
+    playAt(buf, t0 + i * LASER_INTERVAL, level, jitter(1.0, 0.03));
+  }
+  flash(row, rounds * LASER_INTERVAL * 1000 + 200);
+  setStatus(
+    '播放中：镭射 ' + file + '　音量 ' + Math.round(level * 100) + '%　' +
+    rounds + ' 发（AudioContext：' + context.state + '）',
+    context.state === 'running' ? 'ok' : 'warn',
+  );
+}
+
+function renderList(containerId, items, handler) {
+  const box = document.querySelector(containerId);
+  items.forEach(([file, label, source], index) => {
+    const row = document.createElement('div');
+    row.className = 'row' + (index === 0 ? ' current' : '');
+    const idx = document.createElement('span');
+    idx.className = 'idx';
+    idx.textContent = String(index + 1).padStart(2, '0');
+    const name = document.createElement('div');
+    name.className = 'name';
+    name.innerHTML = label + '<small>' + source + '</small>';
+    const one = document.createElement('button');
+    one.textContent = '▶ 单发';
+    one.onclick = () => handler(file, false, row);
+    const many = document.createElement('button');
+    many.className = 'burst';
+    many.textContent = '▶▶ 连发';
+    many.onclick = () => handler(file, true, row);
+    row.append(idx, name, one, many);
+    box.append(row);
+  });
+}
+
+const PLASMA_INTERVAL = 0.300;
+const HIT_INTERVAL = 0.055;
+
+// 通用连发播放（电浆 / 击中）
+async function playSimple(dir, file, burst, row, interval, countSelector, level, rateJitter, kindLabel) {
+  const buf = await loadBuffer(dir + '/' + file + '.mp3');
+  const context = getContext();
+  const t0 = context.currentTime + 0.05;
+  const rounds = burst ? Number(document.querySelector(countSelector).value) : 1;
+  for (let i = 0; i < rounds; i += 1) {
+    playAt(buf, t0 + i * interval, level, jitter(1.0, rateJitter));
+  }
+  flash(row, rounds * interval * 1000 + 200);
+  setStatus(
+    '播放中：' + kindLabel + ' ' + file + '　音量 ' + Math.round(level * 100) + '%　' +
+    rounds + ' 次（AudioContext：' + context.state + '）',
+    context.state === 'running' ? 'ok' : 'warn',
+  );
+}
+
+function playPlasma(file, burst, row) {
+  return playSimple('plasma', file, burst, row, PLASMA_INTERVAL, '#plasma-count',
+    levelFor('laser'), 0.12, '电浆');
+}
+
+function playHit(file, burst, row) {
+  return playSimple('hit', file, burst, row, HIT_INTERVAL, '#hit-count',
+    levelFor('laser'), 0.05, '击中');
+}
+
+async function playPickup(file, burst, row) {
+  // 捡道具是单次事件，「连发」只连播 3 次做对比
+  const buf = await loadBuffer('pickup/' + file + '.mp3');
+  const context = getContext();
+  const t0 = context.currentTime + 0.05;
+  const rounds = burst ? 3 : 1;
+  const level = levelFor('laser');
+  for (let i = 0; i < rounds; i += 1) {
+    playAt(buf, t0 + i * 1.1, level, 1);
+  }
+  flash(row, rounds * 1100 + 200);
+  setStatus(
+    '播放中：捡道具 ' + file + '　音量 ' + Math.round(level * 100) + '%　' +
+    rounds + ' 次（AudioContext：' + context.state + '）',
+    context.state === 'running' ? 'ok' : 'warn',
+  );
+}
+
+renderList('#gun-list', GUN_ITEMS, playGun);
+renderList('#laser-list', LASER_ITEMS, playLaser);
+renderList('#plasma-list', PLASMA_ITEMS, playPlasma);
+renderList('#hit-list', HIT_ITEMS, playHit);
+renderList('#pickup-list', PICKUP_ITEMS, playPickup);
+
+// 机炮扫射循环试听（与游戏同样的 loop 播放方式）
+let loopSource;
+let loopGain;
+document.querySelector('#loop-play').addEventListener('click', async () => {
+  const buf = await loadBuffer('gun/00-loop-heavy-mg2.mp3');
+  const context = getContext();
+  if (typeof buf === 'string') {
+    const audio = new Audio(buf);
+    audio.loop = true;
+    audio.volume = levelFor('gun');
+    void audio.play();
+    setTimeout(() => audio.pause(), 3000);
+    setStatus('播放中：扫射循环（file 模式）', 'ok');
+    return;
+  }
+  stopLoop();
+  const power = Number(document.querySelector('#loop-power').value);
+  const rate = 1 + Math.min(5, power) * 0.02;
+  const level = levelFor('gun') * (0.86 + Math.min(5, power) * 0.03);
+  loopSource = context.createBufferSource();
+  loopGain = context.createGain();
+  loopSource.buffer = buf;
+  loopSource.loop = true;
+  loopSource.playbackRate.value = rate;
+  loopGain.gain.setValueAtTime(0.0001, context.currentTime);
+  loopGain.gain.linearRampToValueAtTime(level, context.currentTime + 0.05);
+  loopSource.connect(loopGain);
+  loopGain.connect(master);
+  loopSource.start();
+  setStatus('播放中：扫射循环　速率 ' + rate.toFixed(2) + '×　音量 ' +
+    Math.round(level * 100) + '%（3 秒后自动停）', 'ok');
+  setTimeout(stopLoop, 3000);
+});
+
+function stopLoop() {
+  if (!loopSource || !loopGain || !ctx) return;
+  const at = ctx.currentTime + 0.12;
+  loopGain.gain.cancelScheduledValues(ctx.currentTime);
+  loopGain.gain.setValueAtTime(loopGain.gain.value, ctx.currentTime);
+  loopGain.gain.linearRampToValueAtTime(0.0001, at);
+  try { loopSource.stop(at + 0.02); } catch { /* 已停止 */ }
+  loopSource = undefined;
+  loopGain = undefined;
+}
+
+document.querySelector('#loop-stop').addEventListener('click', stopLoop);
+
+if (FILE_MODE) {
+  setStatus('目前是用档案（file://）开启，改用 audio 元素播放，连发节奏会略有误差但可听。', '');
+}
+</script>
+</body>
+</html>

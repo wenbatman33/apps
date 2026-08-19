@@ -31,7 +31,7 @@ export class MenuScene extends Phaser.Scene {
 
     // 副標
     this.add
-      .text(GAME_WIDTH / 2, 196, '霓虹空戰計畫', {
+      .text(GAME_WIDTH / 2, 196, '霓虹空战计划', {
         fontFamily: 'Arial, sans-serif',
         fontSize: '32px',
         color: '#ffe4a8',
@@ -50,7 +50,7 @@ export class MenuScene extends Phaser.Scene {
       .setOrigin(0.5);
 
     this.leaderboardText = this.add
-      .text(GAME_WIDTH / 2, 300, '載入中…', {
+      .text(GAME_WIDTH / 2, 300, '载入中…', {
         fontFamily: '"Courier New", monospace',
         fontSize: '15px',
         color: '#e8f0ff',
@@ -121,7 +121,7 @@ export class MenuScene extends Phaser.Scene {
     input.type = 'text';
     input.maxLength = 16;
     input.value = getNickname();
-    input.placeholder = '輸入暱稱…';
+    input.placeholder = '输入昵称…';
     input.spellcheck = false;
     input.autocomplete = 'off';
     input.style.cssText = [
@@ -183,7 +183,7 @@ export class MenuScene extends Phaser.Scene {
   }
 
   private formatNicknameLabel(name: string): string {
-    return `暱稱：${name}　✎`;
+    return `昵称：${name}  ✎`;
   }
 
   private async refreshLeaderboard(): Promise<void> {
@@ -193,17 +193,19 @@ export class MenuScene extends Phaser.Scene {
 
   private formatLeaderboard(rows: ScoreEntry[]): string {
     if (!rows || rows.length === 0) {
-      return '(尚無紀錄，快去挑戰吧！)';
+      return '(尚无纪录，快去挑战吧！)';
     }
-    return rows
-      .map((entry, index) => {
-        const rank = String(index + 1).padStart(2, ' ');
-        const name = String(entry.name ?? '').padEnd(12, ' ').slice(0, 12);
-        const score = String(entry.score ?? 0).padStart(7, ' ');
-        const stage = `S${entry.stage ?? 1}${entry.cleared ? '✓' : ' '}`;
-        return `${rank}. ${name} ${score}  ${stage}`;
-      })
-      .join('\n');
+    // 標頭：名次 / 玩家 / 分數 / 到達關卡（✓ 代表該關已通關）
+    const header = ` #  ${'玩家'.padEnd(11, ' ')}${'分数'.padStart(6, ' ')}  关卡`;
+    const body = rows.map((entry, index) => {
+      const rank = String(index + 1).padStart(2, ' ');
+      const name = String(entry.name ?? '').padEnd(12, ' ').slice(0, 12);
+      const score = String(entry.score ?? 0).padStart(7, ' ');
+      const stageNumber = Math.max(1, Math.floor(entry.stage ?? 1));
+      const stage = `第${stageNumber}关${entry.cleared ? '✓' : ''}`;
+      return `${rank}. ${name} ${score}  ${stage}`;
+    });
+    return [header, ...body].join('\n');
   }
 
   shutdown(): void {

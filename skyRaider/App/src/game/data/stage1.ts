@@ -51,7 +51,7 @@ export const stages: StageConfig[] = [
   },
   {
     stageId: 2,
-    name: '沙漠太陽兵工廠',
+    name: '沙漠太阳兵工厂',
     subtitle: 'Solar weapons facility',
     duration: 96,
     backgroundKey: 'stage-2-gpt2-long',
@@ -60,7 +60,7 @@ export const stages: StageConfig[] = [
   },
   {
     stageId: 3,
-    name: '海上艦隊封鎖線',
+    name: '海上舰队封锁线',
     subtitle: 'Ocean fleet blockade',
     duration: 100,
     backgroundKey: 'stage-3-gpt2-long',
@@ -69,7 +69,7 @@ export const stages: StageConfig[] = [
   },
   {
     stageId: 4,
-    name: '雪山軍工廠',
+    name: '雪山军工厂',
     subtitle: 'Frozen railgun factory',
     duration: 104,
     backgroundKey: 'stage-4-gpt2-long',
@@ -78,7 +78,7 @@ export const stages: StageConfig[] = [
   },
   {
     stageId: 5,
-    name: '上層大氣戰機群',
+    name: '上层大气战机群',
     subtitle: 'Stratospheric fighter swarm',
     duration: 108,
     backgroundKey: 'stage-5-gpt2-long',
@@ -87,7 +87,7 @@ export const stages: StageConfig[] = [
   },
   {
     stageId: 6,
-    name: '軌道空間站',
+    name: '轨道空间站',
     subtitle: 'Omega station ring',
     duration: 112,
     backgroundKey: 'stage-6-gpt2-long',
@@ -96,7 +96,7 @@ export const stages: StageConfig[] = [
   },
   {
     stageId: 7,
-    name: '月面戰場',
+    name: '月面战场',
     subtitle: 'Lunar crystal front',
     duration: 116,
     backgroundKey: 'stage-7-gpt2-long',
@@ -105,7 +105,7 @@ export const stages: StageConfig[] = [
   },
   {
     stageId: 8,
-    name: '深空太陽神鎧',
+    name: '深空太阳神铠',
     subtitle: 'Helios Core final approach',
     duration: 124,
     backgroundKey: 'stage-8-gpt2-long',

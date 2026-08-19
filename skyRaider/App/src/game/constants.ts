@@ -1,3 +1,8 @@
+// 全域音量：音樂與音效統一以 60% 輸出
+export const MASTER_VOLUME = 0.6;
+// BGM 相對音量（實際輸出 = BGM_VOLUME × Phaser 全域音量 MASTER_VOLUME）
+export const BGM_VOLUME = 1;
+
 export const GAME_WIDTH = 432;
 export const GAME_HEIGHT = 936;
 

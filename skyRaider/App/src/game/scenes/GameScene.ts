@@ -4,7 +4,7 @@ import { Bullet } from '../entities/Bullet';
 import { Enemy } from '../entities/Enemy';
 import { Pickup } from '../entities/Pickup';
 import { Player, PLAYER_START_Y } from '../entities/Player';
-import { DEPTH, EVENTS, GAME_HEIGHT, GAME_WIDTH } from '../constants';
+import { BGM_VOLUME, DEPTH, EVENTS, GAME_HEIGHT, GAME_WIDTH, MASTER_VOLUME } from '../constants';
 import { DDA } from '../systems/DDA';
 import { EventBus } from '../EventBus';
 import { AudioSystem } from '../systems/AudioSystem';
@@ -20,6 +20,12 @@ const WEAPON_ORDER: WeaponType[] = ['vulcan', 'laser', 'plasma'];
 const PLASMA_TICK_MS = 112;
 const DEV_WEAPON_KEY = 'skyraider:dev-weapon';
 const PICKUP_COLLECT_RADIUS = 38;
+// 分數文字可用寬度（HUD 上分數圖示右側 ~ 分隔線之間）
+const SCORE_MAX_WIDTH = 58;
+
+// Boss 戰鬥音樂：所有關卡的大魔王共用 Titan Descent，原速播放
+const BOSS_BGM_KEY = 'bgm-boss';
+const BOSS_BGM_RATE = 1.0;
 
 export class GameScene extends Phaser.Scene {
   private static devContinueEnabled = false;
@@ -69,6 +75,8 @@ export class GameScene extends Phaser.Scene {
   private plasmaNextDamageAt = 0;
   private trackerLastFireAt = 0;
   private stageBgm?: Phaser.Sound.BaseSound;
+  // 正在淡出的舊 BGM（boss 切歌用），場景關閉時必須一併停掉
+  private fadingBgm?: Phaser.Sound.BaseSound;
   private backgroundHeight = GAME_HEIGHT;
   private backgroundStartY = GAME_HEIGHT / 2;
   private backgroundEndY = GAME_HEIGHT / 2;
@@ -257,12 +265,14 @@ export class GameScene extends Phaser.Scene {
 
   shutdown(): void {
     this.stopStageBgm();
+    this.audioSystem.stopWeaponLoop();
     this.unregisterDevEvents();
   }
 
   update(time: number, delta: number): void {
     if (delta > 250) {
       this.clearActiveProjectiles();
+      this.audioSystem.stopWeaponLoop();
       return;
     }
 
@@ -270,6 +280,9 @@ export class GameScene extends Phaser.Scene {
       this.updateHud(time);
       return;
     }
+
+    // 機炮掃射循環：停火後由 AudioSystem 自行淡出
+    this.audioSystem.tickWeaponLoop(time);
 
     this.scrollBackground(time);
     if (!this.gameplayStarted || this.exitingStage) {
@@ -342,12 +355,14 @@ export class GameScene extends Phaser.Scene {
   }
 
   private playStageBgm(): void {
+    // 全域音量統一 60%（音樂與音效共用）
+    this.sound.volume = MASTER_VOLUME;
     const key = `bgm-stage-${this.stageId}`;
     if (!this.cache.audio.exists(key)) return;
     this.stopStageBgm();
     this.stageBgm = this.sound.add(key, {
       loop: true,
-      volume: 0.2,
+      volume: BGM_VOLUME,
     });
     // 雙重保險：部分瀏覽器 / 音檔對 loop flag 表現不一致，
     // 監聽 complete 事件後手動重新播放
@@ -356,14 +371,70 @@ export class GameScene extends Phaser.Scene {
         this.stageBgm.play();
       }
     });
-    this.stageBgm.play({ loop: true, volume: 0.2 });
+    this.stageBgm.play({ loop: true, volume: BGM_VOLUME });
+  }
+
+  // Boss 登場時淡出關卡 BGM，換上戰鬥主題（加速播放提升壓迫感）
+  private playBossBgm(): void {
+    const key = BOSS_BGM_KEY;
+    if (!this.cache.audio.exists(key)) return;
+
+    const previous = this.stageBgm;
+    this.stageBgm = undefined;
+    if (previous) {
+      // 淡出舊曲，避免硬切
+      this.fadingBgm = previous;
+      this.tweens.add({
+        targets: previous,
+        volume: 0,
+        duration: 620,
+        onComplete: () => {
+          previous.stop();
+          previous.destroy();
+          if (this.fadingBgm === previous) this.fadingBgm = undefined;
+        },
+      });
+    }
+
+    const bossBgm = this.sound.add(key, { loop: true, volume: 0 });
+    bossBgm.on('complete', () => {
+      if (!bossBgm.isPlaying) bossBgm.play();
+    });
+    bossBgm.play({ loop: true, volume: 0 });
+    const withRate = bossBgm as Phaser.Sound.BaseSound & { setRate?: (rate: number) => void };
+    withRate.setRate?.(BOSS_BGM_RATE);
+    // 警報聲先響，音樂再淡入
+    this.tweens.add({
+      targets: bossBgm,
+      volume: BGM_VOLUME,
+      duration: 900,
+      delay: 260,
+    });
+    this.stageBgm = bossBgm;
   }
 
   private stopStageBgm(): void {
+    if (this.fadingBgm) {
+      this.tweens.killTweensOf(this.fadingBgm);
+      this.fadingBgm.stop();
+      this.fadingBgm.destroy();
+      this.fadingBgm = undefined;
+    }
     if (!this.stageBgm) return;
+    this.tweens.killTweensOf(this.stageBgm);
     this.stageBgm.stop();
     this.stageBgm.destroy();
     this.stageBgm = undefined;
+  }
+
+  // 分數位數變多時自動縮小字級，避免壓到 HUD 的飛機圖示
+  private fitScoreText(): void {
+    if (!this.scoreText) return;
+    this.scoreText.setScale(1);
+    const width = this.scoreText.width;
+    if (width > SCORE_MAX_WIDTH) {
+      this.scoreText.setScale(Math.max(0.58, SCORE_MAX_WIDTH / width));
+    }
   }
 
   private clearActiveProjectiles(): void {
@@ -596,13 +667,16 @@ export class GameScene extends Phaser.Scene {
     scoreIcon.strokeCircle(20, 29, 10);
     scoreIcon.lineStyle(1, 0x6a4512, 0.38);
     scoreIcon.strokeCircle(20, 29, 5);
-    this.scoreText = this.add.text(38, 17, '', {
-      fontFamily: 'Arial, sans-serif',
-      fontSize: '20px',
-      color: '#fff4b8',
-      fontStyle: 'bold',
-      shadow: { offsetX: 0, offsetY: 0, color: '#ffe184', blur: 8, fill: true },
-    });
+    // 分數：origin 設為左中，超長時以 setScale 等比縮小（見 fitScoreText）
+    this.scoreText = this.add
+      .text(38, 28, '', {
+        fontFamily: 'Arial, sans-serif',
+        fontSize: '20px',
+        color: '#fff4b8',
+        fontStyle: 'bold',
+        shadow: { offsetX: 0, offsetY: 0, color: '#ffe184', blur: 8, fill: true },
+      })
+      .setOrigin(0, 0.5);
     // Lives：飛機圖示 + ×N（sprite 已縮成 236×256，HUD 用更小 scale）
     this.lifeIcon = this.add
       .image(112, 32, 'player-ship')
@@ -743,6 +817,7 @@ export class GameScene extends Phaser.Scene {
     this.physics.world.isPaused = this.paused;
     if (this.paused) {
       this.pausedAt = this.time.now;
+      this.audioSystem.stopWeaponLoop();
       this.tweens.pauseAll();
       this.stageBgm?.pause();
       this.plasmaGraphics.clear();
@@ -821,7 +896,7 @@ export class GameScene extends Phaser.Scene {
       this.stats.weapon,
     );
     if (shots.length > 0) {
-      this.audioSystem.shoot(this.stats.weapon, time);
+      this.audioSystem.shoot(this.stats.weapon, time, this.stats.power);
     }
     for (const shot of shots) {
       const b = this.playerBullets.acquire(
@@ -852,6 +927,8 @@ export class GameScene extends Phaser.Scene {
     if (shouldDamage) {
       this.plasmaNextDamageAt = time + PLASMA_TICK_MS;
     }
+    // 電漿為持續光束，以固定節奏補電流音（AudioSystem 內另有最小間隔限制）
+    this.audioSystem.plasmaBeam(time);
 
     targets.forEach((enemy, index) => {
       this.drawPlasmaArc(enemy, time, index);
@@ -889,6 +966,7 @@ export class GameScene extends Phaser.Scene {
     );
     // 標記為追蹤型，updateTrackerBullets 會持續調整方向
     (bullet as unknown as { tracker?: boolean }).tracker = true;
+    this.audioSystem.missile(time);
   }
 
   // 追蹤型子彈每 frame 微幅修正方向以朝最近敵人飛行
@@ -1129,6 +1207,8 @@ export class GameScene extends Phaser.Scene {
         if (wave.spawn === 'boss') {
           this.bossSpawned = true;
           EventBus.emit(EVENTS.bossSpawned);
+          this.audioSystem.bossWarning();
+          this.playBossBgm();
           this.bossHealthBack.setVisible(true);
           this.bossHealthBar.setVisible(true);
           this.startBossSupportSpawns();
@@ -1262,7 +1342,7 @@ export class GameScene extends Phaser.Scene {
     if (!bullet.active || !enemy.active) return;
     if (!this.isEnemyDamageable(enemy)) return;
     bullet.deactivatePoolItem();
-    this.audioSystem.enemyHit(this.time.now);
+    this.audioSystem.enemyHit(this.time.now, enemy.kind === 'boss' || enemy.kind === 'midboss');
     enemy.hitFlash();
     if (enemy.applyDamage(bullet.damage)) {
       this.killEnemy(enemy);
@@ -1431,6 +1511,7 @@ export class GameScene extends Phaser.Scene {
     this.stats.weapon = 'vulcan';
     this.explosionSystem.playerDeath(this.player.x, this.player.y);
     this.audioSystem.playerDeath();
+    this.audioSystem.stopWeaponLoop();
     void Haptics.impact({ style: ImpactStyle.Medium }).catch(() => undefined);
     this.emitStats();
 
@@ -1484,6 +1565,7 @@ export class GameScene extends Phaser.Scene {
 
   private updateHud(time: number): void {
     this.scoreText.setText(String(this.stats.score));
+    this.fitScoreText();
     const lives = Math.max(0, this.stats.lives);
     const bombs = Math.max(0, this.stats.bombs);
     this.lifeCountText.setText(`×${lives}`);

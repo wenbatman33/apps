@@ -56,6 +56,8 @@ export class PreloadScene extends Phaser.Scene {
     this.load.svg('bg-dawn', 'assets/images/bg-dawn.svg', { width: GAME_WIDTH, height: GAME_HEIGHT });
     this.load.svg('bg-orbit', 'assets/images/bg-orbit.svg', { width: GAME_WIDTH, height: GAME_HEIGHT });
 
+    // Boss 戰專屬 BGM（所有關卡的大魔王共用）
+    this.load.audio('bgm-boss', 'assets/sound/BGM/boss_titan_descent.mp3');
     for (let stageId = 1; stageId <= 8; stageId += 1) {
       this.load.audio(`bgm-stage-${stageId}`, `assets/sound/BGM/stage_${stageId}.mp3`);
       this.load.image(
