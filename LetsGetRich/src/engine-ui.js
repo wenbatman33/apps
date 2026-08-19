@@ -1,4 +1,4 @@
-import Phaser from 'phaser';
+import Phaser from '../vendor/phaser.js';
 import { CHANCE_CARDS, FATE_CARDS, REGIONS, ROULETTE_EVENTS, netWorth, rentFor } from './game-data.js';
 
 const UI_DEPTH = 100;

@@ -1,5 +1,4 @@
-import Phaser from 'phaser';
-import './styles.css';
+import Phaser from '../vendor/phaser.js';
 import { Dice3D } from './dice3d.js';
 import { gameAudio } from './audio.js';
 import { EngineUI } from './engine-ui.js';
@@ -1014,7 +1013,8 @@ function endGame(reason) {
 }
 
 const previewFlow = new URLSearchParams(window.location.search).get('preview');
-const previewEnabled = import.meta.env.DEV || ['127.0.0.1', 'localhost'].includes(window.location.hostname);
+// 純 ESM 專案沒有建置期環境變數，改用 hostname 判斷是否為本機預覽
+const previewEnabled = ['127.0.0.1', 'localhost', ''].includes(window.location.hostname);
 if (previewEnabled && previewFlow === 'bankruptcy') {
   startGame().then(async () => {
     players[0].coins = -50;

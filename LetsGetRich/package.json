@@ -1,20 +1,10 @@
 {
   "name": "property-tycoon",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "type": "module",
+  "description": "純瀏覽器 ES module 專案，無建置步驟；第三方函式庫置於 vendor/",
   "scripts": {
-    "dev": "node scripts/restore-source.mjs && vite --host 0.0.0.0 --port 5174",
-    "build": "node scripts/build-root.mjs",
-    "preview": "vite preview --host 0.0.0.0",
     "test": "node --test"
-  },
-  "dependencies": {
-    "cannon-es": "^0.20.0",
-    "phaser": "^3.90.0",
-    "three": "^0.179.1"
-  },
-  "devDependencies": {
-    "vite": "^7.1.1"
   }
 }

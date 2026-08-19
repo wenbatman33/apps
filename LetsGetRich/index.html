@@ -7,8 +7,12 @@
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <title>房产大亨</title>
-    <script type="module" crossorigin src="./assets/index-UuCNREtK.js"></script>
-    <link rel="stylesheet" crossorigin href="./assets/index-DZ8PmSjk.css">
+    <link rel="stylesheet" href="./src/styles.css" />
+    <!--
+      沒有編譯步驟：src/*.js 是瀏覽器直接執行的 ES module，改完存檔重整即可。
+      第三方函式庫（phaser / three / cannon-es）以相對路徑 import vendor/，
+      不用 importmap，相容性最廣。
+    -->
   </head>
   <body>
     <main id="app" aria-label="房产大亨游戏画布">
@@ -18,5 +22,6 @@
         <div id="dice-stage" aria-label="物理 3D 骰子"></div>
       </section>
     </main>
+    <script type="module" src="./src/main.js"></script>
   </body>
 </html>

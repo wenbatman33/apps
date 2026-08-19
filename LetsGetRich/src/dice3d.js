@@ -1,6 +1,6 @@
-import * as THREE from 'three';
-import * as CANNON from 'cannon-es';
-import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
+import * as THREE from '../vendor/three.js';
+import * as CANNON from '../vendor/cannon-es.js';
+import { RoundedBoxGeometry } from '../vendor/RoundedBoxGeometry.js';
 
 const FACE_NORMALS = [
   { value: 1, normal: new CANNON.Vec3(0, 1, 0) },

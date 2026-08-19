@@ -1,5 +1,5 @@
-import * as THREE from 'three';
-import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
+import * as THREE from '../vendor/three.js';
+import { RoundedBoxGeometry } from '../vendor/RoundedBoxGeometry.js';
 
 // 金色外框彼此贴合；米白格面仍保留清楚的独立边界。
 const CELL_STEP_X = 2.46;

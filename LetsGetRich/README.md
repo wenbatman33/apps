@@ -4,20 +4,29 @@
 
 ## 啟動
 
+本專案**沒有建置步驟**：`src/*.js` 是瀏覽器直接執行的 ES module，改完存檔重整瀏覽器即可。
+因為原生 ES module 受同源政策限制，需透過本機靜態伺服器開啟（不能用 `file://` 直開）：
+
 ```bash
-npm install
-npm run dev
+python3 -m http.server 5174
 ```
 
-正式建置與規則測試：
+然後開 <http://localhost:5174>。規則單元測試：
 
 ```bash
 npm test
-npm run build
 ```
 
-打包结果会直接生成在项目根目录的 `index.html` 与 `assets/`，不会保留 `dist/`。
-可编辑的 HTML 来源保存在 `index.source.html`；执行 `npm run dev` 时会自动还原开发入口。
+## 目錄結構
+
+- `index.html` — 唯一入口，直接載入 `./src/main.js`
+- `src/` — 遊戲原始碼（原生 ES module，無需編譯）
+- `vendor/` — 第三方函式庫的 ESM 版本，以相對路徑 import，不依賴 npm 或 CDN
+  - `phaser.js` / `phaser.esm.min.js`、`three.js` / `three.module.min.js` / `three.core.min.js`、`cannon-es.js`、`RoundedBoxGeometry.js`
+- `assets/` — 遊戲實際載入的圖與音效
+- `tests/` — `node --test` 規則測試
+
+要移植到其他平台，整包複製 `index.html` + `src/` + `vendor/` + `assets/` 即可，不需 npm install、不需打包。
 
 ## 完整流程
 
@@ -51,8 +60,8 @@ npm run build
 
 - Three.js：整座 32 格棋盤、等比例 3D 格子、區域色帶、房屋、地標、角色棋子、45 度跟隨鏡頭與傳送光束均為即時 3D 場景。
 - Three.js + cannon-es：真正的 3D 骰子模型、重力、碰撞、反彈與角速度；依實際朝上面取得點數。
-- Phaser 3 + Vite：以高解析度遊戲引擎文字及點陣 UI 負責 HUD、對話框與互動，不使用 DOM 排版遊戲介面。
+- Phaser 3（原生 ESM）：以高解析度遊戲引擎文字及點陣 UI 負責 HUD、對話框與互動，不使用 DOM 排版遊戲介面。
 - ImageGen PNG：首頁、3D 場景下方的高畫質中國園林地表、8 人角色圖集、機會命運卡、特殊事件、破產與冠軍畫面等點陣素材；棋盤格與建築本身不是底圖的一部分。
 - 未使用 Phaser Graphics、Canvas 產圖或 SVG 遊戲素材。
 
-ImageGen prompt 摘要與後製方式記錄在 `public/assets/ASSET_MANIFEST.md`。
+ImageGen prompt 摘要與後製方式記錄在 `assets/ASSET_MANIFEST.md`。
