@@ -181,12 +181,25 @@ export class HUD {
     const cx = x + r, cy = y + r;
     g.clear();
     g.circle(cx, cy, r).fill({ color: 0x061024, alpha: 0.55 }).stroke({ color: 0x4d7dff, width: 1.5, alpha: 0.5 });
-    const k = r / WORLD.radius;
+    // 局部雷達：以玩家為中心，只顯示 minimapRange 內的目標（世界極大，全域圖已無意義）
+    const p = world.player;
+    const ox = (p && !p.dead) ? p.x : 0, oy = (p && !p.dead) ? p.y : 0;
+    const k = r / WORLD.minimapRange;
+    g.circle(cx, cy, r * 0.5).stroke({ color: 0x4d7dff, width: 1, alpha: 0.18 });
+    // 世界邊界若進入雷達範圍，畫出紅色警戒弧
+    const dc = Math.hypot(ox, oy);
+    if (dc + WORLD.minimapRange > WORLD.radius) {
+      const ea = Math.atan2(oy, ox);
+      const ed = Math.min(1, (WORLD.radius - dc) / WORLD.minimapRange);
+      g.circle(cx + Math.cos(ea) * ed * r, cy + Math.sin(ea) * ed * r, 3)
+        .fill({ color: 0xff3366, alpha: 0.9 });
+    }
     for (const sn of world.snakes) {
       if (sn.dead) continue;
-      const d = Math.min(1, Math.hypot(sn.x, sn.y) / WORLD.radius);
-      const a = Math.atan2(sn.y, sn.x);
-      const px = cx + Math.cos(a) * d * r, py = cy + Math.sin(a) * d * r;
+      const rx = (sn.x - ox) * k, ry = (sn.y - oy) * k;
+      const rd = Math.hypot(rx, ry);
+      if (rd > r - 2) continue;                       // 超出雷達範圍不畫
+      const px = cx + rx, py = cy + ry;
       if (sn.isPlayer) {
         g.circle(px, py, 4).fill({ color: 0xffe066 });
         g.circle(px, py, 8).stroke({ color: 0xffe066, width: 1.4, alpha: 0.55 });
@@ -202,7 +215,12 @@ export class HUD {
     g.clear();
     if (!input?.joystick?.active) return;
     const j = input.joystick;
-    g.circle(j.ox, j.oy, j.radius).fill({ color: 0xffffff, alpha: 0.08 }).stroke({ color: 0x9fd0ff, width: 2, alpha: 0.35 });
-    g.circle(j.x, j.y, j.radius * 0.42).fill({ color: 0x9fd0ff, alpha: 0.35 }).stroke({ color: 0xffffff, width: 2, alpha: 0.6 });
+    const hot = j.power > 0.88;                       // 推到底＝衝刺中，整組搖桿變色提示
+    const ring = hot ? 0xffd166 : 0x9fd0ff;
+    g.circle(j.ox, j.oy, j.radius).fill({ color: 0xffffff, alpha: 0.08 })
+      .stroke({ color: ring, width: hot ? 3 : 2, alpha: hot ? 0.75 : 0.35 });
+    if (hot) g.circle(j.ox, j.oy, j.radius + 7).stroke({ color: ring, width: 2, alpha: 0.35 });
+    g.circle(j.x, j.y, j.radius * 0.42).fill({ color: ring, alpha: hot ? 0.55 : 0.35 })
+      .stroke({ color: 0xffffff, width: 2, alpha: 0.6 });
   }
 }

@@ -16,7 +16,8 @@ const SLIDERS = {
     ['botAggression', TUNING, 0, 1, 0.05], ['botBoostChance', TUNING, 0, 1, 0.05],
     ['botReactTime', TUNING, 0.03, 0.6, 0.01],
   ],
-  世界: [['radius', WORLD, 800, 9000, 50], ['foodCount', WORLD, 200, 4000, 50], ['botCount', WORLD, 1, 60, 1]],
+  世界: [['radius', WORLD, 2000, 24000, 100], ['foodCount', WORLD, 200, 6000, 50], ['botCount', WORLD, 1, 60, 1],
+        ['activeRadius', WORLD, 1200, 6000, 50], ['spawnMinDist', WORLD, 600, 4000, 50], ['despawnRadius', WORLD, 2000, 12000, 100], ['minimapRange', WORLD, 800, 8000, 100]],
   版面: [
     ['hudScale', LAYOUT, 0.5, 2, 0.02],
     ['scoreX', LAYOUT, -400, 400, 1], ['scoreY', LAYOUT, -400, 400, 1], ['scoreSize', LAYOUT, 10, 48, 1],
@@ -147,7 +148,7 @@ export function createDevTools(game) {
     commitLayout();
     const j = {
       TUNING: { ...TUNING },
-      WORLD: { radius: WORLD.radius, foodCount: WORLD.foodCount, botCount: WORLD.botCount },
+      WORLD: { ...WORLD },
       LAYOUT_PC: { ...LAYOUT_PC }, LAYOUT_MOBILE: { ...LAYOUT_MOBILE },
       PLAYER_SKIN: SKINS[0].map((c) => '0x' + c.toString(16).padStart(6, '0')),
     };

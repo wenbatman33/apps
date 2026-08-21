@@ -2,7 +2,7 @@ import { TUNING, WORLD } from '../config.js';
 
 const CANDIDATES = 15;        // 候選轉向數
 const SPREAD = Math.PI * 0.85; // 候選角度扇形範圍
-const SENSE = 420;            // 感知半徑
+const SENSE_MAX = 520;        // 感知半徑上限（實際值取 TUNING.botSense）
 
 // AI 決策：對數個候選方向評分（安全 > 食物 > 攻擊 > 邊界），選最高分
 export function botThink(s, world, dt) {
@@ -10,6 +10,7 @@ export function botThink(s, world, dt) {
   if (s._think > 0) return;
   s._think = TUNING.botReactTime;
 
+  const SENSE = Math.min(SENSE_MAX, TUNING.botSense);
   // 收集附近障礙（別條蛇的身體節點）與食物
   const obstacles = [];
   world.bodyGrid.query(s.x, s.y, SENSE, (n) => {
@@ -46,7 +47,7 @@ export function botThink(s, world, dt) {
       const need = n.r + s.radius + 14;
       if (perp < need) danger += (300 - proj) / 300 * (1 - perp / need) * 60;
     }
-    score -= danger * 3;
+    score -= danger * 3 * TUNING.botAvoidSkill;   // 閃避技巧越低越不怕撞
 
     // 2) 食物：方向上的食物加分（越近越重）
     for (const f of foods) {

@@ -20,7 +20,7 @@ export class World {
     this.board = [];
     this._boardTimer = 0;
     this.events = { onDeath: null, onEat: null, onKill: null };
-    for (let i = 0; i < WORLD.foodCount; i++) this.spawnFood(...this.randomPoint(), 1 + Math.random() * 1.5);
+    for (let i = 0; i < WORLD.foodCount; i++) this.spawnFood(...this.activePoint(0), 1 + Math.random() * 1.5);
     for (let i = 0; i < WORLD.botCount; i++) this.spawnBot();
   }
 
@@ -28,6 +28,26 @@ export class World {
     const a = Math.random() * Math.PI * 2;
     const r = Math.sqrt(Math.random()) * (WORLD.radius - 120);
     return [Math.cos(a) * r, Math.sin(a) * r];
+  }
+
+  // 活躍區中心：跟著玩家跑；玩家不在（選單／死亡）時退回世界原點
+  focus() {
+    const p = this.player;
+    return (p && !p.dead) ? p : { x: 0, y: 0 };
+  }
+
+  // 在活躍區內取一點（環狀分布，min~max 為距焦點的距離）
+  // 預設 min = spawnMinDist：一律生在畫面外，玩家不會看到東西憑空出現
+  activePoint(min = WORLD.spawnMinDist, max = WORLD.activeRadius) {
+    const f = this.focus();
+    const a = Math.random() * Math.PI * 2;
+    const r = Math.sqrt(min * min + Math.random() * (max * max - min * min));
+    const lim = WORLD.radius - 140;
+    let x = f.x + Math.cos(a) * r, y = f.y + Math.sin(a) * r;
+    // 超出世界邊界就往內夾回來
+    const d = Math.hypot(x, y);
+    if (d > lim) { x = x / d * lim; y = y / d * lim; }
+    return [x, y];
   }
 
   spawnFood(x, y, v = 1, color = -1) {
@@ -40,13 +60,11 @@ export class World {
   }
   killFood(f) { if (!f.alive) return; f.alive = false; f.eater = null; this.foodPool.push(f); }
 
-  // 出生點：距中心 65% 內，且盡量遠離其他蛇（試 30 次取最佳）
-  safeSpawn() {
+  // 出生點：在玩家周圍的活躍區內，且盡量遠離其他蛇（試 30 次取最佳）
+  safeSpawn(min = 260, max = WORLD.activeRadius) {
     let best = null, bestD = -1;
     for (let i = 0; i < 30; i++) {
-      const a = Math.random() * Math.PI * 2;
-      const r = Math.sqrt(Math.random()) * WORLD.radius * 0.65;
-      const x = Math.cos(a) * r, y = Math.sin(a) * r;
+      const [x, y] = this.activePoint(min, max);
       let near = 1e9;
       for (const s of this.snakes) {
         if (s.dead) continue;
@@ -59,7 +77,7 @@ export class World {
   }
 
   spawnPlayer(name) {
-    const [x, y] = this.safeSpawn();
+    const [x, y] = this.safeSpawn(0, 700);
     const s = new Snake({
       id: this.nextId++, name: name || '玩家', isPlayer: true,
       skin: SKINS[0], x, y, mass: TUNING.startMass,
@@ -69,7 +87,7 @@ export class World {
   }
 
   spawnBot() {
-    const [x, y] = this.safeSpawn();
+    const [x, y] = this.safeSpawn(WORLD.spawnMinDist, WORLD.activeRadius);   // 一律在畫面外上線
     const s = new Snake({
       id: this.nextId++, isBot: true,
       name: BOT_NAMES[(Math.random() * BOT_NAMES.length) | 0],
@@ -102,7 +120,26 @@ export class World {
     this.foodGrid.clear();
     for (const f of this.food) if (f.alive) this.foodGrid.insert(f.x, f.y, f);
 
-    // 4) 碰撞：頭撞到別條蛇的身體 → 死亡
+    // 4a) 頭對頭：兩顆頭撞在一起 → 大的吃掉小的，勢均力敵則同歸於盡
+    const list = this.snakes;
+    for (let i = 0; i < list.length; i++) {
+      const a = list[i];
+      if (a.dead) continue;
+      for (let j = i + 1; j < list.length; j++) {
+        const b = list[j];
+        if (b.dead) continue;
+        const dx = b.x - a.x, dy = b.y - a.y;
+        const need = (a.radius + b.radius) * 0.92;
+        if (dx * dx + dy * dy > need * need) continue;
+        const edge = TUNING.headOnMassEdge;
+        if (a.mass > b.mass * edge) this.kill(b, a);
+        else if (b.mass > a.mass * edge) this.kill(a, b);
+        else { this.kill(a, b); this.kill(b, a); }
+        if (a.dead) break;
+      }
+    }
+
+    // 4b) 碰撞：頭撞到別條蛇的身體 → 死亡
     for (const s of this.snakes) {
       if (s.dead) continue;
       const hr = s.radius * 0.86;
@@ -141,12 +178,30 @@ export class World {
       } else { f.x += dx / d * step; f.y += dy / d * step; }
     }
 
-    // 6) 補食物與補 bot
+    // 6) 活躍區串流：回收離玩家太遠的食物與 bot，再補回玩家周圍
+    //    世界本身極大（跑不到邊），但模擬量固定，所以怎麼跑都保持一樣熱鬧
+    const streaming = this.player && !this.player.dead;
+    const fx = this.player?.x ?? 0, fy = this.player?.y ?? 0;
+    const far = WORLD.despawnRadius * WORLD.despawnRadius;
     let alive = 0;
-    for (const f of this.food) if (f.alive) alive++;
-    for (let i = alive; i < WORLD.foodCount; i++) this.spawnFood(...this.randomPoint(), 1 + Math.random() * 1.5);
+    for (const f of this.food) {
+      if (!f.alive) continue;
+      if (streaming && !f.eater) {
+        const dx = f.x - fx, dy = f.y - fy;
+        if (dx * dx + dy * dy > far) { this.killFood(f); continue; }
+      }
+      alive++;
+    }
+    for (let i = alive; i < WORLD.foodCount; i++) this.spawnFood(...this.activePoint(), 1 + Math.random() * 1.5);
     let bots = 0;
-    for (const s of this.snakes) if (s.isBot && !s.dead) bots++;
+    for (const s of this.snakes) {
+      if (!s.isBot || s.dead) continue;
+      if (streaming) {
+        const dx = s.x - fx, dy = s.y - fy;
+        if (dx * dx + dy * dy > far) { s.dead = true; continue; }  // 直接下線，不撒食物
+      }
+      bots++;
+    }
     for (let i = bots; i < WORLD.botCount; i++) this.spawnBot();
     if (this.snakes.length > WORLD.botCount * 3) this.snakes = this.snakes.filter((s) => !s.dead);
 

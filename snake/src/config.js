@@ -2,10 +2,14 @@
 
 // 世界設定
 export const WORLD = {
-  radius: 4200,          // 圓形世界半徑
-  foodCount: 2600,       // 場上食物數量上限
-  botCount: 22,          // AI 蛇數量
+  radius: 14000,         // 圓形世界半徑（放大到「跑不到邊」的尺度）
+  foodCount: 3000,       // 場上食物數量上限（集中在活躍區內，密度比舊版更高）
+  botCount: 18,          // AI 蛇數量（密度調低，讓發育期不會一直撞見敵人）
   gridCell: 160,         // 空間網格單格大小（碰撞加速用）
+  spawnMinDist: 2100,    // 補生成的最小距離：必須大於畫面可見半徑，避免食物／敵蛇在眼前憑空冒出
+  activeRadius: 4200,    // 活躍區半徑：食物與 bot 只在玩家周圍這個範圍內補充
+  despawnRadius: 7000,   // 離玩家超過此距離的食物／bot 會被回收，挪回活躍區重生
+  minimapRange: 3800,    // 小地圖（局部雷達）顯示的世界半徑
 };
 
 // 玩法手感參數
@@ -19,20 +23,23 @@ export const TUNING = {
   startMass: 20,         // 初始 mass
   massPerSegment: 2.4,   // 每多少 mass 增加一節身體
   baseRadius: 11,        // 基礎身體半徑
-  radiusGrowth: 0.24,    // 粗細成長係數（對 mass 開根號）
-  maxRadius: 46,
+  radiusGrowth: 0.34,    // 粗細成長係數（對 mass 開根號）
+  maxRadius: 64,
   segSpacingRatio: 0.46, // 身體節點間距 = 半徑 * 此值
   foodValue: 1,          // 一般食物 mass
-  foodMagnet: 34,        // 食物吸附距離（額外於身體半徑）
+  foodMagnet: 46,        // 食物吸附距離（額外於身體半徑）
   eatSpeed: 900,         // 食物被吸過來的速度
-  deathFoodRatio: 0.62,  // 死亡後轉成食物的 mass 比例
+  deathFoodRatio: 0.75,  // 死亡後轉成食物的 mass 比例
+  headOnMassEdge: 1.1,   // 頭對頭相撞：質量高過對方這個倍率就吃掉對方（差距內則同歸於盡）
   cameraZoomBase: 1.05,  // 相機基礎縮放
-  cameraZoomFalloff: 0.0016, // 蛇越大鏡頭拉越遠
-  cameraZoomMin: 0.42,
+  cameraZoomFalloff: 0.0009, // 蛇越大鏡頭拉越遠（放慢，避免抵銷身體成長）
+  cameraZoomMin: 0.56,
   cameraLerp: 0.14,      // 相機跟隨平滑
   botAggression: 0.55,   // AI 攻擊性 0~1（越高越愛繞頭堵人）
   botBoostChance: 0.35,  // AI 追擊時開加速的機率
-  botReactTime: 0.12,    // AI 決策間隔（秒）
+  botReactTime: 0.19,    // AI 決策間隔（秒，越大反應越鈍）
+  botAvoidSkill: 0.7,    // AI 閃避技巧 0~1（越低越容易被玩家繞頭堵死）
+  botSense: 340,         // AI 感知半徑
 };
 
 // 版面：PC 與 Mobile 各一份，DEV 工具可分別調整與匯出
@@ -52,7 +59,7 @@ export const LAYOUT_MOBILE = {
   scoreX: 14, scoreY: 12, scoreSize: 18,
   boardX: -14, boardY: 12, boardSize: 12, boardRows: 6, boardAlpha: 0.86,
   minimapX: 14, minimapY: -14, minimapSize: 100, minimapAlpha: 0.62,  // 左下，避開右下加速鍵
-  boostBtnX: -80, boostBtnY: -96, boostBtnR: 46,                     // 右下拇指位置
+  boostBtnX: -80, boostBtnY: -96, boostBtnR: 0,                      // 不用加速鍵：搖桿推到底就是衝刺（單指操作）
   joyX: 0, joyY: 0, joyR: 68,                                         // 搖桿為浮動式，按哪出現在哪
   quitX: 30, quitY: 92, quitR: 17,                                    // 左上離開鍵
   nameSize: 15,

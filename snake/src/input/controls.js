@@ -1,6 +1,6 @@
 import { LAYOUT, IS_TOUCH } from '../config.js';
 
-// 輸入：PC 用滑鼠指向 + 左鍵/空白鍵加速；手機用浮動搖桿 + 右下加速鍵（推到底也會自動加速）
+// 輸入：PC 用滑鼠指向 + 左鍵/空白鍵加速；手機單指浮動搖桿，推到底即衝刺（不另設加速鍵）
 export class Input {
   constructor(app, hud) {
     this.app = app; this.hud = hud;
@@ -98,7 +98,7 @@ export class Input {
     if (kx || ky) this.angle = Math.atan2(ky, kx);
 
     const kb = k.has('Space') || k.has('ShiftLeft') || k.has('ShiftRight');
-    const joyFull = this.joystick.active && this.joystick.power > 0.95;
+    const joyFull = this.joystick.active && this.joystick.power > 0.88;   // 手機：推到底＝衝刺，不另設按鈕
     this.boosting = this.srcMouse || this.srcBtn || kb || joyFull;
   }
 }

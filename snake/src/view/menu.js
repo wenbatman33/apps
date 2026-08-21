@@ -133,7 +133,7 @@ export class Menu {
       this.hint.visible = true;
       this.hint.style.fontSize = 14;
       this.hint.text = IS_TOUCH
-        ? '拖曳畫面控制方向　右下「衝」鍵加速\n搖桿推到底也會自動加速'
+        ? '單指拖曳控制方向　推到底＝衝刺\n放開手指即取消'
         : '滑鼠控制方向　按住左鍵 / 空白鍵加速\nD 鍵開啟版面微調工具';
       this.hint.position.set(cx, bty + bth + 34);
 
