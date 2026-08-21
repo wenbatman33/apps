@@ -6,7 +6,8 @@ export const GRID = {
   COLS: 11,
   ROWS: 17,          // 可見行數（超過底線即失敗）
   CELL: 56,          // 每格邊長 → 場地 616×952，共 187 格
-  GAP: 4,            // 磚塊間隙（視覺用，碰撞仍以整格計算）
+  GAP: 4,            // 保留給版面計算
+  INSET: 2,          // 磚塊四邊內縮（碰撞與視覺一致）→ 磚間僅 4px，磚塊幾乎相連
 };
 
 // 版面：PC 與 Mobile 各一份，DEV 工具可分別微調並匯出
@@ -35,9 +36,9 @@ const BASE_LAYOUT = {
   progressH: 8,
 
   // 瞄準
-  aimDotGap: 30,         // 瞄準虛線點距
+  aimDotGap: 26,         // 瞄準虛線點距
   aimDotSize: 5,
-  aimMaxLen: 900,        // 瞄準線最長長度
+  aimMaxLen: 1800,       // 瞄準線最長長度
   aimMinDrag: 18,        // 觸發瞄準的最小拖曳距離
 
   // 特效
@@ -52,7 +53,7 @@ export const LAYOUT_MOBILE = {
   hudTitleSize: 32,
   hudSubSize: 18,
   ballCountSize: 28,
-  aimMaxLen: 820,
+  aimMaxLen: 1700,
 };
 
 // 執行期生效的版面（由 main.js 依裝置挑選，DEV 工具直接改這個物件）
@@ -64,21 +65,22 @@ export function applyLayout(src) {
 
 // 玩法數值
 export const RULES = {
-  ballRadius: 5,
-  ballSpeed: 1750,        // px/s（邏輯單位）
+  ballRadius: 4.5,
+  ballSpeed: 1000,        // px/s（邏輯單位）：放慢到看得清彈跳過程，趕時間可按加速鈕
   fireInterval: 0.05,     // 連射間隔上限（實際依球數自動縮短）
-  fireBurst: 2.4,         // 全部球射完的目標秒數（球越多射速越快）
-  fireIntervalMin: 0.013, // 連射間隔下限，確保球與球之間看得出間隔
+  fireBurst: 3.0,         // 全部球射完的目標秒數（球越多射速越快）
+  fireIntervalMin: 0.02,  // 連射間隔下限，確保球與球之間看得出間隔
   maxBalls: 800,          // 球數上限
   substepMax: 10,         // 單幀最大物理子步數
+  scatter: 0.03,          // 反射擾動（弧度）：球群發散程度，0 = 所有球走同一條路徑
   recallSpeed: 2600,      // 回收動畫速度
-  turboAfter: 5.0,        // 回合超過此秒數自動加速（秒）
+  turboAfter: 9.0,        // 回合超過此秒數自動加速（秒）
   turboScale: 2.8,
-  forceRecallAfter: 8.0,  // 超過此秒數開始把球導向下方，保證回合一定結束
+  forceRecallAfter: 14.0, // 超過此秒數開始把球導向下方，保證回合一定結束
   ballGrowth: 1,          // 撿到 +1 道具增加的球數
 };
 
 // 單一霓虹主題
-export const THEME = { bg: 0x05060f, accent: 0x35f0ff, glow: 0x35f0ff };
+export const THEME = { bg: 0x232c4d, accent: 0x7cc4f5, glow: 0x7cc4f5, grid: 0x2e3860 };
 
 export const TOTAL_LEVELS = 200;

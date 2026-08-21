@@ -1,12 +1,16 @@
 // 回合制核心邏輯：瞄準 → 連射 → 回收 → 磚塊下移，與渲染完全解耦
 import { GRID, LAYOUT, RULES, WORLD } from '../config.js';
-import { circleVsRect, circleVsTriangle, triangleVerts, reflect, deJam, substepCount } from './physics.js';
+import { circleVsRect, circleVsTriangle, triangleVerts, reflect, scatter, deJam, substepCount } from './physics.js';
 import { makeLevel, buildInitialGrid, buildRow, hpForTurn, waveHpTarget, mulberry32, isPowerup, T } from './level.js';
 
 export const PHASE = { AIM: 'aim', FIRING: 'firing', SHIFT: 'shift', WIN: 'win', LOSE: 'lose' };
 
 export function cellX(c) { return LAYOUT.playLeft + c * GRID.CELL; }
 export function cellY(r) { return LAYOUT.playTop + r * GRID.CELL; }
+// 磚塊實體比格子小一圈，磚與磚之間留出真正的縫隙讓球能鑽進去彈跳
+export function brickX(c) { return cellX(c) + GRID.INSET; }
+export function brickY(r) { return cellY(r) + GRID.INSET; }
+export function brickSize() { return GRID.CELL - GRID.INSET * 2; }
 export function wallLeft() { return LAYOUT.playLeft; }
 export function wallRight() { return LAYOUT.playLeft + GRID.COLS * GRID.CELL; }
 export function wallTop() { return LAYOUT.playTop; }
@@ -210,19 +214,20 @@ export class Game {
   collideBricks(b) {
     const r = RULES.ballRadius;
     const cSize = GRID.CELL;
-    const c0 = Math.floor((b.x - r - LAYOUT.playLeft) / cSize);
-    const c1 = Math.floor((b.x + r - LAYOUT.playLeft) / cSize);
-    const r0 = Math.floor((b.y - r - LAYOUT.playTop) / cSize);
-    const r1 = Math.floor((b.y + r - LAYOUT.playTop) / cSize);
+    const c0 = Math.floor((b.x - r - LAYOUT.playLeft) / cSize) - 1;
+    const c1 = Math.floor((b.x + r - LAYOUT.playLeft) / cSize) + 1;
+    const r0 = Math.floor((b.y - r - LAYOUT.playTop) / cSize) - 1;
+    const r1 = Math.floor((b.y + r - LAYOUT.playTop) / cSize) + 1;
 
     let best = null, bestR = -1, bestC = -1;
     for (let rr = r0; rr <= r1; rr++) {
       for (let cc = c0; cc <= c1; cc++) {
         const cell = this.cellAt(rr, cc);
         if (!cell) continue;
+        const bs = brickSize();
         const hit = cell.t === T.TRI
-          ? circleVsTriangle(b.x, b.y, r, triangleVerts(cellX(cc), cellY(rr), cSize, cell.corner))
-          : circleVsRect(b.x, b.y, r, cellX(cc), cellY(rr), cSize, cSize);
+          ? circleVsTriangle(b.x, b.y, r, triangleVerts(brickX(cc), brickY(rr), bs, cell.corner))
+          : circleVsRect(b.x, b.y, r, brickX(cc), brickY(rr), bs, bs);
         if (!hit) continue;
         if (isPowerup(cell.t)) { // 道具不反彈，碰到即觸發
           this.collectPowerup(rr, cc, cell);
@@ -236,7 +241,8 @@ export class Game {
     // 推出穿透並反射
     b.x += best.nx * best.depth;
     b.y += best.ny * best.depth;
-    const rv = reflect(b.vx, b.vy, best.nx, best.ny);
+    const rv0 = reflect(b.vx, b.vy, best.nx, best.ny);
+    const rv = scatter(rv0.vx, rv0.vy, RULES.scatter);
     const dj = deJam(rv.vx, rv.vy, RULES.ballSpeed);
     b.vx = dj.vx; b.vy = dj.vy;
 

@@ -3,7 +3,6 @@ let ctx = null;
 let master = null;
 let enabled = true;
 let lastHit = 0;
-let hitCount = 0;
 
 export function initAudio() {
   if (ctx) return;
@@ -59,36 +58,43 @@ function noise({ dur = 0.2, gain = 0.4, freq = 1200, q = 1, delay = 0 }) {
   src.start(t0);
 }
 
-// 撞擊：同一幀大量命中時只發聲數次，並隨連擊升高音高
-export function sfxHit(pitchStep = 0) {
+// 撞擊：固定單一音色，不隨連擊變調；同一幀大量命中時做節流避免爆音
+export function sfxHit() {
   if (!ctx) return;
   const now = ctx.currentTime;
-  if (now - lastHit < 0.028) return;
-  if (now - lastHit > 0.35) hitCount = 0;
+  if (now - lastHit < 0.026) return;
   lastHit = now;
-  hitCount = Math.min(24, hitCount + 1);
-  const f = 520 + hitCount * 26 + pitchStep * 40;
-  tone({ freq: f, type: 'square', dur: 0.05, gain: 0.14, sweep: -120 });
+  // 木琴般的清脆點擊：基頻＋一個泛音，快速衰減，固定音高不隨連擊變調
+  tone({ freq: 784, type: 'sine', dur: 0.13, gain: 0.16 });
+  tone({ freq: 1568, type: 'sine', dur: 0.06, gain: 0.045 });
 }
 
-export function sfxBreak() { noise({ dur: 0.16, gain: 0.2, freq: 2400, q: 0.8 }); }
-export function sfxFire() { tone({ freq: 300, type: 'triangle', dur: 0.1, gain: 0.22, sweep: 420 }); }
-export function sfxPlus() {
-  tone({ freq: 880, type: 'sine', dur: 0.1, gain: 0.2 });
-  tone({ freq: 1320, type: 'sine', dur: 0.12, gain: 0.16, delay: 0.06 });
+export function sfxBreak() {
+  // 磚塊碎裂：一顆稍高的鈴音配上一點空氣聲，不刺耳
+  tone({ freq: 1175, type: 'sine', dur: 0.16, gain: 0.11 });
+  noise({ dur: 0.1, gain: 0.07, freq: 3200, q: 1.4 });
 }
-export function sfxTurn() { tone({ freq: 200, type: 'sine', dur: 0.16, gain: 0.14, sweep: 60 }); }
+export function sfxFire() { tone({ freq: 392, type: 'triangle', dur: 0.12, gain: 0.16, sweep: 200 }); }
+export function sfxPlus() {
+  // 上行三度，像收集音
+  tone({ freq: 880, type: 'sine', dur: 0.13, gain: 0.16 });
+  tone({ freq: 1319, type: 'sine', dur: 0.16, gain: 0.13, delay: 0.07 });
+}
+export function sfxTurn() { tone({ freq: 262, type: 'sine', dur: 0.18, gain: 0.1, sweep: 40 }); }
 export function sfxWin() {
-  [523, 659, 784, 1047].forEach((f, i) => tone({ freq: f, type: 'triangle', dur: 0.26, gain: 0.2, delay: i * 0.09 }));
+  [523, 659, 784, 1047].forEach((f, i) => {
+    tone({ freq: f, type: 'sine', dur: 0.32, gain: 0.18, delay: i * 0.1 });
+    tone({ freq: f * 2, type: 'sine', dur: 0.16, gain: 0.05, delay: i * 0.1 });
+  });
 }
 export function sfxLose() {
-  [440, 349, 262].forEach((f, i) => tone({ freq: f, type: 'sawtooth', dur: 0.3, gain: 0.18, delay: i * 0.13 }));
+  [440, 349, 262].forEach((f, i) => tone({ freq: f, type: 'sine', dur: 0.38, gain: 0.15, delay: i * 0.14 }));
 }
 export function sfxLaser() {
-  tone({ freq: 1500, type: 'sawtooth', dur: 0.26, gain: 0.2, sweep: -1200 });
-  noise({ dur: 0.22, gain: 0.16, freq: 3000, q: 2 });
+  tone({ freq: 1400, type: 'triangle', dur: 0.28, gain: 0.15, sweep: -1000 });
+  noise({ dur: 0.18, gain: 0.09, freq: 2600, q: 2.5 });
 }
 export function sfxMulti() {
-  [660, 880, 1180].forEach((f, i) => tone({ freq: f, type: 'triangle', dur: 0.2, gain: 0.18, delay: i * 0.06 }));
+  [659, 880, 1175].forEach((f, i) => tone({ freq: f, type: 'sine', dur: 0.22, gain: 0.15, delay: i * 0.07 }));
 }
-export function sfxTap() { tone({ freq: 660, type: 'sine', dur: 0.06, gain: 0.14 }); }
+export function sfxTap() { tone({ freq: 660, type: 'sine', dur: 0.08, gain: 0.12 }); }

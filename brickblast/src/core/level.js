@@ -28,7 +28,8 @@ export function mulberry32(seed) {
 
 // ---- 難度曲線 ----
 export function startBallsFor(level) {
-  return Math.max(8, Math.min(520, Math.floor(Math.pow(level, 1.12) * 1.3) + 8));
+  // 第 1 關就給足球數（參考同類遊戲：開局約 40~60 顆），後期上看 500+
+  return Math.max(40, Math.min(560, Math.floor(Math.pow(level, 1.1) * 1.4) + 40));
 }
 
 // 磚塊血量基準與球數掛鉤，確保「球多 → 磚也厚」的節奏一致
@@ -43,14 +44,14 @@ export function hpForTurn(level, turn) {
 
 // 一關的初始盤面總血量目標（球數單調 → 目標單調 → 難度單調）
 export function initHpTarget(level) {
-  // 前期球少、命中效率低，係數要小；後期球多才吃得下高血量
-  const k = 4.0 + Math.min(6.0, level * 0.033);
+  // 磚少而厚：總血量拉高，單塊磚要打好幾回合才破
+  const k = 10.5 + Math.min(12, level * 0.055);
   return Math.round(startBallsFor(level) * k);
 }
 
 // 每一波新行的總血量目標，隨回合緩升
 export function waveHpTarget(level, turn) {
-  const k = 1.0 + Math.min(1.5, level * 0.0085);
+  const k = 0.85 + Math.min(0.8, level * 0.0042);
   return Math.round(startBallsFor(level) * k * (1 + turn * 0.06));
 }
 
@@ -70,16 +71,16 @@ function normalizeHp(cells, target) {
 // 同一波才會出現有難有易、顏色不一的盤面
 export function rollHp(base, rng) {
   const r = rng();
-  const mul = r < 0.75 ? 0.32 + r * 0.9 : 1.0 + (r - 0.75) * 3.2;
+  const mul = r < 0.7 ? 0.22 + r * 1.1 : 1.0 + (r - 0.7) * 5.3;
   return Math.max(1, Math.round(base * mul));
 }
 
 export function wavesFor(level) {
-  return Math.min(11, 5 + Math.floor(level / 22));
+  return Math.min(13, 5 + Math.floor(level / 16));
 }
 
 function initRowsFor(level) {
-  return Math.min(7, 3 + Math.floor(level / 12));
+  return Math.min(9, 5 + Math.floor(level / 12));
 }
 
 // ---- 版面圖樣 ----
@@ -143,9 +144,14 @@ export function buildRow(def, turn, rng, opts = {}) {
   const pattern = opts.pattern ?? def.pattern;
   const mask = rowMask(pattern, opts.row ?? 0, opts.rows ?? 1, cols, rng, density);
 
-  // 通道：固定幾個欄位大多留空，讓球有開口能鑽進磚陣往上連續彈擊
+  // 夾道：通道欄留空，左右兩側築牆。球斜射進去會在兩壁之間之字形連續彈擊，
+  // 這是「彈跳感」的主要來源（單純的空欄位只會讓球直接穿過去）
   for (const lane of def.lanes || []) {
-    if (rng() < 0.78) mask[lane] = false;
+    if (rng() < 0.85) {
+      mask[lane] = false;
+      if (lane > 0) mask[lane - 1] = true;
+      if (lane < cols - 1) mask[lane + 1] = true;
+    }
   }
   const base = hpForTurn(def.level, turn);
   const row = [];
@@ -206,7 +212,7 @@ export function makeLevel(level) {
     lanes,
     theme: THEME,
     pattern,
-    density: 0.64 + Math.min(0.26, n * 0.002) + rng() * 0.08,
+    density: 0.22 + Math.min(0.48, n * 0.004) + rng() * 0.06,
     plusRate: Math.max(0.5, 0.85 - n * 0.001),
     startBalls: startBallsFor(n),
     waves: wavesFor(n),
@@ -231,12 +237,20 @@ export function buildInitialGrid(def) {
     grid[r] = row;
   }
 
+  // 夾道封頂：頂端把通道補上磚，球射到底才會被彈回來繼續在夾道裡跳
+  for (const lane of def.lanes || []) {
+    if (!grid[0][lane]) {
+      const hp = rollHp(hpForTurn(def.level, 0), rng);
+      grid[0][lane] = { t: T.BRICK, hp, maxHp: hp };
+    }
+  }
+
   // 保底填充：幾何圖樣可能過於稀疏，補到目標密度確保盤面夠滿
   {
     const cells = rows * GRID.COLS;
     let filled = 0;
     for (let r = 0; r < rows; r++) for (let c = 0; c < GRID.COLS; c++) if (grid[r][c]) filled++;
-    const target = Math.floor(cells * Math.min(0.85, def.density));
+    const target = Math.floor(cells * Math.min(0.8, def.density));
     let guard = cells * 3;
     while (filled < target && guard-- > 0) {
       const r = Math.floor(rng() * rows);

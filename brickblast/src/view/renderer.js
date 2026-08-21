@@ -1,9 +1,10 @@
 // 主渲染：背景 / 磚塊 / 球 / 瞄準線，全部走 PixiJS 批次繪製
 import * as PIXI from '../../vendor/pixi.min.mjs';
-import { GRID, LAYOUT, RULES, WORLD } from '../config.js';
+import { GRID, LAYOUT, RULES, WORLD, THEME } from '../config.js';
 import { T } from '../core/level.js';
-import { cellX, cellY, wallLeft, wallRight, wallTop } from '../core/game.js';
-import { texBall, texBrick, texTriangle, texPlusRing, texLaserIcon, texGlow, texPixel, hpColor } from './textures.js';
+import { cellX, cellY, brickX, brickY, brickSize, wallLeft, wallRight, wallTop } from '../core/game.js';
+import { texBall, texBrick, texTriangle, texPlusRing, texLaserOrb, texGlow, texPixel, hpColor, labelColor } from './textures.js';
+import { circleVsRect, circleVsTriangle, triangleVerts, reflect } from '../core/physics.js';
 import { FX } from './fx.js';
 
 // 數字用點陣字型，磚塊血量每幀變動也不會重建貼圖
@@ -64,14 +65,13 @@ export class Renderer {
     this.texBallT = texBall(16);
     this.texGlowT = texGlow(128);
     this.texPxT = texPixel();
-    this.texBrickT = texBrick(90, 0);
-    this.texTriT = texTriangle(90);
-    this.texLaserIconT = texLaserIcon(54);
+    this.texBrickT = texBrick(90);
+    this.texTriT = [0, 1, 2, 3].map((c) => texTriangle(90, c));
+    this.texLaserOrbT = texLaserOrb(76);
     this.texRingT = texPlusRing(72);
 
     this.ballSprites = [];
     this.brickViews = [];
-    this.aimDots = [];
     this.accent = 0x35f0ff;
 
     this.buildBackground();
@@ -110,17 +110,20 @@ export class Renderer {
     const L = wallLeft(), R = wallRight(), TOPY = wallTop();
     const g = this.frame;
     g.clear();
+    const H = LAYOUT.deadLine - TOPY;
     // 場地底
-    g.roundRect(L - 4, TOPY - 4, R - L + 8, LAYOUT.deadLine - TOPY + 8, 10)
-      .fill({ color: 0xffffff, alpha: 0.025 });
-    // 側牆霓虹
-    g.rect(L - 4, TOPY, 3, LAYOUT.deadLine - TOPY).fill({ color: this.accent, alpha: 0.5 });
-    g.rect(R + 1, TOPY, 3, LAYOUT.deadLine - TOPY).fill({ color: this.accent, alpha: 0.5 });
-    g.rect(L - 4, TOPY - 4, R - L + 8, 3).fill({ color: this.accent, alpha: 0.75 });
-    // 網格參考線
+    g.rect(L, TOPY, R - L, H).fill({ color: 0x000000, alpha: 0.12 });
+    // 完整格線
     for (let c = 1; c < GRID.COLS; c++) {
-      g.rect(L + c * GRID.CELL - 0.5, TOPY, 1, LAYOUT.deadLine - TOPY).fill({ color: 0xffffff, alpha: 0.035 });
+      g.rect(L + c * GRID.CELL - 0.5, TOPY, 1, H).fill({ color: THEME.grid, alpha: 0.9 });
     }
+    for (let r = 1; r * GRID.CELL < H; r++) {
+      g.rect(L, TOPY + r * GRID.CELL - 0.5, R - L, 1).fill({ color: THEME.grid, alpha: 0.9 });
+    }
+    // 外框
+    g.rect(L - 3, TOPY - 3, R - L + 6, 3).fill({ color: this.accent, alpha: 0.8 });
+    g.rect(L - 3, TOPY - 3, 3, H + 6).fill({ color: this.accent, alpha: 0.55 });
+    g.rect(R, TOPY - 3, 3, H + 6).fill({ color: this.accent, alpha: 0.55 });
 
     const d = this.deadLineG;
     d.clear();
@@ -157,9 +160,9 @@ export class Renderer {
 
         const body = new PIXI.Sprite(this.texBrickT);
         body.anchor.set(0.5);
-        body.width = GRID.CELL; body.height = GRID.CELL;
+        body.width = brickSize(); body.height = brickSize();
 
-        const icon = new PIXI.Sprite(this.texLaserIconT);
+        const icon = new PIXI.Sprite(this.texGlowT);
         icon.anchor.set(0.5);
         icon.visible = false;
 
@@ -209,14 +212,12 @@ export class Renderer {
       v.glow.alpha = 0.22;
       v.glow.scale.set(0.6);
       if (cell.t === T.LASER) {
-        v.icon.visible = true;
-        v.icon.tint = col;
-        v.icon.scale.set(0.54);
+        v.body.texture = this.texLaserOrbT;
         v.label.text = '';
       } else {
         v.label.text = cell.t === T.PLUS ? '+1' : '×3';
         v.label.scale.set(0.78);
-        v.label.style && (v.label.style.fill = 0xffffff);
+        v.label.tint = 0xffffff;
       }
       return;
     }
@@ -226,14 +227,15 @@ export class Renderer {
     v.body.tint = col;
     v.label.scale.set(1);
     v.label.text = fmtNum(cell.hp);
+    v.label.tint = labelColor(cell.hp);
 
     if (cell.t === T.TRI) {
-      v.body.texture = this.texTriT;
-      v.body.width = GRID.CELL; v.body.height = GRID.CELL;
-      // 貼圖直角在左上，其餘朝向以 90 度倍數旋轉
-      v.body.rotation = (cell.corner & 3) * Math.PI / 2;
+      // 四種朝向各有自己的貼圖，光源方向才不會跟著轉
+      v.body.texture = this.texTriT[cell.corner & 3];
+      v.body.width = brickSize(); v.body.height = brickSize();
+      v.body.rotation = 0;
       // 數字放在三角形重心，避免壓到斜邊外
-      const k = GRID.CELL / 7.5;
+      const k = brickSize() / 7.5;
       const cx = (cell.corner === 1 || cell.corner === 2) ? k : -k;
       const cy = (cell.corner === 2 || cell.corner === 3) ? k : -k;
       v.label.x = cx; v.label.y = cy;
@@ -241,7 +243,7 @@ export class Renderer {
     }
 
     v.body.texture = this.texBrickT;
-    v.body.width = GRID.CELL; v.body.height = GRID.CELL;
+    v.body.width = brickSize(); v.body.height = brickSize();
   }
 
   animBrick(v) {
@@ -277,66 +279,123 @@ export class Renderer {
 
   // ---- 瞄準線 ----
   buildAim() {
-    this.aimDotsC = new PIXI.Container();
-    this.aimDotsC.blendMode = 'add';
-    this.aimLayer.addChild(this.aimDotsC);
-    for (let i = 0; i < 40; i++) {
+    this.aimHighlight = new PIXI.Graphics();   // 會被打到的磚塊外框
+    this.aimLine = new PIXI.Graphics();        // 連續預測線
+    this.aimLine.blendMode = 'add';
+    this.aimLayer.addChild(this.aimHighlight, this.aimLine);
+
+    // 撞擊點標記
+    this.aimHits = [];
+    for (let i = 0; i < 6; i++) {
       const s = new PIXI.Sprite(this.texBallT);
       s.anchor.set(0.5);
+      s.width = 26; s.height = 26;
+      s.blendMode = 'add';
       s.visible = false;
-      this.aimDotsC.addChild(s);
-      this.aimDots.push(s);
+      this.aimLayer.addChild(s);
+      this.aimHits.push(s);
     }
   }
 
-  // 以反射預測畫出瞄準虛線（含牆面反彈一次）
-  drawAim(game, dir) {
-    const dots = this.aimDots;
-    if (!dir) { for (const d of dots) d.visible = false; this.aimDotsC.visible = false; return; }
-    this.aimDotsC.visible = true;
-
+  // 唯讀模擬球的飛行路徑：一路反射到打中第 N 塊磚為止
+  predictPath(game, dir, maxBrickHits = 2, maxLen = 5000) {
     const r = RULES.ballRadius;
     const L = wallLeft() + r, R = wallRight() - r, TOPY = wallTop() + r;
+    const bs = brickSize();
+    const STEP = 5;
+
     let x = game.launchX, y = LAYOUT.launchY;
-    let dx = dir.x, dy = dir.y;
-    const gap = LAYOUT.aimDotGap;
-    const maxLen = LAYOUT.aimMaxLen;
+    let vx = dir.x, vy = dir.y;
+    const pts = [{ x, y }];
+    const hits = [];
+    const marks = [];
     let travelled = 0;
-    let di = 0;
-    let bounces = 0;
+    let brickHits = 0;
 
-    while (di < dots.length && travelled < maxLen) {
-      // 前進一小段並檢查是否撞到磚塊或牆
-      const step = gap;
-      let nx = x + dx * step, ny = y + dy * step;
+    while (travelled < maxLen && brickHits < maxBrickHits) {
+      x += vx * STEP; y += vy * STEP;
+      travelled += STEP;
 
-      if (nx < L || nx > R) {
-        if (bounces >= 2) break;
-        bounces++;
-        dx = -dx;
-        nx = x + dx * step;
+      let bounced = false;
+      if (x < L) { x = L; vx = Math.abs(vx); bounced = true; }
+      else if (x > R) { x = R; vx = -Math.abs(vx); bounced = true; }
+      if (y < TOPY) { y = TOPY; vy = Math.abs(vy); bounced = true; }
+      if (y > LAYOUT.launchY) break;
+      if (bounced) pts.push({ x, y });
+
+      // 找出這一步碰到的磚
+      const c0 = Math.floor((x - r - LAYOUT.playLeft) / GRID.CELL) - 1;
+      const c1 = Math.floor((x + r - LAYOUT.playLeft) / GRID.CELL) + 1;
+      const r0 = Math.floor((y - r - LAYOUT.playTop) / GRID.CELL) - 1;
+      const r1 = Math.floor((y + r - LAYOUT.playTop) / GRID.CELL) + 1;
+      let best = null, bR = -1, bC = -1;
+      for (let rr = r0; rr <= r1; rr++) {
+        for (let cc = c0; cc <= c1; cc++) {
+          const cell = game.cellAt(rr, cc);
+          if (!cell || cell.t === T.PLUS || cell.t === T.LASER || cell.t === T.MULTI) continue;
+          const hit = cell.t === T.TRI
+            ? circleVsTriangle(x, y, r, triangleVerts(brickX(cc), brickY(rr), bs, cell.corner))
+            : circleVsRect(x, y, r, brickX(cc), brickY(rr), bs, bs);
+          if (!hit) continue;
+          if (!best || hit.depth > best.depth) { best = hit; bR = rr; bC = cc; }
+        }
       }
-      if (ny < TOPY) { break; }
-
-      // 撞到磚塊即停止預測（保留玩家推算空間）
-      const cc = Math.floor((nx - LAYOUT.playLeft) / GRID.CELL);
-      const rr = Math.floor((ny - LAYOUT.playTop) / GRID.CELL);
-      const cell = game.cellAt(rr, cc);
-      if (cell && cell.t !== T.PLUS && cell.t !== T.LASER && cell.t !== T.MULTI) break;
-
-      x = nx; y = ny;
-      travelled += step;
-
-      const d = dots[di++];
-      d.visible = true;
-      d.x = x; d.y = y;
-      const k = 1 - travelled / maxLen;
-      const sz = LAYOUT.aimDotSize * (0.5 + k * 0.7);
-      d.width = sz * 2; d.height = sz * 2;
-      d.tint = this.accent;
-      d.alpha = 0.2 + k * 0.42;
+      if (best) {
+        x += best.nx * best.depth;
+        y += best.ny * best.depth;
+        pts.push({ x, y });
+        marks.push({ x, y });
+        hits.push({ r: bR, c: bC });
+        const rv = reflect(vx, vy, best.nx, best.ny);
+        vx = rv.vx; vy = rv.vy;
+        brickHits++;
+      }
     }
-    for (let i = di; i < dots.length; i++) dots[i].visible = false;
+    pts.push({ x, y });
+    return { pts, hits, marks };
+  }
+
+  drawAim(game, dir) {
+    const line = this.aimLine, hl = this.aimHighlight;
+    if (!dir || !game) {
+      line.clear(); hl.clear();
+      for (const s of this.aimHits) s.visible = false;
+      return;
+    }
+
+    const { pts, hits, marks } = this.predictPath(game, dir);
+
+    // 連續實線：外層粗一點做出光暈，內層細白線
+    line.clear();
+    if (pts.length > 1) {
+      const draw = (width, color, alpha) => {
+        line.moveTo(pts[0].x, pts[0].y);
+        for (let i = 1; i < pts.length; i++) line.lineTo(pts[i].x, pts[i].y);
+        line.stroke({ width, color, alpha, cap: 'round', join: 'round' });
+      };
+      draw(10, 0xffd24a, 0.18);
+      draw(4.5, 0xffd24a, 0.5);
+      draw(1.8, 0xffffff, 0.92);
+    }
+
+    // 會被打到的磚塊：外框高亮
+    hl.clear();
+    const bs = brickSize();
+    for (const h of hits) {
+      hl.rect(brickX(h.c) - 3, brickY(h.r) - 3, bs + 6, bs + 6)
+        .stroke({ width: 3, color: 0xffd24a, alpha: 0.95 });
+    }
+
+    // 撞擊點標記
+    for (let i = 0; i < this.aimHits.length; i++) {
+      const s = this.aimHits[i];
+      const m = marks[i];
+      if (!m) { s.visible = false; continue; }
+      s.visible = true;
+      s.x = m.x; s.y = m.y;
+      s.tint = 0xffd24a;
+      s.alpha = 0.95 - i * 0.25;
+    }
   }
 
   // ---- 球 ----
@@ -345,8 +404,8 @@ export class Renderer {
     while (this.ballSprites.length < balls.length) {
       const s = new PIXI.Sprite(this.texBallT);
       s.anchor.set(0.5);
-      s.width = RULES.ballRadius * 2.7;
-      s.height = RULES.ballRadius * 2.7;
+      s.width = RULES.ballRadius * 3.2;
+      s.height = RULES.ballRadius * 3.2;
       this.ballLayer.addChild(s);
       this.ballSprites.push(s);
     }

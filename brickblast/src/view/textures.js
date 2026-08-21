@@ -54,21 +54,30 @@ export function texGlow(size = 128) {
 }
 
 // 磚塊：霓虹描邊 + 半透明內填（白色，供 tint）
-// 實心磚塊：整塊填色（供 tint），頂部帶一道淡高光做出立體感
-export function texBrick(size = 90, radius = 0) {
-  return make(`brick${size}_${radius}`, size, size, (ctx, w, h) => {
-    const pad = 5;
-    ctx.fillStyle = 'rgba(255,255,255,1)';
-    ctx.fillRect(pad, pad, w - pad * 2, h - pad * 2);
-    // 上緣高光
-    ctx.save();
-    ctx.clip();
-    const g = ctx.createLinearGradient(0, pad, 0, h * 0.55);
-    g.addColorStop(0, 'rgba(255,255,255,0.35)');
-    g.addColorStop(1, 'rgba(255,255,255,0)');
-    ctx.fillStyle = g;
+// 立體方磚：貼圖本身帶明暗（tint 是乘法，全白疊全白不會有明暗差），
+// 主面中灰、上斜面全白、左次亮、右偏暗、下最暗，tint 上色後就是浮凸的方塊
+const FACE = { main: 224, top: 255, left: 244, right: 176, bottom: 138 };
+const gray = (v) => `rgb(${v},${v},${v})`;
+
+export function texBrick(size = 90) {
+  return make(`brick${size}`, size, size, (ctx, w, h) => {
+    const b = size * 0.16;
+    ctx.fillStyle = gray(FACE.main);
     ctx.fillRect(0, 0, w, h);
-    ctx.restore();
+    const faces = [
+      [[0, 0], [w, 0], [w - b, b], [b, b], FACE.top],
+      [[0, 0], [b, b], [b, h - b], [0, h], FACE.left],
+      [[w, 0], [w, h], [w - b, h - b], [w - b, b], FACE.right],
+      [[0, h], [b, h - b], [w - b, h - b], [w, h], FACE.bottom],
+    ];
+    for (const f of faces) {
+      ctx.beginPath();
+      ctx.moveTo(f[0][0], f[0][1]);
+      for (let i = 1; i < 4; i++) ctx.lineTo(f[i][0], f[i][1]);
+      ctx.closePath();
+      ctx.fillStyle = gray(f[4]);
+      ctx.fill();
+    }
   });
 }
 
@@ -86,41 +95,83 @@ export function texPlusRing(size = 76) {
   });
 }
 
-// 三角磚：實心直角三角形，直角在左上，其餘朝向靠旋轉
-export function texTriangle(size = 90) {
-  return make(`tri${size}`, size, size, (ctx, w, h) => {
-    const pad = 5;
-    ctx.beginPath();
-    ctx.moveTo(pad, pad);
-    ctx.lineTo(w - pad, pad);
-    ctx.lineTo(pad, h - pad);
-    ctx.closePath();
-    ctx.fillStyle = 'rgba(255,255,255,1)';
-    ctx.fill();
+// 立體三角磚：每種朝向各畫一張，光源固定從左上（用旋轉的話光會跟著轉，立體感就錯了）
+// corner: 0=直角左上 1=直角右上 2=直角右下 3=直角左下
+export function texTriangle(size = 90, corner = 0) {
+  return make(`tri${size}_${corner}`, size, size, (ctx, w, h) => {
+    const b = size * 0.16;
+    const verts = [
+      [[0, 0], [w, 0], [0, h]],
+      [[0, 0], [w, 0], [w, h]],
+      [[w, 0], [w, h], [0, h]],
+      [[0, 0], [w, h], [0, h]],
+    ][corner & 3];
+
     ctx.save();
+    ctx.beginPath();
+    ctx.moveTo(verts[0][0], verts[0][1]);
+    ctx.lineTo(verts[1][0], verts[1][1]);
+    ctx.lineTo(verts[2][0], verts[2][1]);
+    ctx.closePath();
+    ctx.fillStyle = gray(FACE.main);
+    ctx.fill();
     ctx.clip();
-    const g = ctx.createLinearGradient(0, pad, 0, h * 0.6);
-    g.addColorStop(0, 'rgba(255,255,255,0.35)');
-    g.addColorStop(1, 'rgba(255,255,255,0)');
-    ctx.fillStyle = g;
-    ctx.fillRect(0, 0, w, h);
+
+    // 逐邊畫斜面：亮度由該邊的外法線與左上光源的夾角決定
+    const cx = (verts[0][0] + verts[1][0] + verts[2][0]) / 3;
+    const cy = (verts[0][1] + verts[1][1] + verts[2][1]) / 3;
+    ctx.lineWidth = b * 2;
+    for (let i = 0; i < 3; i++) {
+      const [ax, ay] = verts[i];
+      const [bx, by] = verts[(i + 1) % 3];
+      let nx = by - ay, ny = ax - bx;         // 邊的法線
+      const len = Math.hypot(nx, ny) || 1;
+      nx /= len; ny /= len;
+      // 讓法線朝外（背離重心）
+      const mx = (ax + bx) / 2, my = (ay + by) / 2;
+      if ((mx - cx) * nx + (my - cy) * ny < 0) { nx = -nx; ny = -ny; }
+      const d = (-nx - ny) / Math.SQRT2;      // 與左上光源的夾角
+      ctx.strokeStyle = gray(Math.round(192 + d * 62));
+      ctx.beginPath();
+      ctx.moveTo(ax, ay);
+      ctx.lineTo(bx, by);
+      ctx.stroke();
+    }
     ctx.restore();
   });
 }
 
-// 雷射道具圖示：左右雙向箭頭
-export function texLaserIcon(size = 54) {
-  return make(`lasericon${size}`, size, size, (ctx, w, h) => {
+// 雷射道具：圓環與符號畫在同一張貼圖，避免疊圖時比例跑掉
+export function texLaserOrb(size = 76) {
+  return make(`laserorb${size}`, size, size, (ctx, w, h) => {
+    const cx = w / 2, cy = h / 2, r = w / 2 - 6;
+    ctx.beginPath();
+    ctx.arc(cx, cy, r, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(255,255,255,0.14)';
+    ctx.fill();
+    ctx.lineWidth = 6;
+    ctx.strokeStyle = 'rgba(255,255,255,1)';
+    ctx.stroke();
+
+    // 內部：一道水平光束，兩端收成箭頭
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(cx, cy, r - 4, 0, Math.PI * 2);
+    ctx.clip();
     ctx.fillStyle = 'rgba(255,255,255,1)';
-    // 中央粗光束
-    ctx.fillRect(w * 0.16, h * 0.4, w * 0.68, h * 0.2);
-    // 兩端箭頭
+    const bw = r * 1.05, bh = h * 0.11;
+    ctx.fillRect(cx - bw, cy - bh / 2, bw * 2, bh);
     ctx.beginPath();
-    ctx.moveTo(0, h * 0.5); ctx.lineTo(w * 0.26, h * 0.16); ctx.lineTo(w * 0.26, h * 0.84);
+    ctx.moveTo(cx - bw - r * 0.28, cy);
+    ctx.lineTo(cx - bw, cy - bh * 1.9);
+    ctx.lineTo(cx - bw, cy + bh * 1.9);
     ctx.closePath(); ctx.fill();
     ctx.beginPath();
-    ctx.moveTo(w, h * 0.5); ctx.lineTo(w * 0.74, h * 0.16); ctx.lineTo(w * 0.74, h * 0.84);
+    ctx.moveTo(cx + bw + r * 0.28, cy);
+    ctx.lineTo(cx + bw, cy - bh * 1.9);
+    ctx.lineTo(cx + bw, cy + bh * 1.9);
     ctx.closePath(); ctx.fill();
+    ctx.restore();
   });
 }
 
@@ -143,13 +194,34 @@ export function texPixel() {
 
 // 磚塊顏色：血量越高越往紅／紫走（青綠 → 綠 → 黃 → 橘 → 紅 → 洋紅 → 紫）
 // 血量即時反映，被打到掉血就會往綠色回退
-const HP_COLOR_MAX = 150;  // 血量色階上限（實戰最高約 160），超過一律最深的紫
+// 血量 → 色相分段表：讓同一群數字有同一個顏色，分群才看得出來
+const HUE_STOPS = [[1, 208], [40, 196], [46, 140], [78, 118], [88, 42], [150, 26], [230, 4], [360, 336], [700, 288]];
+
+function hueForHp(hp) {
+  const v = Math.max(1, hp);
+  if (v <= HUE_STOPS[0][0]) return HUE_STOPS[0][1];
+  for (let i = 1; i < HUE_STOPS.length; i++) {
+    const [h1, u1] = HUE_STOPS[i - 1];
+    const [h2, u2] = HUE_STOPS[i];
+    if (v <= h2) {
+      const t = (Math.log(v) - Math.log(h1)) / (Math.log(h2) - Math.log(h1));
+      let du = u2 - u1;
+      if (du > 180) du -= 360; else if (du < -180) du += 360;
+      return (u1 + du * t + 360) % 360;
+    }
+  }
+  return HUE_STOPS[HUE_STOPS.length - 1][1];
+}
+
 export function hpColor(hp) {
-  const t = Math.min(1, Math.log(Math.max(1, hp)) / Math.log(HP_COLOR_MAX));
-  const hue = (165 - t * 240 + 360) % 360;
-  // 紫紅段稍微降亮度，避免在深色底上過曝
-  const l = 0.46 - Math.max(0, t - 0.72) * 0.1;
-  return hsl2hex(hue, 0.92, l);
+  const hue = hueForHp(hp);
+  // 貼圖主面只有 224/255 的灰，tint 是相乘 → 飽和與亮度都要先加足
+  return hsl2hex(hue, 0.9, 0.63);
+}
+
+// 磚上數字用的深色，同色系但壓暗
+export function labelColor(hp) {
+  return hsl2hex(hueForHp(hp), 0.72, 0.19);
 }
 
 export function hsl2hex(h, s, l) {

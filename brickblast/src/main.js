@@ -50,7 +50,7 @@ const events = {
     hitBudget--;
     const p = ball ? { x: ball.x, y: ball.y } : cellCenter(r, c);
     renderer.fx.emit(p.x, p.y, 1, renderer.accent, { speed: 150, life: 0.18, size: 0.45, grav: 300 });
-    if (cause === 'ball') SFX.sfxHit(Math.min(6, cell.maxHp / 20));
+    if (cause === 'ball') SFX.sfxHit();
   },
 
   onBreak(r, c) {

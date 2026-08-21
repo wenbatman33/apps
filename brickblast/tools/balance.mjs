@@ -7,7 +7,7 @@ import { makeLevel, buildInitialGrid, initHpTarget, isPowerup } from '../src/cor
 applyLayout(LAYOUT_PC);
 
 const DT = 1 / 60;
-const MAX_TURN_SECONDS = 45;
+const MAX_TURN_SECONDS = 90;   // 球速放慢後單回合會拉長，門檻要跟著放寬
 const MAX_TURNS = 60;
 const TRIALS = +(process.env.TRIALS || 3);
 
@@ -26,7 +26,11 @@ function playOnce(level, jitterSeed) {
     while (game.phase === PHASE.FIRING && t < MAX_TURN_SECONDS) { game.update(DT); t += DT; }
     if (t >= MAX_TURN_SECONDS) { game.balls.length = 0; game.pendingFire = 0; game.endTurn(); }
   }
-  return { win: game.phase === PHASE.WIN, turns: game.turn, balls: game.stats.ballsFired, stars: game.resultStars };
+  return {
+    win: game.phase === PHASE.WIN, turns: game.turn,
+    balls: game.stats.ballsFired, stars: game.resultStars,
+    hits: game.stats.hits, broken: game.stats.broken,
+  };
 }
 
 const rows = [];
@@ -40,10 +44,11 @@ for (const lv of levels) {
   let bricks = 0, totalHp = 0;
   for (const row of grid) for (const c of row) { if (c && !isPowerup(c.t)) { bricks++; totalHp += c.hp; } }
 
-  let wins = 0, sumTurns = 0, sumBalls = 0, worstTurns = 0;
+  let wins = 0, sumTurns = 0, sumBalls = 0, worstTurns = 0, sumHits = 0, sumFired = 0;
   for (let t = 0; t < TRIALS; t++) {
     const r = playOnce(lv, t + 1);
     if (r.win) { wins++; sumTurns += r.turns; sumBalls += r.balls; }
+    sumHits += r.hits; sumFired += r.balls;
     worstTurns = Math.max(worstTurns, r.turns);
   }
   rows.push({
@@ -56,18 +61,22 @@ for (const lv of levels) {
     totalHp,
     target: initHpTarget(lv),
     lanes: (def.lanes || []).length,
+    // 彈跳感指標：一顆球平均能撞到幾次磚
+    hitsPerBall: sumFired ? sumHits / sumFired : 0,
   });
 }
 
 // ---- 報告 ----
-const fails = rows.filter((r) => r.winRate < 1);
+const never = rows.filter((r) => r.winRate === 0);
+const perfect = rows.filter((r) => r.winRate === 1).length;
 console.log(`\n=== 通關能力（每關 ${TRIALS} 次模擬）===`);
-console.log(`全勝關卡：${rows.filter((r) => r.winRate === 1).length}/${rows.length}`);
-if (fails.length) {
-  console.log('未達全勝的關卡：');
-  for (const f of fails) console.log(`  L${f.lv}  通關率 ${(f.winRate * 100).toFixed(0)}%  波次 ${f.waves}  磚 ${f.bricks}  總血 ${f.totalHp}`);
+console.log(`可通關：${rows.length - never.length}/${rows.length}（至少一次過關，必須 100%）`);
+console.log(`一次過：${perfect}/${rows.length}（每次都過，比例低代表有挑戰性）`);
+if (never.length) {
+  console.log('❌ 完全無法通關的關卡：');
+  for (const f of never) console.log(`  L${f.lv}  波次 ${f.waves}  磚 ${f.bricks}  總血 ${f.totalHp}`);
 } else {
-  console.log('每一關在每次模擬中都能通關 ✓');
+  console.log('沒有無法通關的關卡 ✓');
 }
 
 // 難度曲線：以「通關回合數 / 波次」為難度指標
@@ -83,7 +92,7 @@ const smooth = diff.map((_, i) => {
 });
 for (let i = 0; i < rows.length; i += 20) {
   const r = rows[i];
-  console.log(`  L${String(r.lv).padStart(3)}  超額回合 ${smooth[i].toFixed(2)}  比值 ${ratio[i].toFixed(2)}  回合 ${r.avgTurns?.toFixed(1) ?? '-'}/${r.waves}  用球 ${String(r.avgBalls ?? '-').padStart(5)}  磚 ${String(r.bricks).padStart(3)}  總血 ${String(r.totalHp).padStart(5)}`);
+  console.log(`  L${String(r.lv).padStart(3)}  超額回合 ${smooth[i].toFixed(2)}  回合 ${r.avgTurns?.toFixed(1) ?? '-'}/${r.waves}  每球撞擊 ${r.hitsPerBall.toFixed(1)}  用球 ${String(r.avgBalls ?? '-').padStart(5)}  磚 ${String(r.bricks).padStart(3)}  總血 ${String(r.totalHp).padStart(5)}`);
 }
 
 // 找出「比後面明顯更難」的關卡
@@ -101,6 +110,13 @@ if (bad.length) {
 } else {
   console.log('沒有關卡明顯比後續關卡更難 ✓');
 }
+
+// 彈跳感總結
+const hpb = rows.map((r) => r.hitsPerBall);
+const avgHpb = hpb.reduce((a, b) => a + b, 0) / hpb.length;
+console.log(`\n=== 彈跳感 ===`);
+console.log(`每球平均撞擊次數：${avgHpb.toFixed(2)}  (最低 ${Math.min(...hpb).toFixed(1)} / 最高 ${Math.max(...hpb).toFixed(1)})`);
+console.log(avgHpb >= 5 ? '球會在磚陣中連續彈跳 ✓' : '彈跳偏少，球撞一下就掉出來 ✗');
 
 const first = smooth[0], last = smooth[smooth.length - 1];
 console.log(`\n整體趨勢（超額回合）：起點 ${first.toFixed(2)} → 終點 ${last.toFixed(2)}  (${last > first ? '遞增 ✓' : '未遞增 ✗'})`);

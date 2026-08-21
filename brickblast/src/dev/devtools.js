@@ -7,13 +7,13 @@ const LAYOUT_FIELDS = [
   ['progressY', 40, 260, 1], ['progressW', 200, 700, 5], ['progressH', 2, 30, 1],
   ['ballCountY', 1100, 1279, 1], ['ballCountSize', 12, 56, 1],
   ['btnSpeedX', 40, 400, 1], ['btnRecallX', 320, 690, 1], ['btnBottomY', 1100, 1279, 1], ['turnInfoY', 1000, 1279, 1],
-  ['aimDotGap', 10, 80, 1], ['aimDotSize', 1, 16, 0.5], ['aimMaxLen', 200, 1600, 10],
+  ['aimDotGap', 10, 80, 1], ['aimDotSize', 1, 16, 0.5], ['aimMaxLen', 200, 3000, 20],
   ['glowAlpha', 0, 1, 0.01], ['shakeScale', 0, 3, 0.05],
 ];
 
 const RULE_FIELDS = [
   ['ballRadius', 3, 16, 0.5], ['ballSpeed', 400, 4000, 25], ['fireInterval', 0.01, 0.3, 0.005],
-  ['fireBurst', 0.5, 8, 0.1], ['fireIntervalMin', 0.005, 0.06, 0.001],
+  ['fireBurst', 0.5, 8, 0.1], ['fireIntervalMin', 0.005, 0.06, 0.001], ['scatter', 0, 0.3, 0.005],
   ['maxBalls', 10, 600, 10], ['turboAfter', 1, 20, 0.5], ['turboScale', 1, 6, 0.1],
 ];
 

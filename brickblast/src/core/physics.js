@@ -101,6 +101,15 @@ export function reflect(vx, vy, nx, ny) {
   return { vx: vx - 2 * dot * nx, vy: vy - 2 * dot * ny };
 }
 
+// 反射後的微小角度擾動。少了它，同角度射出的球會走完全一樣的路徑，
+// 整排球看起來就是一條線；加了之後球群會逐漸散開，畫面才有亂彈的手感。
+export function scatter(vx, vy, amount) {
+  if (!amount) return { vx, vy };
+  const a = (Math.random() - 0.5) * amount;
+  const cos = Math.cos(a), sin = Math.sin(a);
+  return { vx: vx * cos - vy * sin, vy: vx * sin + vy * cos };
+}
+
 // 防「幾乎水平」與「幾乎垂直」的無限彈射：夾角過小時強制修正
 const MIN_RATIO = 0.22; // |vy| / speed 的下限
 export function deJam(vx, vy, speed) {

@@ -6,7 +6,7 @@ import { bestAngle } from './ai.mjs';
 applyLayout(LAYOUT_PC);
 
 const DT = 1 / 60;
-const MAX_TURN_SECONDS = 45;   // 單回合超過此秒數視為卡死
+const MAX_TURN_SECONDS = 90;   // 球速放慢後單回合會拉長，門檻要跟著放寬   // 單回合超過此秒數視為卡死
 const MAX_TURNS = 120;
 
 function playLevel(level, seed = 1, strategy = 'sim') {
