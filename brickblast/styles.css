@@ -1,0 +1,14 @@
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{width:100%;height:100%;overflow:hidden;background:#05060f;
+  font-family:"Noto Sans TC","PingFang TC","Microsoft JhengHei",system-ui,sans-serif;
+  -webkit-tap-highlight-color:transparent;touch-action:none;overscroll-behavior:none}
+#game{position:fixed;inset:0;display:flex;align-items:center;justify-content:center}
+#game canvas{display:block;touch-action:none}
+#loading{position:fixed;inset:0;display:flex;flex-direction:column;gap:18px;
+  align-items:center;justify-content:center;color:#7fe7ff;letter-spacing:.2em;
+  font-size:14px;background:#05060f;z-index:50;transition:opacity .4s}
+#loading.hide{opacity:0;pointer-events:none}
+.ld-ring{width:44px;height:44px;border-radius:50%;border:3px solid rgba(127,231,255,.18);
+  border-top-color:#7fe7ff;animation:spin .9s linear infinite;
+  box-shadow:0 0 24px rgba(127,231,255,.35)}
+@keyframes spin{to{transform:rotate(360deg)}}
