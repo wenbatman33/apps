@@ -18,7 +18,7 @@ async function boot() {
   });
   document.getElementById('game').appendChild(app.canvas);
 
-  // AI 產生的飛機素材；若不存在則用程式繪製版本
+  // AI 产生的飞机素材；若不存在则用程序绘制版本
   let planeTexture = null;
   try {
     planeTexture = await Assets.load('assets/images/plane.png');
@@ -53,5 +53,5 @@ async function boot() {
 boot().catch((e) => {
   console.error(e);
   const el = document.getElementById('loading');
-  if (el) el.innerHTML = `<span style="color:#ff5c74">載入失敗：${e.message}</span>`;
+  if (el) el.innerHTML = `<span style="color:#ff5c74">加载失败：${e.message}</span>`;
 });

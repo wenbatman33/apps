@@ -1,4 +1,4 @@
-// 玩家資料層：餘額、雙押注、自動下注 / 自動兌現、我的紀錄
+// 玩家数据层：余额、双押注、自动下注 / 自动兑现、我的纪录
 import { RULES } from '../config.js';
 import { PHASE } from './engine.js';
 
@@ -12,7 +12,7 @@ export class Game {
   constructor(engine) {
     this.engine = engine;
     this.balance = load('av_balance', RULES.startBalance);
-    this.showSecond = load('av_second_v2', true); // 預設就展開雙押注（換鍵名讓舊紀錄失效）
+    this.showSecond = load('av_second_v2', true); // 默认就展开双押注（换键名让旧纪录失效）
     this.myBets = load('av_mybets', []);
     this.slots = [this._newSlot(0), this._newSlot(1)];
     const saved = load('av_slots', null);
@@ -77,7 +77,7 @@ export class Game {
     const m = Math.floor(mult * 100) / 100;
     const win = Math.min(slot.amount * m, RULES.maxWinPerBet);
     this.balance += win;
-    slot.state = SLOT.IDLE; // 兌現後立即可為下一回合下注（與原版一致）
+    slot.state = SLOT.IDLE; // 兑现后立即可为下一回合下注（与原版一致）
     slot.lastWin = win;
     slot.lastMult = m;
     this.myBets.unshift({ t: Date.now(), amount: slot.amount, m, win, nonce: this.engine.round?.nonce });
@@ -91,7 +91,7 @@ export class Game {
     if (p === PHASE.FLYING) {
       this.slots.forEach((s) => { if (s.state === SLOT.QUEUED) s.state = SLOT.ACTIVE; });
     } else if (p === PHASE.BETTING) {
-      // 自動下注：新回合下注階段自動排入
+      // 自动下注：新回合下注阶段自动排入
       this.slots.forEach((s) => {
         if (s.state === SLOT.CASHED) s.state = SLOT.IDLE;
         if (s.autoBet && s.state === SLOT.IDLE) this.place(s);

@@ -1,4 +1,4 @@
-// 用 canvas 產生漸層 / 光暈貼圖（PixiJS 的 Graphics 不方便做柔和漸層）
+// 用 canvas 产生渐变 / 光晕贴图（PixiJS 的 Graphics 不方便做柔和渐变）
 import { Texture } from '../../vendor/pixi.min.mjs';
 
 const cache = new Map();
@@ -37,7 +37,7 @@ export function radialGlow(key, color, alpha = 1) {
   });
 }
 
-// 曲線下方的紅色漸層填充
+// 曲线下方的红色渐变填充
 export function curveFill() {
   return make('curvefill', 8, 256, (ctx, w, h) => {
     const g = ctx.createLinearGradient(0, 0, 0, h);
@@ -49,7 +49,7 @@ export function curveFill() {
   });
 }
 
-// 背景放射光束（旋轉用）
+// 背景放射光束（旋转用）
 export function sunburst() {
   return make('sunburst', 1024, 1024, (ctx, w, h) => {
     const cx = w / 2, cy = h / 2, R = w * 0.72;
@@ -72,11 +72,11 @@ export function sunburst() {
   });
 }
 
-// 程式繪製的紅色小飛機（AI 素材載入失敗時的後備）
+// 程序绘制的红色小飞机（AI 素材加载失败时的后备）
 export function planeFallback() {
   return make('plane_fb', 512, 256, (ctx, w, h) => {
     ctx.translate(0, 10);
-    // 機身
+    // 机身
     ctx.fillStyle = '#e21c3d';
     ctx.beginPath();
     ctx.moveTo(60, 150);
@@ -96,12 +96,12 @@ export function planeFallback() {
     ctx.beginPath();
     ctx.moveTo(190, 150); ctx.lineTo(150, 214); ctx.lineTo(250, 208); ctx.lineTo(276, 156);
     ctx.closePath(); ctx.fill();
-    // 座艙
+    // 座舱
     ctx.fillStyle = '#25272b';
     ctx.beginPath(); ctx.ellipse(300, 122, 44, 16, -0.06, 0, Math.PI * 2); ctx.fill();
     ctx.fillStyle = '#7fd4ff';
     ctx.beginPath(); ctx.ellipse(300, 121, 36, 11, -0.06, 0, Math.PI * 2); ctx.fill();
-    // 機鼻與螺旋槳
+    // 机鼻与螺旋桨
     ctx.fillStyle = '#2b2d31';
     ctx.beginPath(); ctx.ellipse(452, 132, 10, 16, 0, 0, Math.PI * 2); ctx.fill();
     ctx.strokeStyle = 'rgba(255,255,255,0.28)';
@@ -110,7 +110,7 @@ export function planeFallback() {
   });
 }
 
-// 圓角漸層按鈕底圖（含亮邊），依尺寸與配色快取
+// 圆角渐变按钮底图（含亮边），依尺寸与配色缓存
 export function roundedGradient(w, h, r, top, bottom, border = null, borderAlpha = 0.45) {
   const key = `rg_${w}x${h}_${r}_${top}_${bottom}_${border}_${borderAlpha}`;
   return make(key, Math.max(2, Math.round(w)), Math.max(2, Math.round(h)), (ctx, W, H) => {

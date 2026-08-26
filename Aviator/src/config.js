@@ -1,5 +1,5 @@
-// 全域設定：色票、規則參數、PC / Mobile 版面
-// 版面數值可由 DEV 工具（按 D）即時微調並匯出
+// 全域设置：色票、规则参数、PC / Mobile 版面
+// 版面数值可由 DEV 工具（按 D）即时微调并导出
 
 export const COLORS = {
   bg: 0x0b0b0f,
@@ -24,31 +24,31 @@ export const COLORS = {
   curveFill: 0xff2c55,
 };
 
-// 規則（對齊 SPRIBE Aviator / DS 站台限額）
+// 规则（对齐 SPRIBE Aviator / DS 站台限额）
 export const RULES = {
   rtp: 0.97,             // 官方 RTP 97%
   minBet: 3,             // 最小投注 NT$3
   maxBet: 3000,          // 最大投注 NT$3,000
-  maxWinPerBet: 300000,  // 每注獎金上限 NT$300,000
+  maxWinPerBet: 300000,  // 每注奖金上限 NT$300,000
   maxMultiplier: 100000, // 最大倍率 100,000x
   quickBets: [10, 20, 50, 100],
   startBalance: 10000,
-  bettingMs: 5000,       // 起飛前下注時間
-  crashedMs: 3000,       // 飛走後停留時間
-  growth: 0.0865,        // 倍數成長係數 m = e^(growth * t)
-  reachMs: 3200,         // 飛機爬升到巡航位置所需時間
+  bettingMs: 5000,       // 起飞前下注时间
+  crashedMs: 3000,       // 飞走后停留时间
+  growth: 0.0865,        // 倍数成长系数 m = e^(growth * t)
+  reachMs: 3200,         // 飞机爬升到巡航位置所需时间
   historyMax: 30,
 };
 
-// 倍數 → 顏色（Aviator 歷史膠囊配色）
+// 倍数 → 颜色（Aviator 历史胶囊配色）
 export function multColor(m) {
   if (m < 2) return COLORS.cyan;
   if (m < 10) return COLORS.purple;
   return COLORS.pink;
 }
 
-// ── 版面（可由 DEV 工具調整）─────────────────────────────
-// 所有數值皆為「設計座標」，場景會依視窗大小自動縮放/伸展
+// ── 版面（可由 DEV 工具调整）─────────────────────────────
+// 所有数值皆为「设计坐标」，场景会依窗口大小自动缩放/伸展
 
 export const LAYOUT_PC = {
   designW: 1280,
@@ -58,7 +58,7 @@ export const LAYOUT_PC = {
   sideW: 320,
   gap: 10,
   betPanelH: 190,
-  // 遊戲畫布內的飛機巡航位置（比例）
+  // 游戏画布内的飞机巡航位置（比例）
   planeX: 0.74,
   planeY: 0.30,
   planeScale: 0.30,
@@ -100,4 +100,4 @@ export function pickLayout(w, h) {
   return { mobile, L: { ...(mobile ? LAYOUT_MOBILE : LAYOUT_PC) } };
 }
 
-export const FONT = 'system-ui, -apple-system, "PingFang TC", "Noto Sans TC", "Segoe UI", Roboto, sans-serif';
+export const FONT = 'system-ui, -apple-system, "PingFang SC", "Microsoft YaHei", "Noto Sans SC", "PingFang TC", "Segoe UI", Roboto, sans-serif';

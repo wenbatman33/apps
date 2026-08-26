@@ -1,4 +1,4 @@
-// 即時投注面板的線上玩家（暱稱一律遮罩，與原版一致）
+// 即时投注面板的在线玩家（昵称一律遮罩，与原版一致）
 import { RULES } from '../config.js';
 
 const HEAD = 'abcdefghijklmnopqrstuvwxyz';
@@ -11,14 +11,14 @@ function maskName() {
   return `${a}***${b}${(Math.random() * 10) | 0}`;
 }
 
-// 目標倍數分佈：多數人早早落袋，少數硬撐高倍
+// 目标倍数分布：多数人早早落袋，少数硬撑高倍
 function targetMult() {
   const r = Math.random();
   if (r < 0.42) return 1.1 + Math.random() * 0.9;      // 1.10 ~ 2.00
   if (r < 0.75) return 2 + Math.random() * 2;          // 2 ~ 4
   if (r < 0.92) return 4 + Math.random() * 6;          // 4 ~ 10
   if (r < 0.99) return 10 + Math.random() * 40;        // 10 ~ 50
-  return 50 + Math.random() * 450;                     // 極少數
+  return 50 + Math.random() * 450;                     // 极少数
 }
 
 export class Bots {

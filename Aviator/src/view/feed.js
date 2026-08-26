@@ -1,4 +1,4 @@
-// 即時投注面板：全部下注 / 我的下注 / 最高（虛擬列表，只渲染可見列）
+// 即时投注面板：全部下注 / 我的下注 / 最高（虚拟列表，只渲染可见列）
 import { Container, Graphics } from '../../vendor/pixi.min.mjs';
 import { COLORS } from '../config.js';
 import { multColor } from '../config.js';
@@ -45,8 +45,8 @@ export class Feed extends Container {
     this.headBg = new Graphics();
     this.h1 = txt('玩家', 11, COLORS.textFaint, '700');
     this.h2 = txt('下注', 11, COLORS.textFaint, '700');
-    this.h3 = txt('倍數', 11, COLORS.textFaint, '700');
-    this.h4 = txt('贏得', 11, COLORS.textFaint, '700');
+    this.h3 = txt('倍数', 11, COLORS.textFaint, '700');
+    this.h4 = txt('赢得', 11, COLORS.textFaint, '700');
     this.h2.anchor.set(1, 0); this.h3.anchor.set(0.5, 0); this.h4.anchor.set(1, 0);
     this.head.addChild(this.headBg, this.h1, this.h2, this.h3, this.h4);
     this.addChild(this.head);
@@ -71,7 +71,7 @@ export class Feed extends Container {
     if (this.tab === 'all') return this.bots.list;
     if (this.tab === 'mine') {
       return this.game.myBets.map((b) => ({
-        name: new Date(b.t).toLocaleTimeString('zh-TW', { hour12: false }),
+        name: new Date(b.t).toLocaleTimeString('zh-CN', { hour12: false }),
         color: 0xffd60a, amount: b.amount, m: b.m, win: b.win, cashed: b.win > 0, lost: b.win === 0, mine: true,
       }));
     }
@@ -111,8 +111,8 @@ export class Feed extends Container {
     }
     const st = this.bots.stats;
     this.summary.text = this.tab === 'all'
-      ? `本回合 ${st.total} 人下注 · 已兌現 ${st.cashed} 人 · 總押注 ${fmt(st.totalBet, 0)}`
-      : (this.tab === 'mine' ? `我的紀錄 ${this.data.length} 筆` : `近 ${this.data.length} 回合最高倍數`);
+      ? `本回合 ${st.total} 人下注 · 已兑现 ${st.cashed} 人 · 总押注 ${fmt(st.totalBet, 0)}`
+      : (this.tab === 'mine' ? `我的纪录 ${this.data.length} 笔` : `近 ${this.data.length} 回合最高倍数`);
   }
 
   update() {

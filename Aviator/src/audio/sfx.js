@@ -1,4 +1,4 @@
-// WebAudio 合成音效（不外部載檔）：引擎聲、兌現、飛走、按鍵
+// WebAudio 合成音效（不外部载档）：引擎声、兑现、飞走、按键
 export class Sfx {
   constructor() {
     this.enabled = localStorage.getItem('av_sfx') !== '0';

@@ -1,4 +1,4 @@
-// 頂列（Logo / 餘額 / 選單）與歷史倍數列
+// 顶列（Logo / 余额 / 菜单）与历史倍数列
 import { Container, Graphics } from '../../vendor/pixi.min.mjs';
 import { COLORS, multColor } from '../config.js';
 import { txt, panelBg, iconGfx, fmt } from './ui.js';
@@ -12,14 +12,14 @@ export class TopBar extends Container {
 
     this.logo = new Container();
     const mark = new Graphics();
-    // 紅色機翼標誌
+    // 红色机翼标志
     mark.moveTo(0, 8).lineTo(16, 0).lineTo(13, 8).lineTo(22, 8).lineTo(6, 14).lineTo(8, 8).closePath().fill(COLORS.red);
     const name = txt('Aviator', 20, COLORS.red, '800');
     name.position.set(26, -4);
     this.logo.addChild(mark, name);
     this.addChild(this.logo);
 
-    this.help = txt('如何遊玩', 12, COLORS.textDim, '700');
+    this.help = txt('如何游玩', 12, COLORS.textDim, '700');
     this.help.eventMode = 'static';
     this.help.cursor = 'pointer';
     this.help.on('pointertap', onHelp);

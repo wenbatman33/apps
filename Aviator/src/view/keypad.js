@@ -1,4 +1,4 @@
-// 引擎渲染的數字鍵盤（點金額 / 目標倍數時彈出，不使用 DOM input）
+// 引擎渲染的数字键盘（点金额 / 目标倍数时弹出，不使用 DOM input）
 import { Container, Graphics } from '../../vendor/pixi.min.mjs';
 import { COLORS } from '../config.js';
 import { Button, txt, panelBg } from './ui.js';
@@ -33,7 +33,7 @@ export class Keypad extends Container {
       this.box.addChild(b);
       this.keys.push(b);
     });
-    this.okBtn = new Button({ w: 100, h: 42, r: 21, top: COLORS.greenLight, bottom: COLORS.greenDark, label: '確定', labelSize: 16, onTap: () => this.close(true) });
+    this.okBtn = new Button({ w: 100, h: 42, r: 21, top: COLORS.greenLight, bottom: COLORS.greenDark, label: '确定', labelSize: 16, onTap: () => this.close(true) });
     this.cancelBtn = new Button({ w: 100, h: 42, r: 21, top: 0x3a3b3e, bottom: 0x2a2b2e, label: '取消', labelSize: 16, onTap: () => this.close(false) });
     this.box.addChild(this.okBtn, this.cancelBtn);
   }

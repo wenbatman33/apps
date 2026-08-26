@@ -1,90 +1,90 @@
-# Aviator 飛行員（Crash 即時下注）
+# Aviator 飞行员（Crash 即时下注）
 
-以 **PixiJS v8** 重製 SPRIBE《Aviator》玩法的網頁遊戲，PC 與手機皆可遊玩。
-全部 UI（HUD、下注面板、清單、彈窗、數字鍵盤、DEV 工具）都由引擎繪製，沒有任何 DOM 元件。
+以 **PixiJS v8** 重制 SPRIBE《Aviator》玩法的网页游戏，PC 与手机皆可游玩。
+全部 UI（HUD、下注面板、清单、弹窗、数字键盘、DEV 工具）都由引擎绘制，没有任何 DOM 组件。
 
-> 純技術展示 Demo，不涉及任何真實金流。
+> 纯技术展示 Demo，不涉及任何真实金流。
 
-## 玩法（對齊原作規則）
+## 玩法（对齐原作规则）
 
-| 項目 | 數值 |
+| 项目 | 数值 |
 | --- | --- |
 | RTP | 97% |
 | 最大倍率 | 100,000x |
 | 最小 / 最大投注 | NT$3 / NT$3,000 |
-| 每注獎金上限 | NT$300,000 |
-| 同時下注 | 雙押注 |
-| 公平機制 | Provably Fair（SHA-256） |
+| 每注奖金上限 | NT$300,000 |
+| 同时下注 | 双押注 |
+| 公平机制 | Provably Fair（SHA-256） |
 
-- **投注**：回合起飛前輸入金額或用快捷鈕（10 / 20 / 50 / 100），按「投注」；起飛前可按「取消」收回。飛行中下注則排入下一回合。
-- **兌現**：飛機飛走前按「兌現」，獎金 = 兌現倍數 × 投注額；沒兌現就歸零。
-- **雙押注**：面板右上角 `+` / `−` 可新增或收起第二個下注面板。
-- **自動**：「自動」分頁可開自動下注、自動兌現（目標倍數點一下用內建數字鍵盤輸入）。
-- **即時投注**：PC 在左側、手機在下方，列出本回合所有玩家的下注與兌現，另有「我的下注」「最高」分頁。
-- **斷線處理**：投注生效中若離開頁面，會以當下倍數自動兌現（對齊原作斷線規則）。
+- **投注**：回合起飞前输入金额或用快捷钮（10 / 20 / 50 / 100），按「投注」；起飞前可按「取消」收回。飞行中下注则排入下一回合。
+- **兑现**：飞机飞走前按「兑现」，奖金 = 兑现倍数 × 投注额；没兑现就归零。
+- **双押注**：面板右上角 `+` / `−` 可添加或收起第二个下注面板。
+- **自动**：「自动」分页可开自动下注、自动兑现（目标倍数点一下用内置数字键盘输入）。
+- **即时投注**：PC 在左侧、手机在下方，列出本回合所有玩家的下注与兑现，另有「我的下注」「最高」分页。
+- **断线处理**：投注生效中若离开页面，会以当下倍数自动兑现（对齐原作断线规则）。
 
 ## Provably Fair
 
-- 每回合開始前先產生 `serverSeed`，只公布其 SHA-256 **承諾雜湊**。
-- 倍數由 `SHA-256(serverSeed:clientSeed:nonce)` 決定，**開局前就已定案**。
-- 回合結束後公開 `serverSeed`，選單 →「Provably Fair 公平驗證」可一鍵重算比對。
-- 分佈：`P(倍數 ≥ m) = RTP / m`，因此期望回報率恰為 97%；`clientSeed` 可自行更換。
+- 每回合开始前先产生 `serverSeed`，只公布其 SHA-256 **承诺哈希**。
+- 倍数由 `SHA-256(serverSeed:clientSeed:nonce)` 决定，**开局前就已定案**。
+- 回合结束后公开 `serverSeed`，菜单 →「Provably Fair 公平验证」可一键重算比对。
+- 分布：`P(倍数 ≥ m) = RTP / m`，因此期望回报率恰为 97%；`clientSeed` 可自行更换。
 
-驗證分佈與 RTP：
+验证分布与 RTP：
 
 ```bash
 node tools/simrtp.mjs
 ```
 
-## DEV 微調工具
+## DEV 微调工具
 
-遊戲中按 **D** 開啟（或選單內說明）：
+游戏中按 **D** 打开（或菜单内说明）：
 
-- 版面滑桿：topbar / history / 側欄寬 / 間距 / 下注面板高、飛機巡航點與縮放、原點、倍數字級與位置、按鈕高度、列高……即時預覽
-- 🎯 **拖曳畫面直接設定飛機巡航點**
-- 節奏參數：`growth`（倍數成長速度）、`reachMs`、`bettingMs`、`crashedMs`
-- 狀態測試：立即飛走、下一回合鎖 1.00x / 2.00x / 10.00x / 100.00x
-- PC / Mobile 版型切換、重設數值
-- 💾 匯出 JSON（複製到剪貼簿，貼回 `src/config.js` 的 `LAYOUT_PC` / `LAYOUT_MOBILE` 即可鎖定）
+- 版面滑杆：topbar / history / 侧栏宽 / 间距 / 下注面板高、飞机巡航点与缩放、原点、倍数字级与位置、按钮高度、列高……即时预览
+- 🎯 **拖曳画面直接设置飞机巡航点**
+- 节奏参数：`growth`（倍数成长速度）、`reachMs`、`bettingMs`、`crashedMs`
+- 状态测试：立即飞走、下一回合锁 1.00x / 2.00x / 10.00x / 100.00x
+- PC / Mobile 版型切换、重设数值
+- 💾 导出 JSON（拷贝到剪贴板，贴回 `src/config.js` 的 `LAYOUT_PC` / `LAYOUT_MOBILE` 即可锁定）
 
-## 本機執行
+## 本机运行
 
 ```bash
 python3 -m http.server 5190
 ```
 
-開 http://localhost:5190 。
+开 http://localhost:5190 。
 
-## 自動測試
+## 自动测试
 
 ```bash
 python3 scripts/test_ui.py
 ```
 
-用 Playwright 實際點擊 canvas 上的按鈕，驗證下注 → 兌現 → 餘額、分頁切換、數字鍵盤、選單與 Provably Fair 重算。
+用 Playwright 实际点击 canvas 上的按钮，验证下注 → 兑现 → 余额、分页切换、数字键盘、菜单与 Provably Fair 重算。
 
-## 結構
+## 结构
 
 ```
 index.html / styles.css
 src/
-  config.js          規則、色票、PC/Mobile 版面
-  core/  fair.js     Provably Fair 與崩盤倍數分佈
-         engine.js   回合狀態機（下注 → 飛行 → 飛走）
-         game.js     餘額、雙押注、自動下注/兌現
-         bots.js     即時投注列表的線上玩家
-  view/  scene.js    版面組裝與事件連結
-         flight.js   曲線、飛機、倍數、等待動畫
+  config.js          规则、色票、PC/Mobile 版面
+  core/  fair.js     Provably Fair 与崩盘倍数分布
+         engine.js   回合状态机（下注 → 飞行 → 飞走）
+         game.js     余额、双押注、自动下注/兑现
+         bots.js     即时投注列表的在线玩家
+  view/  scene.js    版面组装与事件链接
+         flight.js   曲线、飞机、倍数、等待动画
          betpanel.js 下注面板
-         feed.js     即時投注清單（虛擬列表）
-         chrome.js   頂列與歷史倍數列
-         modals.js   選單 / 玩法 / 公平驗證
-         keypad.js   引擎渲染的數字鍵盤
-         ui.js       按鈕、分頁、開關、捲動容器
-         textures.js canvas 產生的漸層與程式繪製飛機
+         feed.js     即时投注清单（虚拟列表）
+         chrome.js   顶列与历史倍数列
+         modals.js   菜单 / 玩法 / 公平验证
+         keypad.js   引擎渲染的数字键盘
+         ui.js       按钮、分页、开关、卷动容器
+         textures.js canvas 产生的渐变与程序绘制飞机
   audio/ sfx.js      WebAudio 合成音效
-  dev/   devtools.js DEV 微調工具
-assets/images/plane.png   AI 生成的飛機素材
-tools/simrtp.mjs          RTP / 分佈驗證
-scripts/                  截圖與 UI 自測腳本
+  dev/   devtools.js DEV 微调工具
+assets/images/plane.png   AI 生成的飞机素材
+tools/simrtp.mjs          RTP / 分布验证
+scripts/                  截屏与 UI 自测脚本
 ```

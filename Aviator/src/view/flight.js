@@ -1,4 +1,4 @@
-// 飛行畫面：星空/放射背景 + 紅色軌跡曲線 + 飛機 + 倍數文字 + 等待動畫
+// 飞行画面：星空/放射背景 + 红色轨迹曲线 + 飞机 + 倍数文字 + 等待动画
 import { Container, Graphics, Rectangle, Sprite } from '../../vendor/pixi.min.mjs';
 import { COLORS, RULES } from '../config.js';
 import { PHASE } from '../core/engine.js';
@@ -15,7 +15,7 @@ export class FlightView extends Container {
     this.crashAnim = 0;
     this.shake = 0;
 
-    // 底：圓角深色 + 放射光
+    // 底：圆角深色 + 放射光
     this.bgG = new Graphics();
     this.addChild(this.bgG);
 
@@ -30,11 +30,11 @@ export class FlightView extends Container {
       x: Math.random(), y: Math.random(), r: Math.random() * 1.6 + 0.4, s: Math.random() * 0.6 + 0.25,
     }));
 
-    // 座標軸刻度（會隨飛行滾動）
+    // 坐标轴刻度（会随飞行滚动）
     this.axis = new Graphics();
     this.addChild(this.axis);
 
-    // 曲線填充（用 mask 做垂直漸層）
+    // 曲线填充（用 mask 做垂直渐变）
     this.fillSprite = new Sprite(curveFill());
     this.fillMask = new Graphics();
     this.fillSprite.mask = this.fillMask;
@@ -52,22 +52,22 @@ export class FlightView extends Container {
     this.plane.anchor.set(0.5);
     this.addChild(this.plane);
 
-    // 中央倍數
+    // 中央倍数
     this.mult = txt('1.00x', 82, COLORS.text, '800');
     this.mult.anchor.set(0.5);
     this.addChild(this.mult);
 
-    // 狀態文字（等待 / 飛走）
+    // 状态文字（等待 / 飞走）
     this.status = txt('', 20, COLORS.text, '700');
     this.status.anchor.set(0.5);
     this.addChild(this.status);
 
-    // 等待進度條
+    // 等待进度条
     this.barBg = new Graphics();
     this.bar = new Graphics();
     this.addChild(this.barBg, this.bar);
 
-    // 等待時旋轉的螺旋槳圖示
+    // 等待时旋转的螺旋桨图标
     this.spinner = new Graphics();
     this.addChild(this.spinner);
 
@@ -77,7 +77,7 @@ export class FlightView extends Container {
     this.addChild(this.devHint);
   }
 
-  // DEV：直接拖曳畫面決定飛機巡航點
+  // DEV：直接拖曳画面决定飞机巡航点
   enableDevDrag(on, onChange) {
     this.eventMode = on ? 'static' : 'none';
     this.hitArea = on ? new Rectangle(0, 0, this.w, this.h) : null;
@@ -123,7 +123,7 @@ export class FlightView extends Container {
     }
   }
 
-  // 飛機位置（設計座標）
+  // 飞机位置（设计坐标）
   planePos(tMs, phase) {
     const { w, h, L } = this;
     const ox = w * L.originX, oy = h * L.originY;
@@ -133,7 +133,7 @@ export class FlightView extends Container {
     let x = ox + (tx - ox) * e;
     let y = oy + (ty - oy) * (1 - (1 - p) ** 1.5);
     if (p >= 1) {
-      // 抵達後在巡航點附近盤旋
+      // 抵达后在巡航点附近盘旋
       const t = this.time / 1000;
       x += Math.sin(t * 1.7) * w * 0.018;
       y += Math.sin(t * 2.3 + 1) * h * 0.035;
@@ -148,11 +148,11 @@ export class FlightView extends Container {
     const flying = phase === PHASE.FLYING;
     const crashed = phase === PHASE.CRASHED;
 
-    // 背景放射持續旋轉，飛行中加速
+    // 背景放射持续旋转，飞行中加速
     this.burst.rotation += dt * (flying ? 0.00022 : 0.00007);
     this.stars.alpha = 0.6 + Math.sin(this.time / 700) * 0.15;
 
-    // 抖動（起飛與飛走）
+    // 抖动（起飞与飞走）
     if (this.shake > 0) this.shake = Math.max(0, this.shake - dt * 0.004);
     const sx = (Math.random() - 0.5) * this.shake * 10;
     const sy = (Math.random() - 0.5) * this.shake * 10;
@@ -180,7 +180,7 @@ export class FlightView extends Container {
       this.status.text = '';
       this.setWaitVisible(false);
     } else if (crashed) {
-      // 飛走：飛機加速衝出畫面右上
+      // 飞走：飞机加速冲出画面右上
       this.crashAnim += dt / 900;
       const k = this.crashAnim;
       const pos = this.planePos(RULES.reachMs, phase);
@@ -235,7 +235,7 @@ export class FlightView extends Container {
     this.bar.roundRect(0, 0, Math.max(2, bw * p), bh, 3).fill(COLORS.red);
     this.bar.position.set(bx, by);
 
-    // 旋轉螺旋槳
+    // 旋转螺旋桨
     const cx = w / 2, cy = h * L.multY - L.multSize * 0.35;
     const r = L.multSize * 0.42;
     const a = this.time / 120;
@@ -270,10 +270,10 @@ export class FlightView extends Container {
     const { w, h, L } = this;
     const ox = w * L.originX, oy = h * L.originY;
     this.axis.clear();
-    // 軸線
+    // 轴线
     this.axis.moveTo(ox, oy).lineTo(w - 8, oy).stroke({ width: 1.5, color: 0x2f3033 });
     this.axis.moveTo(ox, oy).lineTo(ox, 10).stroke({ width: 1.5, color: 0x2f3033 });
-    // 滾動刻度
+    // 滚动刻度
     const off = (t / 26) % 60;
     for (let x = ox + 60 - off; x < w - 10; x += 60) {
       this.axis.moveTo(x, oy).lineTo(x, oy + 5).stroke({ width: 1.5, color: 0x3a3b3e });

@@ -1,8 +1,8 @@
-// 回合狀態機：下注(betting) → 飛行(flying) → 飛走(crashed) → 循環
+// 回合状态机：下注(betting) → 飞行(flying) → 飞走(crashed) → 循环
 import { RULES } from '../config.js';
 import { makeRound, randomSeed } from './fair.js';
 
-// 首次載入時的示範歷史（與正式回合相同的分佈）
+// 首次加载时的示范历史（与正式回合相同的分布）
 function seedHistory(n) {
   return Array.from({ length: n }, () => {
     const r = Math.random();
@@ -16,10 +16,10 @@ export const PHASE = { BETTING: 'betting', FLYING: 'flying', CRASHED: 'crashed' 
 export class Engine {
   constructor() {
     this.phase = PHASE.BETTING;
-    this.t = 0;              // 目前階段經過時間 (ms)
-    this.mult = 1;           // 目前倍數
-    this.round = null;       // 本回合公平資料（含 crash）
-    this.next = null;        // 預先備好的下一回合
+    this.t = 0;              // 目前阶段经过时间 (ms)
+    this.mult = 1;           // 目前倍数
+    this.round = null;       // 本回合公平数据（含 crash）
+    this.next = null;        // 预先备好的下一回合
     this.nonce = Number(localStorage.getItem('av_nonce') || 0);
     this.clientSeed = localStorage.getItem('av_clientseed') || randomSeed(8);
     this.history = JSON.parse(localStorage.getItem('av_history') || '[]');
@@ -38,7 +38,7 @@ export class Engine {
     this._prepare(true);
   }
 
-  // 預先產生下一回合（開局前就定案，符合 provably fair）
+  // 预先产生下一回合（开局前就定案，符合 provably fair）
   async _prepare(force = false) {
     if (this.next && !force) return;
     this.nonce += 1;
@@ -47,7 +47,7 @@ export class Engine {
     this.emit('prepared', this.next);
   }
 
-  // 飛走時間（毫秒）
+  // 飞走时间（毫秒）
   get crashMs() {
     if (!this.round) return 0;
     return (Math.log(this.round.crash) / RULES.growth) * 1000;
@@ -99,7 +99,7 @@ export class Engine {
     this.emit('phase', PHASE.BETTING);
   }
 
-  // 下注階段剩餘比例 0..1
+  // 下注阶段剩余比例 0..1
   get bettingProgress() {
     return Math.min(1, this.t / RULES.bettingMs);
   }

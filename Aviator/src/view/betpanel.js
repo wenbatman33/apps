@@ -1,4 +1,4 @@
-// 單一下注面板（可同時存在兩個 = 原版的「雙押注」）
+// 单一下注面板（可同时存在两个 = 原版的「双押注」）
 import { Container, Graphics } from '../../vendor/pixi.min.mjs';
 import { COLORS, RULES } from '../config.js';
 import { PHASE } from '../core/engine.js';
@@ -18,12 +18,12 @@ export class BetPanel extends Container {
     this.addChild(this.bg);
 
     this.tabs = new Tabs(
-      [{ id: 'bet', label: '投注' }, { id: 'auto', label: '自動' }],
+      [{ id: 'bet', label: '投注' }, { id: 'auto', label: '自动' }],
       120, 24, (id) => { this.slot.tab = id; this.refresh(); },
     );
     this.addChild(this.tabs);
 
-    // 右上角 + / −（新增或移除第二個下注面板）
+    // 右上角 + / −（添加或移除第二个下注面板）
     this.sideBtn = new Container();
     this.sideG = new Graphics();
     this.sideIcon = iconGfx(index === 0 ? 'plus' : 'minus', 10, COLORS.text);
@@ -33,7 +33,7 @@ export class BetPanel extends Container {
     this.sideBtn.on('pointertap', () => onToggleSecond());
     this.addChild(this.sideBtn);
 
-    // 金額列
+    // 金额列
     this.amtBg = new Graphics();
     this.amtText = txt('10.00', 20, COLORS.text, '800');
     this.amtText.anchor.set(0.5);
@@ -45,7 +45,7 @@ export class BetPanel extends Container {
     this.plusBtn = this.circleBtn('plus', () => this.game.setAmount(this.slot, this.slot.amount + this.step()));
     this.addChild(this.amtBg, this.amtText, this.amtHit, this.minusBtn, this.plusBtn);
 
-    // 快捷金額
+    // 快捷金额
     this.quick = RULES.quickBets.map((v) => new Button({
       w: 60, h: 24, r: 12, top: 0x2e2f32, bottom: 0x232427, border: 0x4a4b4f, borderAlpha: 0.9,
       label: String(v), labelSize: 12, labelColor: COLORS.textDim,
@@ -53,7 +53,7 @@ export class BetPanel extends Container {
     }));
     this.quick.forEach((b) => this.addChild(b));
 
-    // 主按鈕
+    // 主按钮
     this.mainBtn = new Button({
       w: 180, h: 66, r: 20, top: COLORS.greenLight, bottom: COLORS.greenDark,
       label: '投注', labelSize: 22, sub: '10.00 TWD', subSize: 14,
@@ -61,12 +61,12 @@ export class BetPanel extends Container {
     });
     this.addChild(this.mainBtn);
 
-    // 自動分頁元件
+    // 自动分页组件
     this.autoWrap = new Container();
     this.addChild(this.autoWrap);
-    this.autoBetLabel = txt('自動下注', 13, COLORS.textDim, '700');
+    this.autoBetLabel = txt('自动下注', 13, COLORS.textDim, '700');
     this.autoBetToggle = new Toggle(34, 18, false, (v) => { this.slot.autoBet = v; this.refresh(); });
-    this.autoCashLabel = txt('自動兌現', 13, COLORS.textDim, '700');
+    this.autoCashLabel = txt('自动兑现', 13, COLORS.textDim, '700');
     this.autoCashToggle = new Toggle(34, 18, this.slot.autoCash, (v) => { this.slot.autoCash = v; this.game.save(); this.refresh(); });
     this.autoCashBg = new Graphics();
     this.autoCashText = txt('2.00x', 15, COLORS.text, '800');
@@ -77,7 +77,7 @@ export class BetPanel extends Container {
     this.autoCashHit.on('pointertap', () => this.openTargetPad());
     this.autoWrap.addChild(this.autoBetLabel, this.autoBetToggle, this.autoCashLabel, this.autoCashBg, this.autoCashText, this.autoCashHit, this.autoCashToggle);
 
-    // 兌現飄字
+    // 兑现飘字
     this.flash = txt('', 15, COLORS.gold, '800');
     this.flash.anchor.set(0.5);
     this.flash.alpha = 0;
@@ -109,7 +109,7 @@ export class BetPanel extends Container {
 
   openAmountPad() {
     this.keypad.open({
-      title: '投注金額（3 ~ 3,000）', value: this.slot.amount.toFixed(2),
+      title: '投注金额（3 ~ 3,000）', value: this.slot.amount.toFixed(2),
       min: RULES.minBet, max: RULES.maxBet, dec: 2,
       onDone: (v) => this.game.setAmount(this.slot, v),
     });
@@ -117,7 +117,7 @@ export class BetPanel extends Container {
 
   openTargetPad() {
     this.keypad.open({
-      title: '自動兌現倍數', value: this.slot.autoCashAt.toFixed(2),
+      title: '自动兑现倍数', value: this.slot.autoCashAt.toFixed(2),
       min: 1.01, max: RULES.maxMultiplier, dec: 2,
       onDone: (v) => { this.slot.autoCashAt = Math.round(v * 100) / 100; this.game.save(); this.refresh(); },
     });
@@ -156,7 +156,7 @@ export class BetPanel extends Container {
     if (s.state === SLOT.ACTIVE) {
       b.setTheme(COLORS.orangeLight, COLORS.orange);
       const win = Math.min(s.amount * this.engine.mult, RULES.maxWinPerBet);
-      b.setLabel('兌現', `${fmt(win)} TWD`);
+      b.setLabel('兑现', `${fmt(win)} TWD`);
       b.setEnabled(true);
     } else if (s.state === SLOT.QUEUED) {
       b.setTheme(COLORS.redLight, COLORS.red);
@@ -216,21 +216,21 @@ export class BetPanel extends Container {
     this.minusBtn.hitArea = hit(cr + 4);
     this.plusBtn.hitArea = hit(cr + 4);
 
-    // 快捷金額 2x2
+    // 快捷金额 2x2
     const qw = (leftW - 8) / 2, qh = L.quickH;
     this.quick.forEach((b, i) => {
       b.setSize2(qw, qh);
       b.position.set(padX + (i % 2) * (qw + 8), bodyY + amtH + 8 + ((i / 2) | 0) * (qh + 6));
     });
 
-    // 主按鈕
+    // 主按钮
     const mw = w - leftW - padX * 2 - 10;
     const mh = L.betBtnH;
     this.mainBtn.setSize2(mw, mh);
     this.mainBtn.setFontSize(mobile ? 18 : 22, mobile ? 12 : 14);
     this.mainBtn.position.set(padX + leftW + 10, bodyY + (h - bodyY - mh) / 2 - 4);
 
-    // 自動分頁
+    // 自动分页
     const ay = bodyY + amtH + 10;
     this.autoBetLabel.position.set(padX, ay + 2);
     this.autoBetToggle.position.set(padX + 66, ay);

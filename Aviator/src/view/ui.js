@@ -1,4 +1,4 @@
-// 純 PixiJS 的 UI 元件庫（不使用任何 DOM 元素）
+// 纯 PixiJS 的 UI 组件库（不使用任何 DOM 元素）
 import { Container, Graphics, Rectangle, Sprite, Text } from '../../vendor/pixi.min.mjs';
 import { COLORS, FONT } from '../config.js';
 import { roundedGradient } from './textures.js';
@@ -94,7 +94,7 @@ export class Button extends Container {
   }
 }
 
-// 小型分頁（投注 / 自動）
+// 小型分页（投注 / 自动）
 export class Tabs extends Container {
   constructor(items, w, h, onChange) {
     super();
@@ -149,7 +149,7 @@ export class Tabs extends Container {
   }
 }
 
-// 開關
+// 开关
 export class Toggle extends Container {
   constructor(w = 34, h = 18, value = false, onChange = null) {
     super();
@@ -172,7 +172,7 @@ export class Toggle extends Container {
   }
 }
 
-// 可捲動清單容器
+// 可卷动清单容器
 export class ScrollBox extends Container {
   constructor(w, h) {
     super();
@@ -226,7 +226,7 @@ export class ScrollBox extends Container {
   }
 }
 
-// 數值列（label + 值 + 減/加）
+// 数值列（label + 值 + 减/加）
 export function iconGfx(name, size, color = COLORS.text) {
   const g = new Graphics();
   const s = size;

@@ -1,4 +1,4 @@
-// 場景組裝：版面配置、事件連結、每幀更新
+// 场景组装：版面配置、事件链接、每帧更新
 import { Container, Graphics } from '../../vendor/pixi.min.mjs';
 import { COLORS, RULES, pickLayout, LAYOUT_PC, LAYOUT_MOBILE } from '../config.js';
 import { PHASE } from '../core/engine.js';
@@ -36,7 +36,7 @@ export class Scene extends Container {
 
     this.panels = [0, 1].map((i) => new BetPanel(game, i, this.keypad, () => this.toggleSecond()));
 
-    // 兌現提示
+    // 兑现提示
     this.toast = new Container();
     this.toastBg = new Graphics();
     this.toastText = txt('', 14, COLORS.text, '800');
@@ -103,11 +103,11 @@ export class Scene extends Container {
       sfx.cashOut();
       bots.cashMine(slot.index, m, win);
       this.panels[slot.index].showFlash(`+${fmt(win)}`);
-      this.showToast(`已兌現 ${m.toFixed(2)}x　贏得 ${fmt(win)} TWD`);
+      this.showToast(`已兑现 ${m.toFixed(2)}x　赢得 ${fmt(win)} TWD`);
       this.feed.render();
     });
 
-    // 滾輪捲動
+    // 滚轮卷动
     this.app.canvas.addEventListener('wheel', (e) => {
       const x = e.offsetX, y = e.offsetY;
       const target = this.modal.visible ? this.modal.scroll : (this.dev.visible && x > this.dev.x ? this.dev.scroll : this.feed.scroll);
@@ -118,12 +118,12 @@ export class Scene extends Container {
       }
     }, { passive: false });
 
-    // 對齊原版規則：下注生效中若離開頁面（等同斷線），以當下倍數自動兌現
+    // 对齐原版规则：下注生效中若离开页面（等同断线），以当下倍数自动兑现
     document.addEventListener('visibilitychange', () => {
       if (document.hidden) game.slots.forEach((s) => { if (s.state === SLOT.ACTIVE) game.cashOut(s); });
     });
 
-    // 鍵盤：D 開發者工具、空白鍵下注/兌現
+    // 键盘：D 开发者工具、空白键下注/兑现
     window.addEventListener('keydown', (e) => {
       if (e.key === 'd' || e.key === 'D') { this.dev.toggle(); this.dev.resize(this.w, this.h); }
       if (e.code === 'Space') { e.preventDefault(); this.panels[0].onMain(); }
@@ -146,7 +146,7 @@ export class Scene extends Container {
     if (g.showSecond) {
       const s = g.slots[1];
       if (s.state === SLOT.QUEUED) g.cancel(s);
-      if (s.state === SLOT.ACTIVE) return; // 飛行中有效注不可移除
+      if (s.state === SLOT.ACTIVE) return; // 飞行中有效注不可移除
       g.showSecond = false;
     } else {
       g.showSecond = true;
