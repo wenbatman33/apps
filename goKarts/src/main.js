@@ -9,19 +9,19 @@ import { SoundManager } from './sound.js';
 import { ParticleSystem } from './particles.js';
 import { HUD } from './hud.js';
 import { UI } from './ui.js';
+import { createRenderer, Pipeline, LightRig, bakeEnvironment, applyEnvIntensity, RENDER, QUALITY } from './render.js';
+import { initDev } from './dev.js';
 
 // ============ 基础设置 ============
 const app = document.getElementById('app');
-const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
-renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-renderer.setSize(window.innerWidth, window.innerHeight);
-app.appendChild(renderer.domElement);
+const renderer = createRenderer(app);
 
-const camera = new THREE.PerspectiveCamera(68, window.innerWidth / window.innerHeight, 0.1, 1200);
+const camera = new THREE.PerspectiveCamera(RENDER.fov, window.innerWidth / window.innerHeight, 0.1, 2600);
+const pipeline = new Pipeline(renderer, camera);
 window.addEventListener('resize', () => {
   camera.aspect = window.innerWidth / window.innerHeight;
   camera.updateProjectionMatrix();
-  renderer.setSize(window.innerWidth, window.innerHeight);
+  pipeline.resize(window.innerWidth, window.innerHeight);
 });
 
 const isTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
@@ -91,13 +91,15 @@ function startRace(mode, trackDef, kartType) {
 function buildRace(mode, trackDef, kartType) {
   const scene = new THREE.Scene();
   scene.fog = new THREE.Fog(trackDef.fog.color, trackDef.fog.near, trackDef.fog.far);
-  scene.add(buildSky(trackDef));
-  scene.add(new THREE.HemisphereLight(0xffffff, 0x445066, trackDef.ambient));
-  const sun = new THREE.DirectionalLight(trackDef.sunColor, trackDef.theme === 'neon' ? 0.5 : 1.0);
-  sun.position.set(...trackDef.sunPos);
-  scene.add(sun);
+  // 天空先烘成 PMREM 环境贴图（车漆反射 / 布景环境光），再放回场景
+  const sky = buildSky(trackDef);
+  const env = bakeEnvironment(renderer, sky);
+  scene.environment = env.texture;
+  scene.add(sky);
+  const lights = new LightRig(scene, trackDef);
 
   const track = buildTrack(trackDef);
+  applyEnvIntensity(track.group, RENDER.env);
   scene.add(track.group);
 
   // ---- 车辆 ----
@@ -119,15 +121,16 @@ function buildRace(mode, trackDef, kartType) {
   for (const k of karts) {
     const { mesh, wheels } = buildKartMesh(k.type);
     k.mesh = mesh; k.wheels = wheels;
+    applyEnvIntensity(mesh, RENDER.envKart);
     scene.add(mesh);
     updateKartVisual(k, track, 0.016);
     // 喷射火焰：内白外橘双层火舌（喷发时抖动，烟雾由粒子系统处理）
     k.flame = new THREE.Group();
     const flameOut = new THREE.Mesh(new THREE.ConeGeometry(0.30, 1.6, 8),
-      new THREE.MeshBasicMaterial({ color: 0xff7a1a, transparent: true, opacity: 0.75, blending: THREE.AdditiveBlending, depthWrite: false }));
+      new THREE.MeshBasicMaterial({ color: new THREE.Color(0xff7a1a).multiplyScalar(1.8), transparent: true, opacity: 0.75, blending: THREE.AdditiveBlending, depthWrite: false }));
     flameOut.rotation.x = Math.PI / 2;
     const flameCore = new THREE.Mesh(new THREE.ConeGeometry(0.15, 1.0, 8),
-      new THREE.MeshBasicMaterial({ color: 0xfff3c0, transparent: true, opacity: 0.95, blending: THREE.AdditiveBlending, depthWrite: false }));
+      new THREE.MeshBasicMaterial({ color: new THREE.Color(0xfff3c0).multiplyScalar(2.0), transparent: true, opacity: 0.95, blending: THREE.AdditiveBlending, depthWrite: false }));
     flameCore.rotation.x = Math.PI / 2; flameCore.position.z = 0.18;
     k.flame.add(flameOut, flameCore);
     k.flame.position.set(0, 0.6, -1.95); k.flame.visible = false;
@@ -139,7 +142,7 @@ function buildRace(mode, trackDef, kartType) {
   const particles = new ParticleSystem(scene);
 
   race = {
-    mode, trackDef, kartType, scene, track, karts, player, items, particles,
+    mode, trackDef, kartType, scene, track, karts, player, items, particles, lights, sky, env,
     state: 'countdown', countT: 3.6, raceMs: 0,
     bestLap: 0, camPos: null, wrongWayT: 0, endT: 0,
   };
@@ -149,6 +152,8 @@ function buildRace(mode, trackDef, kartType) {
   camera.position.copy(player.pos).addScaledVector(fwd, -8).add(new THREE.Vector3(0, 4, 0));
   race.camPos = camera.position.clone();
   camera.lookAt(player.pos);
+  lights.follow(player.pos);
+  pipeline.setScene(scene, trackDef);
 
   hud.show(isTT);
   hud.initMap(track);
@@ -162,6 +167,7 @@ function disposeRace() {
   sound.stopEngine();
   sound.stopMusic();
   if (race.items) race.items.dispose();
+  if (race.env) race.env.dispose();
   race.scene.traverse(o => {
     if (o.geometry) o.geometry.dispose();
     if (o.material) {
@@ -224,10 +230,10 @@ function tick() {
   let dt = Math.min((now - lastT) / 1000, 0.05);
   lastT = now;
 
-  if (!race) { renderer.clear(); return; }
+  if (!race) { pipeline.render(null); return; }
   const r = race;
 
-  if (r.state === 'paused') { renderer.render(r.scene, camera); return; }
+  if (r.state === 'paused') { pipeline.render(r.scene); return; }
 
   // ---- 倒数 ----
   if (r.state === 'countdown') {
@@ -245,7 +251,9 @@ function tick() {
     // 倒数期间引擎怠速
     sound.setEngine(0, playerInput().throttle * 0.3, false, false);
     updateCamera(r, dt, true);
-    renderer.render(r.scene, camera);
+    r.lights.follow(_shadowFocus(r));
+    pipeline.applyParams();
+    pipeline.render(r.scene);
     return;
   }
 
@@ -356,7 +364,16 @@ function tick() {
   }
 
   updateCamera(r, dt, false);
-  renderer.render(r.scene, camera);
+  r.lights.follow(_shadowFocus(r));
+  pipeline.applyParams();
+  pipeline.render(r.scene);
+}
+
+// 阴影相机焦点：玩家前方一点，让前方路面永远在高解析阴影范围内
+const _sf = new THREE.Vector3();
+function _shadowFocus(r) {
+  const p = r.player;
+  return _sf.set(p.pos.x + Math.sin(p.heading) * 12, p.pos.y, p.pos.z + Math.cos(p.heading) * 12);
 }
 
 // ============ 车辆特效粒子发射 ============
@@ -455,8 +472,8 @@ function updateCamera(r, dt, countdown) {
   const p = r.player;
   _fwd.set(Math.sin(p.heading), 0, Math.cos(p.heading));
   const speedF = Math.min(1, Math.abs(p.speed) / p.type.topSpeed);
-  const dist = 7.4 + speedF * 1.8;
-  const h = 3.4 + speedF * 0.5;
+  const dist = RENDER.camDist + speedF * 1.8;
+  const h = RENDER.camHeight + speedF * 0.5;
   _camTarget.copy(p.pos).addScaledVector(_fwd, -dist);
   _camTarget.y = p.pos.y + h;
   if (countdown) {
@@ -481,7 +498,7 @@ function updateCamera(r, dt, countdown) {
   _look.y += 1.3;
   camera.lookAt(_look);
   // 加速时视野拉宽
-  const targetFov = 68 + (p.boost > 0 ? 12 : 0) + speedF * 4;
+  const targetFov = RENDER.fov + (p.boost > 0 ? 12 : 0) + speedF * 4;
   camera.fov += (targetFov - camera.fov) * Math.min(1, 5 * dt);
   camera.updateProjectionMatrix();
 }
@@ -502,3 +519,7 @@ ui.show('scr-main');
 loadKartModels().then(() => ui.fillKartThumbnails());
 loadDecoModels();
 tick();
+
+// DEV 微调面板（` 键开关）＋除错挂钩
+initDev({ getRace: () => race, pipeline });
+window.__gk = { RENDER, QUALITY, renderer, pipeline, camera, applyEnvIntensity, get race() { return race; } };

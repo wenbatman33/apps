@@ -2,7 +2,8 @@
 import { ITEM_ICONS } from './items.js';
 
 const ICONS = Object.values(ITEM_ICONS);
-const ORD = ['1st', '2nd', '3rd', '4th', '5th', '6th', '7th', '8th'];
+const SUF = ['st', 'nd', 'rd', 'th', 'th', 'th', 'th', 'th'];
+const ARC_LEN = 235.6; // 速度弧总长（270° × r50）
 
 export function fmtTime(ms) {
   if (ms == null || !isFinite(ms)) return '--:--.---';
@@ -13,7 +14,9 @@ export function fmtTime(ms) {
 export class HUD {
   constructor() {
     this.root = document.getElementById('hud-root');
-    this.elPos = document.querySelector('#hud-pos .p');
+    this.elPosNum = document.querySelector('#hud-pos .p .num');
+    this.elPosSuf = document.querySelector('#hud-pos .p .suf');
+    this.elArc = document.getElementById('speed-arc');
     this.elLap = document.querySelector('#hud-pos .lap');
     this.elCur = document.getElementById('t-cur');
     this.elBest = document.getElementById('t-best');
@@ -37,13 +40,17 @@ export class HUD {
   hide() { this.root.classList.add('hidden'); }
 
   setRace(kart, laps, raceMs, bestLap) {
-    if (kart.rank) this.elPos.textContent = ORD[kart.rank - 1] || `${kart.rank}th`;
+    if (kart.rank) { this.elPosNum.textContent = kart.rank; this.elPosSuf.textContent = SUF[kart.rank - 1] || 'th'; }
     const dispLap = Math.min(Math.max(kart.lap, 0) + 1, laps);
-    this.elLap.textContent = `LAP ${dispLap}/${laps}`;
+    this.elLap.innerHTML = `LAP <b>${dispLap}</b>/${laps}`;
     this.elCur.textContent = fmtTime(raceMs - kart.lapStart);
     this.elBest.textContent = fmtTime(bestLap || null);
     this.elTotal.textContent = fmtTime(raceMs);
-    this.elSpeed.textContent = Math.round(Math.abs(kart.speed) * 3.1);
+    const kmh = Math.round(Math.abs(kart.speed) * 3.1);
+    this.elSpeed.textContent = kmh;
+    // 速度弧：0~160 km/h 映射 270°，喷射时转橘色
+    this.elArc.style.strokeDashoffset = ARC_LEN * (1 - Math.min(1, kmh / 160));
+    this.elArc.style.stroke = kart.boost > 0 ? '#ff9a1f' : '#4fa8ff';
     // 道具框
     if (kart.rouletteT > 0) {
       this.elItem.classList.add('flash');

@@ -1,6 +1,7 @@
 // 车辆模组：6 台车型属性 + 复古皮卡 FBX 模型载入，失败时退回低多边形自建车
 import * as THREE from 'three';
 import { FBXLoader } from 'three/addons/loaders/FBXLoader.js';
+import { QUALITY, RENDER } from './render.js';
 
 // 每台车型对应一款实体车(不同车壳), color 取自该车实际车漆色 → UI 与游戏内完全一致
 // topSpeed: 极速(单位/秒)  accel: 加速度  handling: 转向灵敏  weight: 重量(碰撞优势)  drift: 漂移增压效率
@@ -41,7 +42,7 @@ export function loadKartModels() {
     atlasP,
     ...KART_TYPES.map(t => loader.loadAsync(MODEL_DIR + t.model + '.fbx').then(o => [t.id, o])),
   ]).then(([atlas, ...pairs]) => {
-    const mat = new THREE.MeshStandardMaterial({ map: atlas, roughness: 0.62, metalness: 0.05 });
+    const mat = new THREE.MeshStandardMaterial({ map: atlas, roughness: 0.55, metalness: 0.08, envMapIntensity: RENDER.envKart });
     templates = {};
     for (const [id, obj] of pairs) {
       obj.traverse(o => { if (o.isMesh) o.material = mat; });
@@ -63,6 +64,8 @@ export function renderKartThumbnail(type, w = 400, h = 300) {
   r.setPixelRatio(1);
   r.setSize(w, h, false);
   r.outputColorSpace = THREE.SRGBColorSpace;
+  r.toneMapping = THREE.ACESFilmicToneMapping;
+  r.toneMappingExposure = 1.1;
 
   const scene = new THREE.Scene();
   scene.add(new THREE.HemisphereLight(0xdfe8ff, 0x3a3f4c, 1.25));
@@ -97,11 +100,15 @@ export function buildKartMesh(type) {
   const built = templates && templates[type.id]
     ? buildFromTemplate(type)
     : buildBoxKart(type);
-  // 假阴影（blob shadow — 手机效能友善）
-  const shadow = new THREE.Mesh(new THREE.PlaneGeometry(2.6, 3.4),
-    new THREE.MeshBasicMaterial({ map: blobShadowTexture(), transparent: true, depthWrite: false }));
-  shadow.rotation.x = -Math.PI / 2; shadow.position.y = 0.06;
-  built.mesh.add(shadow);
+  // 有即时阴影时车体投影；低画质改用假阴影（blob shadow — 手机效能友善）
+  if (QUALITY.shadows) {
+    built.mesh.traverse(o => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = false; } });
+  } else {
+    const shadow = new THREE.Mesh(new THREE.PlaneGeometry(2.6, 3.4),
+      new THREE.MeshBasicMaterial({ map: blobShadowTexture(), transparent: true, depthWrite: false }));
+    shadow.rotation.x = -Math.PI / 2; shadow.position.y = 0.06;
+    built.mesh.add(shadow);
+  }
   return built;
 }
 

@@ -13,11 +13,14 @@ export class ItemManager {
     // 道具箱：发光旋转方块
     const boxGeo = new THREE.BoxGeometry(1.5, 1.5, 1.5);
     for (const spot of track.itemSpots) {
-      const mat = new THREE.MeshBasicMaterial({ color: 0x64d8ff, transparent: true, opacity: 0.65 });
+      // 半透明玻璃方块 + HDR 自发光（有 bloom 时会发光）
+      const mat = new THREE.MeshStandardMaterial({ color: 0x64d8ff, emissive: 0x2fc8ff, emissiveIntensity: 1.1,
+        transparent: true, opacity: 0.72, roughness: 0.25, metalness: 0.1, envMapIntensity: 1.0 });
       const mesh = new THREE.Mesh(boxGeo, mat);
+      mesh.castShadow = true;
       mesh.position.copy(spot.pos);
       const edge = new THREE.LineSegments(new THREE.EdgesGeometry(boxGeo),
-        new THREE.LineBasicMaterial({ color: 0xffffff }));
+        new THREE.LineBasicMaterial({ color: new THREE.Color(0xffffff).multiplyScalar(1.6) }));
       mesh.add(edge);
       scene.add(mesh);
       this.boxes.push({ mesh, spot, active: true, respawn: 0 });
